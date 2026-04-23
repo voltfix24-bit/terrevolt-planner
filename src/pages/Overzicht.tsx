@@ -1604,21 +1604,32 @@ export default function Overzicht() {
 
 // ============== Sub-components ==============
 
-function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
+function MonteurSidebarRow({
+  monteur,
+  collapsed = false,
+}: {
+  monteur: Monteur;
+  collapsed?: boolean;
+}) {
   const isSchakel = monteur.type === "schakelmonteur";
   const ms = monteur.aanwijzing_ms;
   const msStyle = msBadgeStyle(ms);
   return (
     <div
-      className="flex items-center gap-2 px-3"
+      className="flex items-center gap-2"
+      title={collapsed ? monteur.naam : undefined}
       style={{
         height: ROW_H_MONTEUR,
+        paddingLeft: collapsed ? 0 : 12,
+        paddingRight: collapsed ? 0 : 12,
+        justifyContent: collapsed ? "center" : undefined,
         borderRight: "1px solid rgba(255,255,255,0.08)",
         borderBottom: "1px solid rgba(255,255,255,0.04)",
       }}
     >
       <div
         className="flex shrink-0 items-center justify-center rounded-full"
+        title={collapsed ? undefined : monteur.naam}
         style={{
           width: 26, height: 26,
           background: isSchakel ? "#feb300" : "#378add",
@@ -1628,24 +1639,28 @@ function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
       >
         {initialen(monteur.naam)}
       </div>
-      <span
-        className="truncate text-[13px] font-semibold text-foreground"
-        style={{ maxWidth: 130 }}
-        title={monteur.naam}
-      >
-        {monteur.naam}
-      </span>
-      {ms && msStyle && (
-        <span
-          className="ml-auto shrink-0"
-          style={{
-            ...msStyle,
-            fontSize: 9, fontWeight: 700,
-            padding: "1px 5px", borderRadius: 4,
-          }}
-        >
-          {ms}
-        </span>
+      {!collapsed && (
+        <>
+          <span
+            className="truncate text-[13px] font-semibold text-foreground"
+            style={{ maxWidth: 130 }}
+            title={monteur.naam}
+          >
+            {monteur.naam}
+          </span>
+          {ms && msStyle && (
+            <span
+              className="ml-auto shrink-0"
+              style={{
+                ...msStyle,
+                fontSize: 9, fontWeight: 700,
+                padding: "1px 5px", borderRadius: 4,
+              }}
+            >
+              {ms}
+            </span>
+          )}
+        </>
       )}
     </div>
   );
