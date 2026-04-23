@@ -672,6 +672,27 @@ export default function Overzicht() {
     return Math.round((planned.size / totalPossible) * 100);
   }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById]);
 
+  // Vrije dagen per monteur in zichtbare periode (totaal werkdagen − dagen met inplanning)
+  const monteurVrijeDagen = useMemo(() => {
+    const map = new Map<string, number>();
+    const totalDays = visibleWeekNrSet.size * 5;
+    for (const m of monteurs) {
+      const planned = new Set<string>();
+      for (const cel of cellen) {
+        if (!cel.week_id) continue;
+        const week = weekById.get(cel.week_id);
+        if (!week) continue;
+        if (!visibleWeekNrSet.has(week.week_nr)) continue;
+        const mids = monteurIdsByCel.get(cel.id) ?? [];
+        if (mids.includes(m.id)) {
+          planned.add(`${week.week_nr}-${cel.dag_index}`);
+        }
+      }
+      map.set(m.id, totalDays - planned.size);
+    }
+    return map;
+  }, [monteurs, visibleWeekNrSet, cellen, weekById, monteurIdsByCel]);
+
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
       const s = new Set(prev);
