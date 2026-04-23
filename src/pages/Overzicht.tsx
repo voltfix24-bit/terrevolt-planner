@@ -1446,13 +1446,24 @@ export default function Overzicht() {
               )}
             </div>
 
+            {/* Visual separator between medewerkers en projecten (matches sidebar) */}
+            <div
+              style={{
+                height: 8,
+                width: totalGridWidth,
+                background: "transparent",
+                borderTop: "2px solid rgba(255,255,255,0.06)",
+                marginTop: 4,
+              }}
+            />
+
             {/* Projecten section header spacer */}
             <div
               style={{
                 height: 32, width: totalGridWidth,
+                paddingTop: 4,
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.02)",
+                background: "rgba(255,255,255,0.03)",
               }}
             />
 
