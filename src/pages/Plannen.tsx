@@ -291,15 +291,34 @@ const Plannen = () => {
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
   const scrollLock = useRef(false);
+  // Track horizontale scroll & viewportbreedte van het body-scroll-container,
+  // zodat we kunnen bepalen welke weken op dit moment zichtbaar zijn.
+  const [gridScrollLeft, setGridScrollLeft] = useState(0);
+  const [gridViewportWidth, setGridViewportWidth] = useState(0);
   const syncScroll = useCallback((source: "header" | "body", left: number) => {
     if (scrollLock.current) return;
     scrollLock.current = true;
     if (source !== "header" && headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
     if (source !== "body" && bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
+    setGridScrollLeft(left);
     requestAnimationFrame(() => {
       scrollLock.current = false;
     });
   }, []);
+
+  // Meet de viewportbreedte van de grid en luister naar resize.
+  useEffect(() => {
+    const el = bodyScrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setGridViewportWidth(el.clientWidth);
+      setGridScrollLeft(el.scrollLeft);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [bodyScrollRef.current]);
 
   /* ----------------------------- cell ops ----------------------------- */
   const updateCellLocal = useCallback((cel: Cel) => {
