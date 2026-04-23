@@ -991,6 +991,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
 
   return (
     <TooltipProvider delayDuration={200}>
+      <style>{TIMELINE_SCROLL_STYLES}</style>
       <div className="space-y-4">
         {/* Controls bar */}
         <div className="surface-card sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
