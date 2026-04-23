@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
@@ -17,6 +17,7 @@ import {
 
 // ============== Constants ==============
 const SIDEBAR_W = 230;
+const SIDEBAR_W_COLLAPSED = 48;
 const ROW_H_MONTEUR = 44;
 const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
@@ -233,7 +234,8 @@ export default function Overzicht() {
   const [montageOpen, setMontageOpen] = useState(true);
   const [projectenOpen, setProjectenOpen] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [legendOpen, setLegendOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
@@ -606,22 +608,51 @@ export default function Overzicht() {
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
   const teamCapPct = useMemo(() => {
-    let totalDays = 0;
-    for (const sl of slots) totalDays += sl.pairs.length;
-    totalDays *= monteurs.length;
-    if (totalDays === 0) return 0;
-    let planned = 0;
-    for (const m of monteurs) {
-      const byDay = monteurDayProjects.get(m.id);
-      if (!byDay) continue;
-      for (const sl of slots) {
-        for (const p of sl.pairs) {
-          if (byDay.has(dayKey(p.wnr, p.dag))) planned++;
+    if (monteurs.length === 0) return 0;
+
+    // Build the list of working days (MA-VR) in the visible period
+    const dates: Date[] = [];
+    if (scale === "maand" || scale === "kwartaal") {
+      for (const wnr of visibleWeekNrSet) {
+        const monday = getMondayOfWeek(wnr, jaar);
+        for (let d = 0; d < 5; d++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + d);
+          dates.push(date);
+        }
+      }
+    } else {
+      // jaar: alle werkdagen van het jaar
+      const wkCount = weeksInYear(jaar);
+      for (let week = 1; week <= wkCount; week++) {
+        const monday = getMondayOfWeek(week, jaar);
+        for (let d = 0; d < 5; d++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + d);
+          if (date.getFullYear() === jaar) dates.push(date);
         }
       }
     }
-    return Math.round((planned / totalDays) * 100);
-  }, [monteurs, monteurDayProjects, slots]);
+
+    const totalPossible = monteurs.length * dates.length;
+    if (totalPossible === 0) return 0;
+
+    // Unieke monteur+datum combinaties die ingepland zijn
+    const planned = new Set<string>();
+    for (const cel of cellen) {
+      if (!cel.week_id) continue;
+      const week = weekById.get(cel.week_id);
+      if (!week) continue;
+      const monday = getMondayOfWeek(week.week_nr, jaar);
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + cel.dag_index);
+      const dateStr = date.toISOString().split("T")[0];
+      const mids = monteurIdsByCel.get(cel.id) ?? [];
+      for (const mid of mids) planned.add(`${mid}-${dateStr}`);
+    }
+
+    return Math.round((planned.size / totalPossible) * 100);
+  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
@@ -957,16 +988,40 @@ export default function Overzicht() {
       >
         <div style={{ display: "flex" }}>
           {/* ====== Fixed left sidebar ====== */}
-          <div style={{ width: SIDEBAR_W, flexShrink: 0 }}>
-            {/* Header spacer */}
+          <div
+            style={{
+              width: sidebarW,
+              flexShrink: 0,
+              transition: "width 0.2s ease",
+            }}
+          >
+            {/* Header spacer with collapse toggle */}
             <div
+              className="flex items-center"
               style={{
                 height: HEADER_H,
                 borderRight: "1px solid rgba(255,255,255,0.08)",
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
                 background: "rgba(255,255,255,0.02)",
+                paddingLeft: sidebarCollapsed ? 0 : 8,
+                paddingRight: 6,
+                justifyContent: sidebarCollapsed ? "center" : "flex-end",
               }}
-            />
+            >
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed((c) => !c)}
+                className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+                title={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
+                aria-label={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
+              >
+                {sidebarCollapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </button>
+            </div>
 
             {/* Medewerkers section toggle */}
             <button
@@ -1041,7 +1096,7 @@ export default function Overzicht() {
                 }}
               >
                 {schakelMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} />
+                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
                 ))}
               </div>
 
@@ -1083,7 +1138,7 @@ export default function Overzicht() {
                 }}
               >
                 {montageMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} />
+                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
                 ))}
               </div>
 
@@ -1101,18 +1156,29 @@ export default function Overzicht() {
               )}
             </div>
 
+            {/* Visual separator between medewerkers en projecten */}
+            <div
+              style={{
+                height: 8,
+                background: "transparent",
+                borderRight: "1px solid rgba(255,255,255,0.08)",
+                borderTop: "2px solid rgba(255,255,255,0.06)",
+                marginTop: 4,
+              }}
+            />
+
             {/* Projecten section header */}
             <button
               type="button"
               onClick={() => setProjectenOpen((o) => !o)}
-              className="flex w-full items-center gap-2 hover:bg-white/[0.04]"
+              className="flex w-full items-center gap-2 hover:bg-white/[0.05]"
               style={{
                 height: 32,
                 paddingLeft: 12,
+                paddingTop: 4,
                 borderRight: "1px solid rgba(255,255,255,0.08)",
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.02)",
+                background: "rgba(255,255,255,0.03)",
               }}
             >
               <ChevronRight
@@ -1122,12 +1188,16 @@ export default function Overzicht() {
                   transition: "transform 0.2s ease",
                 }}
               />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Project / Taak
-              </span>
-              <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
-                {visibleProjecten.length}
-              </span>
+              {!sidebarCollapsed && (
+                <>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Project / Taak
+                  </span>
+                  <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                    {visibleProjecten.length}
+                  </span>
+                </>
+              )}
             </button>
 
             <div
@@ -1159,51 +1229,89 @@ export default function Overzicht() {
                     {/* Project header sidebar */}
                     <div
                       onClick={() => navigateToProject(p.id)}
-                      className="group flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
+                      title={`${p.case_nummer ?? "—"}${p.station_naam ? ` — ${p.station_naam}` : ""}`}
+                      className="group relative flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
                       style={{
                         height: ROW_H_PROJECT,
                         borderRight: "1px solid rgba(255,255,255,0.08)",
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
                       }}
                     >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(p.id);
-                        }}
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
-                      >
-                        <ChevronRight
-                          className="h-3 w-3 text-muted-foreground"
-                          style={{
-                            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-                            transition: "transform 0.2s ease",
-                          }}
+                      {sidebarCollapsed ? (
+                        <>
+                          {/* Status dot */}
+                          <span
+                            className="mx-auto shrink-0 rounded-full"
+                            style={{
+                              width: 10,
+                              height: 10,
+                              background: sc.bg,
+                            }}
+                          />
+                          {/* Optional 4-char case number, very small */}
+                          <span
+                            className="absolute inset-x-0 bottom-0.5 text-center font-display text-[8px] font-bold tabular-nums"
+                            style={{ color: "#3fff8b" }}
+                          >
+                            {(p.case_nummer ?? "").slice(0, 4)}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpand(p.id);
+                            }}
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
+                          >
+                            <ChevronRight
+                              className="h-3 w-3 text-muted-foreground"
+                              style={{
+                                transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                                transition: "transform 0.2s ease",
+                              }}
+                            />
+                          </button>
+                          <span
+                            className="font-display text-[13px] font-bold tabular-nums"
+                            style={{ color: "#3fff8b" }}
+                          >
+                            {p.case_nummer ?? "—"}
+                          </span>
+                          <span
+                            className="truncate text-[11px] text-foreground/80"
+                            title={p.station_naam ?? ""}
+                          >
+                            {p.station_naam ? `— ${p.station_naam}` : ""}
+                          </span>
+                          <span
+                            className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+                            style={{ background: sc.bg, color: sc.text }}
+                          >
+                            {sc.label}
+                          </span>
+                          <ArrowRight
+                            className="h-3 w-3 shrink-0 text-muted-foreground transition-opacity"
+                            style={{
+                              opacity: 0,
+                            }}
+                            aria-hidden
+                          />
+                        </>
+                      )}
+                      {/* Hover arrow indicator (positioned absolutely so it doesn't affect layout) */}
+                      {!sidebarCollapsed && (
+                        <ArrowRight
+                          className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-40"
+                          aria-hidden
                         />
-                      </button>
-                      <span
-                        className="font-display text-[13px] font-bold tabular-nums"
-                        style={{ color: "#3fff8b" }}
-                      >
-                        {p.case_nummer ?? "—"}
-                      </span>
-                      <span
-                        className="truncate text-[11px] text-foreground/80"
-                        title={p.station_naam ?? ""}
-                      >
-                        {p.station_naam ? `— ${p.station_naam}` : ""}
-                      </span>
-                      <span
-                        className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
-                        style={{ background: sc.bg, color: sc.text }}
-                      >
-                        {sc.label}
-                      </span>
+                      )}
                     </div>
 
                     {/* Activiteit sidebar rows */}
-                    {expanded &&
+                    {!sidebarCollapsed && expanded &&
                       acts.map((a, ai) => {
                         const capDotColor =
                           a.capaciteit_type === "schakel"
@@ -1338,13 +1446,24 @@ export default function Overzicht() {
               )}
             </div>
 
+            {/* Visual separator between medewerkers en projecten (matches sidebar) */}
+            <div
+              style={{
+                height: 8,
+                width: totalGridWidth,
+                background: "transparent",
+                borderTop: "2px solid rgba(255,255,255,0.06)",
+                marginTop: 4,
+              }}
+            />
+
             {/* Projecten section header spacer */}
             <div
               style={{
                 height: 32, width: totalGridWidth,
+                paddingTop: 4,
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.02)",
+                background: "rgba(255,255,255,0.03)",
               }}
             />
 
@@ -1490,137 +1609,38 @@ export default function Overzicht() {
         </div>
       </div>
 
-      {/* Conflict legend (collapsible, footer) */}
-      <div
-        className="mt-3 rounded-lg border"
-        style={{
-          borderColor: "rgba(255,255,255,0.08)",
-          background: "rgba(10,26,48,0.4)",
-        }}
-        aria-label="Legenda planning-conflicten"
-      >
-        <button
-          type="button"
-          onClick={() => setLegendOpen((o) => !o)}
-          aria-expanded={legendOpen}
-          className="flex w-full items-center gap-2 px-3 py-2 hover:bg-white/[0.03]"
-        >
-          <ChevronRight
-            className="h-3 w-3 text-muted-foreground"
-            style={{
-              transform: legendOpen ? "rotate(90deg)" : "rotate(0deg)",
-              transition: "transform 0.2s ease",
-            }}
-          />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Legenda
-          </span>
-          <span className="text-[11px] text-muted-foreground">
-            Wat betekenen de rode pills en markers?
-          </span>
-          <span className="ml-auto text-[10px] text-muted-foreground">
-            {legendOpen ? "Verberg" : "Toon"}
-          </span>
-        </button>
-        <div
-          style={{
-            maxHeight: legendOpen ? 400 : 0,
-            opacity: legendOpen ? 1 : 0,
-            overflow: "hidden",
-            transition: "max-height 0.25s ease, opacity 0.15s ease",
-          }}
-        >
-          <div
-            className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t px-3 py-3 text-[11px]"
-            style={{
-              borderColor: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.75)",
-            }}
-          >
-            {/* Monteur dubbel gepland */}
-            <div className="flex items-center gap-2">
-              <span
-                className="flex h-[22px] w-[34px] items-center justify-center"
-                style={{
-                  background: "#ef4444",
-                  color: "#ffffff",
-                  borderRadius: 4,
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                !
-              </span>
-              <span>
-                <span className="font-semibold text-foreground">Rode pill met "!"</span>
-                {" "}— monteur is op dezelfde dag aan meerdere projecten gekoppeld (dubbel gepland).
-              </span>
-            </div>
-
-            <span className="hidden h-4 w-px bg-white/10 sm:inline-block" />
-
-            {/* Activiteit-cel met conflict */}
-            <div className="flex items-center gap-2">
-              <span
-                className="relative inline-block"
-                style={{
-                  width: 22,
-                  height: 22,
-                  background: "rgba(239,68,68,0.18)",
-                  borderLeft: "2px solid #ef4444",
-                  boxShadow: "inset 0 0 0 1px rgba(239,68,68,0.55)",
-                  borderRadius: 2,
-                }}
-              >
-                <span
-                  className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
-                  style={{
-                    background: "#ef4444",
-                    color: "#fff",
-                    fontSize: 8,
-                    fontWeight: 700,
-                    lineHeight: 1,
-                  }}
-                >
-                  !
-                </span>
-              </span>
-              <span>
-                <span className="font-semibold text-foreground">Rood gemarkeerde cel</span>
-                {" "}— deze activiteit deelt een monteur met een andere planning op dezelfde dag.
-              </span>
-            </div>
-
-            <span className="hidden h-4 w-px bg-white/10 sm:inline-block" />
-
-            {/* Tip */}
-            <span className="text-muted-foreground">
-              Tip: hover op de rode pill voor de betrokken projecten, klik op een rij om naar Plannen te gaan.
-            </span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
 
 // ============== Sub-components ==============
 
-function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
+function MonteurSidebarRow({
+  monteur,
+  collapsed = false,
+}: {
+  monteur: Monteur;
+  collapsed?: boolean;
+}) {
   const isSchakel = monteur.type === "schakelmonteur";
   const ms = monteur.aanwijzing_ms;
   const msStyle = msBadgeStyle(ms);
   return (
     <div
-      className="flex items-center gap-2 px-3"
+      className="flex items-center gap-2"
+      title={collapsed ? monteur.naam : undefined}
       style={{
         height: ROW_H_MONTEUR,
+        paddingLeft: collapsed ? 0 : 12,
+        paddingRight: collapsed ? 0 : 12,
+        justifyContent: collapsed ? "center" : undefined,
         borderRight: "1px solid rgba(255,255,255,0.08)",
         borderBottom: "1px solid rgba(255,255,255,0.04)",
       }}
     >
       <div
         className="flex shrink-0 items-center justify-center rounded-full"
+        title={collapsed ? undefined : monteur.naam}
         style={{
           width: 26, height: 26,
           background: isSchakel ? "#feb300" : "#378add",
@@ -1630,24 +1650,28 @@ function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
       >
         {initialen(monteur.naam)}
       </div>
-      <span
-        className="truncate text-[13px] font-semibold text-foreground"
-        style={{ maxWidth: 130 }}
-        title={monteur.naam}
-      >
-        {monteur.naam}
-      </span>
-      {ms && msStyle && (
-        <span
-          className="ml-auto shrink-0"
-          style={{
-            ...msStyle,
-            fontSize: 9, fontWeight: 700,
-            padding: "1px 5px", borderRadius: 4,
-          }}
-        >
-          {ms}
-        </span>
+      {!collapsed && (
+        <>
+          <span
+            className="truncate text-[13px] font-semibold text-foreground"
+            style={{ maxWidth: 130 }}
+            title={monteur.naam}
+          >
+            {monteur.naam}
+          </span>
+          {ms && msStyle && (
+            <span
+              className="ml-auto shrink-0"
+              style={{
+                ...msStyle,
+                fontSize: 9, fontWeight: 700,
+                padding: "1px 5px", borderRadius: 4,
+              }}
+            >
+              {ms}
+            </span>
+          )}
+        </>
       )}
     </div>
   );
