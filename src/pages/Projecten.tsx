@@ -315,7 +315,7 @@ const Projecten = () => {
     const startWeek = getIsoWeek();
     const weekRows = Array.from({ length: 6 }).map((_, i) => ({
       project_id: projectId,
-      week_nr: startWeek + i,
+      week_nr: ((startWeek - 1 + i) % 53) + 1,
       positie: i,
       opmerking: "",
     }));
