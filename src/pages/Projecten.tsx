@@ -441,7 +441,7 @@ const Projecten = () => {
           <Input
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
-            placeholder="Zoek op casenummer of stationsnaam"
+            placeholder="Zoek op casenummer, station, straat, postcode of plaats"
             className="rounded-md border-white/10 bg-white/[0.04] pl-9 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary"
           />
         </div>
