@@ -1022,20 +1022,29 @@ export default function Overzicht() {
                   }}
                 />
               )}
-              {schakelMonteurs.map((m) => (
-                <MonteurCellsRow
-                  key={m.id}
-                  monteur={m}
-                  segments={monteurSegments(m.id)}
-                  projectById={projectById}
-                  visibleWeekNrs={visibleWeekNrs}
-                  jaar={jaar}
-                  currentISO={currentISO}
-                  isTodayCol={isTodayCol}
-                  totalGridWidth={totalGridWidth}
-                  onProjectClick={navigateToProject}
-                />
-              ))}
+              <div
+                style={{
+                  maxHeight: schakelOpen ? 2000 : 0,
+                  opacity: schakelOpen ? 1 : 0,
+                  overflow: "hidden",
+                  transition: "max-height 0.2s ease, opacity 0.15s ease",
+                }}
+              >
+                {schakelMonteurs.map((m) => (
+                  <MonteurCellsRow
+                    key={m.id}
+                    monteur={m}
+                    segments={monteurSegments(m.id)}
+                    projectById={projectById}
+                    visibleWeekNrs={visibleWeekNrs}
+                    jaar={jaar}
+                    currentISO={currentISO}
+                    isTodayCol={isTodayCol}
+                    totalGridWidth={totalGridWidth}
+                    onProjectClick={navigateToProject}
+                  />
+                ))}
+              </div>
               {montageMonteurs.length > 0 && (
                 <div
                   style={{
@@ -1046,20 +1055,29 @@ export default function Overzicht() {
                   }}
                 />
               )}
-              {montageMonteurs.map((m) => (
-                <MonteurCellsRow
-                  key={m.id}
-                  monteur={m}
-                  segments={monteurSegments(m.id)}
-                  projectById={projectById}
-                  visibleWeekNrs={visibleWeekNrs}
-                  jaar={jaar}
-                  currentISO={currentISO}
-                  isTodayCol={isTodayCol}
-                  totalGridWidth={totalGridWidth}
-                  onProjectClick={navigateToProject}
-                />
-              ))}
+              <div
+                style={{
+                  maxHeight: montageOpen ? 2000 : 0,
+                  opacity: montageOpen ? 1 : 0,
+                  overflow: "hidden",
+                  transition: "max-height 0.2s ease, opacity 0.15s ease",
+                }}
+              >
+                {montageMonteurs.map((m) => (
+                  <MonteurCellsRow
+                    key={m.id}
+                    monteur={m}
+                    segments={monteurSegments(m.id)}
+                    projectById={projectById}
+                    visibleWeekNrs={visibleWeekNrs}
+                    jaar={jaar}
+                    currentISO={currentISO}
+                    isTodayCol={isTodayCol}
+                    totalGridWidth={totalGridWidth}
+                    onProjectClick={navigateToProject}
+                  />
+                ))}
+              </div>
               {monteurs.length === 0 && (
                 <div style={{ height: 60, width: totalGridWidth }} />
               )}
