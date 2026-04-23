@@ -372,7 +372,7 @@ export default function Overzicht() {
       }
     }
     return out;
-  }, [scale, startWeek, jaar, currentISO]);
+  }, [scale, startWeek, jaar, currentISO, weeksToShow]);
 
   // (cellW for jaar uses viewport-derived width; declared below)
 
