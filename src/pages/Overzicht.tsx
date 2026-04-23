@@ -984,8 +984,12 @@ export default function Overzicht() {
         </span>
       </div>
 
+      {/* Dev: raster integriteits-check */}
+      <RasterCheck />
+
       {/* Main grid container — single scroll wrapper */}
       <div
+        id="overzicht-grid-root"
         className="overflow-hidden rounded-lg border"
         style={{
           borderColor: "rgba(255,255,255,0.08)",
