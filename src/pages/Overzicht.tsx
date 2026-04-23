@@ -1904,6 +1904,7 @@ function MonteurCellsRow({
   projectById,
   slots,
   cellW,
+  scale,
   totalGridWidth,
   onProjectClick,
 }: {
@@ -1912,10 +1913,12 @@ function MonteurCellsRow({
   projectById: Map<string, Project>;
   slots: Slot[];
   cellW: number;
+  scale: Scale;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
 }) {
   const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
+  const isJaar = scale === "jaar";
   return (
     <div
       className="relative"
@@ -1972,6 +1975,51 @@ function MonteurCellsRow({
           );
         }
         const p = s.projectId ? projectById.get(s.projectId) : null;
+
+        // ===== Jaar scale: pill spans the full month column(s) =====
+        // Each segment is already a maximal consecutive span (gaps split
+        // segments), so the segment's first column always has a "previous
+        // month not planned" left-edge and its last column a "next month
+        // not planned" right-edge → fully rounded.
+        if (isJaar) {
+          const projCount = s.projectIds.length;
+          const label =
+            projCount > 1 ? `${projCount} proj.` : (p?.case_nummer ?? "");
+          return (
+            <div
+              key={i}
+              onClick={() => s.projectId && onProjectClick(s.projectId)}
+              className="absolute flex cursor-pointer items-center justify-center"
+              title={
+                projCount > 1
+                  ? s.projectIds
+                      .map((pid) => projectById.get(pid)?.case_nummer ?? pid.slice(0, 6))
+                      .join(", ")
+                  : p?.case_nummer
+                    ? `${p.case_nummer} — ${p.station_naam ?? ""}`
+                    : ""
+              }
+              style={{
+                left: left + 3,
+                width: width - 6,
+                top: 8,
+                bottom: 8,
+                height: ROW_H_MONTEUR - 16,
+                background: "rgba(63,255,139,0.85)",
+                color: "#0a1a30",
+                fontSize: 9,
+                fontWeight: 700,
+                borderRadius: 4,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                padding: "0 4px",
+              }}
+            >
+              {label}
+            </div>
+          );
+        }
+
         return (
           <div
             key={i}
