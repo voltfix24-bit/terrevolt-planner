@@ -18,13 +18,14 @@ import {
 // ============== Constants ==============
 const SIDEBAR_W = 260;
 const SIDEBAR_W_COLLAPSED = 48;
-const ROW_H_MONTEUR = 44;
+const ROW_H_MONTEUR = 52;
 const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
 const DAYS_PER_WEEK = 5;
 const PILL_H_MONTEUR = 26;
 const PILL_H_PROJECT = 22;
+const BESCHIKBAAR_W = 40; // trailing in-row column showing vrije dagen number
 
 // Border tokens — applied to EVERY cell so the raster is always visible
 const BORDER_CELL_RIGHT = "1px solid rgba(255,255,255,0.06)";
@@ -32,6 +33,9 @@ const BORDER_CELL_BOTTOM = "1px solid rgba(255,255,255,0.04)";
 const BORDER_GROUP_RIGHT = "1px solid rgba(255,255,255,0.12)";
 const BG_CURRENT_GROUP = "rgba(63,255,139,0.02)";
 const BG_TODAY = "rgba(63,255,139,0.04)";
+const BG_FEESTDAG = "rgba(167, 139, 250, 0.08)";
+const BG_FEESTDAG_BODY = "rgba(167, 139, 250, 0.06)";
+const BORDER_FEESTDAG = "1px solid rgba(167, 139, 250, 0.18)";
 
 // Scale config
 type Scale = "maand" | "kwartaal" | "jaar";
@@ -66,6 +70,13 @@ interface Project {
   status: Status | null;
   jaar: number | null;
   created_at: string | null;
+  straat: string | null;
+  stad: string | null;
+}
+
+interface Feestdag {
+  datum: string;
+  naam: string;
 }
 
 interface Week {
@@ -121,11 +132,8 @@ interface Slot {
   // tint hints
   isCurrentGroup: boolean;
   isToday: boolean;
-}
-
-// ============== Helpers ==============
-function dayKey(week_nr: number, dag_index: number): string {
-  return `${week_nr}-${dag_index}`;
+  // primary date for this slot (used for feestdag detection in maand scale)
+  date?: Date;
 }
 
 function getCurrentISOWeek(): { week: number; year: number } {
@@ -158,6 +166,20 @@ function statusColor(status: Status | null): { bg: string; text: string; label: 
     case "concept":
     default:
       return { bg: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.7)", label: "Concept" };
+  }
+}
+
+function projectStatusBorderLeft(status: Status | null): string {
+  switch (status) {
+    case "gepland":
+      return "3px solid #feb300";
+    case "in_uitvoering":
+      return "3px solid #3fff8b";
+    case "afgerond":
+      return "3px solid rgba(255,255,255,0.15)";
+    case "concept":
+    default:
+      return "3px dashed rgba(255,255,255,0.2)";
   }
 }
 
@@ -228,6 +250,7 @@ export default function Overzicht() {
   const [cellen, setCellen] = useState<Cel[]>([]);
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
   const [celMonteurs, setCelMonteurs] = useState<CelMonteur[]>([]);
+  const [feestdagen, setFeestdagen] = useState<Feestdag[]>([]);
 
   const [medewerkersOpen, setMedewerkersOpen] = useState(true);
   const [schakelOpen, setSchakelOpen] = useState(true);
@@ -272,7 +295,7 @@ export default function Overzicht() {
   const weeksToShow = useMemo(() => {
     if (scale !== "maand") return 5;
     const sidebarPx = SIDEBAR_W; // not collapsed-aware: keep stable so scrolling doesn't reflow weeks
-    const available = Math.max(0, viewportW - 220 /* app sidebar */ - sidebarPx - 100 /* beschikbaar */ - 80 /* padding */);
+    const available = Math.max(0, viewportW - 220 /* app sidebar */ - sidebarPx - BESCHIKBAAR_W - 80 /* padding */);
     const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand; // 220
     return Math.max(4, Math.min(16, Math.floor(available / weekPx)));
   }, [scale, viewportW]);
@@ -308,6 +331,7 @@ export default function Overzicht() {
             isLastInGroup: d === DAYS_PER_WEEK - 1,
             isCurrentGroup: isCurrentWeek,
             isToday,
+            date,
           });
         }
       }
@@ -384,6 +408,7 @@ export default function Overzicht() {
     return Math.round(Math.min(110, Math.max(70, ideal)));
   }, [scale, viewportW]);
   const totalGridWidth = slots.length * cellW;
+  const bodyRowW = totalGridWidth + BESCHIKBAAR_W;
 
   const visibleWeekNrSet = useMemo(() => {
     const s = new Set<number>();
@@ -405,7 +430,7 @@ export default function Overzicht() {
     let cancelled = false;
     (async () => {
       const [pRes, wRes, aRes, cRes, mRes, cmRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
+        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, straat, stad").order("created_at", { ascending: true }),
         supabase.from("project_weken").select("id, project_id, week_nr, positie"),
         supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
         supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -422,6 +447,44 @@ export default function Overzicht() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Fetch feestdagen for visible year ± 1
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("feestdagen")
+        .select("datum, naam")
+        .in("jaar", [jaar - 1, jaar, jaar + 1]);
+      if (cancelled) return;
+      setFeestdagen((data ?? []) as Feestdag[]);
+    })();
+    return () => { cancelled = true; };
+  }, [jaar]);
+
+  const feestdagSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const f of feestdagen) s.add(f.datum);
+    return s;
+  }, [feestdagen]);
+
+  const feestdagNaamMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of feestdagen) m.set(f.datum, f.naam);
+    return m;
+  }, [feestdagen]);
+
+  // slotIndex → feestdag naam (alleen wanneer slot exact 1 dag dekt, d.w.z. maand-scale)
+  const feestdagSlots = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const s of slots) {
+      if (!s.date) continue;
+      const k = dateKey(s.date);
+      if (feestdagSet.has(k)) m.set(s.index, feestdagNaamMap.get(k) ?? "Feestdag");
+    }
+    return m;
+  }, [slots, feestdagSet, feestdagNaamMap]);
+
 
   // Maps
   const projectById = useMemo(() => {
@@ -686,7 +749,22 @@ export default function Overzicht() {
   // Vrije dagen per monteur in zichtbare periode (totaal werkdagen − dagen met inplanning)
   const monteurVrijeDagen = useMemo(() => {
     const map = new Map<string, number>();
-    const totalDays = visibleWeekNrSet.size * 5;
+
+    // Build list of working dates in the visible range, excluding feestdagen.
+    // dateKey -> { wnr, dag } so we can match planning cells back to a date.
+    const workingDates = new Map<string, { wnr: number; dag: number }>();
+    for (const wnr of visibleWeekNrSet) {
+      const monday = getMondayOfWeek(wnr, jaar);
+      for (let d = 0; d < 5; d++) {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + d);
+        const k = dateKey(date);
+        if (feestdagSet.has(k)) continue;
+        workingDates.set(k, { wnr, dag: d });
+      }
+    }
+    const totalAvailable = workingDates.size;
+
     for (const m of monteurs) {
       const planned = new Set<string>();
       for (const cel of cellen) {
@@ -695,14 +773,18 @@ export default function Overzicht() {
         if (!week) continue;
         if (!visibleWeekNrSet.has(week.week_nr)) continue;
         const mids = monteurIdsByCel.get(cel.id) ?? [];
-        if (mids.includes(m.id)) {
-          planned.add(`${week.week_nr}-${cel.dag_index}`);
-        }
+        if (!mids.includes(m.id)) continue;
+        const monday = getMondayOfWeek(week.week_nr, jaar);
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + cel.dag_index);
+        const k = dateKey(date);
+        if (feestdagSet.has(k)) continue;
+        planned.add(k);
       }
-      map.set(m.id, totalDays - planned.size);
+      map.set(m.id, totalAvailable - planned.size);
     }
     return map;
-  }, [monteurs, visibleWeekNrSet, cellen, weekById, monteurIdsByCel]);
+  }, [monteurs, visibleWeekNrSet, jaar, cellen, weekById, monteurIdsByCel, feestdagSet]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
@@ -945,30 +1027,58 @@ export default function Overzicht() {
           {slots.map((s) => {
             const isCurrent = s.isCurrentGroup;
             const isLastGroup = s.isLastInGroup;
+            const feestNaam = feestdagSlots.get(s.index);
+            const isFeest = !!feestNaam;
             return (
               <div
                 key={s.index}
                 className="flex flex-col items-center justify-center"
+                title={isFeest ? feestNaam : undefined}
                 style={{
                   width: cellW,
                   borderRight: isLastGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
                   borderBottom: BORDER_CELL_BOTTOM,
-                  background: s.isToday
-                    ? BG_TODAY
-                    : isCurrent
-                      ? BG_CURRENT_GROUP
-                      : undefined,
+                  borderTop: isFeest ? "2px solid rgba(167, 139, 250, 0.5)" : undefined,
+                  background: isFeest
+                    ? BG_FEESTDAG
+                    : s.isToday
+                      ? BG_TODAY
+                      : isCurrent
+                        ? BG_CURRENT_GROUP
+                        : undefined,
                 }}
               >
-                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider"
+                  style={{ color: isFeest ? "#a78bfa" : undefined }}
+                >
                   {s.primaryLabel}
                 </span>
                 {s.secondaryLabel && (
-                  <span className="text-[9px] text-muted-foreground/70 tabular-nums">
+                  <span
+                    className="text-[9px] tabular-nums"
+                    style={{ color: isFeest ? "#a78bfa" : undefined }}
+                  >
                     {s.secondaryLabel}
                   </span>
                 )}
-                {s.isToday && (
+                {isFeest && (
+                  <span
+                    style={{
+                      fontSize: 7,
+                      color: "#a78bfa",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      display: "block",
+                      lineHeight: 1,
+                      marginTop: 1,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Feestdag
+                  </span>
+                )}
+                {s.isToday && !isFeest && (
                   <div
                     style={{
                       width: 4, height: 4, borderRadius: "50%",
@@ -1137,33 +1247,6 @@ export default function Overzicht() {
           >
             {renderHeader()}
           </div>
-          {/* Sticky right "Beschikbaar" header cell */}
-          <div
-            style={{
-              width: 100,
-              flexShrink: 0,
-              height: HEADER_H,
-              backgroundColor: "rgba(10, 26, 48, 0.97)",
-              borderLeft: "1px solid rgba(255,255,255,0.08)",
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "center",
-              paddingBottom: 6,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                color: "rgba(255,255,255,0.3)",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-              }}
-            >
-              Beschikbaar
-            </span>
-          </div>
         </div>
 
         {/* ====== Scrollable body (vertical) ====== */}
@@ -1258,7 +1341,7 @@ export default function Overzicht() {
                 }}
               >
                 {schakelMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
+                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} vrijeDagen={monteurVrijeDagen.get(m.id) ?? 0} />
                 ))}
               </div>
 
@@ -1300,7 +1383,7 @@ export default function Overzicht() {
                 }}
               >
                 {montageMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
+                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} vrijeDagen={monteurVrijeDagen.get(m.id) ?? 0} />
                 ))}
               </div>
 
@@ -1547,7 +1630,7 @@ export default function Overzicht() {
             <div
               style={{
                 height: 32,
-                width: totalGridWidth,
+                width: bodyRowW,
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.02)",
               }}
@@ -1564,7 +1647,7 @@ export default function Overzicht() {
               {schakelMonteurs.length > 0 && (
                 <div
                   style={{
-                    height: 28, width: totalGridWidth,
+                    height: 28, width: bodyRowW,
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
@@ -1589,13 +1672,17 @@ export default function Overzicht() {
                     scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
+                    feestdagSlots={feestdagSlots}
+                    vrijeDagen={
+                      monteurVrijeDagen.get(m.id) ?? 0
+                    }
                   />
                 ))}
               </div>
               {montageMonteurs.length > 0 && (
                 <div
                   style={{
-                    height: 28, width: totalGridWidth,
+                    height: 28, width: bodyRowW,
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
@@ -1620,11 +1707,15 @@ export default function Overzicht() {
                     scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
+                    feestdagSlots={feestdagSlots}
+                    vrijeDagen={
+                      monteurVrijeDagen.get(m.id) ?? 0
+                    }
                   />
                 ))}
               </div>
               {monteurs.length === 0 && (
-                <div style={{ height: 60, width: totalGridWidth }} />
+                <div style={{ height: 60, width: bodyRowW }} />
               )}
             </div>
 
@@ -1632,7 +1723,7 @@ export default function Overzicht() {
             <div
               style={{
                 height: 8,
-                width: totalGridWidth,
+                width: bodyRowW,
                 background: "transparent",
                 borderTop: "2px solid rgba(255,255,255,0.06)",
                 marginTop: 4,
@@ -1642,7 +1733,7 @@ export default function Overzicht() {
             {/* Projecten section header spacer */}
             <div
               style={{
-                height: 32, width: totalGridWidth,
+                height: 32, width: bodyRowW,
                 paddingTop: 4,
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.03)",
@@ -1658,7 +1749,7 @@ export default function Overzicht() {
               }}
             >
               {visibleProjecten.length === 0 && (
-                <div style={{ height: 60, width: totalGridWidth }} />
+                <div style={{ height: 60, width: bodyRowW }} />
               )}
 
               {visibleProjecten.map((p) => {
@@ -1674,12 +1765,13 @@ export default function Overzicht() {
                       onClick={() => navigateToProject(p.id)}
                       className="relative cursor-pointer hover:bg-white/[0.02]"
                       style={{
-                        width: totalGridWidth,
+                        width: bodyRowW,
                         height: ROW_H_PROJECT,
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        borderLeft: projectStatusBorderLeft(p.status),
                       }}
                     >
-                      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} />
+                      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} feestdagSlots={feestdagSlots} trailingW={BESCHIKBAAR_W} />
                       {segs.map((s, i) => {
                         const isJaar = scale === "jaar";
                         // Jaar: pill spans the full month column(s); other
@@ -1792,6 +1884,8 @@ export default function Overzicht() {
                           totalGridWidth={totalGridWidth}
                           isLast={a === acts[acts.length - 1]}
                           onClick={() => navigateToProject(p.id)}
+                          feestdagSlots={feestdagSlots}
+                          trailingW={BESCHIKBAAR_W}
                         />
                       ))}
                   </div>
@@ -1800,128 +1894,62 @@ export default function Overzicht() {
             </div>
           </div>
 
-          {/* ====== Sticky right "Beschikbaar" column (medewerkers only) ====== */}
-          <div
-            style={{
-              width: 100,
-              flexShrink: 0,
-              borderLeft: "1px solid rgba(255,255,255,0.08)",
-              backgroundColor: "rgba(10, 26, 48, 0.97)",
-            }}
-          >
-            {/* Medewerkers section header spacer (32px) */}
-            <div
-              style={{
-                height: 32,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.02)",
-              }}
-            />
-            <div
-              style={{
-                maxHeight: medewerkersOpen ? 4000 : 0,
-                opacity: medewerkersOpen ? 1 : 0,
-                overflow: "hidden",
-                transition: "max-height 0.2s ease, opacity 0.15s ease",
-              }}
-            >
-              {schakelMonteurs.length > 0 && (
-                <div
-                  style={{
-                    height: 28,
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  maxHeight: schakelOpen ? 4000 : 0,
-                  opacity: schakelOpen ? 1 : 0,
-                  overflow: "hidden",
-                  transition: "max-height 0.2s ease, opacity 0.15s ease",
-                }}
-              >
-                {schakelMonteurs.map((m) => (
-                  <BeschikbaarCell
-                    key={m.id}
-                    vrijeDagen={
-                      monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5
-                    }
-                  />
-                ))}
-              </div>
-              {montageMonteurs.length > 0 && (
-                <div
-                  style={{
-                    height: 28,
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  maxHeight: montageOpen ? 4000 : 0,
-                  opacity: montageOpen ? 1 : 0,
-                  overflow: "hidden",
-                  transition: "max-height 0.2s ease, opacity 0.15s ease",
-                }}
-              >
-                {montageMonteurs.map((m) => (
-                  <BeschikbaarCell
-                    key={m.id}
-                    vrijeDagen={
-                      monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5
-                    }
-                  />
-                ))}
-              </div>
-              {monteurs.length === 0 && <div style={{ height: 60 }} />}
-            </div>
-            {/* Separator + projecten section: leeg, alleen hoogtes om uit te lijnen */}
-            <div
-              style={{
-                height: 8,
-                borderTop: "2px solid rgba(255,255,255,0.06)",
-                marginTop: 4,
-              }}
-            />
-            <div
-              style={{
-                height: 32,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-              }}
-            />
-            <div
-              style={{
-                maxHeight: projectenOpen ? 99999 : 0,
-                opacity: projectenOpen ? 1 : 0,
-                overflow: "hidden",
-                transition: "max-height 0.25s ease, opacity 0.15s ease",
-              }}
-            >
-              {visibleProjecten.length === 0 && <div style={{ height: 60 }} />}
-              {visibleProjecten.map((p) => {
-                const expanded = expandedProjects.has(p.id);
-                const acts = activiteitenByProject.get(p.id) ?? [];
-                const totalH =
-                  ROW_H_PROJECT +
-                  (expanded ? acts.length * ROW_H_ACTIVITEIT : 0);
-                return (
-                  <div
-                    key={p.id}
-                    style={{
-                      height: totalH,
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
         </div>
+        </div>
+
+        {/* ====== Legenda ====== */}
+        <div
+          style={{
+            padding: "8px 20px",
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 20,
+            flexShrink: 0,
+            backgroundColor: "rgba(10, 26, 48, 0.6)",
+          }}
+        >
+          {[
+            { color: "#3fff8b", label: "Ingepland" },
+            { color: "#a78bfa", label: "Feestdag (NL)" },
+            { color: "#ef4444", label: "Dubbel gepland" },
+            {
+              color: "transparent",
+              label: "Vrij",
+              border: "1px solid rgba(255,255,255,0.2)",
+            },
+          ].map(({ color, label, border }) => (
+            <div
+              key={label}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 2,
+                  backgroundColor: color,
+                  border: border ?? "none",
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.35)",
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                  fontWeight: 600,
+                }}
+              >
+                {label}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1931,68 +1959,42 @@ export default function Overzicht() {
 
 // ============== Sub-components ==============
 
-function BeschikbaarCell({ vrijeDagen }: { vrijeDagen: number }) {
-  let badgeStyle: React.CSSProperties;
-  let label: string;
-  if (vrijeDagen <= 0) {
-    label = "Vol";
-    badgeStyle = {
+function vrijeDagenBadgeStyle(vrijeDagen: number): React.CSSProperties {
+  if (vrijeDagen === 0) {
+    return {
       background: "rgba(254,179,0,0.2)",
       color: "#feb300",
       border: "1px solid rgba(254,179,0,0.3)",
     };
-  } else if (vrijeDagen <= 3) {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
+  }
+  if (vrijeDagen <= 3) {
+    return {
       background: "rgba(254,179,0,0.15)",
       color: "#feb300",
       border: "1px solid rgba(254,179,0,0.25)",
     };
-  } else {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
-      background: "rgba(63,255,139,0.12)",
-      color: "#3fff8b",
-      border: "1px solid rgba(63,255,139,0.2)",
-    };
   }
-  return (
-    <div
-      style={{
-        height: ROW_H_MONTEUR,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
-      }}
-    >
-      <span
-        style={{
-          ...badgeStyle,
-          fontSize: 10,
-          fontWeight: 700,
-          fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-          padding: "3px 8px",
-          borderRadius: 999,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
+  return {
+    background: "rgba(63,255,139,0.12)",
+    color: "#3fff8b",
+    border: "1px solid rgba(63,255,139,0.2)",
+  };
 }
 
 function MonteurSidebarRow({
   monteur,
   collapsed = false,
+  vrijeDagen,
 }: {
   monteur: Monteur;
   collapsed?: boolean;
+  vrijeDagen: number;
 }) {
   const isSchakel = monteur.type === "schakelmonteur";
   const ms = monteur.aanwijzing_ms;
   const msStyle = msBadgeStyle(ms);
+  const badgeStyle = vrijeDagenBadgeStyle(vrijeDagen);
+  const badgeLabel = vrijeDagen === 0 ? "Vol" : `${vrijeDagen}d vrij`;
   return (
     <div
       className="flex items-center gap-2"
@@ -2026,13 +2028,30 @@ function MonteurSidebarRow({
       </div>
       {!collapsed && (
         <>
-          <span
-            className="truncate text-[13px] font-semibold text-foreground"
-            style={{ maxWidth: 160 }}
-            title={monteur.naam}
-          >
-            {monteur.naam}
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+            <span
+              className="truncate text-[13px] font-semibold text-foreground"
+              style={{ maxWidth: 160, lineHeight: 1.1 }}
+              title={monteur.naam}
+            >
+              {monteur.naam}
+            </span>
+            <span
+              style={{
+                ...badgeStyle,
+                fontSize: 9,
+                fontWeight: 700,
+                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                padding: "1px 7px",
+                borderRadius: 999,
+                display: "inline-block",
+                marginTop: 2,
+                width: "fit-content",
+              }}
+            >
+              {badgeLabel}
+            </span>
+          </div>
           {ms && msStyle && (
             <span
               className="ml-auto shrink-0"
@@ -2052,33 +2071,68 @@ function MonteurSidebarRow({
   );
 }
 
-// Renders a row of empty raster cells (always visible borders)
+// Renders a row of empty raster cells (always visible borders).
+// `feestdagSlots` highlights specific slot indices as feestdag.
+// `trailingW` (optional) adds an empty trailing column (used to align with the
+// vrije-dagen badge column on monteur rows).
 function EmptyCellsRow({
-  slots, cellW, rowHeight,
-}: { slots: Slot[]; cellW: number; rowHeight: number }) {
+  slots,
+  cellW,
+  rowHeight,
+  feestdagSlots,
+  trailingW = 0,
+}: {
+  slots: Slot[];
+  cellW: number;
+  rowHeight: number;
+  feestdagSlots?: Map<number, string>;
+  trailingW?: number;
+}) {
   return (
-    <div className="flex" style={{ width: slots.length * cellW, height: rowHeight }}>
-      {slots.map((s) => (
+    <div
+      className="flex"
+      style={{ width: slots.length * cellW + trailingW, height: rowHeight }}
+    >
+      {slots.map((s) => {
+        const isFeest = !!feestdagSlots?.has(s.index);
+        return (
+          <div
+            key={s.index}
+            data-grid-cell="empty"
+            data-slot={s.index}
+            data-today={s.isToday ? "1" : "0"}
+            data-current-group={s.isCurrentGroup ? "1" : "0"}
+            data-last-in-group={s.isLastInGroup ? "1" : "0"}
+            style={{
+              width: cellW,
+              height: rowHeight,
+              borderRight: isFeest
+                ? BORDER_FEESTDAG
+                : s.isLastInGroup
+                  ? BORDER_GROUP_RIGHT
+                  : BORDER_CELL_RIGHT,
+              borderBottom: BORDER_CELL_BOTTOM,
+              background: isFeest
+                ? BG_FEESTDAG_BODY
+                : s.isToday
+                  ? BG_TODAY
+                  : s.isCurrentGroup
+                    ? BG_CURRENT_GROUP
+                    : "transparent",
+            }}
+          />
+        );
+      })}
+      {trailingW > 0 && (
         <div
-          key={s.index}
-          data-grid-cell="empty"
-          data-slot={s.index}
-          data-today={s.isToday ? "1" : "0"}
-          data-current-group={s.isCurrentGroup ? "1" : "0"}
-          data-last-in-group={s.isLastInGroup ? "1" : "0"}
           style={{
-            width: cellW,
+            width: trailingW,
             height: rowHeight,
-            borderRight: s.isLastInGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
+            borderLeft: "1px solid rgba(255,255,255,0.06)",
             borderBottom: BORDER_CELL_BOTTOM,
-            background: s.isToday
-              ? BG_TODAY
-              : s.isCurrentGroup
-                ? BG_CURRENT_GROUP
-                : "transparent",
           }}
         />
-      ))}
+      )}
     </div>
   );
 }
@@ -2092,6 +2146,8 @@ function MonteurCellsRow({
   scale,
   totalGridWidth,
   onProjectClick,
+  feestdagSlots,
+  vrijeDagen,
 }: {
   monteur: Monteur;
   segments: { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean }[];
@@ -2101,6 +2157,8 @@ function MonteurCellsRow({
   scale: Scale;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
+  feestdagSlots: Map<number, string>;
+  vrijeDagen: number;
 }) {
   const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
   const isJaar = scale === "jaar";
@@ -2109,11 +2167,33 @@ function MonteurCellsRow({
       className="relative"
       style={{
         height: ROW_H_MONTEUR,
-        width: totalGridWidth,
+        width: totalGridWidth + BESCHIKBAAR_W,
       }}
     >
-      {/* Background raster */}
-      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_MONTEUR} />
+      {/* Background raster (incl. trailing badge column) */}
+      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_MONTEUR} feestdagSlots={feestdagSlots} trailingW={BESCHIKBAAR_W} />
+
+      {/* Trailing vrije dagen number */}
+      <div
+        style={{
+          position: "absolute",
+          left: totalGridWidth,
+          top: 0,
+          width: BESCHIKBAAR_W,
+          height: ROW_H_MONTEUR,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 13,
+          fontWeight: 700,
+          color: vrijeDagen === 0 ? "#feb300" : "rgba(255,255,255,0.4)",
+          fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+          pointerEvents: "none",
+        }}
+        title={`${vrijeDagen} vrije dagen`}
+      >
+        {vrijeDagen}
+      </div>
 
       {/* Segment overlays */}
       {segments.map((s, i) => {
@@ -2241,6 +2321,8 @@ function ActiviteitCellsRow({
   totalGridWidth,
   isLast: isLastRow,
   onClick,
+  feestdagSlots,
+  trailingW = 0,
 }: {
   activiteit: Activiteit;
   dayCelMap: Map<string, Cel> | undefined;
@@ -2252,13 +2334,15 @@ function ActiviteitCellsRow({
   totalGridWidth: number;
   isLast: boolean;
   onClick: () => void;
+  feestdagSlots: Map<number, string>;
+  trailingW?: number;
 }) {
   return (
     <div
       onClick={onClick}
       className="flex cursor-pointer hover:bg-white/[0.03]"
       style={{
-        width: totalGridWidth,
+        width: totalGridWidth + trailingW,
         height: ROW_H_ACTIVITEIT,
         borderBottom: isLastRow
           ? "2px solid rgba(255,255,255,0.06)"
@@ -2308,13 +2392,19 @@ function ActiviteitCellsRow({
             style={{
               width: cellW,
               height: ROW_H_ACTIVITEIT,
-              borderRight: s.isLastInGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
+              borderRight: feestdagSlots.has(s.index)
+                ? BORDER_FEESTDAG
+                : s.isLastInGroup
+                  ? BORDER_GROUP_RIGHT
+                  : BORDER_CELL_RIGHT,
               borderBottom: BORDER_CELL_BOTTOM,
               background: hasConflict
                 ? "rgba(239,68,68,0.18)"
                 : firstColorHex
                   ? hexToRgba(firstColorHex, 0.45)
-                  : (todayBg ?? groupBg),
+                  : feestdagSlots.has(s.index)
+                    ? BG_FEESTDAG_BODY
+                    : (todayBg ?? groupBg),
               borderLeft: hasConflict
                 ? "2px solid #ef4444"
                 : firstColorHex
@@ -2390,7 +2480,29 @@ function ActiviteitCellsRow({
           </div>
         );
       })}
+      {trailingW > 0 && (
+        <div
+          style={{
+            width: trailingW,
+            height: ROW_H_ACTIVITEIT,
+            borderLeft: "1px solid rgba(255,255,255,0.06)",
+          }}
+        />
+      )}
     </div>
   );
+}
+
+// ============== Helpers ==============
+function dayKey(week_nr: number, dag_index: number): string {
+  return `${week_nr}-${dag_index}`;
+}
+
+function dateKey(d: Date): string {
+  // Local-date YYYY-MM-DD (avoids UTC offset issues compared to toISOString)
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
