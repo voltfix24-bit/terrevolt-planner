@@ -545,6 +545,7 @@ export default function Overzicht() {
                     borderRight: isLastOfWeek
                       ? "1px solid rgba(255,255,255,0.1)"
                       : "1px solid rgba(255,255,255,0.04)",
+                    background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.03)" : undefined,
                   }}
                 />
               );
