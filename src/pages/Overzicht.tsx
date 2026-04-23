@@ -1012,30 +1012,58 @@ export default function Overzicht() {
           {slots.map((s) => {
             const isCurrent = s.isCurrentGroup;
             const isLastGroup = s.isLastInGroup;
+            const feestNaam = feestdagSlots.get(s.index);
+            const isFeest = !!feestNaam;
             return (
               <div
                 key={s.index}
                 className="flex flex-col items-center justify-center"
+                title={isFeest ? feestNaam : undefined}
                 style={{
                   width: cellW,
                   borderRight: isLastGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
                   borderBottom: BORDER_CELL_BOTTOM,
-                  background: s.isToday
-                    ? BG_TODAY
-                    : isCurrent
-                      ? BG_CURRENT_GROUP
-                      : undefined,
+                  borderTop: isFeest ? "2px solid rgba(167, 139, 250, 0.5)" : undefined,
+                  background: isFeest
+                    ? BG_FEESTDAG
+                    : s.isToday
+                      ? BG_TODAY
+                      : isCurrent
+                        ? BG_CURRENT_GROUP
+                        : undefined,
                 }}
               >
-                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider"
+                  style={{ color: isFeest ? "#a78bfa" : undefined }}
+                >
                   {s.primaryLabel}
                 </span>
                 {s.secondaryLabel && (
-                  <span className="text-[9px] text-muted-foreground/70 tabular-nums">
+                  <span
+                    className="text-[9px] tabular-nums"
+                    style={{ color: isFeest ? "#a78bfa" : undefined }}
+                  >
                     {s.secondaryLabel}
                   </span>
                 )}
-                {s.isToday && (
+                {isFeest && (
+                  <span
+                    style={{
+                      fontSize: 7,
+                      color: "#a78bfa",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      display: "block",
+                      lineHeight: 1,
+                      marginTop: 1,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Feestdag
+                  </span>
+                )}
+                {s.isToday && !isFeest && (
                   <div
                     style={{
                       width: 4, height: 4, borderRadius: "50%",
