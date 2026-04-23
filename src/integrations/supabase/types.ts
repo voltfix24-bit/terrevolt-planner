@@ -23,6 +23,8 @@ export type Database = {
           min_aanwijzing_ls: string | null
           min_aanwijzing_ms: string | null
           min_personen: number | null
+          min_personen_gekwalificeerd: number | null
+          min_personen_totaal: number | null
           naam: string
           positie: number | null
         }
@@ -34,6 +36,8 @@ export type Database = {
           min_aanwijzing_ls?: string | null
           min_aanwijzing_ms?: string | null
           min_personen?: number | null
+          min_personen_gekwalificeerd?: number | null
+          min_personen_totaal?: number | null
           naam: string
           positie?: number | null
         }
@@ -45,6 +49,8 @@ export type Database = {
           min_aanwijzing_ls?: string | null
           min_aanwijzing_ms?: string | null
           min_personen?: number | null
+          min_personen_gekwalificeerd?: number | null
+          min_personen_totaal?: number | null
           naam?: string
           positie?: number | null
         }
@@ -166,6 +172,8 @@ export type Database = {
           min_aanwijzing_ls: string | null
           min_aanwijzing_ms: string | null
           min_personen: number | null
+          min_personen_gekwalificeerd: number | null
+          min_personen_totaal: number | null
           naam: string
           positie: number | null
           project_id: string | null
@@ -177,6 +185,8 @@ export type Database = {
           min_aanwijzing_ls?: string | null
           min_aanwijzing_ms?: string | null
           min_personen?: number | null
+          min_personen_gekwalificeerd?: number | null
+          min_personen_totaal?: number | null
           naam: string
           positie?: number | null
           project_id?: string | null
@@ -188,6 +198,8 @@ export type Database = {
           min_aanwijzing_ls?: string | null
           min_aanwijzing_ms?: string | null
           min_personen?: number | null
+          min_personen_gekwalificeerd?: number | null
+          min_personen_totaal?: number | null
           naam?: string
           positie?: number | null
           project_id?: string | null

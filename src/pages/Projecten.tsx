@@ -78,6 +78,8 @@ interface ActiviteitType {
   naam: string;
   capaciteit_type: string | null;
   min_personen: number | null;
+  min_personen_totaal: number | null;
+  min_personen_gekwalificeerd: number | null;
   min_aanwijzing_ls: string | null;
   min_aanwijzing_ms: string | null;
   positie: number | null;
@@ -253,6 +255,9 @@ const Projecten = () => {
           naam: t.naam,
           capaciteit_type: t.capaciteit_type,
           min_personen: t.min_personen ?? 1,
+          min_personen_totaal: t.min_personen_totaal ?? t.min_personen ?? 1,
+          min_personen_gekwalificeerd:
+            t.min_personen_gekwalificeerd ?? t.min_personen ?? 1,
           min_aanwijzing_ls: t.min_aanwijzing_ls,
           min_aanwijzing_ms: t.min_aanwijzing_ms,
           positie: idx,
