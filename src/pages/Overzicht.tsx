@@ -1755,6 +1755,13 @@ function ActiviteitCellsRow({
           <div
             key={s.index}
             className="relative"
+            data-grid-cell="activiteit"
+            data-slot={s.index}
+            data-today={s.isToday ? "1" : "0"}
+            data-current-group={s.isCurrentGroup ? "1" : "0"}
+            data-last-in-group={s.isLastInGroup ? "1" : "0"}
+            data-has-conflict={hasConflict ? "1" : "0"}
+            data-has-color={firstColorHex ? "1" : "0"}
             style={{
               width: cellW,
               height: ROW_H_ACTIVITEIT,
