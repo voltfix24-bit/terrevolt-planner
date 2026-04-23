@@ -1126,6 +1126,10 @@ const MonteurAvatar = ({
   size = 20,
   fontSize = 7,
   overlap = false,
+  overlapPx = 5,
+  borderWidth = 1.5,
+  borderColor = "rgba(0,0,0,0.3)",
+  overflowBg = "rgba(255,255,255,0.2)",
 }: {
   naam?: string;
   type?: "schakelmonteur" | "montagemonteur";
@@ -1133,8 +1137,12 @@ const MonteurAvatar = ({
   size?: number;
   fontSize?: number;
   overlap?: boolean;
+  overlapPx?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  overflowBg?: string;
 }) => {
-  let bg = "rgba(255,255,255,0.2)";
+  let bg = overflowBg;
   let color = "white";
   let label = "";
   if (overflow != null) {
@@ -1156,14 +1164,15 @@ const MonteurAvatar = ({
         borderRadius: "50%",
         backgroundColor: bg,
         color,
-        border: "1.5px solid rgba(0,0,0,0.3)",
-        marginLeft: overlap ? -5 : 0,
+        border: `${borderWidth}px solid ${borderColor}`,
+        marginLeft: overlap ? -overlapPx : 0,
         fontSize,
         fontWeight: 700,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
         lineHeight: 1,
+        flexShrink: 0,
       }}
       className="font-display"
     >
@@ -1171,6 +1180,13 @@ const MonteurAvatar = ({
     </span>
   );
 };
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 const CellBox = memo(function CellBox({
   cel,
@@ -1241,21 +1257,31 @@ const CellBox = memo(function CellBox({
   const visibleAvatars = assignedMonteurs.slice(0, 2);
   const overflow = assignedMonteurs.length - visibleAvatars.length;
 
+  const isGeen = activiteit.capaciteit_type === "geen";
+  const filled = !!kleur;
+  const showHoverPlus = !filled && !isGeen;
+
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
       title={hoverTitle}
-      className="relative shrink-0 transition-colors"
+      className={[
+        "group relative shrink-0 transition-colors",
+        showHoverPlus ? "hover:bg-white/[0.03]" : "",
+      ].join(" ")}
       style={{
         width: CELL_W,
         height: CELL_H,
-        backgroundColor: kleur ?? "transparent",
-        border: kleur
-          ? !voldoet
-            ? "2px solid #feb300"
-            : "none"
+        backgroundColor: filled ? hexToRgba(kleur!, 0.35) : "transparent",
+        borderTop: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
+        borderRight: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
+        borderBottom: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
+        borderLeft: filled
+          ? `3px solid ${kleur}`
           : "1px solid rgba(255,255,255,0.06)",
+        outline: filled && !voldoet ? "2px solid #feb300" : undefined,
+        outlineOffset: filled && !voldoet ? "-2px" : undefined,
       }}
     >
       {showAvatars && (
@@ -1265,25 +1291,45 @@ const CellBox = memo(function CellBox({
               key={m.id}
               naam={m.naam}
               type={m.type}
-              size={20}
-              fontSize={7}
+              size={26}
+              fontSize={8}
               overlap={idx > 0}
+              overlapPx={8}
+              borderWidth={2}
+              borderColor="rgba(0,0,0,0.4)"
             />
           ))}
           {overflow > 0 && (
             <MonteurAvatar
               overflow={overflow}
-              size={20}
-              fontSize={7}
+              size={26}
+              fontSize={8}
               overlap
+              overlapPx={8}
+              borderWidth={2}
+              borderColor="rgba(0,0,0,0.4)"
+              overflowBg="rgba(255,255,255,0.15)"
             />
           )}
         </div>
       )}
+      {showHoverPlus && (
+        <span
+          className="pointer-events-none absolute inset-0 flex items-center justify-center text-[16px] opacity-0 transition-opacity group-hover:opacity-100"
+          style={{ color: "rgba(255,255,255,0.2)" }}
+        >
+          +
+        </span>
+      )}
       {!voldoet && cel && (
         <span
-          className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full text-[8px] font-bold"
-          style={{ backgroundColor: "#feb300", color: "#0a1a30" }}
+          className="absolute right-0.5 top-0.5 flex items-center justify-center rounded-full text-[8px] font-bold"
+          style={{
+            width: 14,
+            height: 14,
+            backgroundColor: "#feb300",
+            color: "#0a1a30",
+          }}
         >
           !
         </span>
