@@ -742,6 +742,25 @@ const Plannen = () => {
     return m;
   }, [monteurs]);
 
+  // Unique monteurs that are actually scheduled in any cell of this project,
+  // sorted: schakelmonteurs (amber) first, then montagemonteurs (blue), then by name.
+  const ingeplandeMonteurs = useMemo(() => {
+    const ids = new Set<string>();
+    for (const monteurIds of celMonteurs.values()) {
+      for (const id of monteurIds) ids.add(id);
+    }
+    const list: Monteur[] = [];
+    for (const id of ids) {
+      const m = monteurById.get(id);
+      if (m) list.push(m);
+    }
+    list.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "schakelmonteur" ? -1 : 1;
+      return a.naam.localeCompare(b.naam, "nl");
+    });
+    return list;
+  }, [celMonteurs, monteurById]);
+
   const openCel = useMemo(() => {
     if (!openCellKey) return null;
     const cel = cellen.get(openCellKey);
