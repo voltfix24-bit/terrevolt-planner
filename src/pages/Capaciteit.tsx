@@ -820,6 +820,31 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
 
   const totalGridWidth = visibleDays.length * CELL_W;
 
+  // Precompute per-week day metadata (keys, labels, borders) once.
+  // This is shared across every monteur row, so we build it once per
+  // visibleWeeks change rather than per-row per-render.
+  const weekStructures = useMemo<WeekStructure[]>(() => {
+    return visibleWeeks.map((w) => {
+      const days: WeekStructure["days"] = [];
+      for (let d = 0; d < 5; d++) {
+        const date = addDays(w.monday, d);
+        days.push({
+          dayIdx: d,
+          dateKey: isoKey(date),
+          dayLabel: DAG_FULL[d],
+          dateLabel: fmtDayMonth(date),
+          isWeekEnd: d === 4,
+        });
+      }
+      return { weekKey: `${w.jaar}-${w.week}`, days };
+    });
+  }, [visibleWeeks]);
+
+  const handleNavigate = useCallback(
+    (id: string) => navigate(`/plannen?project=${id}`),
+    [navigate]
+  );
+
   if (monteurs.length === 0) {
     return (
       <div className="surface-card px-6 py-16 text-center text-sm text-muted-foreground">
@@ -828,166 +853,16 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
     );
   }
 
-  const renderRow = (m: Monteur) => {
-    const days = planMap[m.id] ?? {};
-    return (
-      <div
-        key={m.id}
-        className="flex border-b transition-colors hover:bg-white/[0.04]"
-        style={{ borderColor: "rgba(255,255,255,0.06)", height: CELL_H }}
-      >
-        <div
-          className="sticky left-0 z-10 flex items-center px-3"
-          style={{
-            width: SIDEBAR_W,
-            minWidth: SIDEBAR_W,
-            backgroundColor: "hsl(var(--card))",
-            borderRight: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          <div className="truncate font-display text-sm font-semibold text-foreground">
-            {m.naam}
-          </div>
-        </div>
-        <div className="flex">
-          {visibleWeeks.map((w, wi) => {
-            // Build 5 slots for this week
-            type Slot =
-              | { kind: "vrij" }
-              | { kind: "single"; projectId: string }
-              | { kind: "conflict"; projectIds: string[] };
-            const slots: Slot[] = [];
-            for (let d = 0; d < 5; d++) {
-              const date = addDays(w.monday, d);
-              const ids = days[isoKey(date)] ?? [];
-              if (ids.length === 0) slots.push({ kind: "vrij" });
-              else if (ids.length === 1)
-                slots.push({ kind: "single", projectId: ids[0] });
-              else slots.push({ kind: "conflict", projectIds: ids });
-            }
-
-            const items: React.ReactNode[] = [];
-            let i = 0;
-            while (i < 5) {
-              const slot = slots[i];
-              const isLastDay = i === 4;
-              const borderRight = isLastDay
-                ? "1px solid rgba(255,255,255,0.12)"
-                : "1px solid rgba(255,255,255,0.04)";
-              const date = addDays(w.monday, i);
-
-              if (slot.kind === "vrij") {
-                items.push(
-                  <div
-                    key={`v-${wi}-${i}`}
-                    title={`${DAG_FULL[i]} ${fmtDayMonth(date)}`}
-                    style={{
-                      width: CELL_W,
-                      height: CELL_H,
-                      borderRight,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  />
-                );
-                i++;
-                continue;
-              }
-
-              if (slot.kind === "conflict") {
-                items.push(
-                  <div
-                    key={`c-${wi}-${i}`}
-                    style={{
-                      width: CELL_W,
-                      height: CELL_H,
-                      borderRight,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <ConflictBlock
-                      projectIds={slot.projectIds}
-                      projects={projects}
-                      onNavigate={(id) => navigate(`/plannen?project=${id}`)}
-                    />
-                  </div>
-                );
-                i++;
-                continue;
-              }
-
-              // single → look ahead for consecutive same project
-              const pid = slot.projectId;
-              let span = 1;
-              while (
-                i + span < 5 &&
-                slots[i + span].kind === "single" &&
-                (slots[i + span] as { kind: "single"; projectId: string })
-                  .projectId === pid
-              ) {
-                span++;
-              }
-              const blockWidth = span * CELL_W - 2;
-              const p = projects[pid];
-              const fullLabel = p?.case_nummer ?? "—";
-              const label =
-                blockWidth > 80 ? fullLabel : fullLabel.slice(0, 6);
-
-              items.push(
-                <div
-                  key={`s-${wi}-${i}`}
-                  style={{
-                    width: span * CELL_W,
-                    height: CELL_H,
-                    borderRight: i + span - 1 === 4
-                      ? "1px solid rgba(255,255,255,0.12)"
-                      : "1px solid rgba(255,255,255,0.04)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 1px",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/plannen?project=${pid}`)}
-                    title={fullLabel}
-                    style={{
-                      width: blockWidth,
-                      height: BLOCK_H,
-                      backgroundColor: "#3fff8b",
-                      color: "#0a1a30",
-                      borderRadius: 6,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      overflow: "hidden",
-                    }}
-                    className="font-display transition-opacity hover:opacity-80"
-                  >
-                    <span className="truncate px-1">{label}</span>
-                  </button>
-                </div>
-              );
-              i += span;
-            }
-
-            return (
-              <div key={`w-${wi}`} className="flex">
-                {items}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
+  const renderRow = (m: Monteur) => (
+    <MonteurRow
+      key={m.id}
+      monteur={m}
+      days={planMap[m.id]}
+      weekStructures={weekStructures}
+      projects={projects}
+      onNavigate={handleNavigate}
+    />
+  );
 
   return (
     <TooltipProvider delayDuration={200}>
