@@ -240,6 +240,24 @@ export default function Overzicht() {
     return m;
   }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet]);
 
+  // dayKey → Set<monteurId> of monteurs that are double-booked on that day
+  const dayConflictMonteurs = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const [mid, byDay] of monteurDayProjects.entries()) {
+      for (const [k, projs] of byDay.entries()) {
+        if (projs.size > 1) {
+          let set = m.get(k);
+          if (!set) {
+            set = new Set();
+            m.set(k, set);
+          }
+          set.add(mid);
+        }
+      }
+    }
+    return m;
+  }, [monteurDayProjects]);
+
   // For project section: project_id → dayKey → activiteit_id → cel
   const projectDayActivities = useMemo(() => {
     const m = new Map<string, Map<string, Map<string, Cel>>>();
