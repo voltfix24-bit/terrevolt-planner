@@ -565,7 +565,24 @@ export default function Overzicht() {
     return out;
   }, [scale, startWeek, jaar, currentISO]);
 
-  const cellW = CELL_W_BY_SCALE[scale];
+  // Track viewport width so jaar-scale can fill the available grid area
+  // (each month gets an equal column, clamped between 70 and 110px).
+  const [viewportW, setViewportW] = useState<number>(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const cellW = useMemo(() => {
+    if (scale !== "jaar") return CELL_W_BY_SCALE[scale];
+    // Approximate available width = viewport minus sidebar minus app chrome.
+    const available = Math.max(0, viewportW - SIDEBAR_W - 280);
+    const ideal = available / 12;
+    return Math.round(Math.min(110, Math.max(70, ideal)));
+  }, [scale, viewportW]);
   const totalGridWidth = slots.length * cellW;
 
   const visibleWeekNrSet = useMemo(() => {
@@ -1513,6 +1530,7 @@ export default function Overzicht() {
                     projectById={projectById}
                     slots={slots}
                     cellW={cellW}
+                    scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
                   />
@@ -1543,6 +1561,7 @@ export default function Overzicht() {
                     projectById={projectById}
                     slots={slots}
                     cellW={cellW}
+                    scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
                   />
@@ -1595,25 +1614,45 @@ export default function Overzicht() {
                     >
                       <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} />
                       {segs.map((s, i) => {
-                        const left = s.startSlot * cellW + 2;
-                        const width = (s.endSlot - s.startSlot + 1) * cellW - 4;
+                        const isJaar = scale === "jaar";
+                        // Jaar: pill spans the full month column(s); other
+                        // scales keep the original 2px inset.
+                        const left = s.startSlot * cellW + (isJaar ? 3 : 2);
+                        const width =
+                          (s.endSlot - s.startSlot + 1) * cellW -
+                          (isJaar ? 6 : 4);
                         const segHasConflict =
                           !!conflictSet &&
                           [...Array(s.endSlot - s.startSlot + 1)].some((_, off) =>
                             conflictSet.has(s.startSlot + off),
                           );
+                        const pillTop = isJaar
+                          ? 11
+                          : (ROW_H_PROJECT - PILL_H_PROJECT) / 2;
+                        const pillHeight = isJaar
+                          ? ROW_H_PROJECT - 22
+                          : PILL_H_PROJECT;
+                        const pillBg = segHasConflict
+                          ? "#ef4444"
+                          : isJaar
+                            ? "rgba(254,179,0,0.8)"
+                            : sc.bg;
                         return (
                           <div
                             key={i}
                             className="absolute flex items-center justify-center px-2"
                             style={{
                               left, width,
-                              top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
-                              height: PILL_H_PROJECT,
-                              background: segHasConflict ? "#ef4444" : sc.bg,
-                              opacity: segHasConflict ? 0.95 : 0.8,
+                              top: pillTop,
+                              height: pillHeight,
+                              background: pillBg,
+                              opacity: segHasConflict ? 0.95 : isJaar ? 1 : 0.8,
                               borderRadius: 4,
-                              color: segHasConflict ? "#ffffff" : sc.text,
+                              color: segHasConflict
+                                ? "#ffffff"
+                                : isJaar
+                                  ? "#0a1a30"
+                                  : sc.text,
                               fontSize: 10, fontWeight: 700,
                               overflow: "hidden", whiteSpace: "nowrap",
                               boxShadow: segHasConflict
@@ -1630,7 +1669,7 @@ export default function Overzicht() {
                                 !
                               </span>
                             )}
-                            {width > 80 && (p.case_nummer ?? "")}
+                            {width > (isJaar ? 50 : 80) && (p.case_nummer ?? "")}
                           </div>
                         );
                       })}
@@ -1885,6 +1924,7 @@ function MonteurCellsRow({
   projectById,
   slots,
   cellW,
+  scale,
   totalGridWidth,
   onProjectClick,
 }: {
@@ -1893,10 +1933,12 @@ function MonteurCellsRow({
   projectById: Map<string, Project>;
   slots: Slot[];
   cellW: number;
+  scale: Scale;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
 }) {
   const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
+  const isJaar = scale === "jaar";
   return (
     <div
       className="relative"
@@ -1953,6 +1995,51 @@ function MonteurCellsRow({
           );
         }
         const p = s.projectId ? projectById.get(s.projectId) : null;
+
+        // ===== Jaar scale: pill spans the full month column(s) =====
+        // Each segment is already a maximal consecutive span (gaps split
+        // segments), so the segment's first column always has a "previous
+        // month not planned" left-edge and its last column a "next month
+        // not planned" right-edge → fully rounded.
+        if (isJaar) {
+          const projCount = s.projectIds.length;
+          const label =
+            projCount > 1 ? `${projCount} proj.` : (p?.case_nummer ?? "");
+          return (
+            <div
+              key={i}
+              onClick={() => s.projectId && onProjectClick(s.projectId)}
+              className="absolute flex cursor-pointer items-center justify-center"
+              title={
+                projCount > 1
+                  ? s.projectIds
+                      .map((pid) => projectById.get(pid)?.case_nummer ?? pid.slice(0, 6))
+                      .join(", ")
+                  : p?.case_nummer
+                    ? `${p.case_nummer} — ${p.station_naam ?? ""}`
+                    : ""
+              }
+              style={{
+                left: left + 3,
+                width: width - 6,
+                top: 8,
+                bottom: 8,
+                height: ROW_H_MONTEUR - 16,
+                background: "rgba(63,255,139,0.85)",
+                color: "#0a1a30",
+                fontSize: 9,
+                fontWeight: 700,
+                borderRadius: 4,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                padding: "0 4px",
+              }}
+            >
+              {label}
+            </div>
+          );
+        }
+
         return (
           <div
             key={i}
