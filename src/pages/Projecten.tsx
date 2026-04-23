@@ -247,10 +247,9 @@ const Projecten = () => {
     setPostcode("");
     setStad("");
     setGemeente("");
+    setSavedLocation(null);
     setModalOpen(true);
   };
-
-  const openEdit = (p: Project) => {
     setEditing(p);
     setCaseNummer(p.case_nummer ?? "");
     setStationNaam(p.station_naam ?? "");
