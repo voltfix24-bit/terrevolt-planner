@@ -8,9 +8,11 @@ import {
   Download,
   FileText,
   GripVertical,
+  History,
   Plus,
   Printer,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
