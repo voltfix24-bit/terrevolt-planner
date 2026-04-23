@@ -234,7 +234,8 @@ export default function Overzicht() {
   const [montageOpen, setMontageOpen] = useState(true);
   const [projectenOpen, setProjectenOpen] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [legendOpen, setLegendOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
