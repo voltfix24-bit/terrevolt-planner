@@ -1616,7 +1616,7 @@ export default function Overzicht() {
             <div
               style={{
                 height: 32,
-                width: totalGridWidth,
+                width: bodyRowW,
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.02)",
               }}
@@ -1633,7 +1633,7 @@ export default function Overzicht() {
               {schakelMonteurs.length > 0 && (
                 <div
                   style={{
-                    height: 28, width: totalGridWidth,
+                    height: 28, width: bodyRowW,
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
@@ -1658,13 +1658,17 @@ export default function Overzicht() {
                     scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
+                    feestdagSlots={feestdagSlots}
+                    vrijeDagen={
+                      monteurVrijeDagen.get(m.id) ?? 0
+                    }
                   />
                 ))}
               </div>
               {montageMonteurs.length > 0 && (
                 <div
                   style={{
-                    height: 28, width: totalGridWidth,
+                    height: 28, width: bodyRowW,
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
@@ -1689,11 +1693,15 @@ export default function Overzicht() {
                     scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
+                    feestdagSlots={feestdagSlots}
+                    vrijeDagen={
+                      monteurVrijeDagen.get(m.id) ?? 0
+                    }
                   />
                 ))}
               </div>
               {monteurs.length === 0 && (
-                <div style={{ height: 60, width: totalGridWidth }} />
+                <div style={{ height: 60, width: bodyRowW }} />
               )}
             </div>
 
@@ -1701,7 +1709,7 @@ export default function Overzicht() {
             <div
               style={{
                 height: 8,
-                width: totalGridWidth,
+                width: bodyRowW,
                 background: "transparent",
                 borderTop: "2px solid rgba(255,255,255,0.06)",
                 marginTop: 4,
@@ -1711,7 +1719,7 @@ export default function Overzicht() {
             {/* Projecten section header spacer */}
             <div
               style={{
-                height: 32, width: totalGridWidth,
+                height: 32, width: bodyRowW,
                 paddingTop: 4,
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.03)",
@@ -1727,7 +1735,7 @@ export default function Overzicht() {
               }}
             >
               {visibleProjecten.length === 0 && (
-                <div style={{ height: 60, width: totalGridWidth }} />
+                <div style={{ height: 60, width: bodyRowW }} />
               )}
 
               {visibleProjecten.map((p) => {
@@ -1743,12 +1751,12 @@ export default function Overzicht() {
                       onClick={() => navigateToProject(p.id)}
                       className="relative cursor-pointer hover:bg-white/[0.02]"
                       style={{
-                        width: totalGridWidth,
+                        width: bodyRowW,
                         height: ROW_H_PROJECT,
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
                       }}
                     >
-                      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} />
+                      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} feestdagSlots={feestdagSlots} trailingW={BESCHIKBAAR_W} />
                       {segs.map((s, i) => {
                         const isJaar = scale === "jaar";
                         // Jaar: pill spans the full month column(s); other
@@ -1861,6 +1869,8 @@ export default function Overzicht() {
                           totalGridWidth={totalGridWidth}
                           isLast={a === acts[acts.length - 1]}
                           onClick={() => navigateToProject(p.id)}
+                          feestdagSlots={feestdagSlots}
+                          trailingW={BESCHIKBAAR_W}
                         />
                       ))}
                   </div>
