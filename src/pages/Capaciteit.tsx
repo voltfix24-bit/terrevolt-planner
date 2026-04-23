@@ -334,6 +334,7 @@ const Capaciteit = () => {
           [
             { id: "monteurs", label: "Monteurs" },
             { id: "tijdlijn", label: "Tijdlijn" },
+            { id: "beschikbaarheid", label: "Beschikbaarheid" },
           ] as const
         ).map((t) => {
           const active = tab === t.id;
