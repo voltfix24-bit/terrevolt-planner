@@ -1384,7 +1384,7 @@ export default function Overzicht() {
           </div>
 
           {/* ====== Single scrollable right area ====== */}
-          <div style={{ flex: 1, overflowX: "auto" }}>
+          <div className="overzicht-scroll" style={{ flex: 1, overflowX: "auto" }}>
             {/* Shared header */}
             <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
               {renderHeader()}
