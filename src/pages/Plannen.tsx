@@ -341,6 +341,8 @@ const Plannen = () => {
       const k = cellKey(activiteit_id, week_id, dag_index);
       const cel = cellen.get(k);
       if (!cel) return;
+      const monteurIds = celMonteurs.get(cel.id) ?? [];
+      pushHistory({ type: "cel_deleted", cel, monteurIds: [...monteurIds] });
       removeCellLocal(activiteit_id, week_id, dag_index);
       setCelMonteurs((prev) => {
         const m = new Map(prev);
@@ -353,8 +355,67 @@ const Plannen = () => {
         loadAll();
       }
     },
-    [cellen, removeCellLocal, loadAll]
+    [cellen, celMonteurs, removeCellLocal, loadAll, pushHistory]
   );
+
+  const updateCellColor = useCallback(
+    async (cel: Cel, kleur_code: string | null) => {
+      pushHistory({ type: "cel_color_changed", cel, prevColor: cel.kleur_code });
+      updateCellLocal({ ...cel, kleur_code });
+      const { error } = await supabase
+        .from("planning_cellen")
+        .update({ kleur_code })
+        .eq("id", cel.id);
+      if (error) toast.error("Kleur opslaan mislukt");
+    },
+    [updateCellLocal, pushHistory]
+  );
+
+  const updateCellNotitie = useCallback(
+    async (cel: Cel, notitie: string) => {
+      pushHistory({ type: "cel_notitie_changed", cel, prevNotitie: cel.notitie });
+      updateCellLocal({ ...cel, notitie });
+      const { error } = await supabase
+        .from("planning_cellen")
+        .update({ notitie })
+        .eq("id", cel.id);
+      if (error) toast.error("Notitie opslaan mislukt");
+    },
+    [updateCellLocal, pushHistory]
+  );
+
+  const addMonteurToCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    setCelMonteurs((prev) => {
+      const m = new Map(prev);
+      const arr = [...(m.get(cel.id) ?? [])];
+      if (!arr.includes(monteur_id)) arr.push(monteur_id);
+      m.set(cel.id, arr);
+      return m;
+    });
+    pushHistory({ type: "monteur_added", cel, monteurId: monteur_id });
+    const { error } = await supabase
+      .from("cel_monteurs")
+      .insert({ cel_id: cel.id, monteur_id });
+    if (error) {
+      toast.error("Monteur toevoegen mislukt");
+    }
+  }, [pushHistory]);
+
+  const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    setCelMonteurs((prev) => {
+      const m = new Map(prev);
+      const arr = (m.get(cel.id) ?? []).filter((x) => x !== monteur_id);
+      m.set(cel.id, arr);
+      return m;
+    });
+    pushHistory({ type: "monteur_removed", cel, monteurId: monteur_id });
+    const { error } = await supabase
+      .from("cel_monteurs")
+      .delete()
+      .eq("cel_id", cel.id)
+      .eq("monteur_id", monteur_id);
+    if (error) toast.error("Monteur verwijderen mislukt");
+  }, [pushHistory]);
 
   const updateCellColor = useCallback(
     async (cel: Cel, kleur_code: string | null) => {
