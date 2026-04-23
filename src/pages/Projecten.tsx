@@ -223,6 +223,10 @@ const Projecten = () => {
     setWerkplanMsr(false);
     setWerkplanLsr(false);
     setNotities("");
+    setStraat("");
+    setPostcode("");
+    setStad("");
+    setGemeente("");
     setModalOpen(true);
   };
 
