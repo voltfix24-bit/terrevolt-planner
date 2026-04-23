@@ -1063,6 +1063,19 @@ const Plannen = () => {
         />
       )}
 
+      {/* History panel */}
+      {historyOpen && (
+        <HistoryPanel
+          history={history}
+          activiteiten={activiteiten}
+          monteurById={monteurById}
+          weken={weken}
+          onClose={() => setHistoryOpen(false)}
+          onClear={() => setHistory([])}
+          onUndoEntry={handleUndoEntry}
+        />
+      )}
+
       {/* Week mgmt modal */}
       <Dialog open={weekModalOpen} onOpenChange={setWeekModalOpen}>
         <DialogContent
