@@ -327,11 +327,12 @@ const Plannen = () => {
       const defaultColor = at?.kleur_default ?? "c3";
       const cel = await ensureCell(activiteit.id, week_id, dag_index, defaultColor);
       if (!cel) return;
+      pushHistory({ type: "cel_created", cel });
       if (activiteit.capaciteit_type === "schakel" || activiteit.capaciteit_type === "montage") {
         setOpenCellKey(cellKey(activiteit.id, week_id, dag_index));
       }
     },
-    [cellen, activiteitTypes, ensureCell]
+    [cellen, activiteitTypes, ensureCell, pushHistory]
   );
 
   const handleCellRightClick = useCallback(
