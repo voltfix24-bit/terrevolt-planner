@@ -586,7 +586,18 @@ const EmptyState = ({
 
 const SIDEBAR_W = 160;
 const CELL_W = 48;
-const CELL_H = 44;
+const CELL_H = 52;
+const BLOCK_H = 40;
+
+const DAG_FULL = ["MA", "DI", "WO", "DO", "VR"] as const;
+
+// Custom scrollbar styles for the timeline scroll areas
+const TIMELINE_SCROLL_STYLES = `
+  .tijdlijn-scroll::-webkit-scrollbar { height: 4px; }
+  .tijdlijn-scroll::-webkit-scrollbar-track { background: transparent; }
+  .tijdlijn-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  .tijdlijn-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+`;
 
 const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
   const navigate = useNavigate();
