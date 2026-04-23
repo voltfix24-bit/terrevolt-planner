@@ -839,7 +839,7 @@ const Plannen = () => {
       return a.naam.localeCompare(b.naam, "nl");
     });
     return list;
-  }, [cellen, celMonteurs, monteurById, monteursFilter]);
+  }, [cellen, celMonteurs, monteurById, monteursFilter, monteursScope, visibleWeekIds]);
 
   // Reset filter wanneer de geselecteerde week niet meer bestaat (bv. na week verwijderen)
   useEffect(() => {
