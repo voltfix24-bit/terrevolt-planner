@@ -170,6 +170,13 @@ const Plannen = () => {
   const [weekModalOpen, setWeekModalOpen] = useState(false);
   const [showAddActiviteit, setShowAddActiviteit] = useState(false);
 
+  // History stack — session only, max 30 entries
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const pushHistory = useCallback((entry: HistoryEntry) => {
+    setHistory((prev) => [...prev.slice(-29), entry]);
+  }, []);
+
   // ---------- data load ----------
   const loadAll = useCallback(async () => {
     if (!projectId) {
