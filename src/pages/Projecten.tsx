@@ -160,6 +160,10 @@ const Projecten = () => {
   const [werkplanMsr, setWerkplanMsr] = useState(false);
   const [werkplanLsr, setWerkplanLsr] = useState(false);
   const [notities, setNotities] = useState("");
+  const [straat, setStraat] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [stad, setStad] = useState("");
+  const [gemeente, setGemeente] = useState("");
 
   const loadAll = async () => {
     setLoading(true);
