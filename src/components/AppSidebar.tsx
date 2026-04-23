@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, Settings, Users, Zap } from "lucide-react";
 
 const navItems = [
@@ -11,6 +11,15 @@ const navItems = [
 ];
 
 export function AppSidebar() {
+  const { pathname } = useLocation();
+
+  // Treat "/" as overzicht (root redirects there) and match nested routes by prefix.
+  const isItemActive = (to: string) => {
+    if (to === "/overzicht" && pathname === "/") return true;
+    if (pathname === to) return true;
+    return pathname.startsWith(to + "/");
+  };
+
   return (
     <aside
       className="fixed left-0 top-0 z-30 flex h-screen w-[220px] flex-col border-r"
@@ -37,38 +46,34 @@ export function AppSidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3">
         <ul className="space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end
-                className={({ isActive }) =>
-                  [
-                    "group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
+          {navItems.map(({ to, label, icon: Icon }) => {
+            const active = isItemActive(to);
+            return (
+              <li key={to}>
+                <NavLink
+                  to={to}
+                  className={[
+                    "group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
-                  ].join(" ")
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={[
-                        "absolute -ml-3 h-5 w-[3px] rounded-r-full transition-all",
-                        isActive ? "bg-primary" : "bg-transparent",
-                      ].join(" ")}
-                    />
-                    <Icon
-                      className={["h-[18px] w-[18px] shrink-0", isActive ? "text-primary" : ""].join(" ")}
-                      strokeWidth={2}
-                    />
-                    <span className="font-display tracking-tight">{label}</span>
-                  </>
-                )}
-              </NavLink>
-            </li>
-          ))}
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "absolute -ml-3 h-5 w-[3px] rounded-r-full transition-all",
+                      active ? "bg-primary" : "bg-transparent",
+                    ].join(" ")}
+                  />
+                  <Icon
+                    className={["h-[18px] w-[18px] shrink-0", active ? "text-primary" : ""].join(" ")}
+                    strokeWidth={2}
+                  />
+                  <span className="font-display tracking-tight">{label}</span>
+                </NavLink>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
