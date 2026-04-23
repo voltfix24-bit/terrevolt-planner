@@ -1216,18 +1216,15 @@ function MonteurCellsRow({
             className="absolute flex cursor-pointer items-center justify-center"
             title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}` : ""}
             style={{
-              left,
-              width,
-              top: 4,
-              height: ROW_H_MONTEUR - 8,
+              left: left + 2,
+              width: width - 4,
+              top: topPad,
+              height: PILL_H_MONTEUR,
               background: "rgba(63,255,139,0.85)",
               color: "#0a1a30",
               fontSize: 9,
               fontWeight: 700,
-              borderTopLeftRadius: isFirst ? 4 : 0,
-              borderBottomLeftRadius: isFirst ? 4 : 0,
-              borderTopRightRadius: isLast ? 4 : 0,
-              borderBottomRightRadius: isLast ? 4 : 0,
+              borderRadius: 4,
               overflow: "hidden",
               whiteSpace: "nowrap",
               padding: "0 4px",
