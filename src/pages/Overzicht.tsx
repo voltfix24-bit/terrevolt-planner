@@ -1959,68 +1959,42 @@ export default function Overzicht() {
 
 // ============== Sub-components ==============
 
-function BeschikbaarCell({ vrijeDagen }: { vrijeDagen: number }) {
-  let badgeStyle: React.CSSProperties;
-  let label: string;
-  if (vrijeDagen <= 0) {
-    label = "Vol";
-    badgeStyle = {
+function vrijeDagenBadgeStyle(vrijeDagen: number): React.CSSProperties {
+  if (vrijeDagen === 0) {
+    return {
       background: "rgba(254,179,0,0.2)",
       color: "#feb300",
       border: "1px solid rgba(254,179,0,0.3)",
     };
-  } else if (vrijeDagen <= 3) {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
+  }
+  if (vrijeDagen <= 3) {
+    return {
       background: "rgba(254,179,0,0.15)",
       color: "#feb300",
       border: "1px solid rgba(254,179,0,0.25)",
     };
-  } else {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
-      background: "rgba(63,255,139,0.12)",
-      color: "#3fff8b",
-      border: "1px solid rgba(63,255,139,0.2)",
-    };
   }
-  return (
-    <div
-      style={{
-        height: ROW_H_MONTEUR,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
-      }}
-    >
-      <span
-        style={{
-          ...badgeStyle,
-          fontSize: 10,
-          fontWeight: 700,
-          fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-          padding: "3px 8px",
-          borderRadius: 999,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
+  return {
+    background: "rgba(63,255,139,0.12)",
+    color: "#3fff8b",
+    border: "1px solid rgba(63,255,139,0.2)",
+  };
 }
 
 function MonteurSidebarRow({
   monteur,
   collapsed = false,
+  vrijeDagen,
 }: {
   monteur: Monteur;
   collapsed?: boolean;
+  vrijeDagen: number;
 }) {
   const isSchakel = monteur.type === "schakelmonteur";
   const ms = monteur.aanwijzing_ms;
   const msStyle = msBadgeStyle(ms);
+  const badgeStyle = vrijeDagenBadgeStyle(vrijeDagen);
+  const badgeLabel = vrijeDagen === 0 ? "Vol" : `${vrijeDagen}d vrij`;
   return (
     <div
       className="flex items-center gap-2"
@@ -2054,13 +2028,30 @@ function MonteurSidebarRow({
       </div>
       {!collapsed && (
         <>
-          <span
-            className="truncate text-[13px] font-semibold text-foreground"
-            style={{ maxWidth: 160 }}
-            title={monteur.naam}
-          >
-            {monteur.naam}
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+            <span
+              className="truncate text-[13px] font-semibold text-foreground"
+              style={{ maxWidth: 160, lineHeight: 1.1 }}
+              title={monteur.naam}
+            >
+              {monteur.naam}
+            </span>
+            <span
+              style={{
+                ...badgeStyle,
+                fontSize: 9,
+                fontWeight: 700,
+                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                padding: "1px 7px",
+                borderRadius: 999,
+                display: "inline-block",
+                marginTop: 2,
+                width: "fit-content",
+              }}
+            >
+              {badgeLabel}
+            </span>
+          </div>
           {ms && msStyle && (
             <span
               className="ml-auto shrink-0"
@@ -2080,33 +2071,68 @@ function MonteurSidebarRow({
   );
 }
 
-// Renders a row of empty raster cells (always visible borders)
+// Renders a row of empty raster cells (always visible borders).
+// `feestdagSlots` highlights specific slot indices as feestdag.
+// `trailingW` (optional) adds an empty trailing column (used to align with the
+// vrije-dagen badge column on monteur rows).
 function EmptyCellsRow({
-  slots, cellW, rowHeight,
-}: { slots: Slot[]; cellW: number; rowHeight: number }) {
+  slots,
+  cellW,
+  rowHeight,
+  feestdagSlots,
+  trailingW = 0,
+}: {
+  slots: Slot[];
+  cellW: number;
+  rowHeight: number;
+  feestdagSlots?: Map<number, string>;
+  trailingW?: number;
+}) {
   return (
-    <div className="flex" style={{ width: slots.length * cellW, height: rowHeight }}>
-      {slots.map((s) => (
+    <div
+      className="flex"
+      style={{ width: slots.length * cellW + trailingW, height: rowHeight }}
+    >
+      {slots.map((s) => {
+        const isFeest = !!feestdagSlots?.has(s.index);
+        return (
+          <div
+            key={s.index}
+            data-grid-cell="empty"
+            data-slot={s.index}
+            data-today={s.isToday ? "1" : "0"}
+            data-current-group={s.isCurrentGroup ? "1" : "0"}
+            data-last-in-group={s.isLastInGroup ? "1" : "0"}
+            style={{
+              width: cellW,
+              height: rowHeight,
+              borderRight: isFeest
+                ? BORDER_FEESTDAG
+                : s.isLastInGroup
+                  ? BORDER_GROUP_RIGHT
+                  : BORDER_CELL_RIGHT,
+              borderBottom: BORDER_CELL_BOTTOM,
+              background: isFeest
+                ? BG_FEESTDAG_BODY
+                : s.isToday
+                  ? BG_TODAY
+                  : s.isCurrentGroup
+                    ? BG_CURRENT_GROUP
+                    : "transparent",
+            }}
+          />
+        );
+      })}
+      {trailingW > 0 && (
         <div
-          key={s.index}
-          data-grid-cell="empty"
-          data-slot={s.index}
-          data-today={s.isToday ? "1" : "0"}
-          data-current-group={s.isCurrentGroup ? "1" : "0"}
-          data-last-in-group={s.isLastInGroup ? "1" : "0"}
           style={{
-            width: cellW,
+            width: trailingW,
             height: rowHeight,
-            borderRight: s.isLastInGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
+            borderLeft: "1px solid rgba(255,255,255,0.06)",
             borderBottom: BORDER_CELL_BOTTOM,
-            background: s.isToday
-              ? BG_TODAY
-              : s.isCurrentGroup
-                ? BG_CURRENT_GROUP
-                : "transparent",
           }}
         />
-      ))}
+      )}
     </div>
   );
 }
