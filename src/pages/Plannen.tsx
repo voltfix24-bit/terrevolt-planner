@@ -1250,6 +1250,42 @@ const Plannen = () => {
           )}
         </div>
 
+        {/* Scope toggle: zichtbare weken vs hele project */}
+        <div
+          className="flex items-center gap-0.5 rounded-md border border-white/15 p-0.5 shrink-0"
+          title={
+            monteursFilter.weekId
+              ? "Een week-filter is actief — scope wordt overschreven"
+              : "Bepaalt of alleen de zichtbare weken of het hele project geteld worden"
+          }
+          style={{ opacity: monteursFilter.weekId ? 0.5 : 1 }}
+        >
+          <button
+            type="button"
+            onClick={() => setMonteursScope("visible")}
+            disabled={monteursFilter.weekId !== null}
+            className={`h-6 px-2 rounded text-[10px] font-display font-bold transition-colors ${
+              monteursScope === "visible"
+                ? "bg-white/10 text-foreground"
+                : "text-muted-foreground hover:bg-white/[0.06]"
+            } disabled:cursor-not-allowed`}
+          >
+            ZICHTBAAR
+          </button>
+          <button
+            type="button"
+            onClick={() => setMonteursScope("all")}
+            disabled={monteursFilter.weekId !== null}
+            className={`h-6 px-2 rounded text-[10px] font-display font-bold transition-colors ${
+              monteursScope === "all"
+                ? "bg-white/10 text-foreground"
+                : "text-muted-foreground hover:bg-white/[0.06]"
+            } disabled:cursor-not-allowed`}
+          >
+            HELE PROJECT
+          </button>
+        </div>
+
         {/* Filter controls: week dropdown + dag knoppen + clear */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Week filter */}
