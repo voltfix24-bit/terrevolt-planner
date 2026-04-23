@@ -272,6 +272,7 @@ const Projecten = () => {
     setPostcode(p.postcode ?? "");
     setStad(p.stad ?? "");
     setGemeente(p.gemeente ?? "");
+    setSavedLocation(null);
     setModalOpen(true);
   };
 
