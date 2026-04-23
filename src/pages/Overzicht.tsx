@@ -1535,11 +1535,14 @@ export default function Overzicht() {
                         const pillHeight = isJaar
                           ? ROW_H_PROJECT - 22
                           : PILL_H_PROJECT;
+                        const isConcept = p.status === "concept" && !segHasConflict;
                         const pillBg = segHasConflict
                           ? "#ef4444"
-                          : isJaar
-                            ? "rgba(254,179,0,0.8)"
-                            : sc.bg;
+                          : isConcept
+                            ? "transparent"
+                            : isJaar
+                              ? "rgba(254,179,0,0.8)"
+                              : sc.bg;
                         return (
                           <div
                             key={i}
@@ -1549,14 +1552,20 @@ export default function Overzicht() {
                               top: pillTop,
                               height: pillHeight,
                               background: pillBg,
-                              opacity: segHasConflict ? 0.95 : isJaar ? 1 : 0.8,
+                              opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.8,
                               borderRadius: 4,
+                              border: isConcept ? "2px dashed rgba(255,255,255,0.15)" : undefined,
                               color: segHasConflict
                                 ? "#ffffff"
-                                : isJaar
-                                  ? "#0a1a30"
-                                  : sc.text,
-                              fontSize: 10, fontWeight: 700,
+                                : isConcept
+                                  ? "rgba(255,255,255,0.4)"
+                                  : isJaar
+                                    ? "#0a1a30"
+                                    : sc.text,
+                              fontSize: isConcept ? 9 : 10,
+                              fontWeight: 700,
+                              letterSpacing: isConcept ? "0.1em" : undefined,
+                              textTransform: isConcept ? "uppercase" : undefined,
                               overflow: "hidden", whiteSpace: "nowrap",
                               boxShadow: segHasConflict
                                 ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
@@ -1572,7 +1581,9 @@ export default function Overzicht() {
                                 !
                               </span>
                             )}
-                            {width > (isJaar ? 50 : 80) && (p.case_nummer ?? "")}
+                            {isConcept
+                              ? (width > 60 ? "CONCEPT" : "")
+                              : (width > (isJaar ? 50 : 80) && (p.case_nummer ?? ""))}
                           </div>
                         );
                       })}
