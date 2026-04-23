@@ -1709,6 +1709,9 @@ const CellBox = memo(function CellBox({
   monteurIds,
   monteurById,
   isCurrentWeek = false,
+  isHighlighted = false,
+  highlightColor = null,
+  isDimmed = false,
   onClick,
   onContextMenu,
 }: {
@@ -1717,6 +1720,9 @@ const CellBox = memo(function CellBox({
   monteurIds: string[];
   monteurById: Map<string, Monteur>;
   isCurrentWeek?: boolean;
+  isHighlighted?: boolean;
+  highlightColor?: string | null;
+  isDimmed?: boolean;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
 }) {
@@ -1778,20 +1784,27 @@ const CellBox = memo(function CellBox({
   const filled = !!kleur;
   const showHoverPlus = !filled && !isGeen;
 
+  // Highlight ring (inset boxShadow) wanneer deze cel een geselecteerde monteur bevat.
+  // Dim de overige gevulde cellen zodat de highlight extra opvalt.
+  const highlightShadow =
+    isHighlighted && highlightColor
+      ? `inset 0 0 0 2px ${highlightColor}, 0 0 12px ${highlightColor}80`
+      : undefined;
+
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
       title={hoverTitle}
       className={[
-        "group relative shrink-0 transition-colors",
+        "group relative shrink-0 transition-all",
         showHoverPlus ? "hover:bg-white/[0.03]" : "",
       ].join(" ")}
       style={{
         width: CELL_W,
         height: CELL_H,
         backgroundColor: filled
-          ? hexToRgba(kleur!, 0.35)
+          ? hexToRgba(kleur!, isHighlighted ? 0.55 : 0.35)
           : isCurrentWeek
           ? "rgba(63,255,139,0.02)"
           : "transparent",
@@ -1803,6 +1816,9 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
         outline: filled && !voldoet ? "2px solid #feb300" : undefined,
         outlineOffset: filled && !voldoet ? "-2px" : undefined,
+        boxShadow: highlightShadow,
+        opacity: isDimmed && filled ? 0.35 : 1,
+        zIndex: isHighlighted ? 2 : undefined,
       }}
     >
       {showAvatars && (
