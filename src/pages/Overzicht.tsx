@@ -1362,30 +1362,31 @@ export default function Overzicht() {
                               }}
                             />
                           </button>
-                          <div className="min-w-0 flex-1">
+                          <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
                             <p
                               style={{
                                 fontSize: 10,
                                 fontWeight: 700,
                                 color: "#3fff8b",
-                                letterSpacing: "0.15em",
+                                letterSpacing: "0.12em",
                                 textTransform: "uppercase",
-                                marginBottom: 2,
+                                marginBottom: 1,
                                 fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               {p.case_nummer ?? "—"}
                             </p>
                             <p
                               style={{
-                                fontSize: 13,
-                                fontWeight: 700,
+                                fontSize: 12,
+                                fontWeight: 600,
                                 color: "white",
                                 fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                maxWidth: 160,
+                                maxWidth: 190,
                               }}
                               title={p.station_naam ?? ""}
                             >
