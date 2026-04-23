@@ -799,8 +799,8 @@ export default function Overzicht() {
 
   const shiftLeft = () => {
     if (scale === "maand") {
-      const wkCount = weeksInYear(jaar);
-      const next = startWeek - 4;
+      const step = Math.max(1, weeksToShow - 1);
+      const next = startWeek - step;
       if (next < 1) {
         setJaar(jaar - 1);
         setStartWeek(weeksInYear(jaar - 1) + next);
