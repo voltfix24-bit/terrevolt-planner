@@ -593,10 +593,12 @@ const PillButton = ({
 const ActiviteitRow = ({
   a,
   onEdit,
+  onDuplicate,
   onDelete,
 }: {
   a: ActiviteitType;
   onEdit: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
