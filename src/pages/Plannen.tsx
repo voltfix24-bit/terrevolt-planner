@@ -709,10 +709,13 @@ const Plannen = () => {
         project.wv_naam ?? "",
       ]);
       aoa.push([]);
-      // week header row
+      // week header row — markeer de huidige ISO-week met " — NU"
+      const projectJaar = project.jaar ?? new Date().getFullYear();
       const weekRow: string[] = [""];
       weken.forEach((w) => {
-        weekRow.push(`Week ${w.week_nr}`, "", "", "", "");
+        const isNu = w.week_nr === CURRENT_WEEK && projectJaar === CURRENT_YEAR;
+        const label = isNu ? `Week ${w.week_nr} — NU` : `Week ${w.week_nr}`;
+        weekRow.push(label, "", "", "", "");
       });
       aoa.push(weekRow);
       // day row
@@ -748,6 +751,40 @@ const Plannen = () => {
         opmRow.push(w.opmerking ?? "", "", "", "", "");
       });
       aoa.push(opmRow);
+
+      // ---- Ingeplande monteurs sectie ----
+      // Verzamel unieke monteurs die ergens in dit project staan ingepland.
+      const ingeplandeIds = new Set<string>();
+      for (const cel of cellen.values()) {
+        const ids = celMonteurs.get(cel.id);
+        if (!ids) continue;
+        for (const id of ids) ingeplandeIds.add(id);
+      }
+      const ingeplandeList = Array.from(ingeplandeIds)
+        .map((id) => monteurs.find((m) => m.id === id))
+        .filter((m): m is Monteur => !!m)
+        .sort((a, b) => {
+          if (a.type !== b.type) return a.type === "schakelmonteur" ? -1 : 1;
+          return a.naam.localeCompare(b.naam, "nl");
+        });
+
+      aoa.push([]);
+      aoa.push([`Ingeplande monteurs (${ingeplandeList.length})`]);
+      if (ingeplandeList.length === 0) {
+        aoa.push(["Nog geen monteurs ingepland"]);
+      } else {
+        aoa.push(["Naam", "Type", "Aanwijzing LS", "Aanwijzing MS"]);
+        ingeplandeList.forEach((m) => {
+          const typeLabel =
+            m.type === "schakelmonteur" ? "Schakelmonteur" : "Montagemonteur";
+          aoa.push([
+            m.naam,
+            typeLabel,
+            m.aanwijzing_ls ?? "—",
+            m.aanwijzing_ms ?? "—",
+          ]);
+        });
+      }
 
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
