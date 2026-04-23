@@ -43,6 +43,8 @@ interface ActiviteitType {
   naam: string;
   capaciteit_type: CapType | null;
   min_personen: number | null;
+  min_personen_totaal: number | null;
+  min_personen_gekwalificeerd: number | null;
   min_aanwijzing_ls: Aanwijzing | null;
   min_aanwijzing_ms: Aanwijzing | null;
   kleur_default: string | null;
@@ -86,7 +88,8 @@ const Activiteiten = () => {
   // form state
   const [naam, setNaam] = useState("");
   const [capType, setCapType] = useState<CapType>("geen");
-  const [minPersonen, setMinPersonen] = useState(1);
+  const [minPersonenTotaal, setMinPersonenTotaal] = useState(1);
+  const [minPersonenGekwalificeerd, setMinPersonenGekwalificeerd] = useState(1);
   const [minLs, setMinLs] = useState<Aanwijzing | null>(null);
   const [minMs, setMinMs] = useState<Aanwijzing | null>(null);
   const [kleur, setKleur] = useState<string>("c3");
@@ -122,7 +125,8 @@ const Activiteiten = () => {
     setEditing(null);
     setNaam("");
     setCapType("geen");
-    setMinPersonen(1);
+    setMinPersonenTotaal(1);
+    setMinPersonenGekwalificeerd(1);
     setMinLs(null);
     setMinMs(null);
     setKleur("c3");
@@ -133,7 +137,10 @@ const Activiteiten = () => {
     setEditing(a);
     setNaam(a.naam);
     setCapType((a.capaciteit_type ?? "geen") as CapType);
-    setMinPersonen(a.min_personen ?? 1);
+    setMinPersonenTotaal(a.min_personen_totaal ?? a.min_personen ?? 1);
+    setMinPersonenGekwalificeerd(
+      a.min_personen_gekwalificeerd ?? a.min_personen ?? 1
+    );
     setMinLs(a.min_aanwijzing_ls);
     setMinMs(a.min_aanwijzing_ms);
     setKleur(a.kleur_default ?? "c3");
@@ -147,10 +154,14 @@ const Activiteiten = () => {
     }
     setSaving(true);
     const isCap = capType !== "geen";
+    const totaal = Math.max(1, Math.min(10, minPersonenTotaal));
+    const gekwal = Math.max(1, Math.min(totaal, minPersonenGekwalificeerd));
     const payload = {
       naam: naam.trim(),
       capaciteit_type: capType,
-      min_personen: isCap ? Math.max(1, Math.min(10, minPersonen)) : 1,
+      min_personen: isCap ? totaal : 1,
+      min_personen_totaal: isCap ? totaal : 1,
+      min_personen_gekwalificeerd: isCap ? gekwal : 1,
       min_aanwijzing_ls: isCap ? minLs : null,
       min_aanwijzing_ms: isCap ? minMs : null,
       kleur_default: kleur,
@@ -370,23 +381,58 @@ const Activiteiten = () => {
             {/* Conditional capaciteit fields */}
             {capType !== "geen" && (
               <>
-                <div className="space-y-2">
-                  <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Minimaal aantal personen
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={minPersonen}
-                    onChange={(e) => setMinPersonen(parseInt(e.target.value) || 1)}
-                    className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Minimaal aantal personen totaal
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={minPersonenTotaal}
+                      onChange={(e) => {
+                        const v = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
+                        setMinPersonenTotaal(v);
+                        if (minPersonenGekwalificeerd > v) {
+                          setMinPersonenGekwalificeerd(v);
+                        }
+                      }}
+                      className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Inclusief assistenten (VOP)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Waarvan minimaal met aanwijzing
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={minPersonenTotaal}
+                      value={minPersonenGekwalificeerd}
+                      onChange={(e) =>
+                        setMinPersonenGekwalificeerd(
+                          Math.max(
+                            1,
+                            Math.min(minPersonenTotaal, parseInt(e.target.value) || 1)
+                          )
+                        )
+                      }
+                      className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Deze personen moeten de minimale aanwijzing hebben of hoger
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Minimale aanwijzing laagspanning
+                    Minimale aanwijzing laagspanning (verantwoordelijke)
                   </Label>
                   <div className="flex gap-2">
                     {AANWIJZINGEN.map((a) => (
@@ -403,7 +449,7 @@ const Activiteiten = () => {
 
                 <div className="space-y-2">
                   <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Minimale aanwijzing middenspanning
+                    Minimale aanwijzing middenspanning (verantwoordelijke)
                   </Label>
                   <div className="flex gap-2">
                     {AANWIJZINGEN.map((a) => (
@@ -587,7 +633,8 @@ const ActiviteitRow = ({
         </span>
 
         <span className="inline-flex items-center rounded-md bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          min. {a.min_personen ?? 1} man
+          min. {a.min_personen_totaal ?? a.min_personen ?? 1} man (
+          {a.min_personen_gekwalificeerd ?? a.min_personen ?? 1} gekwal.)
         </span>
 
         {showAanwijzing && a.min_aanwijzing_ls && (
@@ -595,7 +642,7 @@ const ActiviteitRow = ({
             className="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-display font-bold tracking-wide"
             style={{ backgroundColor: "rgba(63,255,139,0.15)", color: "#3fff8b" }}
           >
-            LS: {a.min_aanwijzing_ls}
+            LS: {a.min_aanwijzing_ls}+
           </span>
         )}
         {showAanwijzing && a.min_aanwijzing_ms && (
@@ -603,7 +650,7 @@ const ActiviteitRow = ({
             className="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-display font-bold tracking-wide"
             style={{ backgroundColor: "rgba(63,255,139,0.15)", color: "#3fff8b" }}
           >
-            MS: {a.min_aanwijzing_ms}
+            MS: {a.min_aanwijzing_ms}+
           </span>
         )}
       </div>
