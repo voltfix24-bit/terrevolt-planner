@@ -317,6 +317,20 @@ export default function Overzicht() {
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
+  // Today as { week, dag_index } (Mon=0..Fri=4); null if weekend
+  const today = useMemo(() => {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7; // Mon=0..Sun=6
+    if (dow > 4) return null;
+    return { week: currentISO.week, year: currentISO.year, dag: dow };
+  }, [currentISO]);
+
+  const isTodayCol = useCallback(
+    (wnr: number, d: number) =>
+      !!today && today.year === jaar && today.week === wnr && today.dag === d,
+    [today, jaar],
+  );
+
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
       const s = new Set(prev);
