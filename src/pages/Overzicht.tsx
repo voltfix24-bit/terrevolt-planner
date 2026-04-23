@@ -1342,6 +1342,7 @@ function ActiviteitCellsRow({
   cellMap,
   monteurIdsByCel,
   monteurById,
+  dayConflictMonteurs,
   visibleWeekNrs,
   jaar,
   currentISO,
@@ -1354,6 +1355,7 @@ function ActiviteitCellsRow({
   cellMap: Map<string, Map<string, Cel>> | undefined;
   monteurIdsByCel: Map<string, string[]>;
   monteurById: Map<string, Monteur>;
+  dayConflictMonteurs: Map<string, Set<string>>;
   visibleWeekNrs: number[];
   jaar: number;
   currentISO: { week: number; year: number };
@@ -1385,6 +1387,12 @@ function ActiviteitCellsRow({
               const colorHex = kleur ? colorHexFor(kleur) : null;
               const monteurIds = cel ? monteurIdsByCel.get(cel.id) ?? [] : [];
               const todayBg = isTodayCol(wnr, d) && !colorHex ? "rgba(63,255,139,0.03)" : undefined;
+              const conflictSet = dayConflictMonteurs.get(dayKey(wnr, d));
+              const hasConflict =
+                !!cel && !!conflictSet && monteurIds.some((mid) => conflictSet.has(mid));
+              const conflictMids = hasConflict
+                ? monteurIds.filter((mid) => conflictSet!.has(mid))
+                : [];
               return (
                 <div
                   key={d}
@@ -1395,10 +1403,42 @@ function ActiviteitCellsRow({
                     borderRight: isLastDay
                       ? "1px solid rgba(255,255,255,0.1)"
                       : "1px solid rgba(255,255,255,0.04)",
-                    background: colorHex ? hexToRgba(colorHex, 0.45) : todayBg,
-                    borderLeft: colorHex ? `2px solid ${colorHex}` : undefined,
+                    background: hasConflict
+                      ? "rgba(239,68,68,0.18)"
+                      : colorHex
+                      ? hexToRgba(colorHex, 0.45)
+                      : todayBg,
+                    borderLeft: hasConflict
+                      ? "2px solid #ef4444"
+                      : colorHex
+                      ? `2px solid ${colorHex}`
+                      : undefined,
+                    boxShadow: hasConflict
+                      ? "inset 0 0 0 1px rgba(239,68,68,0.55)"
+                      : undefined,
                   }}
+                  title={
+                    hasConflict
+                      ? `Conflict: ${conflictMids
+                          .map((mid) => monteurById.get(mid)?.naam ?? "?")
+                          .join(", ")} dubbel ingepland`
+                      : undefined
+                  }
                 >
+                  {hasConflict && (
+                    <div
+                      className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
+                      style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        fontSize: 8,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                      }}
+                    >
+                      !
+                    </div>
+                  )}
                   {monteurIds.length > 0 && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="flex">
