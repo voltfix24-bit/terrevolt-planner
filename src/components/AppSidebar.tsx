@@ -4,7 +4,6 @@ import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, Settings, User
 const navItems = [
   { to: "/overzicht", label: "Overzicht", icon: LayoutDashboard },
   { to: "/projecten", label: "Projecten", icon: FolderKanban },
-  { to: "/plannen", label: "Plannen", icon: CalendarDays },
   { to: "/activiteiten", label: "Activiteiten", icon: ListChecks },
   { to: "/capaciteit", label: "Capaciteit", icon: Users },
   { to: "/instellingen", label: "Instellingen", icon: Settings },
