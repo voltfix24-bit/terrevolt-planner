@@ -63,6 +63,10 @@ interface Project {
   werkplan_lsr: boolean | null;
   notities: string | null;
   template_id: string | null;
+  straat: string | null;
+  postcode: string | null;
+  stad: string | null;
+  gemeente: string | null;
   created_at: string;
 }
 
