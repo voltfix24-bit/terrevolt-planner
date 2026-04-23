@@ -835,28 +835,44 @@ export default function Overzicht() {
 
                   {/* Activiteit sidebar rows */}
                   {expanded &&
-                    acts.map((a) => (
-                      <div
-                        key={a.id}
-                        className="flex items-center gap-2 pl-8 pr-2"
-                        style={{
-                          height: ROW_H_ACTIVITEIT,
-                          borderRight: "1px solid rgba(255,255,255,0.08)",
-                          borderBottom: "1px solid rgba(255,255,255,0.03)",
-                          background: "rgba(255,255,255,0.015)",
-                        }}
-                      >
-                        <span className="truncate text-[12px] text-foreground/90">
-                          {a.naam}
-                        </span>
-                        <span
-                          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground"
-                          style={{ background: "rgba(255,255,255,0.06)" }}
+                    acts.map((a, ai) => {
+                      const capDotColor =
+                        a.capaciteit_type === "schakel"
+                          ? "#feb300"
+                          : a.capaciteit_type === "montage"
+                            ? "#378add"
+                            : "rgba(255,255,255,0.2)";
+                      const isLastAct = ai === acts.length - 1;
+                      return (
+                        <div
+                          key={a.id}
+                          onClick={() => navigateToProject(p.id)}
+                          className="flex cursor-pointer items-center gap-2 pr-2 hover:bg-white/[0.03]"
+                          style={{
+                            paddingLeft: 20,
+                            height: ROW_H_ACTIVITEIT,
+                            borderRight: "1px solid rgba(255,255,255,0.08)",
+                            borderBottom: isLastAct
+                              ? "2px solid rgba(255,255,255,0.06)"
+                              : "1px solid rgba(255,255,255,0.03)",
+                            background: "rgba(255,255,255,0.015)",
+                          }}
                         >
-                          {capLabel(a.capaciteit_type)}
-                        </span>
-                      </div>
-                    ))}
+                          <span
+                            className="shrink-0"
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: capDotColor,
+                            }}
+                          />
+                          <span className="truncate text-[11px] text-foreground/90" title={a.naam}>
+                            {a.naam}
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               );
             })}
