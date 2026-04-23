@@ -1124,6 +1124,7 @@ const Plannen = () => {
                       celMonteurs={celMonteurs}
                       monteurById={monteurById}
                       highlightedMonteurId={highlightedMonteurId}
+                      currentWeekTooltip={currentWeekTooltip}
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
                     />
