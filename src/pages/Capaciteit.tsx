@@ -1149,8 +1149,24 @@ const ConflictBlock = ({
   projects: Record<string, ProjectInfo>;
   onNavigate: (id: string) => void;
 }) => {
+  const [open, setOpen] = useState(false);
+  // Stable order: by case_nummer asc (fallback to id), so the list is
+  // identical across renders and across cells with the same projects.
+  const ordered = useMemo(() => {
+    return [...projectIds].sort((a, b) => {
+      const ca = projects[a]?.case_nummer ?? a;
+      const cb = projects[b]?.case_nummer ?? b;
+      return ca.localeCompare(cb, undefined, { numeric: true });
+    });
+  }, [projectIds, projects]);
+
+  const handleNavigate = (id: string) => {
+    setOpen(false);
+    onNavigate(id);
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -1175,12 +1191,12 @@ const ConflictBlock = ({
           Dubbel gepland
         </div>
         <div className="flex flex-col gap-1">
-          {projectIds.map((id) => {
+          {ordered.map((id) => {
             const p = projects[id];
             return (
               <button
                 key={id}
-                onClick={() => onNavigate(id)}
+                onClick={() => handleNavigate(id)}
                 className="rounded-md px-2 py-1.5 text-left text-sm font-display font-semibold text-foreground transition-colors hover:bg-white/[0.06]"
               >
                 {p?.case_nummer ?? id.slice(0, 8)}
