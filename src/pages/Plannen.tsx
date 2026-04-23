@@ -63,6 +63,19 @@ import {
 } from "@/lib/planning-types";
 import { checkCelVoldoet, type Aanwijzing } from "@/lib/aanwijzing";
 
+/* ----------------------------- Current week (ISO) ----------------------------- */
+function getCurrentISOWeek(): number {
+  const now = new Date();
+  const jan4 = new Date(now.getFullYear(), 0, 4);
+  const dow = jan4.getDay() || 7;
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - dow + 1);
+  const diff = now.getTime() - monday.getTime();
+  return Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
+}
+const CURRENT_WEEK = getCurrentISOWeek();
+const CURRENT_YEAR = new Date().getFullYear();
+
 /* ----------------------------- Types ----------------------------- */
 
 type CapType = "schakel" | "montage" | "geen";
