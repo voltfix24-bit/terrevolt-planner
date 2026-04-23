@@ -1156,18 +1156,29 @@ export default function Overzicht() {
               )}
             </div>
 
+            {/* Visual separator between medewerkers en projecten */}
+            <div
+              style={{
+                height: 8,
+                background: "transparent",
+                borderRight: "1px solid rgba(255,255,255,0.08)",
+                borderTop: "2px solid rgba(255,255,255,0.06)",
+                marginTop: 4,
+              }}
+            />
+
             {/* Projecten section header */}
             <button
               type="button"
               onClick={() => setProjectenOpen((o) => !o)}
-              className="flex w-full items-center gap-2 hover:bg-white/[0.04]"
+              className="flex w-full items-center gap-2 hover:bg-white/[0.05]"
               style={{
                 height: 32,
                 paddingLeft: 12,
+                paddingTop: 4,
                 borderRight: "1px solid rgba(255,255,255,0.08)",
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.02)",
+                background: "rgba(255,255,255,0.03)",
               }}
             >
               <ChevronRight
@@ -1177,12 +1188,16 @@ export default function Overzicht() {
                   transition: "transform 0.2s ease",
                 }}
               />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Project / Taak
-              </span>
-              <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
-                {visibleProjecten.length}
-              </span>
+              {!sidebarCollapsed && (
+                <>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Project / Taak
+                  </span>
+                  <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                    {visibleProjecten.length}
+                  </span>
+                </>
+              )}
             </button>
 
             <div
