@@ -315,6 +315,10 @@ const Projecten = () => {
       werkplan_lsr: werkplanLsr,
       notities: notities.trim() || null,
       template_id: templateId,
+      straat: straat.trim() || null,
+      postcode: postcode.trim() || null,
+      stad: stad.trim() || null,
+      gemeente: gemeente.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
