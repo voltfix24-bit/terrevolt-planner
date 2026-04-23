@@ -1566,6 +1566,11 @@ function EmptyCellsRow({
       {slots.map((s) => (
         <div
           key={s.index}
+          data-grid-cell="empty"
+          data-slot={s.index}
+          data-today={s.isToday ? "1" : "0"}
+          data-current-group={s.isCurrentGroup ? "1" : "0"}
+          data-last-in-group={s.isLastInGroup ? "1" : "0"}
           style={{
             width: cellW,
             height: rowHeight,
