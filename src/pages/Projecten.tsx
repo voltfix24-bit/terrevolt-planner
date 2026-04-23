@@ -344,6 +344,13 @@ const Projecten = () => {
       updated_at: new Date().toISOString(),
     };
 
+    const showSavedBanner = () => {
+      const s = straat.trim();
+      const c = stad.trim();
+      if (s || c) setSavedLocation({ straat: s, stad: c });
+      else setSavedLocation(null);
+    };
+
     if (editing) {
       const { error } = await supabase
         .from("projecten")
@@ -353,7 +360,7 @@ const Projecten = () => {
         toast.error("Opslaan mislukt");
       } else {
         toast.success("Project opgeslagen");
-        setModalOpen(false);
+        showSavedBanner();
         await loadAll();
       }
     } else {
@@ -376,7 +383,8 @@ const Projecten = () => {
           }
         }
         toast.success("Project opgeslagen");
-        setModalOpen(false);
+        setEditing(data as Project);
+        showSavedBanner();
         await loadAll();
       }
     }
