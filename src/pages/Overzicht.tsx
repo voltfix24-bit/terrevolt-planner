@@ -1072,7 +1072,11 @@ function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
       >
         {initialen(monteur.naam)}
       </div>
-      <span className="truncate text-[13px] font-semibold text-foreground" title={monteur.naam}>
+      <span
+        className="truncate text-[13px] font-semibold text-foreground"
+        style={{ maxWidth: 130 }}
+        title={monteur.naam}
+      >
         {monteur.naam}
       </span>
       {ms && msStyle && (
