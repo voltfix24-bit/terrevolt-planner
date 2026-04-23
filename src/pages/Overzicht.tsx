@@ -493,6 +493,7 @@ export default function Overzicht() {
                       borderRight: isLastOfWeek
                         ? "1px solid rgba(255,255,255,0.12)"
                         : "1px solid rgba(255,255,255,0.04)",
+                      background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.05)" : undefined,
                     }}
                   >
                     <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -501,6 +502,17 @@ export default function Overzicht() {
                     <span className="text-[9px] text-muted-foreground/70 tabular-nums">
                       {formatDate(date)}
                     </span>
+                    {isTodayCol(wnr, d) && (
+                      <div
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: "50%",
+                          background: "#3fff8b",
+                          marginTop: 2,
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
