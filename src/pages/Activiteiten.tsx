@@ -231,6 +231,30 @@ const Activiteiten = () => {
     setDeleteTarget(null);
   };
 
+  const handleDuplicate = async (a: ActiviteitType) => {
+    const { id: _id, positie: _p, naam: origNaam, ...rest } = a;
+    const payload = {
+      ...rest,
+      naam: origNaam + " (kopie)",
+      positie: maxPositie + 1,
+    };
+    const { data, error } = await supabase
+      .from("activiteit_types")
+      .insert(payload)
+      .select()
+      .single();
+    if (error || !data) {
+      toast.error("Dupliceren mislukt");
+      return;
+    }
+    setItems((cur) =>
+      [...cur, data as ActiviteitType].sort(
+        (x, y) => (x.positie ?? 0) - (y.positie ?? 0)
+      )
+    );
+    toast.success("Activiteit gedupliceerd");
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
