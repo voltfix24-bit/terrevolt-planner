@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,6 @@ import {
 
 // ============== Constants ==============
 const SIDEBAR_W = 230;
-const CELL_W = 52;
 const ROW_H_MONTEUR = 44;
 const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
@@ -26,8 +25,38 @@ const DAYS_PER_WEEK = 5;
 const PILL_H_MONTEUR = 26;
 const PILL_H_PROJECT = 22;
 
+// Border tokens — applied to EVERY cell so the raster is always visible
+const BORDER_CELL_RIGHT = "1px solid rgba(255,255,255,0.06)";
+const BORDER_CELL_BOTTOM = "1px solid rgba(255,255,255,0.04)";
+const BORDER_GROUP_RIGHT = "1px solid rgba(255,255,255,0.12)";
+const BG_CURRENT_GROUP = "rgba(63,255,139,0.02)";
+const BG_TODAY = "rgba(63,255,139,0.04)";
+
+// Scale config
+type Scale = "maand" | "kwartaal" | "jaar";
+
+const SCALE_OPTIONS: { value: Scale; label: string }[] = [
+  { value: "maand", label: "Maand" },
+  { value: "kwartaal", label: "Kwartaal" },
+  { value: "jaar", label: "Jaar" },
+];
+
+const CELL_W_BY_SCALE: Record<Scale, number> = {
+  maand: 44,
+  kwartaal: 52,
+  jaar: 64,
+};
+
+const NL_MONTHS = [
+  "Jan", "Feb", "Mrt", "Apr", "Mei", "Jun",
+  "Jul", "Aug", "Sep", "Okt", "Nov", "Dec",
+];
+const NL_MONTHS_LONG = [
+  "Januari", "Februari", "Maart", "April", "Mei", "Juni",
+  "Juli", "Augustus", "September", "Oktober", "November", "December",
+];
+
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
-type NumWeeks = 2 | 4 | 8;
 
 interface Project {
   id: string;
@@ -72,6 +101,25 @@ interface Monteur {
 interface CelMonteur {
   cel_id: string | null;
   monteur_id: string | null;
+}
+
+// One column in the grid (a "slot"). A slot covers one or more (week_nr, dag_index) pairs.
+interface Slot {
+  index: number;
+  // (week_nr, dag_index) pairs covered by this slot
+  pairs: Array<{ wnr: number; dag: number }>;
+  // header info
+  primaryLabel: string;       // e.g. "MA" / "Wk 18" / "Mei"
+  secondaryLabel?: string;    // e.g. "27/4" / "" / ""
+  // group label that this slot belongs to (e.g. week label for maand, month label for kwartaal/jaar)
+  groupLabel: string;
+  // groupKey is shared across slots in the same group (so we render the group header once)
+  groupKey: string;
+  // is this the last slot of its visible group? (-> stronger right border)
+  isLastInGroup: boolean;
+  // tint hints
+  isCurrentGroup: boolean;
+  isToday: boolean;
 }
 
 // ============== Helpers ==============
@@ -120,10 +168,48 @@ function msBadgeStyle(ms: string | null): React.CSSProperties | null {
   return { background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" };
 }
 
-function capLabel(t: string | null): string {
-  if (t === "schakel") return "Schakel";
-  if (t === "montage") return "Montage";
-  return "Geen";
+function colorHexFor(code: string): string {
+  const map: Record<string, string> = {
+    c1: "#00642f", c2: "#fdcb35", c3: "#1a4a2e", c4: "#0f766e",
+    c5: "#1d4ed8", c6: "#dc2626", c7: "#9333ea", c8: "#ea580c",
+    c9: "#0891b2", c10: "#65a30d", c11: "#be185d", c12: "#78716c",
+  };
+  return map[code] ?? "#888888";
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Number of ISO weeks for a year (52 or 53). Approximation: 52 unless year contains a Thursday on Dec 31 or Jan 1.
+function weeksInYear(year: number): number {
+  const d = new Date(year, 11, 28);
+  // ISO week of Dec 28 is always last week of year
+  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNr = (tmp.getUTCDay() + 6) % 7;
+  tmp.setUTCDate(tmp.getUTCDate() - dayNr + 3);
+  const firstThursday = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 4));
+  const firstDayNr = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNr + 3);
+  return 1 + Math.round((tmp.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000));
+}
+
+// Quarter (1..4) for an ISO week_nr (approximate, based on Monday's month)
+function quarterOfWeek(wnr: number, jaar: number): number {
+  const monday = getMondayOfWeek(wnr, jaar);
+  return Math.floor(monday.getMonth() / 3) + 1;
+}
+
+// First week_nr of a quarter q (1..4)
+function firstWeekOfQuarter(q: number, jaar: number): number {
+  const wkCount = weeksInYear(jaar);
+  for (let w = 1; w <= wkCount; w++) {
+    if (quarterOfWeek(w, jaar) === q) return w;
+  }
+  return 1;
 }
 
 // ============== Page ==============
@@ -131,9 +217,9 @@ export default function Overzicht() {
   const navigate = useNavigate();
 
   const initialIso = useMemo(() => getCurrentISOWeek(), []);
-  const [jaar] = useState<number>(initialIso.year);
+  const [jaar, setJaar] = useState<number>(initialIso.year);
+  const [scale, setScale] = useState<Scale>("maand");
   const [startWeek, setStartWeek] = useState<number>(initialIso.week);
-  const [numWeeks, setNumWeeks] = useState<NumWeeks>(4);
 
   const [projecten, setProjecten] = useState<Project[]>([]);
   const [weken, setWeken] = useState<Week[]>([]);
@@ -148,17 +234,124 @@ export default function Overzicht() {
   const [projectenOpen, setProjectenOpen] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
-  const visibleWeekNrs = useMemo(() => {
-    const arr: number[] = [];
-    for (let i = 0; i < numWeeks; i++) arr.push(wrapWeek(startWeek + i));
-    return arr;
-  }, [startWeek, numWeeks]);
+  const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
-  const visibleWeekNrSet = useMemo(() => new Set(visibleWeekNrs), [visibleWeekNrs]);
+  // ====== Build slots based on scale ======
+  const slots = useMemo<Slot[]>(() => {
+    const out: Slot[] = [];
+    const todayWeek = currentISO.week;
+    const todayYear = currentISO.year;
+    const now = new Date();
+    const todayDow = (now.getDay() + 6) % 7;
 
-  const totalGridWidth = numWeeks * DAYS_PER_WEEK * CELL_W;
+    if (scale === "maand") {
+      // 5 weeks × 5 days
+      const wkCount = weeksInYear(jaar);
+      for (let wi = 0; wi < 5; wi++) {
+        const wnr = wrapWeek(((startWeek - 1 + wi) % wkCount) + 1);
+        const monday = getMondayOfWeek(wnr, jaar);
+        const isCurrentWeek = wnr === todayWeek && jaar === todayYear;
+        const groupKey = `wk-${wnr}`;
+        const groupLabel = `Wk ${wnr} ${formatDate(monday)}`;
+        for (let d = 0; d < DAYS_PER_WEEK; d++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + d);
+          const isToday = isCurrentWeek && d === todayDow && todayDow <= 4;
+          out.push({
+            index: out.length,
+            pairs: [{ wnr, dag: d }],
+            primaryLabel: DAG_LABELS[d],
+            secondaryLabel: formatDate(date),
+            groupLabel,
+            groupKey,
+            isLastInGroup: d === DAYS_PER_WEEK - 1,
+            isCurrentGroup: isCurrentWeek,
+            isToday,
+          });
+        }
+      }
+    } else if (scale === "kwartaal") {
+      // 13 weeks; group by month of the week's Monday
+      const wkCount = weeksInYear(jaar);
+      for (let i = 0; i < 13; i++) {
+        const wnr = wrapWeek(((startWeek - 1 + i) % wkCount) + 1);
+        const monday = getMondayOfWeek(wnr, jaar);
+        const monthIdx = monday.getMonth();
+        const groupKey = `mo-${monday.getFullYear()}-${monthIdx}`;
+        const groupLabel = `${NL_MONTHS_LONG[monthIdx]} ${monday.getFullYear()}`;
+        const pairs: Array<{ wnr: number; dag: number }> = [];
+        for (let d = 0; d < DAYS_PER_WEEK; d++) pairs.push({ wnr, dag: d });
+        // Last in group = next slot has different month
+        // We'll patch isLastInGroup after the loop.
+        const isCurrentWeek = wnr === todayWeek && jaar === todayYear;
+        out.push({
+          index: out.length,
+          pairs,
+          primaryLabel: `Wk ${wnr}`,
+          secondaryLabel: formatDate(monday),
+          groupLabel,
+          groupKey,
+          isLastInGroup: false,
+          isCurrentGroup: isCurrentWeek,
+          isToday: false,
+        });
+      }
+    } else {
+      // jaar: 12 months
+      for (let m = 0; m < 12; m++) {
+        // Collect all (wnr, d) pairs whose Monday is in this month
+        const pairs: Array<{ wnr: number; dag: number }> = [];
+        const wkCount = weeksInYear(jaar);
+        for (let w = 1; w <= wkCount; w++) {
+          const monday = getMondayOfWeek(w, jaar);
+          if (monday.getMonth() === m && monday.getFullYear() === jaar) {
+            for (let d = 0; d < DAYS_PER_WEEK; d++) pairs.push({ wnr: w, dag: d });
+          }
+        }
+        const isCurrentMonth = jaar === todayYear && new Date().getMonth() === m;
+        out.push({
+          index: out.length,
+          pairs,
+          primaryLabel: NL_MONTHS[m],
+          secondaryLabel: `${jaar}`,
+          groupLabel: `${jaar}`,
+          groupKey: `yr-${jaar}`,
+          isLastInGroup: m === 11,
+          isCurrentGroup: isCurrentMonth,
+          isToday: false,
+        });
+      }
+    }
 
-  // Fetch all data
+    // Patch isLastInGroup for kwartaal
+    if (scale === "kwartaal") {
+      for (let i = 0; i < out.length; i++) {
+        const next = out[i + 1];
+        out[i].isLastInGroup = !next || next.groupKey !== out[i].groupKey;
+      }
+    }
+    return out;
+  }, [scale, startWeek, jaar, currentISO]);
+
+  const cellW = CELL_W_BY_SCALE[scale];
+  const totalGridWidth = slots.length * cellW;
+
+  const visibleWeekNrSet = useMemo(() => {
+    const s = new Set<number>();
+    for (const sl of slots) for (const p of sl.pairs) s.add(p.wnr);
+    return s;
+  }, [slots]);
+
+  // dayKey -> slotIndex (for fast lookup of which column a (wnr,dag) belongs to)
+  const dayKeyToSlot = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const sl of slots) {
+      for (const p of sl.pairs) m.set(dayKey(p.wnr, p.dag), sl.index);
+    }
+    return m;
+  }, [slots]);
+
+  // ====== Fetch all data once ======
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -178,9 +371,7 @@ export default function Overzicht() {
       setMonteurs((mRes.data ?? []) as Monteur[]);
       setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   // Maps
@@ -228,32 +419,23 @@ export default function Overzicht() {
       const k = dayKey(w.week_nr, c.dag_index);
       for (const mid of monteurIds) {
         let byDay = m.get(mid);
-        if (!byDay) {
-          byDay = new Map();
-          m.set(mid, byDay);
-        }
+        if (!byDay) { byDay = new Map(); m.set(mid, byDay); }
         let projs = byDay.get(k);
-        if (!projs) {
-          projs = new Set();
-          byDay.set(k, projs);
-        }
+        if (!projs) { projs = new Set(); byDay.set(k, projs); }
         projs.add(act.project_id);
       }
     }
     return m;
   }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet]);
 
-  // dayKey → Set<monteurId> of monteurs that are double-booked on that day
+  // dayKey → Set<monteurId> double-booked on that day
   const dayConflictMonteurs = useMemo(() => {
     const m = new Map<string, Set<string>>();
     for (const [mid, byDay] of monteurDayProjects.entries()) {
       for (const [k, projs] of byDay.entries()) {
         if (projs.size > 1) {
           let set = m.get(k);
-          if (!set) {
-            set = new Set();
-            m.set(k, set);
-          }
+          if (!set) { set = new Set(); m.set(k, set); }
           set.add(mid);
         }
       }
@@ -261,7 +443,7 @@ export default function Overzicht() {
     return m;
   }, [monteurDayProjects]);
 
-  // For project section: project_id → dayKey → activiteit_id → cel
+  // project_id → dayKey → activiteit_id → cel
   const projectDayActivities = useMemo(() => {
     const m = new Map<string, Map<string, Map<string, Cel>>>();
     for (const c of cellen) {
@@ -273,45 +455,29 @@ export default function Overzicht() {
       if (!act?.project_id) continue;
       const k = dayKey(w.week_nr, c.dag_index);
       let byDay = m.get(act.project_id);
-      if (!byDay) {
-        byDay = new Map();
-        m.set(act.project_id, byDay);
-      }
+      if (!byDay) { byDay = new Map(); m.set(act.project_id, byDay); }
       let byAct = byDay.get(k);
-      if (!byAct) {
-        byAct = new Map();
-        byDay.set(k, byAct);
-      }
+      if (!byAct) { byAct = new Map(); byDay.set(k, byAct); }
       byAct.set(c.activiteit_id, c);
     }
     return m;
   }, [cellen, weekById, activiteitById, visibleWeekNrSet]);
 
-  // project_id → Set<dayKey> of days where any assigned monteur on this project is double-booked
-  const projectConflictDayKeys = useMemo(() => {
-    const m = new Map<string, Set<string>>();
+  // activiteit_id → dayKey → cel
+  const activiteitDayCel = useMemo(() => {
+    const m = new Map<string, Map<string, Cel>>();
     for (const c of cellen) {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
       if (!visibleWeekNrSet.has(w.week_nr)) continue;
-      const act = activiteitById.get(c.activiteit_id);
-      if (!act?.project_id) continue;
       const k = dayKey(w.week_nr, c.dag_index);
-      const conflictSet = dayConflictMonteurs.get(k);
-      if (!conflictSet || conflictSet.size === 0) continue;
-      const mids = monteurIdsByCel.get(c.id) ?? [];
-      const hasConflict = mids.some((mid) => conflictSet.has(mid));
-      if (!hasConflict) continue;
-      let s = m.get(act.project_id);
-      if (!s) {
-        s = new Set();
-        m.set(act.project_id, s);
-      }
-      s.add(k);
+      let byDay = m.get(c.activiteit_id);
+      if (!byDay) { byDay = new Map(); m.set(c.activiteit_id, byDay); }
+      byDay.set(k, c);
     }
     return m;
-  }, [cellen, weekById, activiteitById, visibleWeekNrSet, dayConflictMonteurs, monteurIdsByCel]);
+  }, [cellen, weekById, visibleWeekNrSet]);
 
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
@@ -325,7 +491,7 @@ export default function Overzicht() {
     return m;
   }, [activiteiten]);
 
-  // Visible projects = projects with at least one filled cell in visible range OR week defined
+  // Visible projects = projects with at least one project_week in visible range
   const visibleProjecten = useMemo(() => {
     const ids = new Set<string>();
     for (const w of weken) {
@@ -334,7 +500,6 @@ export default function Overzicht() {
     return projecten.filter((p) => ids.has(p.id));
   }, [projecten, weken, visibleWeekNrSet]);
 
-  // Schakelmonteurs / Montagemonteurs split (already sorted by type desc, naam asc)
   const schakelMonteurs = useMemo(
     () => monteurs.filter((m) => m.type === "schakelmonteur"),
     [monteurs],
@@ -344,39 +509,83 @@ export default function Overzicht() {
     [monteurs],
   );
 
-  // Team capaciteit %
+  // ====== Aggregate to slot level ======
+
+  // monteurId → slotIndex → Set<project_id>
+  const monteurSlotProjects = useMemo(() => {
+    const m = new Map<string, Map<number, Set<string>>>();
+    for (const [mid, byDay] of monteurDayProjects.entries()) {
+      for (const [k, projs] of byDay.entries()) {
+        const si = dayKeyToSlot.get(k);
+        if (si === undefined) continue;
+        let bySlot = m.get(mid);
+        if (!bySlot) { bySlot = new Map(); m.set(mid, bySlot); }
+        let set = bySlot.get(si);
+        if (!set) { set = new Set(); bySlot.set(si, set); }
+        for (const p of projs) set.add(p);
+      }
+    }
+    return m;
+  }, [monteurDayProjects, dayKeyToSlot]);
+
+  // project_id → slotIndex → boolean (any cel that slot)
+  const projectSlotsFilled = useMemo(() => {
+    const m = new Map<string, Set<number>>();
+    for (const [pid, byDay] of projectDayActivities.entries()) {
+      for (const k of byDay.keys()) {
+        const si = dayKeyToSlot.get(k);
+        if (si === undefined) continue;
+        let set = m.get(pid);
+        if (!set) { set = new Set(); m.set(pid, set); }
+        set.add(si);
+      }
+    }
+    return m;
+  }, [projectDayActivities, dayKeyToSlot]);
+
+  // project_id → Set<slotIndex> with conflicts
+  const projectSlotConflicts = useMemo(() => {
+    // For each cel, check if any of its monteurs is double-booked on that day → mark its slot
+    const m = new Map<string, Set<number>>();
+    for (const c of cellen) {
+      if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
+      const w = weekById.get(c.week_id);
+      if (!w) continue;
+      const k = dayKey(w.week_nr, c.dag_index);
+      const si = dayKeyToSlot.get(k);
+      if (si === undefined) continue;
+      const act = activiteitById.get(c.activiteit_id);
+      if (!act?.project_id) continue;
+      const conflictSet = dayConflictMonteurs.get(k);
+      if (!conflictSet || conflictSet.size === 0) continue;
+      const mids = monteurIdsByCel.get(c.id) ?? [];
+      const has = mids.some((mid) => conflictSet.has(mid));
+      if (!has) continue;
+      let s = m.get(act.project_id);
+      if (!s) { s = new Set(); m.set(act.project_id, s); }
+      s.add(si);
+    }
+    return m;
+  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot]);
+
+  // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
   const teamCapPct = useMemo(() => {
-    const totalDays = numWeeks * DAYS_PER_WEEK * monteurs.length;
+    let totalDays = 0;
+    for (const sl of slots) totalDays += sl.pairs.length;
+    totalDays *= monteurs.length;
     if (totalDays === 0) return 0;
     let planned = 0;
     for (const m of monteurs) {
       const byDay = monteurDayProjects.get(m.id);
       if (!byDay) continue;
-      // Count any planned day for this monteur in visible weeks
-      for (const wnr of visibleWeekNrs) {
-        for (let d = 0; d < DAYS_PER_WEEK; d++) {
-          if (byDay.has(dayKey(wnr, d))) planned++;
+      for (const sl of slots) {
+        for (const p of sl.pairs) {
+          if (byDay.has(dayKey(p.wnr, p.dag))) planned++;
         }
       }
     }
     return Math.round((planned / totalDays) * 100);
-  }, [monteurs, monteurDayProjects, visibleWeekNrs, numWeeks]);
-
-  const currentISO = useMemo(() => getCurrentISOWeek(), []);
-
-  // Today as { week, dag_index } (Mon=0..Fri=4); null if weekend
-  const today = useMemo(() => {
-    const now = new Date();
-    const dow = (now.getDay() + 6) % 7; // Mon=0..Sun=6
-    if (dow > 4) return null;
-    return { week: currentISO.week, year: currentISO.year, dag: dow };
-  }, [currentISO]);
-
-  const isTodayCol = useCallback(
-    (wnr: number, d: number) =>
-      !!today && today.year === jaar && today.week === wnr && today.dag === d,
-    [today, jaar],
-  );
+  }, [monteurs, monteurDayProjects, slots]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
@@ -391,217 +600,232 @@ export default function Overzicht() {
     navigate(`/plannen?project=${id}`);
   };
 
-  // ====== Compute monteur spans (continuous same-project days) ======
-  // Returns array of segments: { startSlot, endSlot, projectId, dubbel: boolean }
+  // ====== Monteur segments (consecutive slots same project) ======
   type MonteurSeg = { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean };
   const monteurSegments = useCallback(
     (monteurId: string): MonteurSeg[] => {
-      const byDay = monteurDayProjects.get(monteurId);
-      if (!byDay) return [];
+      const bySlot = monteurSlotProjects.get(monteurId);
+      if (!bySlot) return [];
       const segs: MonteurSeg[] = [];
       let cur: MonteurSeg | null = null;
-      const flush = () => {
-        if (cur) segs.push(cur);
-        cur = null;
-      };
-      for (let wi = 0; wi < visibleWeekNrs.length; wi++) {
-        const wnr = visibleWeekNrs[wi];
-        for (let d = 0; d < DAYS_PER_WEEK; d++) {
-          const slot = wi * DAYS_PER_WEEK + d;
-          const projs = byDay.get(dayKey(wnr, d));
-          if (!projs || projs.size === 0) {
-            flush();
-            continue;
-          }
-          if (projs.size > 1) {
-            flush();
-            segs.push({
-              startSlot: slot,
-              endSlot: slot,
-              projectId: null,
-              projectIds: Array.from(projs),
-              dubbel: true,
-            });
-            continue;
-          }
-          const pid = Array.from(projs)[0];
-          if (cur && !cur.dubbel && cur.projectId === pid && cur.endSlot === slot - 1) {
-            cur.endSlot = slot;
-          } else {
-            flush();
-            cur = {
-              startSlot: slot,
-              endSlot: slot,
-              projectId: pid,
-              projectIds: [pid],
-              dubbel: false,
-            };
-          }
+      const flush = () => { if (cur) segs.push(cur); cur = null; };
+      for (let i = 0; i < slots.length; i++) {
+        const projs = bySlot.get(i);
+        if (!projs || projs.size === 0) { flush(); continue; }
+        if (projs.size > 1) {
+          flush();
+          segs.push({
+            startSlot: i, endSlot: i,
+            projectId: null,
+            projectIds: Array.from(projs),
+            dubbel: true,
+          });
+          continue;
+        }
+        const pid = Array.from(projs)[0];
+        if (cur && !cur.dubbel && cur.projectId === pid && cur.endSlot === i - 1) {
+          cur.endSlot = i;
+        } else {
+          flush();
+          cur = { startSlot: i, endSlot: i, projectId: pid, projectIds: [pid], dubbel: false };
         }
       }
       flush();
       return segs;
     },
-    [monteurDayProjects, visibleWeekNrs],
+    [monteurSlotProjects, slots.length],
   );
 
-  // ====== Project bar segments (continuous days with any filled cell) ======
+  // ====== Project bar segments (consecutive filled slots) ======
   const projectSegments = useCallback(
     (projectId: string): { startSlot: number; endSlot: number }[] => {
-      const byDay = projectDayActivities.get(projectId);
-      if (!byDay) return [];
+      const filled = projectSlotsFilled.get(projectId);
+      if (!filled) return [];
       const segs: { startSlot: number; endSlot: number }[] = [];
       let cur: { startSlot: number; endSlot: number } | null = null;
-      for (let wi = 0; wi < visibleWeekNrs.length; wi++) {
-        const wnr = visibleWeekNrs[wi];
-        for (let d = 0; d < DAYS_PER_WEEK; d++) {
-          const slot = wi * DAYS_PER_WEEK + d;
-          const has = byDay.has(dayKey(wnr, d));
-          if (has) {
-            if (cur && cur.endSlot === slot - 1) cur.endSlot = slot;
-            else {
-              if (cur) segs.push(cur);
-              cur = { startSlot: slot, endSlot: slot };
-            }
-          } else {
-            if (cur) {
-              segs.push(cur);
-              cur = null;
-            }
+      for (let i = 0; i < slots.length; i++) {
+        if (filled.has(i)) {
+          if (cur && cur.endSlot === i - 1) cur.endSlot = i;
+          else {
+            if (cur) segs.push(cur);
+            cur = { startSlot: i, endSlot: i };
           }
+        } else {
+          if (cur) { segs.push(cur); cur = null; }
         }
       }
       if (cur) segs.push(cur);
       return segs;
     },
-    [projectDayActivities, visibleWeekNrs],
+    [projectSlotsFilled, slots.length],
   );
+
+  // ====== Navigator label & shift ======
+  const navigatorLabel = useMemo(() => {
+    if (scale === "maand") {
+      const monday = getMondayOfWeek(startWeek, jaar);
+      const m = NL_MONTHS_LONG[monday.getMonth()];
+      return `${m} ${monday.getFullYear()}`;
+    }
+    if (scale === "kwartaal") {
+      const q = quarterOfWeek(startWeek, jaar);
+      return `Q${q} ${jaar}`;
+    }
+    return `${jaar}`;
+  }, [scale, startWeek, jaar]);
+
+  const shiftLeft = () => {
+    if (scale === "maand") {
+      const wkCount = weeksInYear(jaar);
+      const next = startWeek - 4;
+      if (next < 1) {
+        setJaar(jaar - 1);
+        setStartWeek(weeksInYear(jaar - 1) + next);
+      } else {
+        setStartWeek(next);
+      }
+    } else if (scale === "kwartaal") {
+      const q = quarterOfWeek(startWeek, jaar);
+      if (q === 1) {
+        setJaar(jaar - 1);
+        setStartWeek(firstWeekOfQuarter(4, jaar - 1));
+      } else {
+        setStartWeek(firstWeekOfQuarter(q - 1, jaar));
+      }
+    } else {
+      setJaar(jaar - 1);
+      setStartWeek(1);
+    }
+  };
+
+  const shiftRight = () => {
+    if (scale === "maand") {
+      const wkCount = weeksInYear(jaar);
+      const next = startWeek + 4;
+      if (next > wkCount) {
+        setJaar(jaar + 1);
+        setStartWeek(next - wkCount);
+      } else {
+        setStartWeek(next);
+      }
+    } else if (scale === "kwartaal") {
+      const q = quarterOfWeek(startWeek, jaar);
+      if (q === 4) {
+        setJaar(jaar + 1);
+        setStartWeek(firstWeekOfQuarter(1, jaar + 1));
+      } else {
+        setStartWeek(firstWeekOfQuarter(q + 1, jaar));
+      }
+    } else {
+      setJaar(jaar + 1);
+      setStartWeek(1);
+    }
+  };
+
+  // When switching scale, snap startWeek so the current period contains it nicely
+  const onScaleChange = (s: Scale) => {
+    setScale(s);
+    if (s === "kwartaal") {
+      setStartWeek(firstWeekOfQuarter(quarterOfWeek(startWeek, jaar), jaar));
+    } else if (s === "jaar") {
+      setStartWeek(1);
+    }
+  };
 
   // ============== Render helpers ==============
-  const renderHeader = () => (
-    <div style={{ width: totalGridWidth }}>
-      {/* Week titles */}
-      <div className="flex" style={{ height: 28 }}>
-        {visibleWeekNrs.map((wnr, wi) => {
-          const monday = getMondayOfWeek(wnr, jaar);
-          const isNow = wnr === currentISO.week && jaar === currentISO.year;
-          return (
-            <div
-              key={wi}
-              className="flex items-center justify-center gap-1.5"
-              style={{
-                width: DAYS_PER_WEEK * CELL_W,
-                borderRight: "1px solid rgba(255,255,255,0.12)",
-                background: isNow ? "rgba(63,255,139,0.06)" : "transparent",
-              }}
-            >
-              <span className="text-[11px] font-semibold text-foreground">
-                Wk {wnr}{" "}
-                <span className="text-muted-foreground font-normal">
-                  {formatDate(monday)}
+  const renderHeader = () => {
+    // Two header rows: group labels (week / month / year) and slot labels (day/week/month)
+    // Determine grouping
+    const groups: { key: string; label: string; startSlot: number; endSlot: number; isCurrent: boolean }[] = [];
+    for (let i = 0; i < slots.length; i++) {
+      const s = slots[i];
+      const last = groups[groups.length - 1];
+      if (last && last.key === s.groupKey) last.endSlot = i;
+      else groups.push({ key: s.groupKey, label: s.groupLabel, startSlot: i, endSlot: i, isCurrent: s.isCurrentGroup });
+    }
+
+    return (
+      <div style={{ width: totalGridWidth }}>
+        {/* Group row */}
+        <div className="flex" style={{ height: 28 }}>
+          {groups.map((g) => {
+            const w = (g.endSlot - g.startSlot + 1) * cellW;
+            return (
+              <div
+                key={g.key}
+                className="flex items-center justify-center gap-1.5"
+                style={{
+                  width: w,
+                  borderRight: BORDER_GROUP_RIGHT,
+                  borderBottom: BORDER_CELL_BOTTOM,
+                  background: g.isCurrent ? "rgba(63,255,139,0.06)" : "transparent",
+                }}
+              >
+                <span className="text-[11px] font-semibold text-foreground truncate px-1">
+                  {g.label}
                 </span>
-              </span>
-              {isNow && (
-                <span
-                  style={{
-                    background: "rgba(63,255,139,0.2)",
-                    color: "#3fff8b",
-                    fontSize: 8,
-                    fontWeight: 700,
-                    padding: "1px 5px",
-                    borderRadius: 999,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  NU
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {/* Day sub-headers */}
-      <div className="flex" style={{ height: 28, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        {visibleWeekNrs.map((wnr, wi) => {
-          const monday = getMondayOfWeek(wnr, jaar);
-          const isNow = wnr === currentISO.week && jaar === currentISO.year;
-          return (
-            <div key={wi} className="flex" style={{ background: isNow ? "rgba(63,255,139,0.04)" : "transparent" }}>
-              {DAG_LABELS.map((dl, d) => {
-                const date = new Date(monday);
-                date.setDate(monday.getDate() + d);
-                const isLastOfWeek = d === DAYS_PER_WEEK - 1;
-                return (
-                  <div
-                    key={d}
-                    className="flex flex-col items-center justify-center"
+                {g.isCurrent && (
+                  <span
                     style={{
-                      width: CELL_W,
-                      borderRight: isLastOfWeek
-                        ? "1px solid rgba(255,255,255,0.12)"
-                        : "1px solid rgba(255,255,255,0.04)",
-                      background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.05)" : undefined,
+                      background: "rgba(63,255,139,0.2)",
+                      color: "#3fff8b",
+                      fontSize: 8,
+                      fontWeight: 700,
+                      padding: "1px 5px",
+                      borderRadius: 999,
+                      letterSpacing: 0.5,
                     }}
                   >
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {dl}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground/70 tabular-nums">
-                      {formatDate(date)}
-                    </span>
-                    {isTodayCol(wnr, d) && (
-                      <div
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: "50%",
-                          background: "#3fff8b",
-                          marginTop: 2,
-                        }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+                    NU
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {/* Slot label row */}
+        <div className="flex" style={{ height: 28 }}>
+          {slots.map((s) => {
+            const isCurrent = s.isCurrentGroup;
+            const isLastGroup = s.isLastInGroup;
+            return (
+              <div
+                key={s.index}
+                className="flex flex-col items-center justify-center"
+                style={{
+                  width: cellW,
+                  borderRight: isLastGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
+                  borderBottom: BORDER_CELL_BOTTOM,
+                  background: s.isToday
+                    ? BG_TODAY
+                    : isCurrent
+                      ? BG_CURRENT_GROUP
+                      : undefined,
+                }}
+              >
+                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {s.primaryLabel}
+                </span>
+                {s.secondaryLabel && (
+                  <span className="text-[9px] text-muted-foreground/70 tabular-nums">
+                    {s.secondaryLabel}
+                  </span>
+                )}
+                {s.isToday && (
+                  <div
+                    style={{
+                      width: 4, height: 4, borderRadius: "50%",
+                      background: "#3fff8b", marginTop: 2,
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
-
-  // Empty cells row background (for monteurs row)
-  const renderEmptyDayCells = (rowHeight: number) => (
-    <div className="flex" style={{ width: totalGridWidth, height: rowHeight }}>
-      {visibleWeekNrs.map((wnr, wi) => {
-        const monday = getMondayOfWeek(wnr, jaar);
-        const isNow = wnr === currentISO.week && jaar === currentISO.year;
-        return (
-          <div key={wi} className="flex" style={{ background: isNow ? "rgba(63,255,139,0.03)" : "transparent" }}>
-            {DAG_LABELS.map((_, d) => {
-              const isLastOfWeek = d === DAYS_PER_WEEK - 1;
-              const date = new Date(monday);
-              date.setDate(monday.getDate() + d);
-              return (
-                <div
-                  key={d}
-                  title={`${DAG_LABELS[d]} ${formatDate(date)}`}
-                  style={{
-                    width: CELL_W,
-                    height: rowHeight,
-                    borderRight: isLastOfWeek
-                      ? "1px solid rgba(255,255,255,0.1)"
-                      : "1px solid rgba(255,255,255,0.04)",
-                    background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.03)" : undefined,
-                  }}
-                />
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
-  );
+    );
+  };
 
   // ============== Render ==============
   const totalMonteurs = monteurs.length;
@@ -627,9 +851,7 @@ export default function Overzicht() {
         >
           <span
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
+              width: 8, height: 8, borderRadius: 999,
               background: "#3fff8b",
               boxShadow: "0 0 6px rgba(63,255,139,0.6)",
             }}
@@ -638,7 +860,7 @@ export default function Overzicht() {
         </div>
       </div>
 
-      {/* Week navigator */}
+      {/* Navigator + scale selector */}
       <div
         className="mb-3 flex items-center justify-between rounded-lg border px-3 py-2"
         style={{
@@ -649,38 +871,38 @@ export default function Overzicht() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setStartWeek((w) => wrapWeek(w - 1))}
+            onClick={shiftLeft}
             className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
-            title="Vorige week"
+            title="Vorige periode"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-sm font-semibold text-foreground tabular-nums min-w-[110px] text-center">
-            Week {startWeek} {jaar}
+          <span className="text-sm font-semibold text-foreground tabular-nums min-w-[140px] text-center">
+            {navigatorLabel}
           </span>
           <button
             type="button"
-            onClick={() => setStartWeek((w) => wrapWeek(w + 1))}
+            onClick={shiftRight}
             className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
-            title="Volgende week"
+            title="Volgende periode"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
         <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] p-0.5">
-          {([2, 4, 8] as const).map((n) => (
+          {SCALE_OPTIONS.map((opt) => (
             <button
-              key={n}
+              key={opt.value}
               type="button"
-              onClick={() => setNumWeeks(n)}
+              onClick={() => onScaleChange(opt.value)}
               className={[
                 "rounded px-3 h-7 text-xs font-semibold transition-colors",
-                numWeeks === n
+                scale === opt.value
                   ? "bg-primary/20 text-primary"
                   : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
               ].join(" ")}
             >
-              {n} weken
+              {opt.label}
             </button>
           ))}
         </div>
@@ -969,9 +1191,7 @@ export default function Overzicht() {
                             <span
                               className="shrink-0"
                               style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: "50%",
+                                width: 6, height: 6, borderRadius: "50%",
                                 background: capDotColor,
                               }}
                             />
@@ -1006,7 +1226,7 @@ export default function Overzicht() {
 
             <div
               style={{
-                maxHeight: medewerkersOpen ? 2000 : 0,
+                maxHeight: medewerkersOpen ? 4000 : 0,
                 opacity: medewerkersOpen ? 1 : 0,
                 overflow: "hidden",
                 transition: "max-height 0.2s ease, opacity 0.15s ease",
@@ -1015,8 +1235,7 @@ export default function Overzicht() {
               {schakelMonteurs.length > 0 && (
                 <div
                   style={{
-                    height: 28,
-                    width: totalGridWidth,
+                    height: 28, width: totalGridWidth,
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
@@ -1024,7 +1243,7 @@ export default function Overzicht() {
               )}
               <div
                 style={{
-                  maxHeight: schakelOpen ? 2000 : 0,
+                  maxHeight: schakelOpen ? 4000 : 0,
                   opacity: schakelOpen ? 1 : 0,
                   overflow: "hidden",
                   transition: "max-height 0.2s ease, opacity 0.15s ease",
@@ -1036,10 +1255,8 @@ export default function Overzicht() {
                     monteur={m}
                     segments={monteurSegments(m.id)}
                     projectById={projectById}
-                    visibleWeekNrs={visibleWeekNrs}
-                    jaar={jaar}
-                    currentISO={currentISO}
-                    isTodayCol={isTodayCol}
+                    slots={slots}
+                    cellW={cellW}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
                   />
@@ -1048,8 +1265,7 @@ export default function Overzicht() {
               {montageMonteurs.length > 0 && (
                 <div
                   style={{
-                    height: 28,
-                    width: totalGridWidth,
+                    height: 28, width: totalGridWidth,
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
@@ -1057,7 +1273,7 @@ export default function Overzicht() {
               )}
               <div
                 style={{
-                  maxHeight: montageOpen ? 2000 : 0,
+                  maxHeight: montageOpen ? 4000 : 0,
                   opacity: montageOpen ? 1 : 0,
                   overflow: "hidden",
                   transition: "max-height 0.2s ease, opacity 0.15s ease",
@@ -1069,10 +1285,8 @@ export default function Overzicht() {
                     monteur={m}
                     segments={monteurSegments(m.id)}
                     projectById={projectById}
-                    visibleWeekNrs={visibleWeekNrs}
-                    jaar={jaar}
-                    currentISO={currentISO}
-                    isTodayCol={isTodayCol}
+                    slots={slots}
+                    cellW={cellW}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
                   />
@@ -1086,8 +1300,7 @@ export default function Overzicht() {
             {/* Projecten section header spacer */}
             <div
               style={{
-                height: 32,
-                width: totalGridWidth,
+                height: 32, width: totalGridWidth,
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
                 borderTop: "1px solid rgba(255,255,255,0.08)",
                 background: "rgba(255,255,255,0.02)",
@@ -1102,130 +1315,115 @@ export default function Overzicht() {
                 transition: "max-height 0.25s ease, opacity 0.15s ease",
               }}
             >
-            {visibleProjecten.length === 0 && (
-              <div style={{ height: 60, width: totalGridWidth }} />
-            )}
+              {visibleProjecten.length === 0 && (
+                <div style={{ height: 60, width: totalGridWidth }} />
+              )}
 
-            {visibleProjecten.map((p) => {
-              const expanded = expandedProjects.has(p.id);
-              const sc = statusColor(p.status);
-              const segs = projectSegments(p.id);
-              const acts = activiteitenByProject.get(p.id) ?? [];
-              const conflictKeys = projectConflictDayKeys.get(p.id);
-              const conflictSlots: number[] = [];
-              if (conflictKeys && conflictKeys.size > 0) {
-                for (let wi = 0; wi < visibleWeekNrs.length; wi++) {
-                  const wnr = visibleWeekNrs[wi];
-                  for (let d = 0; d < DAYS_PER_WEEK; d++) {
-                    if (conflictKeys.has(dayKey(wnr, d))) {
-                      conflictSlots.push(wi * DAYS_PER_WEEK + d);
-                    }
-                  }
-                }
-              }
-              return (
-                <div key={p.id}>
-                  {/* Project bar row */}
-                  <div
-                    onClick={() => navigateToProject(p.id)}
-                    className="relative cursor-pointer hover:bg-white/[0.02]"
-                    style={{
-                      width: totalGridWidth,
-                      height: ROW_H_PROJECT,
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    }}
-                  >
-                    {renderEmptyDayCells(ROW_H_PROJECT)}
-                    {segs.map((s, i) => {
-                      const left = s.startSlot * CELL_W + 2;
-                      const width = (s.endSlot - s.startSlot + 1) * CELL_W - 4;
-                      const segHasConflict =
-                        !!conflictKeys &&
-                        conflictSlots.some((sl) => sl >= s.startSlot && sl <= s.endSlot);
-                      return (
-                        <div
-                          key={i}
-                          className="absolute flex items-center justify-center px-2"
-                          style={{
-                            left,
-                            width,
-                            top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
-                            height: PILL_H_PROJECT,
-                            background: segHasConflict ? "#ef4444" : sc.bg,
-                            opacity: segHasConflict ? 0.95 : 0.8,
-                            borderRadius: 4,
-                            color: segHasConflict ? "#ffffff" : sc.text,
-                            fontSize: 10,
-                            fontWeight: 700,
-                            overflow: "hidden",
-                            whiteSpace: "nowrap",
-                            boxShadow: segHasConflict
-                              ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
-                              : undefined,
-                          }}
-                          title={segHasConflict ? "Conflict: monteur is dubbel ingepland" : undefined}
-                        >
-                          {segHasConflict && (
-                            <span
-                              className="mr-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
-                              style={{ background: "rgba(0,0,0,0.25)", fontSize: 9 }}
-                            >
-                              !
-                            </span>
-                          )}
-                          {width > 80 && (p.case_nummer ?? "")}
-                        </div>
-                      );
-                    })}
-                    {/* Conflict markers for slots not covered by any status bar */}
-                    {conflictSlots
-                      .filter((sl) => !segs.some((s) => sl >= s.startSlot && sl <= s.endSlot))
-                      .map((sl) => (
-                        <div
-                          key={`cf-${sl}`}
-                          className="absolute flex items-center justify-center"
-                          style={{
-                            left: sl * CELL_W + 2,
-                            width: CELL_W - 4,
-                            top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
-                            height: PILL_H_PROJECT,
-                            background: "#ef4444",
-                            opacity: 0.95,
-                            borderRadius: 4,
-                            color: "#ffffff",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
-                          }}
-                          title="Conflict: monteur is dubbel ingepland"
-                        >
-                          !
-                        </div>
+              {visibleProjecten.map((p) => {
+                const expanded = expandedProjects.has(p.id);
+                const sc = statusColor(p.status);
+                const segs = projectSegments(p.id);
+                const acts = activiteitenByProject.get(p.id) ?? [];
+                const conflictSet = projectSlotConflicts.get(p.id);
+                return (
+                  <div key={p.id}>
+                    {/* Project bar row */}
+                    <div
+                      onClick={() => navigateToProject(p.id)}
+                      className="relative cursor-pointer hover:bg-white/[0.02]"
+                      style={{
+                        width: totalGridWidth,
+                        height: ROW_H_PROJECT,
+                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                      }}
+                    >
+                      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} />
+                      {segs.map((s, i) => {
+                        const left = s.startSlot * cellW + 2;
+                        const width = (s.endSlot - s.startSlot + 1) * cellW - 4;
+                        const segHasConflict =
+                          !!conflictSet &&
+                          [...Array(s.endSlot - s.startSlot + 1)].some((_, off) =>
+                            conflictSet.has(s.startSlot + off),
+                          );
+                        return (
+                          <div
+                            key={i}
+                            className="absolute flex items-center justify-center px-2"
+                            style={{
+                              left, width,
+                              top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
+                              height: PILL_H_PROJECT,
+                              background: segHasConflict ? "#ef4444" : sc.bg,
+                              opacity: segHasConflict ? 0.95 : 0.8,
+                              borderRadius: 4,
+                              color: segHasConflict ? "#ffffff" : sc.text,
+                              fontSize: 10, fontWeight: 700,
+                              overflow: "hidden", whiteSpace: "nowrap",
+                              boxShadow: segHasConflict
+                                ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
+                                : undefined,
+                            }}
+                            title={segHasConflict ? "Conflict: monteur is dubbel ingepland" : undefined}
+                          >
+                            {segHasConflict && (
+                              <span
+                                className="mr-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
+                                style={{ background: "rgba(0,0,0,0.25)", fontSize: 9 }}
+                              >
+                                !
+                              </span>
+                            )}
+                            {width > 80 && (p.case_nummer ?? "")}
+                          </div>
+                        );
+                      })}
+                      {/* Standalone conflict markers (no status bar covers them) */}
+                      {conflictSet && [...conflictSet]
+                        .filter((sl) => !segs.some((s) => sl >= s.startSlot && sl <= s.endSlot))
+                        .map((sl) => (
+                          <div
+                            key={`cf-${sl}`}
+                            className="absolute flex items-center justify-center"
+                            style={{
+                              left: sl * cellW + 2,
+                              width: cellW - 4,
+                              top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
+                              height: PILL_H_PROJECT,
+                              background: "#ef4444",
+                              opacity: 0.95,
+                              borderRadius: 4,
+                              color: "#ffffff",
+                              fontSize: 11, fontWeight: 700,
+                              boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
+                            }}
+                            title="Conflict: monteur is dubbel ingepland"
+                          >
+                            !
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Activiteit cell rows */}
+                    {expanded &&
+                      acts.map((a) => (
+                        <ActiviteitCellsRow
+                          key={a.id}
+                          activiteit={a}
+                          dayCelMap={activiteitDayCel.get(a.id)}
+                          monteurIdsByCel={monteurIdsByCel}
+                          monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
+                          dayConflictMonteurs={dayConflictMonteurs}
+                          slots={slots}
+                          cellW={cellW}
+                          totalGridWidth={totalGridWidth}
+                          isLast={a === acts[acts.length - 1]}
+                          onClick={() => navigateToProject(p.id)}
+                        />
                       ))}
                   </div>
-
-                  {/* Activiteit cell rows */}
-                  {expanded &&
-                    acts.map((a) => (
-                      <ActiviteitCellsRow
-                        key={a.id}
-                        activiteit={a}
-                        cellMap={projectDayActivities.get(p.id)}
-                        monteurIdsByCel={monteurIdsByCel}
-                        monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
-                        dayConflictMonteurs={dayConflictMonteurs}
-                        visibleWeekNrs={visibleWeekNrs}
-                        jaar={jaar}
-                        currentISO={currentISO}
-                        isTodayCol={isTodayCol}
-                        totalGridWidth={totalGridWidth}
-                        isLast={a === acts[acts.length - 1]}
-                        onClick={() => navigateToProject(p.id)}
-                      />
-                    ))}
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1235,6 +1433,7 @@ export default function Overzicht() {
 }
 
 // ============== Sub-components ==============
+
 function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
   const isSchakel = monteur.type === "schakelmonteur";
   const ms = monteur.aanwijzing_ms;
@@ -1251,12 +1450,10 @@ function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
       <div
         className="flex shrink-0 items-center justify-center rounded-full"
         style={{
-          width: 26,
-          height: 26,
+          width: 26, height: 26,
           background: isSchakel ? "#feb300" : "#378add",
           color: isSchakel ? "#0a1a30" : "#ffffff",
-          fontSize: 9,
-          fontWeight: 700,
+          fontSize: 9, fontWeight: 700,
         }}
       >
         {initialen(monteur.naam)}
@@ -1273,10 +1470,8 @@ function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
           className="ml-auto shrink-0"
           style={{
             ...msStyle,
-            fontSize: 9,
-            fontWeight: 700,
-            padding: "1px 5px",
-            borderRadius: 4,
+            fontSize: 9, fontWeight: 700,
+            padding: "1px 5px", borderRadius: 4,
           }}
         >
           {ms}
@@ -1286,24 +1481,46 @@ function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
   );
 }
 
+// Renders a row of empty raster cells (always visible borders)
+function EmptyCellsRow({
+  slots, cellW, rowHeight,
+}: { slots: Slot[]; cellW: number; rowHeight: number }) {
+  return (
+    <div className="flex" style={{ width: slots.length * cellW, height: rowHeight }}>
+      {slots.map((s) => (
+        <div
+          key={s.index}
+          style={{
+            width: cellW,
+            height: rowHeight,
+            borderRight: s.isLastInGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
+            borderBottom: BORDER_CELL_BOTTOM,
+            background: s.isToday
+              ? BG_TODAY
+              : s.isCurrentGroup
+                ? BG_CURRENT_GROUP
+                : "transparent",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function MonteurCellsRow({
   monteur,
   segments,
   projectById,
-  visibleWeekNrs,
-  jaar,
-  currentISO,
-  isTodayCol,
+  slots,
+  cellW,
   totalGridWidth,
   onProjectClick,
 }: {
   monteur: Monteur;
   segments: { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean }[];
   projectById: Map<string, Project>;
-  visibleWeekNrs: number[];
-  jaar: number;
-  currentISO: { week: number; year: number };
-  isTodayCol: (wnr: number, d: number) => boolean;
+  slots: Slot[];
+  cellW: number;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
 }) {
@@ -1314,43 +1531,15 @@ function MonteurCellsRow({
       style={{
         height: ROW_H_MONTEUR,
         width: totalGridWidth,
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
       }}
     >
-      {/* Empty cell backgrounds */}
-      <div className="flex" style={{ width: totalGridWidth, height: ROW_H_MONTEUR }}>
-        {visibleWeekNrs.map((wnr, wi) => {
-          const monday = getMondayOfWeek(wnr, jaar);
-          return (
-            <div key={wi} className="flex">
-              {DAG_LABELS.map((_, d) => {
-                const isLast = d === DAYS_PER_WEEK - 1;
-                const date = new Date(monday);
-                date.setDate(monday.getDate() + d);
-                return (
-                  <div
-                    key={d}
-                    title={`${monteur.naam} — ${DAG_LABELS[d]} ${formatDate(date)}`}
-                    style={{
-                      width: CELL_W,
-                      height: ROW_H_MONTEUR,
-                      borderRight: isLast
-                        ? "1px solid rgba(255,255,255,0.1)"
-                        : "1px solid rgba(255,255,255,0.04)",
-                      background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.03)" : undefined,
-                    }}
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
+      {/* Background raster */}
+      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_MONTEUR} />
 
       {/* Segment overlays */}
       {segments.map((s, i) => {
-        const left = s.startSlot * CELL_W;
-        const width = (s.endSlot - s.startSlot + 1) * CELL_W;
+        const left = s.startSlot * cellW;
+        const width = (s.endSlot - s.startSlot + 1) * cellW;
         if (s.dubbel) {
           return (
             <HoverCard key={i} openDelay={120}>
@@ -1358,15 +1547,11 @@ function MonteurCellsRow({
                 <div
                   className="absolute flex cursor-pointer items-center justify-center"
                   style={{
-                    left: left + 2,
-                    width: width - 4,
-                    top: topPad,
-                    height: PILL_H_MONTEUR,
+                    left: left + 2, width: width - 4,
+                    top: topPad, height: PILL_H_MONTEUR,
                     background: "#ef4444",
                     borderRadius: 4,
-                    color: "white",
-                    fontWeight: 700,
-                    fontSize: 12,
+                    color: "white", fontWeight: 700, fontSize: 12,
                   }}
                 >
                   !
@@ -1396,8 +1581,6 @@ function MonteurCellsRow({
           );
         }
         const p = s.projectId ? projectById.get(s.projectId) : null;
-        const isFirst = true;
-        const isLast = true;
         return (
           <div
             key={i}
@@ -1405,17 +1588,13 @@ function MonteurCellsRow({
             className="absolute flex cursor-pointer items-center justify-center"
             title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}` : ""}
             style={{
-              left: left + 2,
-              width: width - 4,
-              top: topPad,
-              height: PILL_H_MONTEUR,
+              left: left + 2, width: width - 4,
+              top: topPad, height: PILL_H_MONTEUR,
               background: "rgba(63,255,139,0.85)",
               color: "#0a1a30",
-              fontSize: 9,
-              fontWeight: 700,
+              fontSize: 9, fontWeight: 700,
               borderRadius: 4,
-              overflow: "hidden",
-              whiteSpace: "nowrap",
+              overflow: "hidden", whiteSpace: "nowrap",
               padding: "0 4px",
             }}
           >
@@ -1429,27 +1608,23 @@ function MonteurCellsRow({
 
 function ActiviteitCellsRow({
   activiteit,
-  cellMap,
+  dayCelMap,
   monteurIdsByCel,
   monteurById,
   dayConflictMonteurs,
-  visibleWeekNrs,
-  jaar,
-  currentISO,
-  isTodayCol,
+  slots,
+  cellW,
   totalGridWidth,
   isLast: isLastRow,
   onClick,
 }: {
   activiteit: Activiteit;
-  cellMap: Map<string, Map<string, Cel>> | undefined;
+  dayCelMap: Map<string, Cel> | undefined;
   monteurIdsByCel: Map<string, string[]>;
   monteurById: Map<string, Monteur>;
   dayConflictMonteurs: Map<string, Set<string>>;
-  visibleWeekNrs: number[];
-  jaar: number;
-  currentISO: { week: number; year: number };
-  isTodayCol: (wnr: number, d: number) => boolean;
+  slots: Slot[];
+  cellW: number;
   totalGridWidth: number;
   isLast: boolean;
   onClick: () => void;
@@ -1467,131 +1642,107 @@ function ActiviteitCellsRow({
         background: "rgba(255,255,255,0.015)",
       }}
     >
-      {visibleWeekNrs.map((wnr, wi) => {
+      {slots.map((s) => {
+        // Aggregate over all (wnr,d) pairs in this slot
+        let firstColorHex: string | null = null;
+        let aggMonteurIds = new Set<string>();
+        let hasConflict = false;
+        const conflictMids: string[] = [];
+
+        for (const p of s.pairs) {
+          const cel = dayCelMap?.get(dayKey(p.wnr, p.dag));
+          if (!cel) continue;
+          if (cel.kleur_code && !firstColorHex) firstColorHex = colorHexFor(cel.kleur_code);
+          const mids = monteurIdsByCel.get(cel.id) ?? [];
+          for (const mid of mids) aggMonteurIds.add(mid);
+          const cs = dayConflictMonteurs.get(dayKey(p.wnr, p.dag));
+          if (cs) {
+            for (const mid of mids) {
+              if (cs.has(mid)) {
+                hasConflict = true;
+                if (!conflictMids.includes(mid)) conflictMids.push(mid);
+              }
+            }
+          }
+        }
+
+        const monteurIds = Array.from(aggMonteurIds);
+        const todayBg = s.isToday && !firstColorHex ? BG_TODAY : undefined;
+        const groupBg = s.isCurrentGroup && !firstColorHex && !s.isToday ? BG_CURRENT_GROUP : undefined;
+
         return (
-          <div key={wi} className="flex">
-            {DAG_LABELS.map((_, d) => {
-              const isLastDay = d === DAYS_PER_WEEK - 1;
-              const cel = cellMap?.get(dayKey(wnr, d))?.get(activiteit.id);
-              const kleur = cel?.kleur_code;
-              const colorHex = kleur ? colorHexFor(kleur) : null;
-              const monteurIds = cel ? monteurIdsByCel.get(cel.id) ?? [] : [];
-              const todayBg = isTodayCol(wnr, d) && !colorHex ? "rgba(63,255,139,0.03)" : undefined;
-              const conflictSet = dayConflictMonteurs.get(dayKey(wnr, d));
-              const hasConflict =
-                !!cel && !!conflictSet && monteurIds.some((mid) => conflictSet.has(mid));
-              const conflictMids = hasConflict
-                ? monteurIds.filter((mid) => conflictSet!.has(mid))
-                : [];
-              return (
-                <div
-                  key={d}
-                  className="relative"
-                  style={{
-                    width: CELL_W,
-                    height: ROW_H_ACTIVITEIT,
-                    borderRight: isLastDay
-                      ? "1px solid rgba(255,255,255,0.1)"
-                      : "1px solid rgba(255,255,255,0.04)",
-                    background: hasConflict
-                      ? "rgba(239,68,68,0.18)"
-                      : colorHex
-                      ? hexToRgba(colorHex, 0.45)
-                      : todayBg,
-                    borderLeft: hasConflict
-                      ? "2px solid #ef4444"
-                      : colorHex
-                      ? `2px solid ${colorHex}`
-                      : undefined,
-                    boxShadow: hasConflict
-                      ? "inset 0 0 0 1px rgba(239,68,68,0.55)"
-                      : undefined,
-                  }}
-                  title={
-                    hasConflict
-                      ? `Conflict: ${conflictMids
-                          .map((mid) => monteurById.get(mid)?.naam ?? "?")
-                          .join(", ")} dubbel ingepland`
-                      : undefined
-                  }
-                >
-                  {hasConflict && (
-                    <div
-                      className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
-                      style={{
-                        background: "#ef4444",
-                        color: "#fff",
-                        fontSize: 8,
-                        fontWeight: 700,
-                        lineHeight: 1,
-                      }}
-                    >
-                      !
-                    </div>
-                  )}
-                  {monteurIds.length > 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex">
-                        {monteurIds.slice(0, 2).map((mid, idx) => {
-                          const m = monteurById.get(mid);
-                          if (!m) return null;
-                          const isS = m.type === "schakelmonteur";
-                          return (
-                            <div
-                              key={mid}
-                              className="flex items-center justify-center rounded-full"
-                              style={{
-                                width: 16,
-                                height: 16,
-                                background: isS ? "#feb300" : "#378add",
-                                color: isS ? "#0a1a30" : "#fff",
-                                fontSize: 6,
-                                fontWeight: 700,
-                                border: "1.5px solid rgba(0,0,0,0.4)",
-                                marginLeft: idx === 0 ? 0 : -4,
-                              }}
-                              title={m.naam}
-                            >
-                              {initialen(m.naam)}
-                            </div>
-                          );
-                        })}
+          <div
+            key={s.index}
+            className="relative"
+            style={{
+              width: cellW,
+              height: ROW_H_ACTIVITEIT,
+              borderRight: s.isLastInGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
+              borderBottom: BORDER_CELL_BOTTOM,
+              background: hasConflict
+                ? "rgba(239,68,68,0.18)"
+                : firstColorHex
+                  ? hexToRgba(firstColorHex, 0.45)
+                  : (todayBg ?? groupBg),
+              borderLeft: hasConflict
+                ? "2px solid #ef4444"
+                : firstColorHex
+                  ? `2px solid ${firstColorHex}`
+                  : undefined,
+              boxShadow: hasConflict
+                ? "inset 0 0 0 1px rgba(239,68,68,0.55)"
+                : undefined,
+            }}
+            title={
+              hasConflict
+                ? `Conflict: ${conflictMids
+                    .map((mid) => monteurById.get(mid)?.naam ?? "?")
+                    .join(", ")} dubbel ingepland`
+                : undefined
+            }
+          >
+            {hasConflict && (
+              <div
+                className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
+                style={{
+                  background: "#ef4444", color: "#fff",
+                  fontSize: 8, fontWeight: 700, lineHeight: 1,
+                }}
+              >
+                !
+              </div>
+            )}
+            {monteurIds.length > 0 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex">
+                  {monteurIds.slice(0, 2).map((mid, idx) => {
+                    const m = monteurById.get(mid);
+                    if (!m) return null;
+                    const isS = m.type === "schakelmonteur";
+                    return (
+                      <div
+                        key={mid}
+                        className="flex items-center justify-center rounded-full"
+                        style={{
+                          width: 16, height: 16,
+                          background: isS ? "#feb300" : "#378add",
+                          color: isS ? "#0a1a30" : "#fff",
+                          fontSize: 6, fontWeight: 700,
+                          border: "1.5px solid rgba(0,0,0,0.4)",
+                          marginLeft: idx === 0 ? 0 : -4,
+                        }}
+                        title={m.naam}
+                      >
+                        {initialen(m.naam)}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         );
       })}
     </div>
   );
-}
-
-function colorHexFor(code: string): string {
-  // Lazy import to avoid circular issues — use the COLOR_MAP constants directly
-  // by re-importing here for type clarity
-  const map: Record<string, string> = {
-    c1: "#00642f",
-    c2: "#fdcb35",
-    c3: "#1a4a2e",
-    c4: "#0f766e",
-    c5: "#1d4ed8",
-    c6: "#dc2626",
-    c7: "#9333ea",
-    c8: "#ea580c",
-    c9: "#0891b2",
-    c10: "#65a30d",
-    c11: "#be185d",
-    c12: "#78716c",
-  };
-  return map[code] ?? "#888888";
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
