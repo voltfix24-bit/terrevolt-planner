@@ -1588,6 +1588,7 @@ const GridRow = memo(function GridRow({
   cellen,
   celMonteurs,
   monteurById,
+  highlightedMonteurId,
   onClick,
   onRightClick,
 }: GridRowProps) {
@@ -1603,14 +1604,26 @@ const GridRow = memo(function GridRow({
         const isCurrentWeek = w.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
         return DAG_LABELS.map((_, d) => {
           const cel = cellen.get(cellKey(activiteit.id, w.id, d));
+          const monteurIds = cel ? celMonteurs.get(cel.id) ?? [] : [];
+          const isHighlighted =
+            highlightedMonteurId !== null &&
+            monteurIds.includes(highlightedMonteurId);
+          const highlightColor = isHighlighted
+            ? monteurById.get(highlightedMonteurId!)?.type === "schakelmonteur"
+              ? "#feb300"
+              : "#378add"
+            : null;
           return (
             <CellBox
               key={`${w.id}-${d}`}
               cel={cel}
               activiteit={activiteit}
-              monteurIds={cel ? celMonteurs.get(cel.id) ?? [] : []}
+              monteurIds={monteurIds}
               monteurById={monteurById}
               isCurrentWeek={isCurrentWeek}
+              isHighlighted={isHighlighted}
+              highlightColor={highlightColor}
+              isDimmed={highlightedMonteurId !== null && !isHighlighted}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
