@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/hover-card";
 
 // ============== Constants ==============
-const SIDEBAR_W = 230;
+const SIDEBAR_W = 260;
 const SIDEBAR_W_COLLAPSED = 48;
 const ROW_H_MONTEUR = 44;
 const ROW_H_PROJECT = 44;
