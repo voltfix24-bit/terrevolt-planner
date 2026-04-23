@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
@@ -865,6 +865,24 @@ export default function Overzicht() {
     }
   };
 
+  // Spring exact één week vooruit/achteruit, ongeacht de huidige schaal.
+  const shiftWeek = (delta: number) => {
+    const next = startWeek + delta;
+    if (next < 1) {
+      const prevYear = jaar - 1;
+      setJaar(prevYear);
+      setStartWeek(weeksInYear(prevYear) + next);
+    } else {
+      const wkCount = weeksInYear(jaar);
+      if (next > wkCount) {
+        setJaar(jaar + 1);
+        setStartWeek(next - wkCount);
+      } else {
+        setStartWeek(next);
+      }
+    }
+  };
+
   // Wisselen van schaal mag startWeek/jaar niet verschuiven — de huidige
   // periode blijft in beeld; alleen de zoom verandert.
   const onScaleChange = (s: Scale) => {
@@ -1025,6 +1043,14 @@ export default function Overzicht() {
             className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
             title="Vorige periode"
           >
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => shiftWeek(-1)}
+            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            title="Eén week terug"
+          >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="text-sm font-semibold text-foreground tabular-nums min-w-[140px] text-center">
@@ -1032,11 +1058,19 @@ export default function Overzicht() {
           </span>
           <button
             type="button"
+            onClick={() => shiftWeek(1)}
+            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            title="Eén week vooruit"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={shiftRight}
             className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
             title="Volgende periode"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronsRight className="h-4 w-4" />
           </button>
         </div>
         <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] p-0.5">
