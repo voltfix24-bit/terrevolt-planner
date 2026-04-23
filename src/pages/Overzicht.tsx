@@ -807,11 +807,13 @@ export default function Overzicht() {
                       }}
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
                     >
-                      {expanded ? (
-                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                      )}
+                      <ChevronRight
+                        className="h-3 w-3 text-muted-foreground"
+                        style={{
+                          transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s ease",
+                        }}
+                      />
                     </button>
                     <span
                       className="font-display text-[13px] font-bold tabular-nums"
