@@ -908,6 +908,82 @@ export default function Overzicht() {
         </div>
       </div>
 
+      {/* Conflict legend */}
+      <div
+        className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-3 py-2 text-[11px]"
+        style={{
+          borderColor: "rgba(255,255,255,0.08)",
+          background: "rgba(10,26,48,0.4)",
+          color: "rgba(255,255,255,0.75)",
+        }}
+        aria-label="Legenda planning-conflicten"
+      >
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Legenda
+        </span>
+
+        {/* Monteur dubbel gepland */}
+        <div className="flex items-center gap-2">
+          <span
+            className="flex h-[22px] w-[34px] items-center justify-center"
+            style={{
+              background: "#ef4444",
+              color: "#ffffff",
+              borderRadius: 4,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            !
+          </span>
+          <span>
+            <span className="font-semibold text-foreground">Rode pill met "!"</span>
+            {" "}— monteur is op dezelfde dag aan meerdere projecten gekoppeld (dubbel gepland).
+          </span>
+        </div>
+
+        <span className="hidden h-4 w-px bg-white/10 sm:inline-block" />
+
+        {/* Activiteit-cel met conflict */}
+        <div className="flex items-center gap-2">
+          <span
+            className="relative inline-block"
+            style={{
+              width: 22,
+              height: 22,
+              background: "rgba(239,68,68,0.18)",
+              borderLeft: "2px solid #ef4444",
+              boxShadow: "inset 0 0 0 1px rgba(239,68,68,0.55)",
+              borderRadius: 2,
+            }}
+          >
+            <span
+              className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
+              style={{
+                background: "#ef4444",
+                color: "#fff",
+                fontSize: 8,
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+            >
+              !
+            </span>
+          </span>
+          <span>
+            <span className="font-semibold text-foreground">Rood gemarkeerde cel</span>
+            {" "}— deze activiteit deelt een monteur met een andere planning op dezelfde dag.
+          </span>
+        </div>
+
+        <span className="hidden h-4 w-px bg-white/10 sm:inline-block" />
+
+        {/* Tip */}
+        <span className="text-muted-foreground">
+          Tip: hover op de rode pill voor de betrokken projecten, klik op een rij om naar Plannen te gaan.
+        </span>
+      </div>
+
       {/* Main grid container — single scroll wrapper */}
       <div
         className="overflow-hidden rounded-lg border"
