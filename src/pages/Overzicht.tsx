@@ -1229,51 +1229,89 @@ export default function Overzicht() {
                     {/* Project header sidebar */}
                     <div
                       onClick={() => navigateToProject(p.id)}
-                      className="group flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
+                      title={`${p.case_nummer ?? "—"}${p.station_naam ? ` — ${p.station_naam}` : ""}`}
+                      className="group relative flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
                       style={{
                         height: ROW_H_PROJECT,
                         borderRight: "1px solid rgba(255,255,255,0.08)",
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
                       }}
                     >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleExpand(p.id);
-                        }}
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
-                      >
-                        <ChevronRight
-                          className="h-3 w-3 text-muted-foreground"
-                          style={{
-                            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-                            transition: "transform 0.2s ease",
-                          }}
+                      {sidebarCollapsed ? (
+                        <>
+                          {/* Status dot */}
+                          <span
+                            className="mx-auto shrink-0 rounded-full"
+                            style={{
+                              width: 10,
+                              height: 10,
+                              background: sc.bg,
+                            }}
+                          />
+                          {/* Optional 4-char case number, very small */}
+                          <span
+                            className="absolute inset-x-0 bottom-0.5 text-center font-display text-[8px] font-bold tabular-nums"
+                            style={{ color: "#3fff8b" }}
+                          >
+                            {(p.case_nummer ?? "").slice(0, 4)}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpand(p.id);
+                            }}
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
+                          >
+                            <ChevronRight
+                              className="h-3 w-3 text-muted-foreground"
+                              style={{
+                                transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                                transition: "transform 0.2s ease",
+                              }}
+                            />
+                          </button>
+                          <span
+                            className="font-display text-[13px] font-bold tabular-nums"
+                            style={{ color: "#3fff8b" }}
+                          >
+                            {p.case_nummer ?? "—"}
+                          </span>
+                          <span
+                            className="truncate text-[11px] text-foreground/80"
+                            title={p.station_naam ?? ""}
+                          >
+                            {p.station_naam ? `— ${p.station_naam}` : ""}
+                          </span>
+                          <span
+                            className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+                            style={{ background: sc.bg, color: sc.text }}
+                          >
+                            {sc.label}
+                          </span>
+                          <ArrowRight
+                            className="h-3 w-3 shrink-0 text-muted-foreground transition-opacity"
+                            style={{
+                              opacity: 0,
+                            }}
+                            aria-hidden
+                          />
+                        </>
+                      )}
+                      {/* Hover arrow indicator (positioned absolutely so it doesn't affect layout) */}
+                      {!sidebarCollapsed && (
+                        <ArrowRight
+                          className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-40"
+                          aria-hidden
                         />
-                      </button>
-                      <span
-                        className="font-display text-[13px] font-bold tabular-nums"
-                        style={{ color: "#3fff8b" }}
-                      >
-                        {p.case_nummer ?? "—"}
-                      </span>
-                      <span
-                        className="truncate text-[11px] text-foreground/80"
-                        title={p.station_naam ?? ""}
-                      >
-                        {p.station_naam ? `— ${p.station_naam}` : ""}
-                      </span>
-                      <span
-                        className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
-                        style={{ background: sc.bg, color: sc.text }}
-                      >
-                        {sc.label}
-                      </span>
+                      )}
                     </div>
 
                     {/* Activiteit sidebar rows */}
-                    {expanded &&
+                    {!sidebarCollapsed && expanded &&
                       acts.map((a, ai) => {
                         const capDotColor =
                           a.capaciteit_type === "schakel"
