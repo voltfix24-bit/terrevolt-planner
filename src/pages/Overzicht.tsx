@@ -16,13 +16,15 @@ import {
 } from "@/components/ui/hover-card";
 
 // ============== Constants ==============
-const SIDEBAR_W = 200;
+const SIDEBAR_W = 230;
 const CELL_W = 52;
 const ROW_H_MONTEUR = 44;
 const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
 const DAYS_PER_WEEK = 5;
+const PILL_H_MONTEUR = 28;
+const PILL_H_PROJECT = 24;
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 type NumWeeks = 2 | 4 | 8;
@@ -315,6 +317,20 @@ export default function Overzicht() {
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
+  // Today as { week, dag_index } (Mon=0..Fri=4); null if weekend
+  const today = useMemo(() => {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7; // Mon=0..Sun=6
+    if (dow > 4) return null;
+    return { week: currentISO.week, year: currentISO.year, dag: dow };
+  }, [currentISO]);
+
+  const isTodayCol = useCallback(
+    (wnr: number, d: number) =>
+      !!today && today.year === jaar && today.week === wnr && today.dag === d,
+    [today, jaar],
+  );
+
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
       const s = new Set(prev);
@@ -477,6 +493,7 @@ export default function Overzicht() {
                       borderRight: isLastOfWeek
                         ? "1px solid rgba(255,255,255,0.12)"
                         : "1px solid rgba(255,255,255,0.04)",
+                      background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.05)" : undefined,
                     }}
                   >
                     <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -485,6 +502,17 @@ export default function Overzicht() {
                     <span className="text-[9px] text-muted-foreground/70 tabular-nums">
                       {formatDate(date)}
                     </span>
+                    {isTodayCol(wnr, d) && (
+                      <div
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: "50%",
+                          background: "#3fff8b",
+                          marginTop: 2,
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -517,6 +545,7 @@ export default function Overzicht() {
                     borderRight: isLastOfWeek
                       ? "1px solid rgba(255,255,255,0.1)"
                       : "1px solid rgba(255,255,255,0.04)",
+                    background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.03)" : undefined,
                   }}
                 />
               );
@@ -643,11 +672,13 @@ export default function Overzicht() {
                 background: "rgba(255,255,255,0.02)",
               }}
             >
-              {medewerkersOpen ? (
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-              )}
+              <ChevronRight
+                className="h-3 w-3 text-muted-foreground"
+                style={{
+                  transform: medewerkersOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s ease",
+                }}
+              />
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Medewerkers
               </span>
@@ -656,66 +687,71 @@ export default function Overzicht() {
               </span>
             </button>
 
-            {medewerkersOpen && (
-              <>
-                {/* Schakelmonteurs label */}
-                {schakelMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      paddingLeft: 16,
-                      display: "flex",
-                      alignItems: "center",
-                      borderRight: "1px solid rgba(255,255,255,0.08)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  >
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Schakelmonteurs
-                    </span>
-                  </div>
-                )}
-                {schakelMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} />
-                ))}
+            <div
+              style={{
+                maxHeight: medewerkersOpen ? 2000 : 0,
+                opacity: medewerkersOpen ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 0.2s ease, opacity 0.15s ease",
+              }}
+            >
+              {/* Schakelmonteurs label */}
+              {schakelMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    paddingLeft: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Schakelmonteurs
+                  </span>
+                </div>
+              )}
+              {schakelMonteurs.map((m) => (
+                <MonteurSidebarRow key={m.id} monteur={m} />
+              ))}
 
-                {/* Montagemonteurs label */}
-                {montageMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      paddingLeft: 16,
-                      display: "flex",
-                      alignItems: "center",
-                      borderRight: "1px solid rgba(255,255,255,0.08)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  >
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Montagemonteurs
-                    </span>
-                  </div>
-                )}
-                {montageMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} />
-                ))}
+              {/* Montagemonteurs label */}
+              {montageMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    paddingLeft: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Montagemonteurs
+                  </span>
+                </div>
+              )}
+              {montageMonteurs.map((m) => (
+                <MonteurSidebarRow key={m.id} monteur={m} />
+              ))}
 
-                {monteurs.length === 0 && (
-                  <div
-                    style={{
-                      padding: "16px 12px",
-                      borderRight: "1px solid rgba(255,255,255,0.08)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    }}
-                    className="text-xs italic text-muted-foreground"
-                  >
-                    Voeg monteurs toe op de Capaciteit pagina
-                  </div>
-                )}
-              </>
-            )}
+              {monteurs.length === 0 && (
+                <div
+                  style={{
+                    padding: "16px 12px",
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                  }}
+                  className="text-xs italic text-muted-foreground"
+                >
+                  Voeg monteurs toe op de Capaciteit pagina
+                </div>
+              )}
+            </div>
 
             {/* Projecten section header */}
             <div
@@ -799,28 +835,44 @@ export default function Overzicht() {
 
                   {/* Activiteit sidebar rows */}
                   {expanded &&
-                    acts.map((a) => (
-                      <div
-                        key={a.id}
-                        className="flex items-center gap-2 pl-8 pr-2"
-                        style={{
-                          height: ROW_H_ACTIVITEIT,
-                          borderRight: "1px solid rgba(255,255,255,0.08)",
-                          borderBottom: "1px solid rgba(255,255,255,0.03)",
-                          background: "rgba(255,255,255,0.015)",
-                        }}
-                      >
-                        <span className="truncate text-[12px] text-foreground/90">
-                          {a.naam}
-                        </span>
-                        <span
-                          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground"
-                          style={{ background: "rgba(255,255,255,0.06)" }}
+                    acts.map((a, ai) => {
+                      const capDotColor =
+                        a.capaciteit_type === "schakel"
+                          ? "#feb300"
+                          : a.capaciteit_type === "montage"
+                            ? "#378add"
+                            : "rgba(255,255,255,0.2)";
+                      const isLastAct = ai === acts.length - 1;
+                      return (
+                        <div
+                          key={a.id}
+                          onClick={() => navigateToProject(p.id)}
+                          className="flex cursor-pointer items-center gap-2 pr-2 hover:bg-white/[0.03]"
+                          style={{
+                            paddingLeft: 20,
+                            height: ROW_H_ACTIVITEIT,
+                            borderRight: "1px solid rgba(255,255,255,0.08)",
+                            borderBottom: isLastAct
+                              ? "2px solid rgba(255,255,255,0.06)"
+                              : "1px solid rgba(255,255,255,0.03)",
+                            background: "rgba(255,255,255,0.015)",
+                          }}
                         >
-                          {capLabel(a.capaciteit_type)}
-                        </span>
-                      </div>
-                    ))}
+                          <span
+                            className="shrink-0"
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: capDotColor,
+                            }}
+                          />
+                          <span className="truncate text-[11px] text-foreground/90" title={a.naam}>
+                            {a.naam}
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               );
             })}
@@ -843,59 +895,66 @@ export default function Overzicht() {
               }}
             />
 
-            {medewerkersOpen && (
-              <>
-                {schakelMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      width: totalGridWidth,
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  />
-                )}
-                {schakelMonteurs.map((m) => (
-                  <MonteurCellsRow
-                    key={m.id}
-                    monteur={m}
-                    segments={monteurSegments(m.id)}
-                    projectById={projectById}
-                    visibleWeekNrs={visibleWeekNrs}
-                    jaar={jaar}
-                    currentISO={currentISO}
-                    totalGridWidth={totalGridWidth}
-                    onProjectClick={navigateToProject}
-                  />
-                ))}
-                {montageMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      width: totalGridWidth,
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  />
-                )}
-                {montageMonteurs.map((m) => (
-                  <MonteurCellsRow
-                    key={m.id}
-                    monteur={m}
-                    segments={monteurSegments(m.id)}
-                    projectById={projectById}
-                    visibleWeekNrs={visibleWeekNrs}
-                    jaar={jaar}
-                    currentISO={currentISO}
-                    totalGridWidth={totalGridWidth}
-                    onProjectClick={navigateToProject}
-                  />
-                ))}
-                {monteurs.length === 0 && (
-                  <div style={{ height: 60, width: totalGridWidth }} />
-                )}
-              </>
-            )}
+            <div
+              style={{
+                maxHeight: medewerkersOpen ? 2000 : 0,
+                opacity: medewerkersOpen ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 0.2s ease, opacity 0.15s ease",
+              }}
+            >
+              {schakelMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    width: totalGridWidth,
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                />
+              )}
+              {schakelMonteurs.map((m) => (
+                <MonteurCellsRow
+                  key={m.id}
+                  monteur={m}
+                  segments={monteurSegments(m.id)}
+                  projectById={projectById}
+                  visibleWeekNrs={visibleWeekNrs}
+                  jaar={jaar}
+                  currentISO={currentISO}
+                  isTodayCol={isTodayCol}
+                  totalGridWidth={totalGridWidth}
+                  onProjectClick={navigateToProject}
+                />
+              ))}
+              {montageMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    width: totalGridWidth,
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                />
+              )}
+              {montageMonteurs.map((m) => (
+                <MonteurCellsRow
+                  key={m.id}
+                  monteur={m}
+                  segments={monteurSegments(m.id)}
+                  projectById={projectById}
+                  visibleWeekNrs={visibleWeekNrs}
+                  jaar={jaar}
+                  currentISO={currentISO}
+                  isTodayCol={isTodayCol}
+                  totalGridWidth={totalGridWidth}
+                  onProjectClick={navigateToProject}
+                />
+              ))}
+              {monteurs.length === 0 && (
+                <div style={{ height: 60, width: totalGridWidth }} />
+              )}
+            </div>
 
             {/* Projecten section header spacer */}
             <div
@@ -940,10 +999,10 @@ export default function Overzicht() {
                           style={{
                             left,
                             width,
-                            top: (ROW_H_PROJECT - 20) / 2,
-                            height: 20,
+                            top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
+                            height: PILL_H_PROJECT,
                             background: sc.bg,
-                            opacity: 0.85,
+                            opacity: 0.8,
                             borderRadius: 4,
                             color: sc.text,
                             fontSize: 10,
@@ -970,7 +1029,10 @@ export default function Overzicht() {
                         visibleWeekNrs={visibleWeekNrs}
                         jaar={jaar}
                         currentISO={currentISO}
+                        isTodayCol={isTodayCol}
                         totalGridWidth={totalGridWidth}
+                        isLast={a === acts[acts.length - 1]}
+                        onClick={() => navigateToProject(p.id)}
                       />
                     ))}
                 </div>
@@ -1010,7 +1072,11 @@ function MonteurSidebarRow({ monteur }: { monteur: Monteur }) {
       >
         {initialen(monteur.naam)}
       </div>
-      <span className="truncate text-[13px] font-semibold text-foreground" title={monteur.naam}>
+      <span
+        className="truncate text-[13px] font-semibold text-foreground"
+        style={{ maxWidth: 130 }}
+        title={monteur.naam}
+      >
         {monteur.naam}
       </span>
       {ms && msStyle && (
@@ -1038,6 +1104,7 @@ function MonteurCellsRow({
   visibleWeekNrs,
   jaar,
   currentISO,
+  isTodayCol,
   totalGridWidth,
   onProjectClick,
 }: {
@@ -1047,9 +1114,11 @@ function MonteurCellsRow({
   visibleWeekNrs: number[];
   jaar: number;
   currentISO: { week: number; year: number };
+  isTodayCol: (wnr: number, d: number) => boolean;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
 }) {
+  const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
   return (
     <div
       className="relative"
@@ -1063,9 +1132,8 @@ function MonteurCellsRow({
       <div className="flex" style={{ width: totalGridWidth, height: ROW_H_MONTEUR }}>
         {visibleWeekNrs.map((wnr, wi) => {
           const monday = getMondayOfWeek(wnr, jaar);
-          const isNow = wnr === currentISO.week && jaar === currentISO.year;
           return (
-            <div key={wi} className="flex" style={{ background: isNow ? "rgba(63,255,139,0.03)" : "transparent" }}>
+            <div key={wi} className="flex">
               {DAG_LABELS.map((_, d) => {
                 const isLast = d === DAYS_PER_WEEK - 1;
                 const date = new Date(monday);
@@ -1080,6 +1148,7 @@ function MonteurCellsRow({
                       borderRight: isLast
                         ? "1px solid rgba(255,255,255,0.1)"
                         : "1px solid rgba(255,255,255,0.04)",
+                      background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.03)" : undefined,
                     }}
                   />
                 );
@@ -1102,8 +1171,8 @@ function MonteurCellsRow({
                   style={{
                     left: left + 2,
                     width: width - 4,
-                    top: 4,
-                    height: ROW_H_MONTEUR - 8,
+                    top: topPad,
+                    height: PILL_H_MONTEUR,
                     background: "#ef4444",
                     borderRadius: 4,
                     color: "white",
@@ -1147,18 +1216,15 @@ function MonteurCellsRow({
             className="absolute flex cursor-pointer items-center justify-center"
             title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}` : ""}
             style={{
-              left,
-              width,
-              top: 4,
-              height: ROW_H_MONTEUR - 8,
+              left: left + 2,
+              width: width - 4,
+              top: topPad,
+              height: PILL_H_MONTEUR,
               background: "rgba(63,255,139,0.85)",
               color: "#0a1a30",
               fontSize: 9,
               fontWeight: 700,
-              borderTopLeftRadius: isFirst ? 4 : 0,
-              borderBottomLeftRadius: isFirst ? 4 : 0,
-              borderTopRightRadius: isLast ? 4 : 0,
-              borderBottomRightRadius: isLast ? 4 : 0,
+              borderRadius: 4,
               overflow: "hidden",
               whiteSpace: "nowrap",
               padding: "0 4px",
@@ -1180,7 +1246,10 @@ function ActiviteitCellsRow({
   visibleWeekNrs,
   jaar,
   currentISO,
+  isTodayCol,
   totalGridWidth,
+  isLast: isLastRow,
+  onClick,
 }: {
   activiteit: Activiteit;
   cellMap: Map<string, Map<string, Cel>> | undefined;
@@ -1189,28 +1258,34 @@ function ActiviteitCellsRow({
   visibleWeekNrs: number[];
   jaar: number;
   currentISO: { week: number; year: number };
+  isTodayCol: (wnr: number, d: number) => boolean;
   totalGridWidth: number;
+  isLast: boolean;
+  onClick: () => void;
 }) {
   return (
     <div
-      className="flex"
+      onClick={onClick}
+      className="flex cursor-pointer hover:bg-white/[0.03]"
       style={{
         width: totalGridWidth,
         height: ROW_H_ACTIVITEIT,
-        borderBottom: "1px solid rgba(255,255,255,0.03)",
+        borderBottom: isLastRow
+          ? "2px solid rgba(255,255,255,0.06)"
+          : "1px solid rgba(255,255,255,0.03)",
         background: "rgba(255,255,255,0.015)",
       }}
     >
       {visibleWeekNrs.map((wnr, wi) => {
-        const isNow = wnr === currentISO.week && jaar === currentISO.year;
         return (
-          <div key={wi} className="flex" style={{ background: isNow ? "rgba(63,255,139,0.03)" : "transparent" }}>
+          <div key={wi} className="flex">
             {DAG_LABELS.map((_, d) => {
-              const isLast = d === DAYS_PER_WEEK - 1;
+              const isLastDay = d === DAYS_PER_WEEK - 1;
               const cel = cellMap?.get(dayKey(wnr, d))?.get(activiteit.id);
               const kleur = cel?.kleur_code;
               const colorHex = kleur ? colorHexFor(kleur) : null;
               const monteurIds = cel ? monteurIdsByCel.get(cel.id) ?? [] : [];
+              const todayBg = isTodayCol(wnr, d) && !colorHex ? "rgba(63,255,139,0.03)" : undefined;
               return (
                 <div
                   key={d}
@@ -1218,17 +1293,17 @@ function ActiviteitCellsRow({
                   style={{
                     width: CELL_W,
                     height: ROW_H_ACTIVITEIT,
-                    borderRight: isLast
+                    borderRight: isLastDay
                       ? "1px solid rgba(255,255,255,0.1)"
                       : "1px solid rgba(255,255,255,0.04)",
-                    background: colorHex ? hexToRgba(colorHex, 0.5) : "transparent",
+                    background: colorHex ? hexToRgba(colorHex, 0.45) : todayBg,
                     borderLeft: colorHex ? `2px solid ${colorHex}` : undefined,
                   }}
                 >
                   {monteurIds.length > 0 && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="flex">
-                        {monteurIds.slice(0, 3).map((mid, idx) => {
+                        {monteurIds.slice(0, 2).map((mid, idx) => {
                           const m = monteurById.get(mid);
                           if (!m) return null;
                           const isS = m.type === "schakelmonteur";
@@ -1237,14 +1312,14 @@ function ActiviteitCellsRow({
                               key={mid}
                               className="flex items-center justify-center rounded-full"
                               style={{
-                                width: 18,
-                                height: 18,
+                                width: 16,
+                                height: 16,
                                 background: isS ? "#feb300" : "#378add",
                                 color: isS ? "#0a1a30" : "#fff",
-                                fontSize: 7,
+                                fontSize: 6,
                                 fontWeight: 700,
                                 border: "1.5px solid rgba(0,0,0,0.4)",
-                                marginLeft: idx === 0 ? 0 : -6,
+                                marginLeft: idx === 0 ? 0 : -4,
                               }}
                               title={m.naam}
                             >
