@@ -22,8 +22,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<Projecten />} />
+            <Route path="/" element={<Navigate to="/overzicht" replace />} />
             <Route path="/overzicht" element={<Overzicht />} />
+            <Route path="/projecten" element={<Projecten />} />
             <Route path="/plannen" element={<Plannen />} />
             <Route path="/activiteiten" element={<Activiteiten />} />
             <Route path="/capaciteit" element={<Capaciteit />} />
