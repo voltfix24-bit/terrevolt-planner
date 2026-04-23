@@ -133,7 +133,7 @@ type CelMonteurMap = Map<string, string[]>; // key: cel.id -> monteur ids
 const cellKey = (a: string, w: string, d: number) => `${a}|${w}|${d}`;
 
 /* ----------------------------- Layout sizes ----------------------------- */
-const SIDEBAR_W = 200;
+const SIDEBAR_W = 240;
 const CELL_W = 52;
 const CELL_H = 40;
 const HEADER_H = 56;
@@ -245,15 +245,16 @@ const Plannen = () => {
   /* ----------------------------- scroll sync ----------------------------- */
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
-  const commentsScrollRef = useRef<HTMLDivElement>(null);
   const scrollLock = useRef(false);
-
-  const syncScroll = useCallback((source: "header" | "body" | "comments", left: number) => {
+  const syncScroll = useCallback((source: "header" | "body", left: number) => {
     if (scrollLock.current) return;
     scrollLock.current = true;
     if (source !== "header" && headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
     if (source !== "body" && bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
-    if (source !== "comments" && commentsScrollRef.current) commentsScrollRef.current.scrollLeft = left;
+    requestAnimationFrame(() => {
+      scrollLock.current = false;
+    });
+  }, []);
     requestAnimationFrame(() => {
       scrollLock.current = false;
     });
