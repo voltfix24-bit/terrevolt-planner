@@ -652,7 +652,7 @@ export default function Overzicht() {
     }
 
     return Math.round((planned.size / totalPossible) * 100);
-  }, [monteurs, visibleWeekNrs, scale, jaar, cellen, monteurIdsByCel, weekById]);
+  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
