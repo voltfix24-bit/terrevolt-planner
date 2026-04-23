@@ -286,9 +286,9 @@ export default function Overzicht() {
     const todayDow = (now.getDay() + 6) % 7;
 
     if (scale === "maand") {
-      // 5 weeks × 5 days
+      // weeksToShow weeks × 5 days (auto-fit to viewport)
       const wkCount = weeksInYear(jaar);
-      for (let wi = 0; wi < 5; wi++) {
+      for (let wi = 0; wi < weeksToShow; wi++) {
         const wnr = wrapWeek(((startWeek - 1 + wi) % wkCount) + 1);
         const monday = getMondayOfWeek(wnr, jaar);
         const isCurrentWeek = wnr === todayWeek && jaar === todayYear;
