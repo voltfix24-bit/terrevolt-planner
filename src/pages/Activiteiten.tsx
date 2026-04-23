@@ -333,6 +333,7 @@ const Activiteiten = () => {
                   key={a.id}
                   a={a}
                   onEdit={() => openEdit(a)}
+                  onDuplicate={() => handleDuplicate(a)}
                   onDelete={() => setDeleteTarget(a)}
                 />
               ))}
