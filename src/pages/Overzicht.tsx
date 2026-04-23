@@ -954,14 +954,10 @@ export default function Overzicht() {
     }
   };
 
-  // When switching scale, snap startWeek so the current period contains it nicely
+  // Wisselen van schaal mag startWeek/jaar niet verschuiven — de huidige
+  // periode blijft in beeld; alleen de zoom verandert.
   const onScaleChange = (s: Scale) => {
     setScale(s);
-    if (s === "kwartaal") {
-      setStartWeek(firstWeekOfQuarter(quarterOfWeek(startWeek, jaar), jaar));
-    } else if (s === "jaar") {
-      setStartWeek(1);
-    }
   };
 
   // ============== Render helpers ==============
