@@ -418,7 +418,125 @@ const Plannen = () => {
   }, [pushHistory]);
 
 
-  /* ----------------------------- week opmerking ----------------------------- */
+  /* ----------------------------- undo / history ----------------------------- */
+  const reverseHistoryEntry = useCallback(
+    async (entry: HistoryEntry) => {
+      skipHistoryRef.current = true;
+      try {
+        switch (entry.type) {
+          case "cel_created": {
+            removeCellLocal(
+              entry.cel.activiteit_id,
+              entry.cel.week_id,
+              entry.cel.dag_index
+            );
+            await supabase
+              .from("planning_cellen")
+              .delete()
+              .eq("id", entry.cel.id);
+            break;
+          }
+          case "cel_deleted": {
+            const { data } = await supabase
+              .from("planning_cellen")
+              .insert({
+                activiteit_id: entry.cel.activiteit_id,
+                week_id: entry.cel.week_id,
+                dag_index: entry.cel.dag_index,
+                kleur_code: entry.cel.kleur_code,
+                notitie: entry.cel.notitie,
+                capaciteit: entry.cel.capaciteit,
+              })
+              .select()
+              .single();
+            if (data) {
+              updateCellLocal(data as Cel);
+              if (entry.monteurIds.length > 0) {
+                await supabase.from("cel_monteurs").insert(
+                  entry.monteurIds.map((mid) => ({
+                    cel_id: (data as Cel).id,
+                    monteur_id: mid,
+                  }))
+                );
+                setCelMonteurs((prev) => {
+                  const m = new Map(prev);
+                  m.set((data as Cel).id, [...entry.monteurIds]);
+                  return m;
+                });
+              }
+            }
+            break;
+          }
+          case "cel_color_changed": {
+            await updateCellColor(entry.cel, entry.prevColor);
+            break;
+          }
+          case "cel_notitie_changed": {
+            await updateCellNotitie(entry.cel, entry.prevNotitie ?? "");
+            break;
+          }
+          case "monteur_added": {
+            await removeMonteurFromCell(entry.cel, entry.monteurId);
+            break;
+          }
+          case "monteur_removed": {
+            await addMonteurToCell(entry.cel, entry.monteurId);
+            break;
+          }
+        }
+      } finally {
+        skipHistoryRef.current = false;
+      }
+    },
+    [
+      removeCellLocal,
+      updateCellLocal,
+      updateCellColor,
+      updateCellNotitie,
+      addMonteurToCell,
+      removeMonteurFromCell,
+    ]
+  );
+
+  const handleUndo = useCallback(async () => {
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    await reverseHistoryEntry(last);
+    toast("Actie ongedaan gemaakt");
+  }, [history, reverseHistoryEntry]);
+
+  const handleUndoEntry = useCallback(
+    async (entry: HistoryEntry, idx: number) => {
+      setHistory((prev) => prev.filter((_, i) => i !== idx));
+      await reverseHistoryEntry(entry);
+      toast("Actie ongedaan gemaakt");
+    },
+    [reverseHistoryEntry]
+  );
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        const target = e.target as HTMLElement | null;
+        // Don't intercept undo when user is editing text
+        if (
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleUndo]);
+
+
   const updateWeekOpmerking = useCallback(async (week_id: string, opmerking: string) => {
     setWeken((prev) => prev.map((w) => (w.id === week_id ? { ...w, opmerking } : w)));
     const { error } = await supabase
