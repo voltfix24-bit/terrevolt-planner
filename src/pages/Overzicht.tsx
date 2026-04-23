@@ -487,7 +487,7 @@ export default function Overzicht() {
         {/* Body */}
         {loading ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Laden…</div>
-        ) : projecten.length === 0 ? (
+        ) : visibleProjecten.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
             Nog geen projecten — maak een project aan op de Projecten pagina
           </div>
@@ -502,7 +502,7 @@ export default function Overzicht() {
                 backgroundColor: "rgba(255,255,255,0.015)",
               }}
             >
-              {projecten.map((p) => {
+              {visibleProjecten.map((p) => {
                 const expanded = expandedProjects.has(p.id);
                 const projActs = activiteitenByProject.get(p.id) ?? [];
                 return (
@@ -592,7 +592,7 @@ export default function Overzicht() {
               onScroll={(e) => syncScroll("body", e.currentTarget.scrollLeft)}
             >
               <div style={{ width: totalGridWidth }}>
-                {projecten.map((p) => {
+                {visibleProjecten.map((p) => {
                   const expanded = expandedProjects.has(p.id);
                   const projActs = activiteitenByProject.get(p.id) ?? [];
                   const projWeken = wekenByProject.get(p.id) ?? [];
