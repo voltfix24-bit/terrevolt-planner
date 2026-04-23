@@ -415,7 +415,7 @@ export default function Overzicht() {
     let cancelled = false;
     (async () => {
       const [pRes, wRes, aRes, cRes, mRes, cmRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
+        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, straat, stad").order("created_at", { ascending: true }),
         supabase.from("project_weken").select("id, project_id, week_nr, positie"),
         supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
         supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -432,6 +432,44 @@ export default function Overzicht() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Fetch feestdagen for visible year ± 1
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("feestdagen")
+        .select("datum, naam")
+        .in("jaar", [jaar - 1, jaar, jaar + 1]);
+      if (cancelled) return;
+      setFeestdagen((data ?? []) as Feestdag[]);
+    })();
+    return () => { cancelled = true; };
+  }, [jaar]);
+
+  const feestdagSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const f of feestdagen) s.add(f.datum);
+    return s;
+  }, [feestdagen]);
+
+  const feestdagNaamMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of feestdagen) m.set(f.datum, f.naam);
+    return m;
+  }, [feestdagen]);
+
+  // slotIndex → feestdag naam (alleen wanneer slot exact 1 dag dekt, d.w.z. maand-scale)
+  const feestdagSlots = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const s of slots) {
+      if (!s.date) continue;
+      const k = dateKey(s.date);
+      if (feestdagSet.has(k)) m.set(s.index, feestdagNaamMap.get(k) ?? "Feestdag");
+    }
+    return m;
+  }, [slots, feestdagSet, feestdagNaamMap]);
+
 
   // Maps
   const projectById = useMemo(() => {
