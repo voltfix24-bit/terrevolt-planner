@@ -1090,34 +1090,6 @@ export default function Overzicht() {
               transition: "width 0.2s ease",
             }}
           >
-            {/* Header spacer with collapse toggle */}
-            <div
-              className="flex items-center"
-              style={{
-                height: HEADER_H,
-                borderRight: "1px solid rgba(255,255,255,0.08)",
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.02)",
-                paddingLeft: sidebarCollapsed ? 0 : 8,
-                paddingRight: 6,
-                justifyContent: sidebarCollapsed ? "center" : "flex-end",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed((c) => !c)}
-                className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
-                title={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
-                aria-label={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
-              >
-                {sidebarCollapsed ? (
-                  <PanelLeftOpen className="h-4 w-4" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-
             {/* Medewerkers section toggle */}
             <button
               type="button"
