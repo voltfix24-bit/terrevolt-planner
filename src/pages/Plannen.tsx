@@ -1122,6 +1122,59 @@ const GridRow = memo(function GridRow({
   );
 });
 
+const MonteurAvatar = ({
+  naam,
+  type,
+  overflow,
+  size = 20,
+  fontSize = 7,
+  overlap = false,
+}: {
+  naam?: string;
+  type?: "schakelmonteur" | "montagemonteur";
+  overflow?: number;
+  size?: number;
+  fontSize?: number;
+  overlap?: boolean;
+}) => {
+  let bg = "rgba(255,255,255,0.2)";
+  let color = "white";
+  let label = "";
+  if (overflow != null) {
+    label = `+${overflow}`;
+  } else if (type === "schakelmonteur") {
+    bg = "#feb300";
+    color = "#0a1a30";
+    label = initialen(naam ?? "");
+  } else {
+    bg = "#378add";
+    color = "white";
+    label = initialen(naam ?? "");
+  }
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        backgroundColor: bg,
+        color,
+        border: "1.5px solid rgba(0,0,0,0.3)",
+        marginLeft: overlap ? -5 : 0,
+        fontSize,
+        fontWeight: 700,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+      }}
+      className="font-display"
+    >
+      {label}
+    </span>
+  );
+};
+
 const CellBox = memo(function CellBox({
   cel,
   activiteit,
