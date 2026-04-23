@@ -9,6 +9,7 @@ import Plannen from "./pages/Plannen";
 import Activiteiten from "./pages/Activiteiten";
 import Capaciteit from "./pages/Capaciteit";
 import Instellingen from "./pages/Instellingen";
+import Overzicht from "./pages/Overzicht";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Projecten />} />
+            <Route path="/overzicht" element={<Overzicht />} />
             <Route path="/plannen" element={<Plannen />} />
             <Route path="/activiteiten" element={<Activiteiten />} />
             <Route path="/capaciteit" element={<Capaciteit />} />
