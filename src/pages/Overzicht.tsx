@@ -1013,7 +1013,10 @@ export default function Overzicht() {
                         visibleWeekNrs={visibleWeekNrs}
                         jaar={jaar}
                         currentISO={currentISO}
+                        isTodayCol={isTodayCol}
                         totalGridWidth={totalGridWidth}
+                        isLast={a === acts[acts.length - 1]}
+                        onClick={() => navigateToProject(p.id)}
                       />
                     ))}
                 </div>
