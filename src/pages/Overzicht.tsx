@@ -1094,6 +1094,14 @@ export default function Overzicht() {
               }}
             />
 
+            <div
+              style={{
+                maxHeight: projectenOpen ? 99999 : 0,
+                opacity: projectenOpen ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 0.25s ease, opacity 0.15s ease",
+              }}
+            >
             {visibleProjecten.length === 0 && (
               <div style={{ height: 60, width: totalGridWidth }} />
             )}
