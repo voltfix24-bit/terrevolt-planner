@@ -797,6 +797,45 @@ const Plannen = () => {
     }
   }, [weken, monteursFilter.weekId]);
 
+  // Tooltip-tekst voor lege cellen in de huidige ISO-week.
+  // Verklaart waarom de week een groene tint heeft + samenvatting van wat er die week gepland staat.
+  const currentWeekTooltip = useMemo<string | null>(() => {
+    const projectJaar = project?.jaar ?? new Date().getFullYear();
+    if (projectJaar !== CURRENT_YEAR) return null;
+    const currentWeek = weken.find((w) => w.week_nr === CURRENT_WEEK);
+    if (!currentWeek) return null;
+
+    // Tel per activiteit hoeveel dagen er gepland zijn in deze week (cellen met kleur_code).
+    const dagenPerActiviteit = new Map<string, number>();
+    for (const cel of cellen.values()) {
+      if (cel.week_id !== currentWeek.id) continue;
+      if (!cel.kleur_code) continue;
+      dagenPerActiviteit.set(
+        cel.activiteit_id,
+        (dagenPerActiviteit.get(cel.activiteit_id) ?? 0) + 1,
+      );
+    }
+
+    const header = `Huidige week (week ${CURRENT_WEEK})`;
+    if (dagenPerActiviteit.size === 0) {
+      return `${header}\nNog niets ingepland deze week`;
+    }
+
+    const regels: string[] = [];
+    for (const a of activiteiten) {
+      const n = dagenPerActiviteit.get(a.id);
+      if (!n) continue;
+      const cap =
+        a.capaciteit_type === "schakel"
+          ? " (schakel)"
+          : a.capaciteit_type === "montage"
+          ? " (montage)"
+          : "";
+      regels.push(`• ${a.naam}${cap} — ${n} ${n === 1 ? "dag" : "dagen"}`);
+    }
+    return `${header}\nGepland deze week:\n${regels.join("\n")}`;
+  }, [project?.jaar, weken, cellen, activiteiten]);
+
   const openCel = useMemo(() => {
     if (!openCellKey) return null;
     const cel = cellen.get(openCellKey);
