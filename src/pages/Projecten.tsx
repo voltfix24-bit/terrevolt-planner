@@ -128,6 +128,8 @@ const getIsoWeek = (date = new Date()): number => {
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 };
 
+const wrapWeek = (n: number): number => ((n - 1 + 53) % 53) + 1;
+
 const Projecten = () => {
   const navigate = useNavigate();
   const setSelectedProjectId = useSelectedProject((s) => s.setProjectId);
