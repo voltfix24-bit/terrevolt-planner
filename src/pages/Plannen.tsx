@@ -1126,6 +1126,10 @@ const MonteurAvatar = ({
   size = 20,
   fontSize = 7,
   overlap = false,
+  overlapPx = 5,
+  borderWidth = 1.5,
+  borderColor = "rgba(0,0,0,0.3)",
+  overflowBg = "rgba(255,255,255,0.2)",
 }: {
   naam?: string;
   type?: "schakelmonteur" | "montagemonteur";
@@ -1133,8 +1137,12 @@ const MonteurAvatar = ({
   size?: number;
   fontSize?: number;
   overlap?: boolean;
+  overlapPx?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  overflowBg?: string;
 }) => {
-  let bg = "rgba(255,255,255,0.2)";
+  let bg = overflowBg;
   let color = "white";
   let label = "";
   if (overflow != null) {
@@ -1156,14 +1164,15 @@ const MonteurAvatar = ({
         borderRadius: "50%",
         backgroundColor: bg,
         color,
-        border: "1.5px solid rgba(0,0,0,0.3)",
-        marginLeft: overlap ? -5 : 0,
+        border: `${borderWidth}px solid ${borderColor}`,
+        marginLeft: overlap ? -overlapPx : 0,
         fontSize,
         fontWeight: 700,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
         lineHeight: 1,
+        flexShrink: 0,
       }}
       className="font-display"
     >
@@ -1171,6 +1180,13 @@ const MonteurAvatar = ({
     </span>
   );
 };
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 const CellBox = memo(function CellBox({
   cel,
