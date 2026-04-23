@@ -1138,7 +1138,7 @@ export default function Overzicht() {
                 }}
               >
                 {montageMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} />
+                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
                 ))}
               </div>
 
