@@ -143,6 +143,9 @@ export default function Overzicht() {
   const [celMonteurs, setCelMonteurs] = useState<CelMonteur[]>([]);
 
   const [medewerkersOpen, setMedewerkersOpen] = useState(true);
+  const [schakelOpen, setSchakelOpen] = useState(true);
+  const [montageOpen, setMontageOpen] = useState(true);
+  const [projectenOpen, setProjectenOpen] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const visibleWeekNrs = useMemo(() => {
