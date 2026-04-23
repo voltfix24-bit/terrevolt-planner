@@ -143,6 +143,7 @@ const Projecten = () => {
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savedLocation, setSavedLocation] = useState<{ straat: string; stad: string } | null>(null);
 
   // form state
   const [caseNummer, setCaseNummer] = useState("");
@@ -253,6 +254,7 @@ const Projecten = () => {
     setPostcode("");
     setStad("");
     setGemeente("");
+    setSavedLocation(null);
     setModalOpen(true);
   };
 
@@ -277,6 +279,7 @@ const Projecten = () => {
     setPostcode(p.postcode ?? "");
     setStad(p.stad ?? "");
     setGemeente(p.gemeente ?? "");
+    setSavedLocation(null);
     setModalOpen(true);
   };
 
@@ -348,6 +351,13 @@ const Projecten = () => {
       updated_at: new Date().toISOString(),
     };
 
+    const showSavedBanner = () => {
+      const s = straat.trim();
+      const c = stad.trim();
+      if (s || c) setSavedLocation({ straat: s, stad: c });
+      else setSavedLocation(null);
+    };
+
     if (editing) {
       const { error } = await supabase
         .from("projecten")
@@ -357,7 +367,7 @@ const Projecten = () => {
         toast.error("Opslaan mislukt");
       } else {
         toast.success("Project opgeslagen");
-        setModalOpen(false);
+        showSavedBanner();
         await loadAll();
       }
     } else {
@@ -380,7 +390,8 @@ const Projecten = () => {
           }
         }
         toast.success("Project opgeslagen");
-        setModalOpen(false);
+        setEditing(data as Project);
+        showSavedBanner();
         await loadAll();
       }
     }
@@ -510,6 +521,16 @@ const Projecten = () => {
               <X className="h-3.5 w-3.5" /> Annuleren
             </button>
           </div>
+
+          {savedLocation && (
+            <div className="mx-6 mt-4 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
+              <MapPin className="h-4 w-4 shrink-0" />
+              <span className="font-display font-semibold">Locatie opgeslagen:</span>
+              <span className="text-foreground/90">
+                {[savedLocation.straat, savedLocation.stad].filter(Boolean).join(", ") || "—"}
+              </span>
+            </div>
+          )}
 
           <div className="space-y-5 px-6 py-6 max-h-[75vh] overflow-y-auto">
             {/* Two columns */}
