@@ -1274,18 +1274,36 @@ export default function Overzicht() {
                               }}
                             />
                           </button>
-                          <span
-                            className="font-display text-[13px] font-bold tabular-nums"
-                            style={{ color: "#3fff8b" }}
-                          >
-                            {p.case_nummer ?? "—"}
-                          </span>
-                          <span
-                            className="truncate text-[11px] text-foreground/80"
-                            title={p.station_naam ?? ""}
-                          >
-                            {p.station_naam ? `— ${p.station_naam}` : ""}
-                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: "#3fff8b",
+                                letterSpacing: "0.15em",
+                                textTransform: "uppercase",
+                                marginBottom: 2,
+                                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                              }}
+                            >
+                              {p.case_nummer ?? "—"}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "white",
+                                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                maxWidth: 160,
+                              }}
+                              title={p.station_naam ?? ""}
+                            >
+                              {p.station_naam ?? ""}
+                            </p>
+                          </div>
                           <span
                             className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
                             style={{ background: sc.bg, color: sc.text }}
