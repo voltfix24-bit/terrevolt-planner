@@ -687,66 +687,71 @@ export default function Overzicht() {
               </span>
             </button>
 
-            {medewerkersOpen && (
-              <>
-                {/* Schakelmonteurs label */}
-                {schakelMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      paddingLeft: 16,
-                      display: "flex",
-                      alignItems: "center",
-                      borderRight: "1px solid rgba(255,255,255,0.08)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  >
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Schakelmonteurs
-                    </span>
-                  </div>
-                )}
-                {schakelMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} />
-                ))}
+            <div
+              style={{
+                maxHeight: medewerkersOpen ? 2000 : 0,
+                opacity: medewerkersOpen ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 0.2s ease, opacity 0.15s ease",
+              }}
+            >
+              {/* Schakelmonteurs label */}
+              {schakelMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    paddingLeft: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Schakelmonteurs
+                  </span>
+                </div>
+              )}
+              {schakelMonteurs.map((m) => (
+                <MonteurSidebarRow key={m.id} monteur={m} />
+              ))}
 
-                {/* Montagemonteurs label */}
-                {montageMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      paddingLeft: 16,
-                      display: "flex",
-                      alignItems: "center",
-                      borderRight: "1px solid rgba(255,255,255,0.08)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  >
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Montagemonteurs
-                    </span>
-                  </div>
-                )}
-                {montageMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} />
-                ))}
+              {/* Montagemonteurs label */}
+              {montageMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    paddingLeft: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Montagemonteurs
+                  </span>
+                </div>
+              )}
+              {montageMonteurs.map((m) => (
+                <MonteurSidebarRow key={m.id} monteur={m} />
+              ))}
 
-                {monteurs.length === 0 && (
-                  <div
-                    style={{
-                      padding: "16px 12px",
-                      borderRight: "1px solid rgba(255,255,255,0.08)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    }}
-                    className="text-xs italic text-muted-foreground"
-                  >
-                    Voeg monteurs toe op de Capaciteit pagina
-                  </div>
-                )}
-              </>
-            )}
+              {monteurs.length === 0 && (
+                <div
+                  style={{
+                    padding: "16px 12px",
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                  }}
+                  className="text-xs italic text-muted-foreground"
+                >
+                  Voeg monteurs toe op de Capaciteit pagina
+                </div>
+              )}
+            </div>
 
             {/* Projecten section header */}
             <div
