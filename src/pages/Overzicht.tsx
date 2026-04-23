@@ -2321,6 +2321,8 @@ function ActiviteitCellsRow({
   totalGridWidth,
   isLast: isLastRow,
   onClick,
+  feestdagSlots,
+  trailingW = 0,
 }: {
   activiteit: Activiteit;
   dayCelMap: Map<string, Cel> | undefined;
@@ -2332,13 +2334,15 @@ function ActiviteitCellsRow({
   totalGridWidth: number;
   isLast: boolean;
   onClick: () => void;
+  feestdagSlots: Map<number, string>;
+  trailingW?: number;
 }) {
   return (
     <div
       onClick={onClick}
       className="flex cursor-pointer hover:bg-white/[0.03]"
       style={{
-        width: totalGridWidth,
+        width: totalGridWidth + trailingW,
         height: ROW_H_ACTIVITEIT,
         borderBottom: isLastRow
           ? "2px solid rgba(255,255,255,0.06)"
@@ -2388,13 +2392,19 @@ function ActiviteitCellsRow({
             style={{
               width: cellW,
               height: ROW_H_ACTIVITEIT,
-              borderRight: s.isLastInGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
+              borderRight: feestdagSlots.has(s.index)
+                ? BORDER_FEESTDAG
+                : s.isLastInGroup
+                  ? BORDER_GROUP_RIGHT
+                  : BORDER_CELL_RIGHT,
               borderBottom: BORDER_CELL_BOTTOM,
               background: hasConflict
                 ? "rgba(239,68,68,0.18)"
                 : firstColorHex
                   ? hexToRgba(firstColorHex, 0.45)
-                  : (todayBg ?? groupBg),
+                  : feestdagSlots.has(s.index)
+                    ? BG_FEESTDAG_BODY
+                    : (todayBg ?? groupBg),
               borderLeft: hasConflict
                 ? "2px solid #ef4444"
                 : firstColorHex
@@ -2470,6 +2480,15 @@ function ActiviteitCellsRow({
           </div>
         );
       })}
+      {trailingW > 0 && (
+        <div
+          style={{
+            width: trailingW,
+            height: ROW_H_ACTIVITEIT,
+            borderLeft: "1px solid rgba(255,255,255,0.06)",
+          }}
+        />
+      )}
     </div>
   );
 }
