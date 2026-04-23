@@ -901,6 +901,17 @@ export default function Overzicht() {
 
   return (
     <div className="font-sans">
+      <style>{`
+        .overzicht-scroll::-webkit-scrollbar { height: 4px; width: 4px; }
+        .overzicht-scroll::-webkit-scrollbar-track { background: transparent; }
+        .overzicht-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.1);
+          border-radius: 10px;
+        }
+        .overzicht-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(63,255,139,0.3);
+        }
+      `}</style>
       {/* Page header */}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
