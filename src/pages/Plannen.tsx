@@ -8,9 +8,11 @@ import {
   Download,
   FileText,
   GripVertical,
+  History,
   Plus,
   Printer,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -132,6 +134,16 @@ type CelMonteurMap = Map<string, string[]>; // key: cel.id -> monteur ids
 
 const cellKey = (a: string, w: string, d: number) => `${a}|${w}|${d}`;
 
+const DAG_NAMEN_KORT = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
+
+type HistoryEntry =
+  | { type: "cel_created"; cel: Cel }
+  | { type: "cel_deleted"; cel: Cel; monteurIds: string[] }
+  | { type: "cel_color_changed"; cel: Cel; prevColor: string | null }
+  | { type: "cel_notitie_changed"; cel: Cel; prevNotitie: string | null }
+  | { type: "monteur_added"; cel: Cel; monteurId: string }
+  | { type: "monteur_removed"; cel: Cel; monteurId: string };
+
 /* ----------------------------- Layout sizes ----------------------------- */
 const SIDEBAR_W = 240;
 const CELL_W = 52;
@@ -157,6 +169,15 @@ const Plannen = () => {
   const [openCellKey, setOpenCellKey] = useState<string | null>(null);
   const [weekModalOpen, setWeekModalOpen] = useState(false);
   const [showAddActiviteit, setShowAddActiviteit] = useState(false);
+
+  // History stack — session only, max 30 entries
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const skipHistoryRef = useRef(false);
+  const pushHistory = useCallback((entry: HistoryEntry) => {
+    if (skipHistoryRef.current) return;
+    setHistory((prev) => [...prev.slice(-29), entry]);
+  }, []);
 
   // ---------- data load ----------
   const loadAll = useCallback(async () => {
@@ -306,11 +327,12 @@ const Plannen = () => {
       const defaultColor = at?.kleur_default ?? "c3";
       const cel = await ensureCell(activiteit.id, week_id, dag_index, defaultColor);
       if (!cel) return;
+      pushHistory({ type: "cel_created", cel });
       if (activiteit.capaciteit_type === "schakel" || activiteit.capaciteit_type === "montage") {
         setOpenCellKey(cellKey(activiteit.id, week_id, dag_index));
       }
     },
-    [cellen, activiteitTypes, ensureCell]
+    [cellen, activiteitTypes, ensureCell, pushHistory]
   );
 
   const handleCellRightClick = useCallback(
@@ -319,6 +341,8 @@ const Plannen = () => {
       const k = cellKey(activiteit_id, week_id, dag_index);
       const cel = cellen.get(k);
       if (!cel) return;
+      const monteurIds = celMonteurs.get(cel.id) ?? [];
+      pushHistory({ type: "cel_deleted", cel, monteurIds: [...monteurIds] });
       removeCellLocal(activiteit_id, week_id, dag_index);
       setCelMonteurs((prev) => {
         const m = new Map(prev);
@@ -331,11 +355,12 @@ const Plannen = () => {
         loadAll();
       }
     },
-    [cellen, removeCellLocal, loadAll]
+    [cellen, celMonteurs, removeCellLocal, loadAll, pushHistory]
   );
 
   const updateCellColor = useCallback(
     async (cel: Cel, kleur_code: string | null) => {
+      pushHistory({ type: "cel_color_changed", cel, prevColor: cel.kleur_code });
       updateCellLocal({ ...cel, kleur_code });
       const { error } = await supabase
         .from("planning_cellen")
@@ -343,11 +368,12 @@ const Plannen = () => {
         .eq("id", cel.id);
       if (error) toast.error("Kleur opslaan mislukt");
     },
-    [updateCellLocal]
+    [updateCellLocal, pushHistory]
   );
 
   const updateCellNotitie = useCallback(
     async (cel: Cel, notitie: string) => {
+      pushHistory({ type: "cel_notitie_changed", cel, prevNotitie: cel.notitie });
       updateCellLocal({ ...cel, notitie });
       const { error } = await supabase
         .from("planning_cellen")
@@ -355,7 +381,7 @@ const Plannen = () => {
         .eq("id", cel.id);
       if (error) toast.error("Notitie opslaan mislukt");
     },
-    [updateCellLocal]
+    [updateCellLocal, pushHistory]
   );
 
   const addMonteurToCell = useCallback(async (cel: Cel, monteur_id: string) => {
@@ -366,13 +392,14 @@ const Plannen = () => {
       m.set(cel.id, arr);
       return m;
     });
+    pushHistory({ type: "monteur_added", cel, monteurId: monteur_id });
     const { error } = await supabase
       .from("cel_monteurs")
       .insert({ cel_id: cel.id, monteur_id });
     if (error) {
       toast.error("Monteur toevoegen mislukt");
     }
-  }, []);
+  }, [pushHistory]);
 
   const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
     setCelMonteurs((prev) => {
@@ -381,15 +408,135 @@ const Plannen = () => {
       m.set(cel.id, arr);
       return m;
     });
+    pushHistory({ type: "monteur_removed", cel, monteurId: monteur_id });
     const { error } = await supabase
       .from("cel_monteurs")
       .delete()
       .eq("cel_id", cel.id)
       .eq("monteur_id", monteur_id);
     if (error) toast.error("Monteur verwijderen mislukt");
-  }, []);
+  }, [pushHistory]);
 
-  /* ----------------------------- week opmerking ----------------------------- */
+
+  /* ----------------------------- undo / history ----------------------------- */
+  const reverseHistoryEntry = useCallback(
+    async (entry: HistoryEntry) => {
+      skipHistoryRef.current = true;
+      try {
+        switch (entry.type) {
+          case "cel_created": {
+            removeCellLocal(
+              entry.cel.activiteit_id,
+              entry.cel.week_id,
+              entry.cel.dag_index
+            );
+            await supabase
+              .from("planning_cellen")
+              .delete()
+              .eq("id", entry.cel.id);
+            break;
+          }
+          case "cel_deleted": {
+            const { data } = await supabase
+              .from("planning_cellen")
+              .insert({
+                activiteit_id: entry.cel.activiteit_id,
+                week_id: entry.cel.week_id,
+                dag_index: entry.cel.dag_index,
+                kleur_code: entry.cel.kleur_code,
+                notitie: entry.cel.notitie,
+                capaciteit: entry.cel.capaciteit,
+              })
+              .select()
+              .single();
+            if (data) {
+              updateCellLocal(data as Cel);
+              if (entry.monteurIds.length > 0) {
+                await supabase.from("cel_monteurs").insert(
+                  entry.monteurIds.map((mid) => ({
+                    cel_id: (data as Cel).id,
+                    monteur_id: mid,
+                  }))
+                );
+                setCelMonteurs((prev) => {
+                  const m = new Map(prev);
+                  m.set((data as Cel).id, [...entry.monteurIds]);
+                  return m;
+                });
+              }
+            }
+            break;
+          }
+          case "cel_color_changed": {
+            await updateCellColor(entry.cel, entry.prevColor);
+            break;
+          }
+          case "cel_notitie_changed": {
+            await updateCellNotitie(entry.cel, entry.prevNotitie ?? "");
+            break;
+          }
+          case "monteur_added": {
+            await removeMonteurFromCell(entry.cel, entry.monteurId);
+            break;
+          }
+          case "monteur_removed": {
+            await addMonteurToCell(entry.cel, entry.monteurId);
+            break;
+          }
+        }
+      } finally {
+        skipHistoryRef.current = false;
+      }
+    },
+    [
+      removeCellLocal,
+      updateCellLocal,
+      updateCellColor,
+      updateCellNotitie,
+      addMonteurToCell,
+      removeMonteurFromCell,
+    ]
+  );
+
+  const handleUndo = useCallback(async () => {
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    await reverseHistoryEntry(last);
+    toast("Actie ongedaan gemaakt");
+  }, [history, reverseHistoryEntry]);
+
+  const handleUndoEntry = useCallback(
+    async (entry: HistoryEntry, idx: number) => {
+      setHistory((prev) => prev.filter((_, i) => i !== idx));
+      await reverseHistoryEntry(entry);
+      toast("Actie ongedaan gemaakt");
+    },
+    [reverseHistoryEntry]
+  );
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        const target = e.target as HTMLElement | null;
+        // Don't intercept undo when user is editing text
+        if (
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleUndo]);
+
+
   const updateWeekOpmerking = useCallback(async (week_id: string, opmerking: string) => {
     setWeken((prev) => prev.map((w) => (w.id === week_id ? { ...w, opmerking } : w)));
     const { error } = await supabase
@@ -694,13 +841,33 @@ const Plannen = () => {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-warning/40 bg-warning/10 px-3 text-xs font-display font-semibold text-warning hover:bg-warning/20"
-            onClick={() => toast("Template-modal volgt in latere prompt")}
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={history.length === 0}
+            title="Ongedaan maken (Ctrl+Z)"
+            className={[
+              "flex h-8 items-center justify-center rounded-md border border-white/15 px-2",
+              history.length === 0
+                ? "cursor-not-allowed opacity-30"
+                : "text-foreground hover:bg-white/[0.06]",
+            ].join(" ")}
           >
-            <FileText className="mr-1.5 h-3.5 w-3.5" /> Template
-          </Button>
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            title="Geschiedenis"
+            className="flex h-8 items-center justify-center rounded-md border border-white/15 px-2 text-foreground hover:bg-white/[0.06]"
+          >
+            <History className="h-3.5 w-3.5" />
+            {history.length > 0 && (
+              <span className="ml-1 font-display text-xs font-semibold">
+                {history.length}
+              </span>
+            )}
+          </button>
           <Button
             variant="outline"
             className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
@@ -893,6 +1060,19 @@ const Plannen = () => {
           onNotitieChange={(n) => updateCellNotitie(openCel.cel, n)}
           onAddMonteur={(id) => addMonteurToCell(openCel.cel, id)}
           onRemoveMonteur={(id) => removeMonteurFromCell(openCel.cel, id)}
+        />
+      )}
+
+      {/* History panel */}
+      {historyOpen && (
+        <HistoryPanel
+          history={history}
+          activiteiten={activiteiten}
+          monteurById={monteurById}
+          weken={weken}
+          onClose={() => setHistoryOpen(false)}
+          onClear={() => setHistory([])}
+          onUndoEntry={handleUndoEntry}
         />
       )}
 
@@ -1714,3 +1894,158 @@ function loadSheetJS(): Promise<any> {
 }
 
 export default Plannen;
+
+/* ----------------------------- History Panel ----------------------------- */
+
+const dotColor = (type: HistoryEntry["type"]): string => {
+  switch (type) {
+    case "cel_created":
+    case "monteur_added":
+      return "#3fff8b";
+    case "cel_deleted":
+    case "monteur_removed":
+      return "#ef4444";
+    case "cel_color_changed":
+      return "#feb300";
+    case "cel_notitie_changed":
+      return "#7cc1ff";
+  }
+};
+
+const describeEntry = (
+  entry: HistoryEntry,
+  activiteiten: Activiteit[],
+  weken: Week[],
+  monteurById: Map<string, Monteur>
+): string => {
+  const actNaam = (id: string) =>
+    activiteiten.find((a) => a.id === id)?.naam ?? "—";
+  const weekNr = (id: string) =>
+    weken.find((w) => w.id === id)?.week_nr ?? "—";
+  const dag = (idx: number) => DAG_NAMEN_KORT[idx] ?? "";
+  switch (entry.type) {
+    case "cel_created":
+      return `Cel aangemaakt — ${actNaam(entry.cel.activiteit_id)} ${dag(
+        entry.cel.dag_index
+      )} week ${weekNr(entry.cel.week_id)}`;
+    case "cel_deleted":
+      return `Cel gewist — ${actNaam(entry.cel.activiteit_id)} ${dag(
+        entry.cel.dag_index
+      )} week ${weekNr(entry.cel.week_id)}`;
+    case "cel_color_changed":
+      return `Kleur gewijzigd — ${actNaam(entry.cel.activiteit_id)}`;
+    case "monteur_added":
+      return `Monteur toegevoegd — ${
+        monteurById.get(entry.monteurId)?.naam ?? "—"
+      }`;
+    case "monteur_removed":
+      return `Monteur verwijderd — ${
+        monteurById.get(entry.monteurId)?.naam ?? "—"
+      }`;
+    case "cel_notitie_changed":
+      return "Notitie gewijzigd";
+  }
+};
+
+const HistoryPanel = ({
+  history,
+  activiteiten,
+  monteurById,
+  weken,
+  onClose,
+  onClear,
+  onUndoEntry,
+}: {
+  history: HistoryEntry[];
+  activiteiten: Activiteit[];
+  monteurById: Map<string, Monteur>;
+  weken: Week[];
+  onClose: () => void;
+  onClear: () => void;
+  onUndoEntry: (entry: HistoryEntry, idx: number) => void;
+}) => {
+  const reversed = [...history].map((e, i) => ({ entry: e, idx: i })).reverse();
+  return (
+    <div
+      className="fixed right-0 overflow-y-auto"
+      style={{
+        top: 52,
+        width: 320,
+        height: "calc(100vh - 52px)",
+        backgroundColor: "rgba(10, 26, 48, 0.97)",
+        borderLeft: "1px solid rgba(255,255,255,0.08)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        zIndex: 40,
+      }}
+    >
+      <div
+        className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+        style={{
+          backgroundColor: "rgba(10, 26, 48, 0.97)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
+          Geschiedenis
+        </h3>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={history.length === 0}
+            className={[
+              "rounded-md px-2 py-1 text-[11px] font-display font-semibold",
+              history.length === 0
+                ? "cursor-not-allowed text-muted-foreground/40"
+                : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+            ].join(" ")}
+          >
+            Wissen
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {history.length === 0 ? (
+        <div className="px-4 py-12 text-center text-xs text-muted-foreground">
+          Nog geen wijzigingen in deze sessie
+        </div>
+      ) : (
+        <div className="px-2 py-2">
+          {reversed.map(({ entry, idx }) => (
+            <div
+              key={idx}
+              className="group flex items-start gap-2 rounded-md px-2 py-2 hover:bg-white/[0.04]"
+            >
+              <span
+                className="mt-1 inline-block shrink-0 rounded-full"
+                style={{
+                  width: 8,
+                  height: 8,
+                  backgroundColor: dotColor(entry.type),
+                }}
+              />
+              <div className="flex-1 text-[12px] leading-snug text-foreground">
+                {describeEntry(entry, activiteiten, weken, monteurById)}
+              </div>
+              <button
+                type="button"
+                onClick={() => onUndoEntry(entry, idx)}
+                className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-display font-bold text-primary opacity-0 transition-opacity hover:bg-primary/10 group-hover:opacity-100"
+              >
+                Herstel
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
