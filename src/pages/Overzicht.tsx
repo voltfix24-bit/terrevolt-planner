@@ -464,6 +464,7 @@ export default function Overzicht() {
   const [montageOpen, setMontageOpen] = useState(true);
   const [projectenOpen, setProjectenOpen] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [legendOpen, setLegendOpen] = useState(false);
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
