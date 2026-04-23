@@ -2008,7 +2008,7 @@ function ActiviteitCellsRow({
                           background: isS ? "#feb300" : "#378add",
                           color: isS ? "#0a1a30" : "#fff",
                           fontSize: 6, fontWeight: 700,
-                          border: "1.5px solid rgba(0,0,0,0.4)",
+                          border: "1px solid rgba(10,26,48,0.5)",
                           marginLeft: idx === 0 ? 0 : -4,
                         }}
                         title={m.naam}
@@ -2017,6 +2017,22 @@ function ActiviteitCellsRow({
                       </div>
                     );
                   })}
+                  {monteurIds.length > 2 && (
+                    <div
+                      className="flex items-center justify-center rounded-full"
+                      style={{
+                        width: 16, height: 16,
+                        background: "rgba(255,255,255,0.2)",
+                        color: "#fff",
+                        fontSize: 6, fontWeight: 700,
+                        border: "1px solid rgba(10,26,48,0.5)",
+                        marginLeft: -4,
+                      }}
+                      title={`+${monteurIds.length - 2} meer`}
+                    >
+                      +{monteurIds.length - 2}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
