@@ -133,7 +133,7 @@ type CelMonteurMap = Map<string, string[]>; // key: cel.id -> monteur ids
 const cellKey = (a: string, w: string, d: number) => `${a}|${w}|${d}`;
 
 /* ----------------------------- Layout sizes ----------------------------- */
-const SIDEBAR_W = 200;
+const SIDEBAR_W = 240;
 const CELL_W = 52;
 const CELL_H = 40;
 const HEADER_H = 56;
@@ -245,15 +245,12 @@ const Plannen = () => {
   /* ----------------------------- scroll sync ----------------------------- */
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
-  const commentsScrollRef = useRef<HTMLDivElement>(null);
   const scrollLock = useRef(false);
-
-  const syncScroll = useCallback((source: "header" | "body" | "comments", left: number) => {
+  const syncScroll = useCallback((source: "header" | "body", left: number) => {
     if (scrollLock.current) return;
     scrollLock.current = true;
     if (source !== "header" && headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
     if (source !== "body" && bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
-    if (source !== "comments" && commentsScrollRef.current) commentsScrollRef.current.scrollLeft = left;
     requestAnimationFrame(() => {
       scrollLock.current = false;
     });
@@ -856,24 +853,24 @@ const Plannen = () => {
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
                   <div style={{ height: showAddActiviteit ? 80 : CELL_H }} />
-                </div>
-              </div>
 
-              {/* Opmerkingen row */}
-              <div
-                ref={commentsScrollRef}
-                onScroll={(e) => syncScroll("comments", (e.target as HTMLDivElement).scrollLeft)}
-                className="overflow-x-auto overflow-y-hidden border-t"
-                style={{ borderColor: "rgba(255,255,255,0.06)" }}
-              >
-                <div className="flex" style={{ width: totalGridWidth, height: CELL_H }}>
-                  {weken.map((w) => (
-                    <OpmerkingCell
-                      key={w.id}
-                      week={w}
-                      onSave={(val) => updateWeekOpmerking(w.id, val)}
-                    />
-                  ))}
+                  {/* Opmerkingen row — inside same scroll container as activity rows */}
+                  <div
+                    className="flex border-t"
+                    style={{
+                      width: totalGridWidth,
+                      height: CELL_H,
+                      borderColor: "rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    {weken.map((w) => (
+                      <OpmerkingCell
+                        key={w.id}
+                        week={w}
+                        onSave={(val) => updateWeekOpmerking(w.id, val)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
