@@ -1754,6 +1754,7 @@ export default function Overzicht() {
                         width: bodyRowW,
                         height: ROW_H_PROJECT,
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        borderLeft: projectStatusBorderLeft(p.status),
                       }}
                     >
                       <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} feestdagSlots={feestdagSlots} trailingW={BESCHIKBAAR_W} />
