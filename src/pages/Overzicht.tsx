@@ -608,22 +608,51 @@ export default function Overzicht() {
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
   const teamCapPct = useMemo(() => {
-    let totalDays = 0;
-    for (const sl of slots) totalDays += sl.pairs.length;
-    totalDays *= monteurs.length;
-    if (totalDays === 0) return 0;
-    let planned = 0;
-    for (const m of monteurs) {
-      const byDay = monteurDayProjects.get(m.id);
-      if (!byDay) continue;
-      for (const sl of slots) {
-        for (const p of sl.pairs) {
-          if (byDay.has(dayKey(p.wnr, p.dag))) planned++;
+    if (monteurs.length === 0) return 0;
+
+    // Build the list of working days (MA-VR) in the visible period
+    const dates: Date[] = [];
+    if (scale === "maand" || scale === "kwartaal") {
+      for (const wnr of visibleWeekNrs) {
+        const monday = getMondayOfWeek(wnr, jaar);
+        for (let d = 0; d < 5; d++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + d);
+          dates.push(date);
+        }
+      }
+    } else {
+      // jaar: alle werkdagen van het jaar
+      const wkCount = weeksInYear(jaar);
+      for (let week = 1; week <= wkCount; week++) {
+        const monday = getMondayOfWeek(week, jaar);
+        for (let d = 0; d < 5; d++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + d);
+          if (date.getFullYear() === jaar) dates.push(date);
         }
       }
     }
-    return Math.round((planned / totalDays) * 100);
-  }, [monteurs, monteurDayProjects, slots]);
+
+    const totalPossible = monteurs.length * dates.length;
+    if (totalPossible === 0) return 0;
+
+    // Unieke monteur+datum combinaties die ingepland zijn
+    const planned = new Set<string>();
+    for (const cel of cellen) {
+      if (!cel.week_id) continue;
+      const week = weekById.get(cel.week_id);
+      if (!week) continue;
+      const monday = getMondayOfWeek(week.week_nr, jaar);
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + cel.dag_index);
+      const dateStr = date.toISOString().split("T")[0];
+      const mids = monteurIdsByCel.get(cel.id) ?? [];
+      for (const mid of mids) planned.add(`${mid}-${dateStr}`);
+    }
+
+    return Math.round((planned.size / totalPossible) * 100);
+  }, [monteurs, visibleWeekNrs, scale, jaar, cellen, monteurIdsByCel, weekById]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
