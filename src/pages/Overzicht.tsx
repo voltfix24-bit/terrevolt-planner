@@ -1006,15 +1006,81 @@ export default function Overzicht() {
         </div>
       </div>
 
-      {/* Main grid container — single scroll wrapper */}
+      {/* Main grid container — sticky header + scrollable body */}
       <div
         id="overzicht-grid-root"
-        className="overflow-hidden rounded-lg border"
+        className="rounded-lg border"
         style={{
           borderColor: "rgba(255,255,255,0.08)",
           background: "rgba(10,26,48,0.4)",
+          height: "calc(100vh - 200px)",
+          minHeight: 400,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
         }}
       >
+        {/* ====== Sticky top header bar ====== */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            zIndex: 30,
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+          }}
+        >
+          {/* Sidebar-aligned spacer with collapse toggle */}
+          <div
+            className="flex items-center"
+            style={{
+              width: sidebarW,
+              flexShrink: 0,
+              height: HEADER_H,
+              borderRight: "1px solid rgba(255,255,255,0.08)",
+              paddingLeft: sidebarCollapsed ? 0 : 8,
+              paddingRight: 6,
+              justifyContent: sidebarCollapsed ? "center" : "flex-end",
+              transition: "width 0.2s ease",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+              title={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
+              aria-label={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+          {/* Horizontally-scrollable header (week/day labels) */}
+          <div
+            ref={headerScrollRef}
+            className="overzicht-scroll no-scrollbar"
+            style={{ flex: 1, overflowX: "auto", overflowY: "hidden" }}
+            onScroll={(e) => syncScroll("header", e.currentTarget.scrollLeft)}
+          >
+            {renderHeader()}
+          </div>
+        </div>
+
+        {/* ====== Scrollable body (vertical) ====== */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            minHeight: 0,
+          }}
+          className="overzicht-scroll"
+        >
         <div style={{ display: "flex" }}>
           {/* ====== Fixed left sidebar ====== */}
           <div
