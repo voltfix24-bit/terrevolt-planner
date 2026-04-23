@@ -1078,6 +1078,10 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
                       style={{
                         width: CELL_W,
                         borderColor: "rgba(255,255,255,0.06)",
+                        borderRight:
+                          d.dayIdx === 4
+                            ? "1px solid rgba(255,255,255,0.12)"
+                            : "1px solid rgba(255,255,255,0.04)",
                       }}
                     >
                       <div className="font-display text-[10px] font-bold text-foreground">
