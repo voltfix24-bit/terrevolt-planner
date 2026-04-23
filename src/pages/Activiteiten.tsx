@@ -659,10 +659,12 @@ const ActiviteitRow = ({
           {capLabel(a.capaciteit_type)}
         </span>
 
-        <span className="inline-flex items-center rounded-md bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          min. {a.min_personen_totaal ?? a.min_personen ?? 1} man (
-          {a.min_personen_gekwalificeerd ?? a.min_personen ?? 1} gekwal.)
-        </span>
+        {showAanwijzing && (
+          <span className="inline-flex items-center rounded-md bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+            min. {a.min_personen_totaal ?? a.min_personen ?? 1} man (
+            {a.min_personen_gekwalificeerd ?? a.min_personen ?? 1} gekwal.)
+          </span>
+        )}
 
         {showAanwijzing && a.min_aanwijzing_ls && (
           <span
@@ -690,6 +692,13 @@ const ActiviteitRow = ({
           aria-label="Wijzigen"
         >
           <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onDuplicate}
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+          aria-label="Dupliceren"
+        >
+          <Copy className="h-4 w-4" />
         </button>
         <button
           onClick={onDelete}
