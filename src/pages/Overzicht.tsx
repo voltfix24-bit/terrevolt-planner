@@ -26,6 +26,7 @@ interface Project {
   case_nummer: string | null;
   station_naam: string | null;
   status: Status | null;
+  jaar: number | null;
   created_at: string | null;
 }
 
@@ -175,7 +176,7 @@ export default function Overzicht() {
     (async () => {
       setLoading(true);
       const [pRes, wRes, aRes, cRes, mRes, cmRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, created_at").order("created_at", { ascending: true }),
+        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
         supabase.from("project_weken").select("id, project_id, week_nr, positie"),
         supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
         supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -203,19 +204,35 @@ export default function Overzicht() {
     return arr;
   }, [startWeek, numWeeks]);
 
+  const visibleWeekNrSet = useMemo(() => new Set(visibleWeekNrs), [visibleWeekNrs]);
+
   const totalGridWidth = numWeeks * DAYS_PER_WEEK * CELL_W;
 
+  // Only projecten matching the selected jaar are shown
+  const visibleProjecten = useMemo(
+    () => projecten.filter((p) => (p.jaar ?? null) === jaar),
+    [projecten, jaar],
+  );
+
+  const visibleProjectIds = useMemo(
+    () => new Set(visibleProjecten.map((p) => p.id)),
+    [visibleProjecten],
+  );
+
+  // Only weken belonging to a visible project AND within the visible week range
   const wekenByProject = useMemo(() => {
     const m = new Map<string, Week[]>();
     for (const w of weken) {
       if (!w.project_id) continue;
+      if (!visibleProjectIds.has(w.project_id)) continue;
+      if (!visibleWeekNrSet.has(w.week_nr)) continue;
       const arr = m.get(w.project_id) ?? [];
       arr.push(w);
       m.set(w.project_id, arr);
     }
     for (const arr of m.values()) arr.sort((a, b) => a.positie - b.positie);
     return m;
-  }, [weken]);
+  }, [weken, visibleProjectIds, visibleWeekNrSet]);
 
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
