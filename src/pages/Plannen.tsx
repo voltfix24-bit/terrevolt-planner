@@ -255,10 +255,6 @@ const Plannen = () => {
       scrollLock.current = false;
     });
   }, []);
-    requestAnimationFrame(() => {
-      scrollLock.current = false;
-    });
-  }, []);
 
   /* ----------------------------- cell ops ----------------------------- */
   const updateCellLocal = useCallback((cel: Cel) => {
