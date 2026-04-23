@@ -841,13 +841,33 @@ const Plannen = () => {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-warning/40 bg-warning/10 px-3 text-xs font-display font-semibold text-warning hover:bg-warning/20"
-            onClick={() => toast("Template-modal volgt in latere prompt")}
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={history.length === 0}
+            title="Ongedaan maken (Ctrl+Z)"
+            className={[
+              "flex h-8 items-center justify-center rounded-md border border-white/15 px-2",
+              history.length === 0
+                ? "cursor-not-allowed opacity-30"
+                : "text-foreground hover:bg-white/[0.06]",
+            ].join(" ")}
           >
-            <FileText className="mr-1.5 h-3.5 w-3.5" /> Template
-          </Button>
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            title="Geschiedenis"
+            className="flex h-8 items-center justify-center rounded-md border border-white/15 px-2 text-foreground hover:bg-white/[0.06]"
+          >
+            <History className="h-3.5 w-3.5" />
+            {history.length > 0 && (
+              <span className="ml-1 font-display text-xs font-semibold">
+                {history.length}
+              </span>
+            )}
+          </button>
           <Button
             variant="outline"
             className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
