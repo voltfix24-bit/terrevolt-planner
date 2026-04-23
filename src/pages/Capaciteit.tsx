@@ -833,7 +833,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
     return (
       <div
         key={m.id}
-        className="flex border-b"
+        className="flex border-b transition-colors hover:bg-white/[0.04]"
         style={{ borderColor: "rgba(255,255,255,0.06)", height: CELL_H }}
       >
         <div
@@ -850,15 +850,138 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
           </div>
         </div>
         <div className="flex">
-          {visibleDays.map((d) => {
-            const projIds = days[d.key] ?? [];
+          {visibleWeeks.map((w, wi) => {
+            // Build 5 slots for this week
+            type Slot =
+              | { kind: "vrij" }
+              | { kind: "single"; projectId: string }
+              | { kind: "conflict"; projectIds: string[] };
+            const slots: Slot[] = [];
+            for (let d = 0; d < 5; d++) {
+              const date = addDays(w.monday, d);
+              const ids = days[isoKey(date)] ?? [];
+              if (ids.length === 0) slots.push({ kind: "vrij" });
+              else if (ids.length === 1)
+                slots.push({ kind: "single", projectId: ids[0] });
+              else slots.push({ kind: "conflict", projectIds: ids });
+            }
+
+            const items: React.ReactNode[] = [];
+            let i = 0;
+            while (i < 5) {
+              const slot = slots[i];
+              const isLastDay = i === 4;
+              const borderRight = isLastDay
+                ? "1px solid rgba(255,255,255,0.12)"
+                : "1px solid rgba(255,255,255,0.04)";
+              const date = addDays(w.monday, i);
+
+              if (slot.kind === "vrij") {
+                items.push(
+                  <div
+                    key={`v-${wi}-${i}`}
+                    title={`${DAG_FULL[i]} ${fmtDayMonth(date)}`}
+                    style={{
+                      width: CELL_W,
+                      height: CELL_H,
+                      borderRight,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  />
+                );
+                i++;
+                continue;
+              }
+
+              if (slot.kind === "conflict") {
+                items.push(
+                  <div
+                    key={`c-${wi}-${i}`}
+                    style={{
+                      width: CELL_W,
+                      height: CELL_H,
+                      borderRight,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ConflictBlock
+                      projectIds={slot.projectIds}
+                      projects={projects}
+                      onNavigate={(id) => navigate(`/plannen?project=${id}`)}
+                    />
+                  </div>
+                );
+                i++;
+                continue;
+              }
+
+              // single → look ahead for consecutive same project
+              const pid = slot.projectId;
+              let span = 1;
+              while (
+                i + span < 5 &&
+                slots[i + span].kind === "single" &&
+                (slots[i + span] as { kind: "single"; projectId: string })
+                  .projectId === pid
+              ) {
+                span++;
+              }
+              const blockWidth = span * CELL_W - 2;
+              const p = projects[pid];
+              const fullLabel = p?.case_nummer ?? "—";
+              const label =
+                blockWidth > 80 ? fullLabel : fullLabel.slice(0, 6);
+
+              items.push(
+                <div
+                  key={`s-${wi}-${i}`}
+                  style={{
+                    width: span * CELL_W,
+                    height: CELL_H,
+                    borderRight: i + span - 1 === 4
+                      ? "1px solid rgba(255,255,255,0.12)"
+                      : "1px solid rgba(255,255,255,0.04)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 1px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/plannen?project=${pid}`)}
+                    title={fullLabel}
+                    style={{
+                      width: blockWidth,
+                      height: BLOCK_H,
+                      backgroundColor: "#3fff8b",
+                      color: "#0a1a30",
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      overflow: "hidden",
+                    }}
+                    className="font-display transition-opacity hover:opacity-80"
+                  >
+                    <span className="truncate px-1">{label}</span>
+                  </button>
+                </div>
+              );
+              i += span;
+            }
+
             return (
-              <CellView
-                key={d.key}
-                projectIds={projIds}
-                projects={projects}
-                onNavigate={(id) => navigate(`/plannen?project=${id}`)}
-              />
+              <div key={`w-${wi}`} className="flex">
+                {items}
+              </div>
             );
           })}
         </div>
