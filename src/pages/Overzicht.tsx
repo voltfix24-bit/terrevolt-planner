@@ -2146,6 +2146,8 @@ function MonteurCellsRow({
   scale,
   totalGridWidth,
   onProjectClick,
+  feestdagSlots,
+  vrijeDagen,
 }: {
   monteur: Monteur;
   segments: { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean }[];
@@ -2155,6 +2157,8 @@ function MonteurCellsRow({
   scale: Scale;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
+  feestdagSlots: Map<number, string>;
+  vrijeDagen: number;
 }) {
   const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
   const isJaar = scale === "jaar";
@@ -2163,11 +2167,33 @@ function MonteurCellsRow({
       className="relative"
       style={{
         height: ROW_H_MONTEUR,
-        width: totalGridWidth,
+        width: totalGridWidth + BESCHIKBAAR_W,
       }}
     >
-      {/* Background raster */}
-      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_MONTEUR} />
+      {/* Background raster (incl. trailing badge column) */}
+      <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_MONTEUR} feestdagSlots={feestdagSlots} trailingW={BESCHIKBAAR_W} />
+
+      {/* Trailing vrije dagen number */}
+      <div
+        style={{
+          position: "absolute",
+          left: totalGridWidth,
+          top: 0,
+          width: BESCHIKBAAR_W,
+          height: ROW_H_MONTEUR,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 13,
+          fontWeight: 700,
+          color: vrijeDagen === 0 ? "#feb300" : "rgba(255,255,255,0.4)",
+          fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+          pointerEvents: "none",
+        }}
+        title={`${vrijeDagen} vrije dagen`}
+      >
+        {vrijeDagen}
+      </div>
 
       {/* Segment overlays */}
       {segments.map((s, i) => {
