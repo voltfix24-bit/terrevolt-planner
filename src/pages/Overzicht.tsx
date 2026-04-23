@@ -257,6 +257,26 @@ export default function Overzicht() {
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
+  // Track viewport width so the grid can fill available horizontal space.
+  const [viewportW, setViewportW] = useState<number>(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // For "maand": auto-fit number of weeks to the available width.
+  // Each week = 5 days × 44px = 220px. Reserve sidebar + beschikbaar column + app chrome.
+  const weeksToShow = useMemo(() => {
+    if (scale !== "maand") return 5;
+    const sidebarPx = SIDEBAR_W; // not collapsed-aware: keep stable so scrolling doesn't reflow weeks
+    const available = Math.max(0, viewportW - 220 /* app sidebar */ - sidebarPx - 100 /* beschikbaar */ - 80 /* padding */);
+    const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand; // 220
+    return Math.max(4, Math.min(16, Math.floor(available / weekPx)));
+  }, [scale, viewportW]);
+
   // ====== Build slots based on scale ======
   const slots = useMemo<Slot[]>(() => {
     const out: Slot[] = [];
@@ -266,9 +286,9 @@ export default function Overzicht() {
     const todayDow = (now.getDay() + 6) % 7;
 
     if (scale === "maand") {
-      // 5 weeks × 5 days
+      // weeksToShow weeks × 5 days (auto-fit to viewport)
       const wkCount = weeksInYear(jaar);
-      for (let wi = 0; wi < 5; wi++) {
+      for (let wi = 0; wi < weeksToShow; wi++) {
         const wnr = wrapWeek(((startWeek - 1 + wi) % wkCount) + 1);
         const monday = getMondayOfWeek(wnr, jaar);
         const isCurrentWeek = wnr === todayWeek && jaar === todayYear;
@@ -352,18 +372,9 @@ export default function Overzicht() {
       }
     }
     return out;
-  }, [scale, startWeek, jaar, currentISO]);
+  }, [scale, startWeek, jaar, currentISO, weeksToShow]);
 
-  // Track viewport width so jaar-scale can fill the available grid area
-  // (each month gets an equal column, clamped between 70 and 110px).
-  const [viewportW, setViewportW] = useState<number>(
-    typeof window !== "undefined" ? window.innerWidth : 1280,
-  );
-  useEffect(() => {
-    const onResize = () => setViewportW(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  // (cellW for jaar uses viewport-derived width; declared below)
 
   const cellW = useMemo(() => {
     if (scale !== "jaar") return CELL_W_BY_SCALE[scale];
@@ -788,8 +799,8 @@ export default function Overzicht() {
 
   const shiftLeft = () => {
     if (scale === "maand") {
-      const wkCount = weeksInYear(jaar);
-      const next = startWeek - 4;
+      const step = Math.max(1, weeksToShow - 1);
+      const next = startWeek - step;
       if (next < 1) {
         setJaar(jaar - 1);
         setStartWeek(weeksInYear(jaar - 1) + next);
@@ -813,7 +824,8 @@ export default function Overzicht() {
   const shiftRight = () => {
     if (scale === "maand") {
       const wkCount = weeksInYear(jaar);
-      const next = startWeek + 4;
+      const step = Math.max(1, weeksToShow - 1);
+      const next = startWeek + step;
       if (next > wkCount) {
         setJaar(jaar + 1);
         setStartWeek(next - wkCount);
