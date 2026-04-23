@@ -1,7 +1,8 @@
 import { NavLink } from "react-router-dom";
-import { CalendarDays, FolderKanban, ListChecks, Settings, Users, Zap } from "lucide-react";
+import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, Settings, Users, Zap } from "lucide-react";
 
 const navItems = [
+  { to: "/overzicht", label: "Overzicht", icon: LayoutDashboard },
   { to: "/", label: "Projecten", icon: FolderKanban },
   { to: "/plannen", label: "Plannen", icon: CalendarDays },
   { to: "/activiteiten", label: "Activiteiten", icon: ListChecks },
