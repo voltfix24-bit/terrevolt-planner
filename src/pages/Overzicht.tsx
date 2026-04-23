@@ -132,11 +132,8 @@ interface Slot {
   // tint hints
   isCurrentGroup: boolean;
   isToday: boolean;
-}
-
-// ============== Helpers ==============
-function dayKey(week_nr: number, dag_index: number): string {
-  return `${week_nr}-${dag_index}`;
+  // primary date for this slot (used for feestdag detection in maand scale)
+  date?: Date;
 }
 
 function getCurrentISOWeek(): { week: number; year: number } {
