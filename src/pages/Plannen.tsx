@@ -134,6 +134,16 @@ type CelMonteurMap = Map<string, string[]>; // key: cel.id -> monteur ids
 
 const cellKey = (a: string, w: string, d: number) => `${a}|${w}|${d}`;
 
+const DAG_NAMEN_KORT = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
+
+type HistoryEntry =
+  | { type: "cel_created"; cel: Cel }
+  | { type: "cel_deleted"; cel: Cel; monteurIds: string[] }
+  | { type: "cel_color_changed"; cel: Cel; prevColor: string | null }
+  | { type: "cel_notitie_changed"; cel: Cel; prevNotitie: string | null }
+  | { type: "monteur_added"; cel: Cel; monteurId: string }
+  | { type: "monteur_removed"; cel: Cel; monteurId: string };
+
 /* ----------------------------- Layout sizes ----------------------------- */
 const SIDEBAR_W = 240;
 const CELL_W = 52;
