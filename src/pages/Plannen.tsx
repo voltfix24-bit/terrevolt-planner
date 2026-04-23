@@ -1154,10 +1154,95 @@ const Plannen = () => {
           )}
         </div>
 
+        {/* Filter controls: week dropdown + dag knoppen + clear */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Week filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-1.5 rounded-md border border-white/15 bg-transparent px-2.5 h-7 text-[11px] font-display font-semibold text-foreground hover:bg-white/[0.06]"
+                title="Filter op week"
+              >
+                <CalendarDays className="h-3 w-3" />
+                {monteursFilter.weekId
+                  ? `Week ${weken.find((w) => w.id === monteursFilter.weekId)?.week_nr ?? "?"}`
+                  : "Alle weken"}
+                <ChevronDown className="h-3 w-3 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="border-white/10 bg-[#0a1a30] text-foreground max-h-72 overflow-y-auto"
+            >
+              <DropdownMenuItem
+                onSelect={() => setMonteursFilter((p) => ({ ...p, weekId: null }))}
+                className="text-[12px]"
+              >
+                Alle weken
+              </DropdownMenuItem>
+              {weken.map((w) => (
+                <DropdownMenuItem
+                  key={w.id}
+                  onSelect={() => setMonteursFilter((p) => ({ ...p, weekId: w.id }))}
+                  className="text-[12px]"
+                >
+                  Week {w.week_nr}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Dag filter */}
+          <div className="flex items-center gap-0.5 rounded-md border border-white/15 p-0.5">
+            <button
+              type="button"
+              onClick={() => setMonteursFilter((p) => ({ ...p, dagIndex: null }))}
+              className={`h-6 px-2 rounded text-[10px] font-display font-bold ${
+                monteursFilter.dagIndex === null
+                  ? "bg-white/10 text-foreground"
+                  : "text-muted-foreground hover:bg-white/[0.06]"
+              }`}
+              title="Alle dagen"
+            >
+              ALLE
+            </button>
+            {DAG_LABELS.map((d, i) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setMonteursFilter((p) => ({ ...p, dagIndex: i }))}
+                className={`h-6 w-7 rounded text-[10px] font-display font-bold ${
+                  monteursFilter.dagIndex === i
+                    ? "bg-white/10 text-foreground"
+                    : "text-muted-foreground hover:bg-white/[0.06]"
+                }`}
+                title={DAG_NAMEN_KORT[i]}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+
+          {/* Clear filter (alleen tonen als er een filter actief is) */}
+          {(monteursFilter.weekId !== null || monteursFilter.dagIndex !== null) && (
+            <button
+              type="button"
+              onClick={() => setMonteursFilter({ weekId: null, dagIndex: null })}
+              className="flex items-center gap-1 rounded-md border border-white/15 bg-transparent px-2 h-7 text-[10px] font-display font-semibold text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+              title="Filter wissen"
+            >
+              <X className="h-3 w-3" />
+              Wissen
+            </button>
+          )}
+        </div>
+
         {/* Monteur chips */}
         {ingeplandeMonteurs.length === 0 ? (
           <span className="text-[12px] text-muted-foreground">
-            Nog geen monteurs ingepland
+            {monteursFilter.weekId !== null || monteursFilter.dagIndex !== null
+              ? "Geen monteurs ingepland in deze selectie"
+              : "Nog geen monteurs ingepland"}
           </span>
         ) : (
           <div className="flex flex-1 flex-wrap items-center" style={{ gap: 12 }}>
