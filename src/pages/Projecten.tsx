@@ -209,14 +209,21 @@ const Projecten = () => {
 
   const handleCaseTypeSelect = (c: CaseType) => {
     setCaseType(c);
+  };
+
+  // Auto-select matching template whenever case type changes for new projects.
+  // Also re-applies when switching from Custom back to NSA/Provisorium/Compact.
+  useEffect(() => {
+    if (!modalOpen) return;
     if (editing) return;
-    if (c === "custom") {
+    if (!caseType) return;
+    if (caseType === "custom") {
       setTemplateId(null);
       return;
     }
-    const match = templates.find((t) => t.type === c);
+    const match = templates.find((t) => t.type === caseType);
     setTemplateId(match ? match.id : null);
-  };
+  }, [caseType, modalOpen, editing, templates]);
 
   const openNew = () => {
     setEditing(null);
