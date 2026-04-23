@@ -1050,7 +1050,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
             />
             <div
               ref={headerRef}
-              className="overflow-x-auto"
+              className="overflow-x-auto tijdlijn-scroll"
               style={{ scrollbarWidth: "thin" }}
             >
               <div style={{ width: totalGridWidth }}>
