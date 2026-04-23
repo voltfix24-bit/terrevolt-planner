@@ -140,9 +140,23 @@ export default function Overzicht() {
   const navigate = useNavigate();
 
   // ====== Filters ======
-  const [jaar, setJaar] = useState<number>(2026);
+  // Compute the current ISO week number for the initial startWeek default
+  const getCurrentIsoWeek = (): { week: number; year: number } => {
+    const now = new Date();
+    const target = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const dayNr = (target.getUTCDay() + 6) % 7; // Mon=0..Sun=6
+    target.setUTCDate(target.getUTCDate() - dayNr + 3); // nearest Thursday
+    const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+    const firstDayNr = (firstThursday.getUTCDay() + 6) % 7;
+    firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNr + 3);
+    const week = 1 + Math.round((target.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000));
+    return { week, year: target.getUTCFullYear() };
+  };
+  const initialIso = getCurrentIsoWeek();
+
+  const [jaar, setJaar] = useState<number>(initialIso.year);
   const [numWeeks, setNumWeeks] = useState<4 | 8 | 12>(8);
-  const [startWeek, setStartWeek] = useState<number>(1);
+  const [startWeek, setStartWeek] = useState<number>(initialIso.week);
 
   // ====== Data ======
   const [projecten, setProjecten] = useState<Project[]>([]);
