@@ -237,6 +237,24 @@ export default function Overzicht() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
 
+  // Scroll sync between sticky header and vertically-scrolling body
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const scrollLock = useRef(false);
+  const syncScroll = useCallback((source: "header" | "body", left: number) => {
+    if (scrollLock.current) return;
+    scrollLock.current = true;
+    if (source !== "header" && headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = left;
+    }
+    if (source !== "body" && bodyScrollRef.current) {
+      bodyScrollRef.current.scrollLeft = left;
+    }
+    requestAnimationFrame(() => {
+      scrollLock.current = false;
+    });
+  }, []);
+
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
   // ====== Build slots based on scale ======
