@@ -316,6 +316,7 @@ export default function Overzicht() {
             isLastInGroup: d === DAYS_PER_WEEK - 1,
             isCurrentGroup: isCurrentWeek,
             isToday,
+            date,
           });
         }
       }
