@@ -190,6 +190,10 @@ const Plannen = () => {
     dagIndex: number | null;
   }>({ weekId: null, dagIndex: null });
 
+  // Geselecteerde monteur waarvan alle ingeplande cellen worden gehighlight in de grid.
+  // null => geen highlight actief.
+  const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
+
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
