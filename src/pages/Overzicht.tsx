@@ -1171,8 +1171,8 @@ function MonteurCellsRow({
                   style={{
                     left: left + 2,
                     width: width - 4,
-                    top: 4,
-                    height: ROW_H_MONTEUR - 8,
+                    top: topPad,
+                    height: PILL_H_MONTEUR,
                     background: "#ef4444",
                     borderRadius: 4,
                     color: "white",
