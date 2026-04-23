@@ -397,17 +397,22 @@ const Projecten = () => {
       if (error || !data) {
         toast.error("Opslaan mislukt");
       } else {
+        let createdAct = 0;
         if (templateId) {
-          const tpl = templateById.get(templateId);
-          if (tpl) {
-            try {
-              await seedTemplateForProject(data.id, tpl);
-            } catch {
-              toast.error("Template kon niet volledig worden toegepast");
-            }
+          try {
+            createdAct = await seedTemplateForProject(data.id, templateId);
+          } catch {
+            toast.error("Template kon niet volledig worden toegepast");
           }
         }
-        toast.success("Project opgeslagen");
+        try {
+          await seedWeeksForProject(data.id);
+        } catch {
+          // non-fatal
+        }
+        toast.success(
+          `Project aangemaakt met ${createdAct} activiteiten en 6 weken`,
+        );
         setEditing(data as Project);
         showSavedBanner();
         await loadAll();
