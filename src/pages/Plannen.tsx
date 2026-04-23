@@ -63,6 +63,19 @@ import {
 } from "@/lib/planning-types";
 import { checkCelVoldoet, type Aanwijzing } from "@/lib/aanwijzing";
 
+/* ----------------------------- Current week (ISO) ----------------------------- */
+function getCurrentISOWeek(): number {
+  const now = new Date();
+  const jan4 = new Date(now.getFullYear(), 0, 4);
+  const dow = jan4.getDay() || 7;
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - dow + 1);
+  const diff = now.getTime() - monday.getTime();
+  return Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
+}
+const CURRENT_WEEK = getCurrentISOWeek();
+const CURRENT_YEAR = new Date().getFullYear();
+
 /* ----------------------------- Types ----------------------------- */
 
 type CapType = "schakel" | "montage" | "geen";
@@ -866,48 +879,62 @@ const Plannen = () => {
             disabled={history.length === 0}
             title="Ongedaan maken (Ctrl+Z)"
             className={[
-              "flex h-8 items-center justify-center rounded-md border border-white/15 px-2",
+              "flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent",
               history.length === 0
                 ? "cursor-not-allowed opacity-30"
                 : "text-foreground hover:bg-white/[0.06]",
             ].join(" ")}
           >
-            <Undo2 className="h-3.5 w-3.5" />
+            <Undo2 className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
             title="Geschiedenis"
-            className="flex h-8 items-center justify-center rounded-md border border-white/15 px-2 text-foreground hover:bg-white/[0.06]"
+            className="flex h-8 items-center justify-center rounded-md border border-white/15 bg-transparent px-2 text-foreground hover:bg-white/[0.06]"
           >
-            <History className="h-3.5 w-3.5" />
+            <History className="h-4 w-4" />
             {history.length > 0 && (
               <span className="ml-1 font-display text-xs font-semibold">
                 {history.length}
               </span>
             )}
           </button>
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+          {/* divider */}
+          <span
+            aria-hidden
+            className="inline-block"
+            style={{
+              width: 1,
+              height: 20,
+              backgroundColor: "rgba(255,255,255,0.08)",
+              marginInline: 2,
+            }}
+          />
+          <button
+            type="button"
             onClick={() => setWeekModalOpen(true)}
+            title="Weken beheren"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
           >
-            <CalendarDays className="mr-1.5 h-3.5 w-3.5" /> Weken
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+            <CalendarDays className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={exportExcel}
+            title="Exporteer naar Excel"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
           >
-            <Download className="mr-1.5 h-3.5 w-3.5" /> Excel
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+            <Download className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => window.print()}
+            title="Afdrukken"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
           >
-            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
-          </Button>
+            <Printer className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -1030,6 +1057,7 @@ const Plannen = () => {
                       key={a.id}
                       activiteit={a}
                       weken={weken}
+                      jaar={project.jaar ?? new Date().getFullYear()}
                       cellen={cellen}
                       celMonteurs={celMonteurs}
                       monteurById={monteurById}
@@ -1064,57 +1092,122 @@ const Plannen = () => {
         </div>
       </div>
 
-      {/* Monteurs legenda — alleen ingeplande monteurs */}
-      {ingeplandeMonteurs.length > 0 && (
-        <div
-          className="mt-3 rounded-lg border px-4 py-3"
-          style={{
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(10,26,48,0.4)",
-          }}
-        >
-          <div className="mb-2 flex items-center gap-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Ingeplande monteurs
-            </span>
-            <span className="text-[10px] text-muted-foreground/70">
+      {/* Ingeplande monteurs balk */}
+      <div
+        style={{
+          marginTop: "16px",
+          padding: "12px 20px",
+          background: "rgba(10, 26, 48, 0.7)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Left side: label + count */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className="font-display"
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "rgba(63,255,139,0.6)",
+            }}
+          >
+            Ingeplande monteurs
+          </span>
+          {ingeplandeMonteurs.length > 0 && (
+            <span
+              className="rounded-full px-2 py-0.5 font-display"
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                backgroundColor: "rgba(63,255,139,0.15)",
+                color: "#3fff8b",
+              }}
+            >
               {ingeplandeMonteurs.length}
             </span>
-            <div className="ml-auto flex items-center gap-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: "#feb300" }}
-                />
-                Schakel
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: "#378add" }}
-                />
-                Montage
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
+          )}
+        </div>
+
+        {/* Monteur chips */}
+        {ingeplandeMonteurs.length === 0 ? (
+          <span className="text-[12px] text-muted-foreground">
+            Nog geen monteurs ingepland
+          </span>
+        ) : (
+          <div className="flex flex-1 flex-wrap items-center" style={{ gap: 12 }}>
             {ingeplandeMonteurs.map((m) => (
               <div
                 key={m.id}
-                className="flex items-center gap-2 rounded-full border px-2 py-1"
+                className="flex items-center"
                 style={{
-                  borderColor: "rgba(255,255,255,0.08)",
-                  backgroundColor: "rgba(255,255,255,0.03)",
+                  gap: 8,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 8,
+                  padding: "4px 10px 4px 6px",
                 }}
-                title={m.naam}
               >
-                <MonteurAvatar naam={m.naam} type={m.type} size={20} fontSize={8} />
-                <span className="text-[12px] font-medium text-foreground">{m.naam}</span>
+                <MonteurAvatar
+                  naam={m.naam}
+                  type={m.type}
+                  size={28}
+                  fontSize={9}
+                  borderWidth={2}
+                  borderColor="rgba(0,0,0,0.4)"
+                />
+                <span
+                  className="font-display"
+                  style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}
+                >
+                  {m.naam}
+                </span>
+                {m.aanwijzing_ms && (
+                  <span
+                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                    style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                  >
+                    MS {m.aanwijzing_ms}
+                  </span>
+                )}
               </div>
             ))}
           </div>
+        )}
+
+        {/* Right end: legend pills with divider */}
+        <div className="ml-auto flex items-center gap-3 shrink-0">
+          <span
+            aria-hidden
+            style={{
+              width: 1,
+              height: 20,
+              backgroundColor: "rgba(255,255,255,0.08)",
+              display: "inline-block",
+            }}
+          />
+          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span
+              className="inline-block rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: "#feb300" }}
+            />
+            Schakel
+          </span>
+          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span
+              className="inline-block rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: "#378add" }}
+            />
+            Montage
+          </span>
         </div>
-      )}
+      </div>
 
       {openCel?.cel && openCel.activiteit && openCel.week && (
         <CelModal
@@ -1227,15 +1320,41 @@ const WeekHeader = memo(function WeekHeader({
 }) {
   const monday = getMondayOfWeek(week.week_nr, jaar);
   const dayWidth = CELL_W * 5;
+  const isCurrentWeek = week.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
   return (
     <div
       className="shrink-0 flex flex-col"
-      style={{ width: dayWidth, borderRight: "1px solid rgba(255,255,255,0.06)" }}
+      style={{
+        width: dayWidth,
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+        backgroundColor: isCurrentWeek ? "rgba(63,255,139,0.04)" : undefined,
+      }}
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-display font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+          <button
+            className={[
+              "flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-display font-bold uppercase tracking-wider hover:text-foreground",
+              isCurrentWeek ? "" : "text-muted-foreground",
+            ].join(" ")}
+            style={isCurrentWeek ? { color: "#3fff8b" } : undefined}
+          >
             Week {week.week_nr}
+            {isCurrentWeek && (
+              <span
+                style={{
+                  background: "rgba(63,255,139,0.2)",
+                  color: "#3fff8b",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: "999px",
+                  marginLeft: "6px",
+                }}
+              >
+                Nu
+              </span>
+            )}
             <ChevronDown className="h-3 w-3" />
           </button>
         </DropdownMenuTrigger>
@@ -1320,6 +1439,7 @@ const SidebarRow = ({ a, onRemove }: { a: Activiteit; onRemove: () => void }) =>
 interface GridRowProps {
   activiteit: Activiteit;
   weken: Week[];
+  jaar: number;
   cellen: CelMap;
   celMonteurs: CelMonteurMap;
   monteurById: Map<string, Monteur>;
@@ -1335,6 +1455,7 @@ interface GridRowProps {
 const GridRow = memo(function GridRow({
   activiteit,
   weken,
+  jaar,
   cellen,
   celMonteurs,
   monteurById,
@@ -1349,8 +1470,9 @@ const GridRow = memo(function GridRow({
         borderTop: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {weken.map((w) =>
-        DAG_LABELS.map((_, d) => {
+      {weken.map((w) => {
+        const isCurrentWeek = w.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
+        return DAG_LABELS.map((_, d) => {
           const cel = cellen.get(cellKey(activiteit.id, w.id, d));
           return (
             <CellBox
@@ -1359,12 +1481,13 @@ const GridRow = memo(function GridRow({
               activiteit={activiteit}
               monteurIds={cel ? celMonteurs.get(cel.id) ?? [] : []}
               monteurById={monteurById}
+              isCurrentWeek={isCurrentWeek}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
           );
-        })
-      )}
+        });
+      })}
     </div>
   );
 });
@@ -1443,6 +1566,7 @@ const CellBox = memo(function CellBox({
   activiteit,
   monteurIds,
   monteurById,
+  isCurrentWeek = false,
   onClick,
   onContextMenu,
 }: {
@@ -1450,6 +1574,7 @@ const CellBox = memo(function CellBox({
   activiteit: Activiteit;
   monteurIds: string[];
   monteurById: Map<string, Monteur>;
+  isCurrentWeek?: boolean;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
 }) {
@@ -1523,7 +1648,11 @@ const CellBox = memo(function CellBox({
       style={{
         width: CELL_W,
         height: CELL_H,
-        backgroundColor: filled ? hexToRgba(kleur!, 0.35) : "transparent",
+        backgroundColor: filled
+          ? hexToRgba(kleur!, 0.35)
+          : isCurrentWeek
+          ? "rgba(63,255,139,0.02)"
+          : "transparent",
         borderTop: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
         borderRight: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
         borderBottom: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
