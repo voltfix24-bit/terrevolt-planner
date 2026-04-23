@@ -1098,7 +1098,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
           </div>
 
           {/* Body */}
-          <div ref={bodyRef} className="overflow-x-auto tijdljin-scroll tijdlijn-scroll" style={{ scrollbarWidth: "thin" }}>
+          <div ref={bodyRef} className="overflow-x-auto tijdlijn-scroll" style={{ scrollbarWidth: "thin" }}>
             <div style={{ minWidth: SIDEBAR_W + totalGridWidth }}>
               {loadingPlan && (
                 <div className="px-4 py-2 text-xs text-muted-foreground">Laden…</div>
