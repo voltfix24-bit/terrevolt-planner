@@ -252,15 +252,34 @@ export default function Overzicht() {
     return m;
   }, [weken]);
 
-  // cel lookup: activiteitId|weekId|dag → cel
-  const celByKey = useMemo(() => {
-    const m = new Map<string, Cel>();
+  // Indexed cel lookup: week_id → dag_index → activiteit_id → cel
+  // Allows fast span scans without scanning every activiteit per (week,day).
+  const cellenByWeekDay = useMemo(() => {
+    const m = new Map<string, Map<number, Map<string, Cel>>>();
     for (const c of cellen) {
       if (!c.activiteit_id || !c.week_id) continue;
-      m.set(`${c.activiteit_id}|${c.week_id}|${c.dag_index}`, c);
+      let byDay = m.get(c.week_id);
+      if (!byDay) {
+        byDay = new Map();
+        m.set(c.week_id, byDay);
+      }
+      let byAct = byDay.get(c.dag_index);
+      if (!byAct) {
+        byAct = new Map();
+        byDay.set(c.dag_index, byAct);
+      }
+      byAct.set(c.activiteit_id, c);
     }
     return m;
   }, [cellen]);
+
+  // Convenience helper for the activiteit-level rendering path
+  const getCel = useCallback(
+    (activiteitId: string, weekId: string, dagIndex: number): Cel | undefined => {
+      return cellenByWeekDay.get(weekId)?.get(dagIndex)?.get(activiteitId);
+    },
+    [cellenByWeekDay],
+  );
 
   const monteurById = useMemo(() => {
     const m = new Map<string, Monteur>();
@@ -279,27 +298,38 @@ export default function Overzicht() {
     return m;
   }, [celMonteurs]);
 
-  // For each project, find global slot range across visible weeks
-  // slot index = visibleWeekIndex * 5 + dag
+  // For each project, find global slot range across visible weeks.
+  // slot index = visibleWeekIndex * 5 + dag.
+  // Walks the indexed cellenByWeekDay map directly so we don't scan empty
+  // (week, day, activiteit) combinations.
   const projectSpanByProject = useMemo(() => {
     const result = new Map<string, { first: number; last: number } | null>();
+    // Pre-index visible week_nr → wi
+    const wiByWeekNr = new Map<number, number>();
+    for (let wi = 0; wi < visibleWeekNrs.length; wi++) {
+      // Last occurrence wins, but visibleWeekNrs is unique within a year span.
+      wiByWeekNr.set(visibleWeekNrs[wi], wi);
+    }
     for (const p of visibleProjecten) {
       const projWeken = wekenByProject.get(p.id) ?? [];
       const projActs = activiteitenByProject.get(p.id) ?? [];
+      const actIds = new Set(projActs.map((a) => a.id));
       let first = Infinity;
       let last = -Infinity;
-      for (let wi = 0; wi < visibleWeekNrs.length; wi++) {
-        const wnr = visibleWeekNrs[wi];
-        const matchingWeeks = projWeken.filter((w) => w.week_nr === wnr);
-        for (const w of matchingWeeks) {
-          for (let d = 0; d < DAYS_PER_WEEK; d++) {
-            for (const a of projActs) {
-              const c = celByKey.get(`${a.id}|${w.id}|${d}`);
-              if (c?.kleur_code) {
-                const slot = wi * DAYS_PER_WEEK + d;
-                if (slot < first) first = slot;
-                if (slot > last) last = slot;
-              }
+      for (const w of projWeken) {
+        const wi = wiByWeekNr.get(w.week_nr);
+        if (wi === undefined) continue;
+        const byDay = cellenByWeekDay.get(w.id);
+        if (!byDay) continue;
+        for (const [d, byAct] of byDay) {
+          // Bail early if no project activiteit has a cell this day
+          for (const actId of actIds) {
+            const c = byAct.get(actId);
+            if (c?.kleur_code) {
+              const slot = wi * DAYS_PER_WEEK + d;
+              if (slot < first) first = slot;
+              if (slot > last) last = slot;
+              break; // one filled cell is enough for this slot
             }
           }
         }
@@ -307,7 +337,7 @@ export default function Overzicht() {
       result.set(p.id, first === Infinity ? null : { first, last });
     }
     return result;
-  }, [visibleProjecten, wekenByProject, activiteitenByProject, visibleWeekNrs, celByKey]);
+  }, [visibleProjecten, wekenByProject, activiteitenByProject, visibleWeekNrs, cellenByWeekDay]);
 
   // For empty projects: thin dashed bar across project_weken visible range
   const projectVisibleWeekRangeByProject = useMemo(() => {
@@ -693,7 +723,7 @@ export default function Overzicht() {
                               const week = matchingWeeks[0];
                               return DAG_LABELS.map((_, di) => {
                                 const cel = week
-                                  ? celByKey.get(`${a.id}|${week.id}|${di}`)
+                                  ? getCel(a.id, week.id, di)
                                   : undefined;
                                 const filled = !!cel?.kleur_code;
                                 const kleur = filled
