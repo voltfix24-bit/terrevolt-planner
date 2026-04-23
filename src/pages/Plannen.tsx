@@ -791,13 +791,39 @@ const Plannen = () => {
     return m;
   }, [monteurs]);
 
+  // Bereken welke weken op dit moment (deels) zichtbaar zijn in de grid-viewport.
+  // Een week neemt 5 * CELL_W pixels in. Een week telt als zichtbaar als zijn
+  // [start, eind)-bereik overlapt met [scrollLeft, scrollLeft + viewportWidth].
+  const visibleWeekIds = useMemo(() => {
+    if (gridViewportWidth <= 0 || weken.length === 0) return new Set<string>();
+    const weekW = CELL_W * 5;
+    const left = gridScrollLeft;
+    const right = gridScrollLeft + gridViewportWidth;
+    const ids = new Set<string>();
+    weken.forEach((w, idx) => {
+      const wLeft = idx * weekW;
+      const wRight = wLeft + weekW;
+      // Overlap-check; we tellen een week mee zodra >=20% zichtbaar is om
+      // randgevallen (1px van een week net zichtbaar) uit te sluiten.
+      const overlap = Math.max(0, Math.min(right, wRight) - Math.max(left, wLeft));
+      if (overlap >= weekW * 0.2) ids.add(w.id);
+    });
+    return ids;
+  }, [weken, gridScrollLeft, gridViewportWidth]);
+
   // Unique monteurs that are actually scheduled in any cell of this project,
-  // gefilterd op de geselecteerde week en/of dag (monteursFilter).
+  // gefilterd op:
+  //  - expliciete week-filter (monteursFilter.weekId) als gezet
+  //  - anders: scope ("visible" => alleen zichtbare weken, "all" => hele project)
+  //  - en altijd op dagIndex als gezet
   // Sortering: schakelmonteurs (amber) eerst, dan montagemonteurs (blue), daarna op naam.
   const ingeplandeMonteurs = useMemo(() => {
     const ids = new Set<string>();
+    const useVisibleScope =
+      monteursScope === "visible" && monteursFilter.weekId === null;
     for (const cel of cellen.values()) {
       if (monteursFilter.weekId && cel.week_id !== monteursFilter.weekId) continue;
+      if (useVisibleScope && !visibleWeekIds.has(cel.week_id)) continue;
       if (monteursFilter.dagIndex !== null && cel.dag_index !== monteursFilter.dagIndex) continue;
       const monteurIds = celMonteurs.get(cel.id);
       if (!monteurIds) continue;
