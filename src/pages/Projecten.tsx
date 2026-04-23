@@ -592,6 +592,36 @@ const Projecten = () => {
               </Field>
             </div>
 
+            {/* Locatie */}
+            <Field label="Locatie">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  value={straat}
+                  onChange={(e) => setStraat(e.target.value)}
+                  placeholder="bijv. Kalverstraat 12"
+                  className={inputCls}
+                />
+                <Input
+                  value={stad}
+                  onChange={(e) => setStad(e.target.value)}
+                  placeholder="bijv. Amsterdam"
+                  className={inputCls}
+                />
+                <Input
+                  value={postcode}
+                  onChange={(e) => setPostcode(e.target.value)}
+                  placeholder="bijv. 1012 NX"
+                  className={inputCls}
+                />
+                <Input
+                  value={gemeente}
+                  onChange={(e) => setGemeente(e.target.value)}
+                  placeholder="bijv. Amsterdam"
+                  className={inputCls}
+                />
+              </div>
+            </Field>
+
             {/* Case type */}
             <Field label="Case type">
               <div className="grid grid-cols-4 gap-2">
@@ -599,10 +629,7 @@ const Projecten = () => {
                   <button
                     key={c}
                     type="button"
-                    onClick={() => {
-                      setCaseType(c);
-                      setTemplateId(null);
-                    }}
+                    onClick={() => handleCaseTypeSelect(c)}
                     className={[
                       "rounded-md px-4 py-3 text-sm font-display font-bold tracking-tight transition-all",
                       caseType === c
