@@ -89,6 +89,65 @@ export type Database = {
           },
         ]
       }
+      feestdagen: {
+        Row: {
+          datum: string
+          id: string
+          jaar: number
+          naam: string
+        }
+        Insert: {
+          datum: string
+          id?: string
+          jaar: number
+          naam: string
+        }
+        Update: {
+          datum?: string
+          id?: string
+          jaar?: number
+          naam?: string
+        }
+        Relationships: []
+      }
+      monteur_afwezigheid: {
+        Row: {
+          created_at: string | null
+          datum_tot: string
+          datum_van: string
+          id: string
+          monteur_id: string | null
+          omschrijving: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          datum_tot: string
+          datum_van: string
+          id?: string
+          monteur_id?: string | null
+          omschrijving?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          datum_tot?: string
+          datum_van?: string
+          id?: string
+          monteur_id?: string | null
+          omschrijving?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monteur_afwezigheid_monteur_id_fkey"
+            columns: ["monteur_id"]
+            isOneToOne: false
+            referencedRelation: "monteurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monteurs: {
         Row: {
           aanwijzing_ls: string | null
@@ -98,6 +157,7 @@ export type Database = {
           id: string
           naam: string
           type: string
+          werkdagen: number[] | null
         }
         Insert: {
           aanwijzing_ls?: string | null
@@ -107,6 +167,7 @@ export type Database = {
           id?: string
           naam: string
           type: string
+          werkdagen?: number[] | null
         }
         Update: {
           aanwijzing_ls?: string | null
@@ -116,6 +177,7 @@ export type Database = {
           id?: string
           naam?: string
           type?: string
+          werkdagen?: number[] | null
         }
         Relationships: []
       }
