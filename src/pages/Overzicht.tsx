@@ -565,7 +565,24 @@ export default function Overzicht() {
     return out;
   }, [scale, startWeek, jaar, currentISO]);
 
-  const cellW = CELL_W_BY_SCALE[scale];
+  // Track viewport width so jaar-scale can fill the available grid area
+  // (each month gets an equal column, clamped between 70 and 110px).
+  const [viewportW, setViewportW] = useState<number>(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const cellW = useMemo(() => {
+    if (scale !== "jaar") return CELL_W_BY_SCALE[scale];
+    // Approximate available width = viewport minus sidebar minus app chrome.
+    const available = Math.max(0, viewportW - SIDEBAR_W - 280);
+    const ideal = available / 12;
+    return Math.round(Math.min(110, Math.max(70, ideal)));
+  }, [scale, viewportW]);
   const totalGridWidth = slots.length * cellW;
 
   const visibleWeekNrSet = useMemo(() => {
