@@ -257,6 +257,26 @@ export default function Overzicht() {
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
+  // Track viewport width so the grid can fill available horizontal space.
+  const [viewportW, setViewportW] = useState<number>(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // For "maand": auto-fit number of weeks to the available width.
+  // Each week = 5 days × 44px = 220px. Reserve sidebar + beschikbaar column + app chrome.
+  const weeksToShow = useMemo(() => {
+    if (scale !== "maand") return 5;
+    const sidebarPx = SIDEBAR_W; // not collapsed-aware: keep stable so scrolling doesn't reflow weeks
+    const available = Math.max(0, viewportW - 220 /* app sidebar */ - sidebarPx - 100 /* beschikbaar */ - 80 /* padding */);
+    const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand; // 220
+    return Math.max(4, Math.min(16, Math.floor(available / weekPx)));
+  }, [scale, viewportW]);
+
   // ====== Build slots based on scale ======
   const slots = useMemo<Slot[]>(() => {
     const out: Slot[] = [];
