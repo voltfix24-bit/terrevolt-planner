@@ -169,6 +169,18 @@ function statusColor(status: Status | null): { bg: string; text: string; label: 
   }
 }
 
+function dayKey(week_nr: number, dag_index: number): string {
+  return `${week_nr}-${dag_index}`;
+}
+
+function dateKey(d: Date): string {
+  // Local-date YYYY-MM-DD (avoids UTC offset issues compared to toISOString)
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function projectStatusBorderLeft(status: Status | null): string {
   switch (status) {
     case "gepland":
@@ -2493,16 +2505,4 @@ function ActiviteitCellsRow({
   );
 }
 
-// ============== Helpers ==============
-function dayKey(week_nr: number, dag_index: number): string {
-  return `${week_nr}-${dag_index}`;
-}
-
-function dateKey(d: Date): string {
-  // Local-date YYYY-MM-DD (avoids UTC offset issues compared to toISOString)
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
