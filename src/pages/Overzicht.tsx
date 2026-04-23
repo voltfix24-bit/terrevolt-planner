@@ -613,7 +613,7 @@ export default function Overzicht() {
     // Build the list of working days (MA-VR) in the visible period
     const dates: Date[] = [];
     if (scale === "maand" || scale === "kwartaal") {
-      for (const wnr of visibleWeekNrs) {
+      for (const wnr of visibleWeekNrSet) {
         const monday = getMondayOfWeek(wnr, jaar);
         for (let d = 0; d < 5; d++) {
           const date = new Date(monday);
