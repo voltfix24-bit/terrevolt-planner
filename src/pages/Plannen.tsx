@@ -1169,15 +1169,33 @@ const CellBox = memo(function CellBox({
     warningReason = res.reden;
   }
 
-  const firstMonteur = monteurIds[0] ? monteurById.get(monteurIds[0]) : undefined;
-  const showInitials =
-    isCap && firstMonteur && (cel?.kleur_code != null);
+  const assignedMonteurs = monteurIds
+    .map((id) => monteurById.get(id))
+    .filter((m): m is Monteur => !!m);
+  const showAvatars = isCap && cel?.kleur_code != null && assignedMonteurs.length > 0;
+
+  // Build hover title: kleur naam + monteur namen
+  const namen = assignedMonteurs.map((m) => m.naam).join(", ");
+  const kleurNaam = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.naam : null;
+  let hoverTitle: string | undefined;
+  if (warningReason) {
+    hoverTitle = warningReason;
+  } else if (kleurNaam && namen) {
+    hoverTitle = `${kleurNaam} — ${namen}`;
+  } else if (kleurNaam) {
+    hoverTitle = kleurNaam;
+  } else if (namen) {
+    hoverTitle = namen;
+  }
+
+  const visibleAvatars = assignedMonteurs.slice(0, 2);
+  const overflow = assignedMonteurs.length - visibleAvatars.length;
 
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
-      title={warningReason ?? undefined}
+      title={hoverTitle}
       className="relative shrink-0 transition-colors"
       style={{
         width: CELL_W,
@@ -1190,13 +1208,27 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {showInitials && (
-        <span className="text-[10px] font-display font-bold text-white">
-          {initialen(firstMonteur!.naam)}
-          {monteurIds.length > 1 && (
-            <span className="ml-0.5 opacity-80">+{monteurIds.length - 1}</span>
+      {showAvatars && (
+        <div className="flex h-full w-full items-center justify-center">
+          {visibleAvatars.map((m, idx) => (
+            <MonteurAvatar
+              key={m.id}
+              naam={m.naam}
+              type={m.type}
+              size={20}
+              fontSize={7}
+              overlap={idx > 0}
+            />
+          ))}
+          {overflow > 0 && (
+            <MonteurAvatar
+              overflow={overflow}
+              size={20}
+              fontSize={7}
+              overlap
+            />
           )}
-        </span>
+        </div>
       )}
       {!voldoet && cel && (
         <span
