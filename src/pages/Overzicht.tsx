@@ -1530,6 +1530,7 @@ export default function Overzicht() {
                     projectById={projectById}
                     slots={slots}
                     cellW={cellW}
+                    scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
                   />
@@ -1560,6 +1561,7 @@ export default function Overzicht() {
                     projectById={projectById}
                     slots={slots}
                     cellW={cellW}
+                    scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
                   />
