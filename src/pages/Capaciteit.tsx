@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Edit2, Plus, Power, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -820,6 +820,31 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
 
   const totalGridWidth = visibleDays.length * CELL_W;
 
+  // Precompute per-week day metadata (keys, labels, borders) once.
+  // This is shared across every monteur row, so we build it once per
+  // visibleWeeks change rather than per-row per-render.
+  const weekStructures = useMemo<WeekStructure[]>(() => {
+    return visibleWeeks.map((w) => {
+      const days: WeekStructure["days"] = [];
+      for (let d = 0; d < 5; d++) {
+        const date = addDays(w.monday, d);
+        days.push({
+          dayIdx: d,
+          dateKey: isoKey(date),
+          dayLabel: DAG_FULL[d],
+          dateLabel: fmtDayMonth(date),
+          isWeekEnd: d === 4,
+        });
+      }
+      return { weekKey: `${w.jaar}-${w.week}`, days };
+    });
+  }, [visibleWeeks]);
+
+  const handleNavigate = useCallback(
+    (id: string) => navigate(`/plannen?project=${id}`),
+    [navigate]
+  );
+
   if (monteurs.length === 0) {
     return (
       <div className="surface-card px-6 py-16 text-center text-sm text-muted-foreground">
@@ -828,166 +853,16 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
     );
   }
 
-  const renderRow = (m: Monteur) => {
-    const days = planMap[m.id] ?? {};
-    return (
-      <div
-        key={m.id}
-        className="flex border-b transition-colors hover:bg-white/[0.04]"
-        style={{ borderColor: "rgba(255,255,255,0.06)", height: CELL_H }}
-      >
-        <div
-          className="sticky left-0 z-10 flex items-center px-3"
-          style={{
-            width: SIDEBAR_W,
-            minWidth: SIDEBAR_W,
-            backgroundColor: "hsl(var(--card))",
-            borderRight: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          <div className="truncate font-display text-sm font-semibold text-foreground">
-            {m.naam}
-          </div>
-        </div>
-        <div className="flex">
-          {visibleWeeks.map((w, wi) => {
-            // Build 5 slots for this week
-            type Slot =
-              | { kind: "vrij" }
-              | { kind: "single"; projectId: string }
-              | { kind: "conflict"; projectIds: string[] };
-            const slots: Slot[] = [];
-            for (let d = 0; d < 5; d++) {
-              const date = addDays(w.monday, d);
-              const ids = days[isoKey(date)] ?? [];
-              if (ids.length === 0) slots.push({ kind: "vrij" });
-              else if (ids.length === 1)
-                slots.push({ kind: "single", projectId: ids[0] });
-              else slots.push({ kind: "conflict", projectIds: ids });
-            }
-
-            const items: React.ReactNode[] = [];
-            let i = 0;
-            while (i < 5) {
-              const slot = slots[i];
-              const isLastDay = i === 4;
-              const borderRight = isLastDay
-                ? "1px solid rgba(255,255,255,0.12)"
-                : "1px solid rgba(255,255,255,0.04)";
-              const date = addDays(w.monday, i);
-
-              if (slot.kind === "vrij") {
-                items.push(
-                  <div
-                    key={`v-${wi}-${i}`}
-                    title={`${DAG_FULL[i]} ${fmtDayMonth(date)}`}
-                    style={{
-                      width: CELL_W,
-                      height: CELL_H,
-                      borderRight,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  />
-                );
-                i++;
-                continue;
-              }
-
-              if (slot.kind === "conflict") {
-                items.push(
-                  <div
-                    key={`c-${wi}-${i}`}
-                    style={{
-                      width: CELL_W,
-                      height: CELL_H,
-                      borderRight,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <ConflictBlock
-                      projectIds={slot.projectIds}
-                      projects={projects}
-                      onNavigate={(id) => navigate(`/plannen?project=${id}`)}
-                    />
-                  </div>
-                );
-                i++;
-                continue;
-              }
-
-              // single → look ahead for consecutive same project
-              const pid = slot.projectId;
-              let span = 1;
-              while (
-                i + span < 5 &&
-                slots[i + span].kind === "single" &&
-                (slots[i + span] as { kind: "single"; projectId: string })
-                  .projectId === pid
-              ) {
-                span++;
-              }
-              const blockWidth = span * CELL_W - 2;
-              const p = projects[pid];
-              const fullLabel = p?.case_nummer ?? "—";
-              const label =
-                blockWidth > 80 ? fullLabel : fullLabel.slice(0, 6);
-
-              items.push(
-                <div
-                  key={`s-${wi}-${i}`}
-                  style={{
-                    width: span * CELL_W,
-                    height: CELL_H,
-                    borderRight: i + span - 1 === 4
-                      ? "1px solid rgba(255,255,255,0.12)"
-                      : "1px solid rgba(255,255,255,0.04)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 1px",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/plannen?project=${pid}`)}
-                    title={fullLabel}
-                    style={{
-                      width: blockWidth,
-                      height: BLOCK_H,
-                      backgroundColor: "#3fff8b",
-                      color: "#0a1a30",
-                      borderRadius: 6,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      overflow: "hidden",
-                    }}
-                    className="font-display transition-opacity hover:opacity-80"
-                  >
-                    <span className="truncate px-1">{label}</span>
-                  </button>
-                </div>
-              );
-              i += span;
-            }
-
-            return (
-              <div key={`w-${wi}`} className="flex">
-                {items}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
+  const renderRow = (m: Monteur) => (
+    <MonteurRow
+      key={m.id}
+      monteur={m}
+      days={planMap[m.id]}
+      weekStructures={weekStructures}
+      projects={projects}
+      onNavigate={handleNavigate}
+    />
+  );
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -1128,6 +1003,232 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
   );
 };
 
+interface WeekStructure {
+  weekKey: string;
+  days: {
+    dayIdx: number;
+    dateKey: string;
+    dayLabel: string;
+    dateLabel: string;
+    isWeekEnd: boolean;
+  }[];
+}
+
+const MonteurRow = memo(function MonteurRow({
+  monteur,
+  days,
+  weekStructures,
+  projects,
+  onNavigate,
+}: {
+  monteur: Monteur;
+  days: Record<string, string[]> | undefined;
+  weekStructures: WeekStructure[];
+  projects: Record<string, ProjectInfo>;
+  onNavigate: (id: string) => void;
+}) {
+  // Compute slots/spans once per (days, weekStructures) change.
+  // Memoizing on `days` (the row's slice of planMap) means rows for
+  // monteurs with no planning changes do not recompute.
+  const weekItems = useMemo(() => {
+    const safeDays = days ?? {};
+    return weekStructures.map((w) => {
+      type Slot =
+        | { kind: "vrij" }
+        | { kind: "single"; projectId: string }
+        | { kind: "conflict"; projectIds: string[] };
+      const slots: Slot[] = w.days.map((d) => {
+        const ids = safeDays[d.dateKey] ?? [];
+        if (ids.length === 0) return { kind: "vrij" };
+        if (ids.length === 1) return { kind: "single", projectId: ids[0] };
+        return { kind: "conflict", projectIds: ids };
+      });
+
+      type Item =
+        | {
+            kind: "vrij";
+            key: string;
+            title: string;
+            borderRight: string;
+          }
+        | {
+            kind: "conflict";
+            key: string;
+            borderRight: string;
+            projectIds: string[];
+          }
+        | {
+            kind: "single";
+            key: string;
+            span: number;
+            blockWidth: number;
+            label: string;
+            fullLabel: string;
+            projectId: string;
+            borderRight: string;
+          };
+
+      const items: Item[] = [];
+      let i = 0;
+      while (i < 5) {
+        const slot = slots[i];
+        const meta = w.days[i];
+        const lastIdx = (n: number) => i + n - 1 === 4;
+        if (slot.kind === "vrij") {
+          items.push({
+            kind: "vrij",
+            key: `v-${i}`,
+            title: `${meta.dayLabel} ${meta.dateLabel}`,
+            borderRight: meta.isWeekEnd
+              ? "1px solid rgba(255,255,255,0.12)"
+              : "1px solid rgba(255,255,255,0.04)",
+          });
+          i++;
+          continue;
+        }
+        if (slot.kind === "conflict") {
+          items.push({
+            kind: "conflict",
+            key: `c-${i}`,
+            borderRight: meta.isWeekEnd
+              ? "1px solid rgba(255,255,255,0.12)"
+              : "1px solid rgba(255,255,255,0.04)",
+            projectIds: slot.projectIds,
+          });
+          i++;
+          continue;
+        }
+        const pid = slot.projectId;
+        let span = 1;
+        while (
+          i + span < 5 &&
+          slots[i + span].kind === "single" &&
+          (slots[i + span] as { kind: "single"; projectId: string })
+            .projectId === pid
+        ) {
+          span++;
+        }
+        const blockWidth = span * CELL_W - 2;
+        const fullLabel = projects[pid]?.case_nummer ?? "—";
+        items.push({
+          kind: "single",
+          key: `s-${i}`,
+          span,
+          blockWidth,
+          fullLabel,
+          label: blockWidth > 80 ? fullLabel : fullLabel.slice(0, 6),
+          projectId: pid,
+          borderRight: lastIdx(span)
+            ? "1px solid rgba(255,255,255,0.12)"
+            : "1px solid rgba(255,255,255,0.04)",
+        });
+        i += span;
+      }
+      return { weekKey: w.weekKey, items };
+    });
+  }, [days, weekStructures, projects]);
+
+  return (
+    <div
+      className="flex border-b transition-colors hover:bg-white/[0.04]"
+      style={{ borderColor: "rgba(255,255,255,0.06)", height: CELL_H }}
+    >
+      <div
+        className="sticky left-0 z-10 flex items-center px-3"
+        style={{
+          width: SIDEBAR_W,
+          minWidth: SIDEBAR_W,
+          backgroundColor: "hsl(var(--card))",
+          borderRight: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <div className="truncate font-display text-sm font-semibold text-foreground">
+          {monteur.naam}
+        </div>
+      </div>
+      <div className="flex">
+        {weekItems.map((w) => (
+          <div key={w.weekKey} className="flex">
+            {w.items.map((it) => {
+              if (it.kind === "vrij") {
+                return (
+                  <div
+                    key={it.key}
+                    title={it.title}
+                    style={{
+                      width: CELL_W,
+                      height: CELL_H,
+                      borderRight: it.borderRight,
+                    }}
+                  />
+                );
+              }
+              if (it.kind === "conflict") {
+                return (
+                  <div
+                    key={it.key}
+                    style={{
+                      width: CELL_W,
+                      height: CELL_H,
+                      borderRight: it.borderRight,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ConflictBlock
+                      projectIds={it.projectIds}
+                      projects={projects}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={it.key}
+                  style={{
+                    width: it.span * CELL_W,
+                    height: CELL_H,
+                    borderRight: it.borderRight,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 1px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(it.projectId)}
+                    title={it.fullLabel}
+                    style={{
+                      width: it.blockWidth,
+                      height: BLOCK_H,
+                      backgroundColor: "#3fff8b",
+                      color: "#0a1a30",
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      overflow: "hidden",
+                    }}
+                    className="font-display transition-opacity hover:opacity-80"
+                  >
+                    <span className="truncate px-1">{it.label}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
 const GroupLabel = ({ label }: { label: string }) => (
   <div
     className="sticky left-0 z-10 px-3 py-1.5 text-[10px] font-display font-bold uppercase tracking-wider text-muted-foreground"
@@ -1140,7 +1241,7 @@ const GroupLabel = ({ label }: { label: string }) => (
   </div>
 );
 
-const ConflictBlock = ({
+const ConflictBlock = memo(function ConflictBlock({
   projectIds,
   projects,
   onNavigate,
@@ -1148,7 +1249,7 @@ const ConflictBlock = ({
   projectIds: string[];
   projects: Record<string, ProjectInfo>;
   onNavigate: (id: string) => void;
-}) => {
+}) {
   const [open, setOpen] = useState(false);
   // Stable order: by case_nummer asc (fallback to id), so the list is
   // identical across renders and across cells with the same projects.
@@ -1207,6 +1308,6 @@ const ConflictBlock = ({
       </PopoverContent>
     </Popover>
   );
-};
+});
 
 export default Capaciteit;
