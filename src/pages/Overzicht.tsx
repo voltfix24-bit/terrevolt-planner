@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -236,6 +236,24 @@ export default function Overzicht() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
+
+  // Scroll sync between sticky header and vertically-scrolling body
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const scrollLock = useRef(false);
+  const syncScroll = useCallback((source: "header" | "body", left: number) => {
+    if (scrollLock.current) return;
+    scrollLock.current = true;
+    if (source !== "header" && headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = left;
+    }
+    if (source !== "body" && bodyScrollRef.current) {
+      bodyScrollRef.current.scrollLeft = left;
+    }
+    requestAnimationFrame(() => {
+      scrollLock.current = false;
+    });
+  }, []);
 
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
@@ -988,15 +1006,81 @@ export default function Overzicht() {
         </div>
       </div>
 
-      {/* Main grid container — single scroll wrapper */}
+      {/* Main grid container — sticky header + scrollable body */}
       <div
         id="overzicht-grid-root"
-        className="overflow-hidden rounded-lg border"
+        className="rounded-lg border"
         style={{
           borderColor: "rgba(255,255,255,0.08)",
           background: "rgba(10,26,48,0.4)",
+          height: "calc(100vh - 200px)",
+          minHeight: 400,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
         }}
       >
+        {/* ====== Sticky top header bar ====== */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            zIndex: 30,
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+          }}
+        >
+          {/* Sidebar-aligned spacer with collapse toggle */}
+          <div
+            className="flex items-center"
+            style={{
+              width: sidebarW,
+              flexShrink: 0,
+              height: HEADER_H,
+              borderRight: "1px solid rgba(255,255,255,0.08)",
+              paddingLeft: sidebarCollapsed ? 0 : 8,
+              paddingRight: 6,
+              justifyContent: sidebarCollapsed ? "center" : "flex-end",
+              transition: "width 0.2s ease",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+              title={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
+              aria-label={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+          {/* Horizontally-scrollable header (week/day labels) */}
+          <div
+            ref={headerScrollRef}
+            className="overzicht-scroll no-scrollbar"
+            style={{ flex: 1, overflowX: "auto", overflowY: "hidden" }}
+            onScroll={(e) => syncScroll("header", e.currentTarget.scrollLeft)}
+          >
+            {renderHeader()}
+          </div>
+        </div>
+
+        {/* ====== Scrollable body (vertical) ====== */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            minHeight: 0,
+          }}
+          className="overzicht-scroll"
+        >
         <div style={{ display: "flex" }}>
           {/* ====== Fixed left sidebar ====== */}
           <div
@@ -1006,34 +1090,6 @@ export default function Overzicht() {
               transition: "width 0.2s ease",
             }}
           >
-            {/* Header spacer with collapse toggle */}
-            <div
-              className="flex items-center"
-              style={{
-                height: HEADER_H,
-                borderRight: "1px solid rgba(255,255,255,0.08)",
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.02)",
-                paddingLeft: sidebarCollapsed ? 0 : 8,
-                paddingRight: 6,
-                justifyContent: sidebarCollapsed ? "center" : "flex-end",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed((c) => !c)}
-                className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
-                title={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
-                aria-label={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
-              >
-                {sidebarCollapsed ? (
-                  <PanelLeftOpen className="h-4 w-4" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-
             {/* Medewerkers section toggle */}
             <button
               type="button"
@@ -1383,12 +1439,13 @@ export default function Overzicht() {
             </div>
           </div>
 
-          {/* ====== Single scrollable right area ====== */}
-          <div className="overzicht-scroll" style={{ flex: 1, overflowX: "auto" }}>
-            {/* Shared header */}
-            <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
-              {renderHeader()}
-            </div>
+          {/* ====== Single horizontally-scrollable right area (synced with header) ====== */}
+          <div
+            ref={bodyScrollRef}
+            className="overzicht-scroll"
+            style={{ flex: 1, overflowX: "auto" }}
+            onScroll={(e) => syncScroll("body", e.currentTarget.scrollLeft)}
+          >
 
             {/* Medewerkers toggle row spacer (matches sidebar 32px) */}
             <div
@@ -1646,6 +1703,7 @@ export default function Overzicht() {
               })}
             </div>
           </div>
+        </div>
         </div>
       </div>
 
