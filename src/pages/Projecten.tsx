@@ -515,6 +515,16 @@ const Projecten = () => {
             </button>
           </div>
 
+          {savedLocation && (
+            <div className="mx-6 mt-4 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
+              <MapPin className="h-4 w-4 shrink-0" />
+              <span className="font-display font-semibold">Locatie opgeslagen:</span>
+              <span className="text-foreground/90">
+                {[savedLocation.straat, savedLocation.stad].filter(Boolean).join(", ") || "—"}
+              </span>
+            </div>
+          )}
+
           <div className="space-y-5 px-6 py-6 max-h-[75vh] overflow-y-auto">
             {/* Two columns */}
             <div className="grid grid-cols-2 gap-4">
