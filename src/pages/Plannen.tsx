@@ -190,6 +190,10 @@ const Plannen = () => {
     dagIndex: number | null;
   }>({ weekId: null, dagIndex: null });
 
+  // Geselecteerde monteur waarvan alle ingeplande cellen worden gehighlight in de grid.
+  // null => geen highlight actief.
+  const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
+
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -1080,6 +1084,7 @@ const Plannen = () => {
                       cellen={cellen}
                       celMonteurs={celMonteurs}
                       monteurById={monteurById}
+                      highlightedMonteurId={highlightedMonteurId}
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
                     />
@@ -1246,42 +1251,61 @@ const Plannen = () => {
           </span>
         ) : (
           <div className="flex flex-1 flex-wrap items-center" style={{ gap: 12 }}>
-            {ingeplandeMonteurs.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center"
-                style={{
-                  gap: 8,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 8,
-                  padding: "4px 10px 4px 6px",
-                }}
-              >
-                <MonteurAvatar
-                  naam={m.naam}
-                  type={m.type}
-                  size={28}
-                  fontSize={9}
-                  borderWidth={2}
-                  borderColor="rgba(0,0,0,0.4)"
-                />
-                <span
-                  className="font-display"
-                  style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}
+            {ingeplandeMonteurs.map((m) => {
+              const isActive = highlightedMonteurId === m.id;
+              const accentColor = m.type === "schakelmonteur" ? "#feb300" : "#378add";
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() =>
+                    setHighlightedMonteurId((prev) => (prev === m.id ? null : m.id))
+                  }
+                  className="flex items-center transition-all"
+                  title={
+                    isActive
+                      ? "Klik om highlight uit te zetten"
+                      : `Highlight alle cellen van ${m.naam}`
+                  }
+                  style={{
+                    gap: 8,
+                    background: isActive
+                      ? `${accentColor}26` // ~15% alpha hex
+                      : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${
+                      isActive ? accentColor : "rgba(255,255,255,0.08)"
+                    }`,
+                    borderRadius: 8,
+                    padding: "4px 10px 4px 6px",
+                    boxShadow: isActive ? `0 0 0 2px ${accentColor}40` : undefined,
+                    cursor: "pointer",
+                  }}
                 >
-                  {m.naam}
-                </span>
-                {m.aanwijzing_ms && (
+                  <MonteurAvatar
+                    naam={m.naam}
+                    type={m.type}
+                    size={28}
+                    fontSize={9}
+                    borderWidth={2}
+                    borderColor="rgba(0,0,0,0.4)"
+                  />
                   <span
-                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                    style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                    className="font-display"
+                    style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}
                   >
-                    MS {m.aanwijzing_ms}
+                    {m.naam}
                   </span>
-                )}
-              </div>
-            ))}
+                  {m.aanwijzing_ms && (
+                    <span
+                      className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                      style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                    >
+                      MS {m.aanwijzing_ms}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -1547,6 +1571,7 @@ interface GridRowProps {
   cellen: CelMap;
   celMonteurs: CelMonteurMap;
   monteurById: Map<string, Monteur>;
+  highlightedMonteurId: string | null;
   onClick: (a: Activiteit, week_id: string, dag_index: number) => void;
   onRightClick: (
     e: ReactMouseEvent,
@@ -1563,6 +1588,7 @@ const GridRow = memo(function GridRow({
   cellen,
   celMonteurs,
   monteurById,
+  highlightedMonteurId,
   onClick,
   onRightClick,
 }: GridRowProps) {
@@ -1578,14 +1604,26 @@ const GridRow = memo(function GridRow({
         const isCurrentWeek = w.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
         return DAG_LABELS.map((_, d) => {
           const cel = cellen.get(cellKey(activiteit.id, w.id, d));
+          const monteurIds = cel ? celMonteurs.get(cel.id) ?? [] : [];
+          const isHighlighted =
+            highlightedMonteurId !== null &&
+            monteurIds.includes(highlightedMonteurId);
+          const highlightColor = isHighlighted
+            ? monteurById.get(highlightedMonteurId!)?.type === "schakelmonteur"
+              ? "#feb300"
+              : "#378add"
+            : null;
           return (
             <CellBox
               key={`${w.id}-${d}`}
               cel={cel}
               activiteit={activiteit}
-              monteurIds={cel ? celMonteurs.get(cel.id) ?? [] : []}
+              monteurIds={monteurIds}
               monteurById={monteurById}
               isCurrentWeek={isCurrentWeek}
+              isHighlighted={isHighlighted}
+              highlightColor={highlightColor}
+              isDimmed={highlightedMonteurId !== null && !isHighlighted}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
@@ -1671,6 +1709,9 @@ const CellBox = memo(function CellBox({
   monteurIds,
   monteurById,
   isCurrentWeek = false,
+  isHighlighted = false,
+  highlightColor = null,
+  isDimmed = false,
   onClick,
   onContextMenu,
 }: {
@@ -1679,6 +1720,9 @@ const CellBox = memo(function CellBox({
   monteurIds: string[];
   monteurById: Map<string, Monteur>;
   isCurrentWeek?: boolean;
+  isHighlighted?: boolean;
+  highlightColor?: string | null;
+  isDimmed?: boolean;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
 }) {
@@ -1740,20 +1784,27 @@ const CellBox = memo(function CellBox({
   const filled = !!kleur;
   const showHoverPlus = !filled && !isGeen;
 
+  // Highlight ring (inset boxShadow) wanneer deze cel een geselecteerde monteur bevat.
+  // Dim de overige gevulde cellen zodat de highlight extra opvalt.
+  const highlightShadow =
+    isHighlighted && highlightColor
+      ? `inset 0 0 0 2px ${highlightColor}, 0 0 12px ${highlightColor}80`
+      : undefined;
+
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
       title={hoverTitle}
       className={[
-        "group relative shrink-0 transition-colors",
+        "group relative shrink-0 transition-all",
         showHoverPlus ? "hover:bg-white/[0.03]" : "",
       ].join(" ")}
       style={{
         width: CELL_W,
         height: CELL_H,
         backgroundColor: filled
-          ? hexToRgba(kleur!, 0.35)
+          ? hexToRgba(kleur!, isHighlighted ? 0.55 : 0.35)
           : isCurrentWeek
           ? "rgba(63,255,139,0.02)"
           : "transparent",
@@ -1765,6 +1816,9 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
         outline: filled && !voldoet ? "2px solid #feb300" : undefined,
         outlineOffset: filled && !voldoet ? "-2px" : undefined,
+        boxShadow: highlightShadow,
+        opacity: isDimmed && filled ? 0.35 : 1,
+        zIndex: isHighlighted ? 2 : undefined,
       }}
     >
       {showAvatars && (
