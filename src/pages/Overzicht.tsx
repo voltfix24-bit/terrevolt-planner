@@ -841,130 +841,150 @@ export default function Overzicht() {
             </div>
 
             {/* Projecten section header */}
-            <div
+            <button
+              type="button"
+              onClick={() => setProjectenOpen((o) => !o)}
+              className="flex w-full items-center gap-2 hover:bg-white/[0.04]"
               style={{
                 height: 32,
                 paddingLeft: 12,
-                display: "flex",
-                alignItems: "center",
                 borderRight: "1px solid rgba(255,255,255,0.08)",
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
                 borderTop: "1px solid rgba(255,255,255,0.08)",
                 background: "rgba(255,255,255,0.02)",
               }}
             >
+              <ChevronRight
+                className="h-3 w-3 text-muted-foreground"
+                style={{
+                  transform: projectenOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s ease",
+                }}
+              />
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Project / Taak
               </span>
-            </div>
+              <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                {visibleProjecten.length}
+              </span>
+            </button>
 
-            {visibleProjecten.length === 0 && (
-              <div
-                style={{
-                  padding: "16px 12px",
-                  borderRight: "1px solid rgba(255,255,255,0.08)",
-                }}
-                className="text-xs italic text-muted-foreground"
-              >
-                Maak een project aan op de Projecten pagina
-              </div>
-            )}
-
-            {visibleProjecten.map((p) => {
-              const expanded = expandedProjects.has(p.id);
-              const sc = statusColor(p.status);
-              const acts = activiteitenByProject.get(p.id) ?? [];
-              return (
-                <div key={p.id}>
-                  {/* Project header sidebar */}
-                  <div
-                    onClick={() => navigateToProject(p.id)}
-                    className="group flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
-                    style={{
-                      height: ROW_H_PROJECT,
-                      borderRight: "1px solid rgba(255,255,255,0.08)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExpand(p.id);
-                      }}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
-                    >
-                      <ChevronRight
-                        className="h-3 w-3 text-muted-foreground"
-                        style={{
-                          transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-                          transition: "transform 0.2s ease",
-                        }}
-                      />
-                    </button>
-                    <span
-                      className="font-display text-[13px] font-bold tabular-nums"
-                      style={{ color: "#3fff8b" }}
-                    >
-                      {p.case_nummer ?? "—"}
-                    </span>
-                    <span
-                      className="truncate text-[11px] text-foreground/80"
-                      title={p.station_naam ?? ""}
-                    >
-                      {p.station_naam ? `— ${p.station_naam}` : ""}
-                    </span>
-                    <span
-                      className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
-                      style={{ background: sc.bg, color: sc.text }}
-                    >
-                      {sc.label}
-                    </span>
-                  </div>
-
-                  {/* Activiteit sidebar rows */}
-                  {expanded &&
-                    acts.map((a, ai) => {
-                      const capDotColor =
-                        a.capaciteit_type === "schakel"
-                          ? "#feb300"
-                          : a.capaciteit_type === "montage"
-                            ? "#378add"
-                            : "rgba(255,255,255,0.2)";
-                      const isLastAct = ai === acts.length - 1;
-                      return (
-                        <div
-                          key={a.id}
-                          onClick={() => navigateToProject(p.id)}
-                          className="flex cursor-pointer items-center gap-2 pr-2 hover:bg-white/[0.03]"
-                          style={{
-                            paddingLeft: 20,
-                            height: ROW_H_ACTIVITEIT,
-                            borderRight: "1px solid rgba(255,255,255,0.08)",
-                            borderBottom: isLastAct
-                              ? "2px solid rgba(255,255,255,0.06)"
-                              : "1px solid rgba(255,255,255,0.03)",
-                            background: "rgba(255,255,255,0.015)",
-                          }}
-                        >
-                          <span
-                            className="shrink-0"
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: "50%",
-                              background: capDotColor,
-                            }}
-                          />
-                          <span className="truncate text-[11px] text-foreground/90" title={a.naam}>
-                            {a.naam}
-                          </span>
-                        </div>
-                      );
-                    })}
+            <div
+              style={{
+                maxHeight: projectenOpen ? 99999 : 0,
+                opacity: projectenOpen ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 0.25s ease, opacity 0.15s ease",
+              }}
+            >
+              {visibleProjecten.length === 0 && (
+                <div
+                  style={{
+                    padding: "16px 12px",
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                  className="text-xs italic text-muted-foreground"
+                >
+                  Maak een project aan op de Projecten pagina
                 </div>
-              );
-            })}
+              )}
+
+              {visibleProjecten.map((p) => {
+                const expanded = expandedProjects.has(p.id);
+                const sc = statusColor(p.status);
+                const acts = activiteitenByProject.get(p.id) ?? [];
+                return (
+                  <div key={p.id}>
+                    {/* Project header sidebar */}
+                    <div
+                      onClick={() => navigateToProject(p.id)}
+                      className="group flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
+                      style={{
+                        height: ROW_H_PROJECT,
+                        borderRight: "1px solid rgba(255,255,255,0.08)",
+                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpand(p.id);
+                        }}
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
+                      >
+                        <ChevronRight
+                          className="h-3 w-3 text-muted-foreground"
+                          style={{
+                            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s ease",
+                          }}
+                        />
+                      </button>
+                      <span
+                        className="font-display text-[13px] font-bold tabular-nums"
+                        style={{ color: "#3fff8b" }}
+                      >
+                        {p.case_nummer ?? "—"}
+                      </span>
+                      <span
+                        className="truncate text-[11px] text-foreground/80"
+                        title={p.station_naam ?? ""}
+                      >
+                        {p.station_naam ? `— ${p.station_naam}` : ""}
+                      </span>
+                      <span
+                        className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+                        style={{ background: sc.bg, color: sc.text }}
+                      >
+                        {sc.label}
+                      </span>
+                    </div>
+
+                    {/* Activiteit sidebar rows */}
+                    {expanded &&
+                      acts.map((a, ai) => {
+                        const capDotColor =
+                          a.capaciteit_type === "schakel"
+                            ? "#feb300"
+                            : a.capaciteit_type === "montage"
+                              ? "#378add"
+                              : "rgba(255,255,255,0.2)";
+                        const isLastAct = ai === acts.length - 1;
+                        return (
+                          <div
+                            key={a.id}
+                            onClick={() => navigateToProject(p.id)}
+                            className="flex cursor-pointer items-center gap-2 pr-2 hover:bg-white/[0.03]"
+                            style={{
+                              paddingLeft: 20,
+                              height: ROW_H_ACTIVITEIT,
+                              borderRight: "1px solid rgba(255,255,255,0.08)",
+                              borderBottom: isLastAct
+                                ? "2px solid rgba(255,255,255,0.06)"
+                                : "1px solid rgba(255,255,255,0.03)",
+                              background: "rgba(255,255,255,0.015)",
+                            }}
+                          >
+                            <span
+                              className="shrink-0"
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                background: capDotColor,
+                              }}
+                            />
+                            <span className="truncate text-[11px] text-foreground/90" title={a.naam}>
+                              {a.naam}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* ====== Single scrollable right area ====== */}
