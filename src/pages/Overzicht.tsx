@@ -946,9 +946,6 @@ export default function Overzicht() {
         </div>
       </div>
 
-      {/* Dev: raster integriteits-check */}
-      <RasterCheck />
-
       {/* Main grid container — single scroll wrapper */}
       <div
         id="overzicht-grid-root"
