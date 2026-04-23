@@ -1439,6 +1439,7 @@ const SidebarRow = ({ a, onRemove }: { a: Activiteit; onRemove: () => void }) =>
 interface GridRowProps {
   activiteit: Activiteit;
   weken: Week[];
+  jaar: number;
   cellen: CelMap;
   celMonteurs: CelMonteurMap;
   monteurById: Map<string, Monteur>;
@@ -1454,6 +1455,7 @@ interface GridRowProps {
 const GridRow = memo(function GridRow({
   activiteit,
   weken,
+  jaar,
   cellen,
   celMonteurs,
   monteurById,
@@ -1468,8 +1470,9 @@ const GridRow = memo(function GridRow({
         borderTop: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {weken.map((w) =>
-        DAG_LABELS.map((_, d) => {
+      {weken.map((w) => {
+        const isCurrentWeek = w.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
+        return DAG_LABELS.map((_, d) => {
           const cel = cellen.get(cellKey(activiteit.id, w.id, d));
           return (
             <CellBox
@@ -1478,12 +1481,13 @@ const GridRow = memo(function GridRow({
               activiteit={activiteit}
               monteurIds={cel ? celMonteurs.get(cel.id) ?? [] : []}
               monteurById={monteurById}
+              isCurrentWeek={isCurrentWeek}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
           );
-        })
-      )}
+        });
+      })}
     </div>
   );
 });
