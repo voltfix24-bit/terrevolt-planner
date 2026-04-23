@@ -252,15 +252,34 @@ export default function Overzicht() {
     return m;
   }, [weken]);
 
-  // cel lookup: activiteitId|weekId|dag → cel
-  const celByKey = useMemo(() => {
-    const m = new Map<string, Cel>();
+  // Indexed cel lookup: week_id → dag_index → activiteit_id → cel
+  // Allows fast span scans without scanning every activiteit per (week,day).
+  const cellenByWeekDay = useMemo(() => {
+    const m = new Map<string, Map<number, Map<string, Cel>>>();
     for (const c of cellen) {
       if (!c.activiteit_id || !c.week_id) continue;
-      m.set(`${c.activiteit_id}|${c.week_id}|${c.dag_index}`, c);
+      let byDay = m.get(c.week_id);
+      if (!byDay) {
+        byDay = new Map();
+        m.set(c.week_id, byDay);
+      }
+      let byAct = byDay.get(c.dag_index);
+      if (!byAct) {
+        byAct = new Map();
+        byDay.set(c.dag_index, byAct);
+      }
+      byAct.set(c.activiteit_id, c);
     }
     return m;
   }, [cellen]);
+
+  // Convenience helper for the activiteit-level rendering path
+  const getCel = useCallback(
+    (activiteitId: string, weekId: string, dagIndex: number): Cel | undefined => {
+      return cellenByWeekDay.get(weekId)?.get(dagIndex)?.get(activiteitId);
+    },
+    [cellenByWeekDay],
+  );
 
   const monteurById = useMemo(() => {
     const m = new Map<string, Monteur>();
