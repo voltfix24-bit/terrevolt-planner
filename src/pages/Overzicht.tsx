@@ -983,10 +983,10 @@ export default function Overzicht() {
                           style={{
                             left,
                             width,
-                            top: (ROW_H_PROJECT - 20) / 2,
-                            height: 20,
+                            top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
+                            height: PILL_H_PROJECT,
                             background: sc.bg,
-                            opacity: 0.85,
+                            opacity: 0.8,
                             borderRadius: 4,
                             color: sc.text,
                             fontSize: 10,
