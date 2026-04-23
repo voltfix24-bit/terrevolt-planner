@@ -285,14 +285,18 @@ export type Database = {
           case_nummer: string | null
           case_type: string | null
           created_at: string | null
+          gemeente: string | null
           gsu_geu: string | null
           id: string
           jaar: number | null
           ls_rek_vervangen: string | null
           ms_type: string | null
           notities: string | null
+          postcode: string | null
+          stad: string | null
           station_naam: string | null
           status: string | null
+          straat: string | null
           template_id: string | null
           trafo_kva: string | null
           updated_at: string | null
@@ -306,14 +310,18 @@ export type Database = {
           case_nummer?: string | null
           case_type?: string | null
           created_at?: string | null
+          gemeente?: string | null
           gsu_geu?: string | null
           id?: string
           jaar?: number | null
           ls_rek_vervangen?: string | null
           ms_type?: string | null
           notities?: string | null
+          postcode?: string | null
+          stad?: string | null
           station_naam?: string | null
           status?: string | null
+          straat?: string | null
           template_id?: string | null
           trafo_kva?: string | null
           updated_at?: string | null
@@ -327,14 +335,18 @@ export type Database = {
           case_nummer?: string | null
           case_type?: string | null
           created_at?: string | null
+          gemeente?: string | null
           gsu_geu?: string | null
           id?: string
           jaar?: number | null
           ls_rek_vervangen?: string | null
           ms_type?: string | null
           notities?: string | null
+          postcode?: string | null
+          stad?: string | null
           station_naam?: string | null
           status?: string | null
+          straat?: string | null
           template_id?: string | null
           trafo_kva?: string | null
           updated_at?: string | null
