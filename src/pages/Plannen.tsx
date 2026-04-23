@@ -417,60 +417,6 @@ const Plannen = () => {
     if (error) toast.error("Monteur verwijderen mislukt");
   }, [pushHistory]);
 
-  const updateCellColor = useCallback(
-    async (cel: Cel, kleur_code: string | null) => {
-      updateCellLocal({ ...cel, kleur_code });
-      const { error } = await supabase
-        .from("planning_cellen")
-        .update({ kleur_code })
-        .eq("id", cel.id);
-      if (error) toast.error("Kleur opslaan mislukt");
-    },
-    [updateCellLocal]
-  );
-
-  const updateCellNotitie = useCallback(
-    async (cel: Cel, notitie: string) => {
-      updateCellLocal({ ...cel, notitie });
-      const { error } = await supabase
-        .from("planning_cellen")
-        .update({ notitie })
-        .eq("id", cel.id);
-      if (error) toast.error("Notitie opslaan mislukt");
-    },
-    [updateCellLocal]
-  );
-
-  const addMonteurToCell = useCallback(async (cel: Cel, monteur_id: string) => {
-    setCelMonteurs((prev) => {
-      const m = new Map(prev);
-      const arr = [...(m.get(cel.id) ?? [])];
-      if (!arr.includes(monteur_id)) arr.push(monteur_id);
-      m.set(cel.id, arr);
-      return m;
-    });
-    const { error } = await supabase
-      .from("cel_monteurs")
-      .insert({ cel_id: cel.id, monteur_id });
-    if (error) {
-      toast.error("Monteur toevoegen mislukt");
-    }
-  }, []);
-
-  const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
-    setCelMonteurs((prev) => {
-      const m = new Map(prev);
-      const arr = (m.get(cel.id) ?? []).filter((x) => x !== monteur_id);
-      m.set(cel.id, arr);
-      return m;
-    });
-    const { error } = await supabase
-      .from("cel_monteurs")
-      .delete()
-      .eq("cel_id", cel.id)
-      .eq("monteur_id", monteur_id);
-    if (error) toast.error("Monteur verwijderen mislukt");
-  }, []);
 
   /* ----------------------------- week opmerking ----------------------------- */
   const updateWeekOpmerking = useCallback(async (week_id: string, opmerking: string) => {
