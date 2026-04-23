@@ -879,48 +879,62 @@ const Plannen = () => {
             disabled={history.length === 0}
             title="Ongedaan maken (Ctrl+Z)"
             className={[
-              "flex h-8 items-center justify-center rounded-md border border-white/15 px-2",
+              "flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent",
               history.length === 0
                 ? "cursor-not-allowed opacity-30"
                 : "text-foreground hover:bg-white/[0.06]",
             ].join(" ")}
           >
-            <Undo2 className="h-3.5 w-3.5" />
+            <Undo2 className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
             title="Geschiedenis"
-            className="flex h-8 items-center justify-center rounded-md border border-white/15 px-2 text-foreground hover:bg-white/[0.06]"
+            className="flex h-8 items-center justify-center rounded-md border border-white/15 bg-transparent px-2 text-foreground hover:bg-white/[0.06]"
           >
-            <History className="h-3.5 w-3.5" />
+            <History className="h-4 w-4" />
             {history.length > 0 && (
               <span className="ml-1 font-display text-xs font-semibold">
                 {history.length}
               </span>
             )}
           </button>
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+          {/* divider */}
+          <span
+            aria-hidden
+            className="inline-block"
+            style={{
+              width: 1,
+              height: 20,
+              backgroundColor: "rgba(255,255,255,0.08)",
+              marginInline: 2,
+            }}
+          />
+          <button
+            type="button"
             onClick={() => setWeekModalOpen(true)}
+            title="Weken beheren"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
           >
-            <CalendarDays className="mr-1.5 h-3.5 w-3.5" /> Weken
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+            <CalendarDays className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={exportExcel}
+            title="Exporteer naar Excel"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
           >
-            <Download className="mr-1.5 h-3.5 w-3.5" /> Excel
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+            <Download className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => window.print()}
+            title="Afdrukken"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
           >
-            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
-          </Button>
+            <Printer className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
