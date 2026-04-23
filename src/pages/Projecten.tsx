@@ -187,9 +187,16 @@ const Projecten = () => {
     return projects.filter((p) => {
       if (statusFilter !== "alle" && p.status !== statusFilter) return false;
       if (term) {
-        const a = (p.case_nummer ?? "").toLowerCase();
-        const b = (p.station_naam ?? "").toLowerCase();
-        if (!a.includes(term) && !b.includes(term)) return false;
+        const fields = [
+          p.case_nummer,
+          p.station_naam,
+          p.straat,
+          p.postcode,
+          p.stad,
+          p.gemeente,
+        ];
+        const hit = fields.some((f) => (f ?? "").toLowerCase().includes(term));
+        if (!hit) return false;
       }
       return true;
     });
@@ -434,7 +441,7 @@ const Projecten = () => {
           <Input
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
-            placeholder="Zoek op casenummer of stationsnaam"
+            placeholder="Zoek op casenummer, station, straat, postcode of plaats"
             className="rounded-md border-white/10 bg-white/[0.04] pl-9 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary"
           />
         </div>
