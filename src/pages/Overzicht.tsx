@@ -18,13 +18,14 @@ import {
 // ============== Constants ==============
 const SIDEBAR_W = 260;
 const SIDEBAR_W_COLLAPSED = 48;
-const ROW_H_MONTEUR = 44;
+const ROW_H_MONTEUR = 52;
 const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
 const DAYS_PER_WEEK = 5;
 const PILL_H_MONTEUR = 26;
 const PILL_H_PROJECT = 22;
+const BESCHIKBAAR_W = 40; // trailing in-row column showing vrije dagen number
 
 // Border tokens — applied to EVERY cell so the raster is always visible
 const BORDER_CELL_RIGHT = "1px solid rgba(255,255,255,0.06)";
@@ -32,6 +33,9 @@ const BORDER_CELL_BOTTOM = "1px solid rgba(255,255,255,0.04)";
 const BORDER_GROUP_RIGHT = "1px solid rgba(255,255,255,0.12)";
 const BG_CURRENT_GROUP = "rgba(63,255,139,0.02)";
 const BG_TODAY = "rgba(63,255,139,0.04)";
+const BG_FEESTDAG = "rgba(167, 139, 250, 0.08)";
+const BG_FEESTDAG_BODY = "rgba(167, 139, 250, 0.06)";
+const BORDER_FEESTDAG = "1px solid rgba(167, 139, 250, 0.18)";
 
 // Scale config
 type Scale = "maand" | "kwartaal" | "jaar";
@@ -66,6 +70,13 @@ interface Project {
   status: Status | null;
   jaar: number | null;
   created_at: string | null;
+  straat: string | null;
+  stad: string | null;
+}
+
+interface Feestdag {
+  datum: string;
+  naam: string;
 }
 
 interface Week {
