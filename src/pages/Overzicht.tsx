@@ -169,6 +169,20 @@ function statusColor(status: Status | null): { bg: string; text: string; label: 
   }
 }
 
+function projectStatusBorderLeft(status: Status | null): string {
+  switch (status) {
+    case "gepland":
+      return "3px solid #feb300";
+    case "in_uitvoering":
+      return "3px solid #3fff8b";
+    case "afgerond":
+      return "3px solid rgba(255,255,255,0.15)";
+    case "concept":
+    default:
+      return "3px dashed rgba(255,255,255,0.2)";
+  }
+}
+
 function msBadgeStyle(ms: string | null): React.CSSProperties | null {
   if (!ms) return null;
   if (ms === "AVP") return { background: "#3fff8b", color: "#0a1a30" };
