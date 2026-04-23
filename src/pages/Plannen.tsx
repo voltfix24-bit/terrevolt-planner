@@ -1,14 +1,1592 @@
-import { PageHeader } from "@/components/PageHeader";
+import { useEffect, useMemo, useRef, useState, useCallback, memo, MouseEvent as ReactMouseEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  Download,
+  FileText,
+  GripVertical,
+  Plus,
+  Printer,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  COLOR_MAP,
+  COLOR_CODES,
+  DAG_LABELS,
+  formatDate,
+  getMondayOfWeek,
+  initialen,
+  wrapWeek,
+} from "@/lib/planning-types";
+import { checkCelVoldoet, type Aanwijzing } from "@/lib/aanwijzing";
+
+/* ----------------------------- Types ----------------------------- */
+
+type CapType = "schakel" | "montage" | "geen";
+type MonteurType = "schakelmonteur" | "montagemonteur";
+
+interface Project {
+  id: string;
+  case_nummer: string | null;
+  station_naam: string | null;
+  case_type: string | null;
+  status: string | null;
+  jaar: number | null;
+  wv_naam: string | null;
+}
+
+interface Week {
+  id: string;
+  week_nr: number;
+  positie: number;
+  opmerking: string | null;
+}
+
+interface Activiteit {
+  id: string;
+  naam: string;
+  capaciteit_type: CapType | null;
+  min_personen: number | null;
+  min_personen_totaal: number | null;
+  min_personen_gekwalificeerd: number | null;
+  min_aanwijzing_ls: Aanwijzing | null;
+  min_aanwijzing_ms: Aanwijzing | null;
+  positie: number | null;
+  activiteit_type_id: string | null;
+}
+
+interface ActiviteitTypeOption {
+  id: string;
+  naam: string;
+  capaciteit_type: CapType | null;
+  min_personen: number | null;
+  min_personen_totaal: number | null;
+  min_personen_gekwalificeerd: number | null;
+  min_aanwijzing_ls: Aanwijzing | null;
+  min_aanwijzing_ms: Aanwijzing | null;
+  kleur_default: string | null;
+}
+
+interface Monteur {
+  id: string;
+  naam: string;
+  type: MonteurType;
+  aanwijzing_ls: Aanwijzing | null;
+  aanwijzing_ms: Aanwijzing | null;
+  actief: boolean;
+}
+
+interface Cel {
+  id: string;
+  activiteit_id: string;
+  week_id: string;
+  dag_index: number;
+  kleur_code: string | null;
+  notitie: string | null;
+  capaciteit: number | null;
+}
+
+type CelMap = Map<string, Cel>; // key: `${activiteit_id}|${week_id}|${dag_index}`
+type CelMonteurMap = Map<string, string[]>; // key: cel.id -> monteur ids
+
+const cellKey = (a: string, w: string, d: number) => `${a}|${w}|${d}`;
+
+/* ----------------------------- Layout sizes ----------------------------- */
+const SIDEBAR_W = 200;
+const CELL_W = 52;
+const CELL_H = 40;
+const HEADER_H = 56;
+
+/* ----------------------------- Page ----------------------------- */
 
 const Plannen = () => {
-  return (
-    <div>
-      <PageHeader title="Plannen" description="Weekplanning per project." />
-      <div className="surface-card p-6">
-        <p className="text-sm text-muted-foreground">Hier komt het planningsraster.</p>
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project");
+
+  const [project, setProject] = useState<Project | null>(null);
+  const [weken, setWeken] = useState<Week[]>([]);
+  const [activiteiten, setActiviteiten] = useState<Activiteit[]>([]);
+  const [cellen, setCellen] = useState<CelMap>(new Map());
+  const [celMonteurs, setCelMonteurs] = useState<CelMonteurMap>(new Map());
+  const [monteurs, setMonteurs] = useState<Monteur[]>([]);
+  const [activiteitTypes, setActiviteitTypes] = useState<ActiviteitTypeOption[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [openCellKey, setOpenCellKey] = useState<string | null>(null);
+  const [weekModalOpen, setWeekModalOpen] = useState(false);
+  const [showAddActiviteit, setShowAddActiviteit] = useState(false);
+
+  // ---------- data load ----------
+  const loadAll = useCallback(async () => {
+    if (!projectId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const [projRes, wRes, aRes, mRes, atRes] = await Promise.all([
+      supabase.from("projecten").select("*").eq("id", projectId).single(),
+      supabase
+        .from("project_weken")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("positie", { ascending: true }),
+      supabase
+        .from("project_activiteiten")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("positie", { ascending: true }),
+      supabase
+        .from("monteurs")
+        .select("*")
+        .eq("actief", true)
+        .order("naam", { ascending: true }),
+      supabase
+        .from("activiteit_types")
+        .select("*")
+        .order("positie", { ascending: true }),
+    ]);
+
+    if (projRes.error || !projRes.data) {
+      toast.error("Project niet gevonden");
+      setLoading(false);
+      return;
+    }
+    setProject(projRes.data as Project);
+    const weekRows = (wRes.data ?? []) as Week[];
+    setWeken(weekRows);
+    setActiviteiten((aRes.data ?? []) as Activiteit[]);
+    setMonteurs((mRes.data ?? []) as Monteur[]);
+    setActiviteitTypes((atRes.data ?? []) as ActiviteitTypeOption[]);
+
+    // load cells for these weeks
+    if (weekRows.length > 0) {
+      const weekIds = weekRows.map((w) => w.id);
+      const { data: celRows } = await supabase
+        .from("planning_cellen")
+        .select("*")
+        .in("week_id", weekIds);
+      const celArr = (celRows ?? []) as Cel[];
+      const cmap: CelMap = new Map();
+      celArr.forEach((c) => cmap.set(cellKey(c.activiteit_id, c.week_id, c.dag_index), c));
+      setCellen(cmap);
+
+      if (celArr.length > 0) {
+        const { data: cm } = await supabase
+          .from("cel_monteurs")
+          .select("*")
+          .in(
+            "cel_id",
+            celArr.map((c) => c.id)
+          );
+        const mmap: CelMonteurMap = new Map();
+        (cm ?? []).forEach((row: { cel_id: string; monteur_id: string }) => {
+          const arr = mmap.get(row.cel_id) ?? [];
+          arr.push(row.monteur_id);
+          mmap.set(row.cel_id, arr);
+        });
+        setCelMonteurs(mmap);
+      } else {
+        setCelMonteurs(new Map());
+      }
+    } else {
+      setCellen(new Map());
+      setCelMonteurs(new Map());
+    }
+
+    setLoading(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  /* ----------------------------- scroll sync ----------------------------- */
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const commentsScrollRef = useRef<HTMLDivElement>(null);
+  const scrollLock = useRef(false);
+
+  const syncScroll = useCallback((source: "header" | "body" | "comments", left: number) => {
+    if (scrollLock.current) return;
+    scrollLock.current = true;
+    if (source !== "header" && headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
+    if (source !== "body" && bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
+    if (source !== "comments" && commentsScrollRef.current) commentsScrollRef.current.scrollLeft = left;
+    requestAnimationFrame(() => {
+      scrollLock.current = false;
+    });
+  }, []);
+
+  /* ----------------------------- cell ops ----------------------------- */
+  const updateCellLocal = useCallback((cel: Cel) => {
+    setCellen((prev) => {
+      const m = new Map(prev);
+      m.set(cellKey(cel.activiteit_id, cel.week_id, cel.dag_index), cel);
+      return m;
+    });
+  }, []);
+
+  const removeCellLocal = useCallback((activiteit_id: string, week_id: string, dag_index: number) => {
+    setCellen((prev) => {
+      const m = new Map(prev);
+      m.delete(cellKey(activiteit_id, week_id, dag_index));
+      return m;
+    });
+  }, []);
+
+  const ensureCell = useCallback(
+    async (activiteit_id: string, week_id: string, dag_index: number, kleur_code: string | null): Promise<Cel | null> => {
+      const k = cellKey(activiteit_id, week_id, dag_index);
+      const existing = cellen.get(k);
+      if (existing) return existing;
+      const { data, error } = await supabase
+        .from("planning_cellen")
+        .insert({ activiteit_id, week_id, dag_index, kleur_code })
+        .select()
+        .single();
+      if (error || !data) {
+        toast.error("Cel kon niet worden aangemaakt");
+        return null;
+      }
+      updateCellLocal(data as Cel);
+      return data as Cel;
+    },
+    [cellen, updateCellLocal]
+  );
+
+  const handleCellClick = useCallback(
+    async (activiteit: Activiteit, week_id: string, dag_index: number) => {
+      const k = cellKey(activiteit.id, week_id, dag_index);
+      const existing = cellen.get(k);
+      if (existing) {
+        setOpenCellKey(k);
+        return;
+      }
+      // create with default color from activiteit_type
+      const at = activiteitTypes.find((t) => t.id === activiteit.activiteit_type_id);
+      const defaultColor = at?.kleur_default ?? "c3";
+      const cel = await ensureCell(activiteit.id, week_id, dag_index, defaultColor);
+      if (!cel) return;
+      if (activiteit.capaciteit_type === "schakel" || activiteit.capaciteit_type === "montage") {
+        setOpenCellKey(cellKey(activiteit.id, week_id, dag_index));
+      }
+    },
+    [cellen, activiteitTypes, ensureCell]
+  );
+
+  const handleCellRightClick = useCallback(
+    async (e: ReactMouseEvent, activiteit_id: string, week_id: string, dag_index: number) => {
+      e.preventDefault();
+      const k = cellKey(activiteit_id, week_id, dag_index);
+      const cel = cellen.get(k);
+      if (!cel) return;
+      removeCellLocal(activiteit_id, week_id, dag_index);
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        m.delete(cel.id);
+        return m;
+      });
+      const { error } = await supabase.from("planning_cellen").delete().eq("id", cel.id);
+      if (error) {
+        toast.error("Wissen mislukt");
+        loadAll();
+      }
+    },
+    [cellen, removeCellLocal, loadAll]
+  );
+
+  const updateCellColor = useCallback(
+    async (cel: Cel, kleur_code: string | null) => {
+      updateCellLocal({ ...cel, kleur_code });
+      const { error } = await supabase
+        .from("planning_cellen")
+        .update({ kleur_code })
+        .eq("id", cel.id);
+      if (error) toast.error("Kleur opslaan mislukt");
+    },
+    [updateCellLocal]
+  );
+
+  const updateCellNotitie = useCallback(
+    async (cel: Cel, notitie: string) => {
+      updateCellLocal({ ...cel, notitie });
+      const { error } = await supabase
+        .from("planning_cellen")
+        .update({ notitie })
+        .eq("id", cel.id);
+      if (error) toast.error("Notitie opslaan mislukt");
+    },
+    [updateCellLocal]
+  );
+
+  const addMonteurToCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    setCelMonteurs((prev) => {
+      const m = new Map(prev);
+      const arr = [...(m.get(cel.id) ?? [])];
+      if (!arr.includes(monteur_id)) arr.push(monteur_id);
+      m.set(cel.id, arr);
+      return m;
+    });
+    const { error } = await supabase
+      .from("cel_monteurs")
+      .insert({ cel_id: cel.id, monteur_id });
+    if (error) {
+      toast.error("Monteur toevoegen mislukt");
+    }
+  }, []);
+
+  const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    setCelMonteurs((prev) => {
+      const m = new Map(prev);
+      const arr = (m.get(cel.id) ?? []).filter((x) => x !== monteur_id);
+      m.set(cel.id, arr);
+      return m;
+    });
+    const { error } = await supabase
+      .from("cel_monteurs")
+      .delete()
+      .eq("cel_id", cel.id)
+      .eq("monteur_id", monteur_id);
+    if (error) toast.error("Monteur verwijderen mislukt");
+  }, []);
+
+  /* ----------------------------- week opmerking ----------------------------- */
+  const updateWeekOpmerking = useCallback(async (week_id: string, opmerking: string) => {
+    setWeken((prev) => prev.map((w) => (w.id === week_id ? { ...w, opmerking } : w)));
+    const { error } = await supabase
+      .from("project_weken")
+      .update({ opmerking })
+      .eq("id", week_id);
+    if (error) toast.error("Opmerking opslaan mislukt");
+  }, []);
+
+  /* ----------------------------- week mgmt ----------------------------- */
+  const addWeek = useCallback(async () => {
+    if (!projectId) return;
+    const lastWeek = weken[weken.length - 1];
+    const newPos = (lastWeek?.positie ?? -1) + 1;
+    const newWeekNr = wrapWeek((lastWeek?.week_nr ?? 0) + 1);
+    const { data, error } = await supabase
+      .from("project_weken")
+      .insert({ project_id: projectId, week_nr: newWeekNr, positie: newPos, opmerking: "" })
+      .select()
+      .single();
+    if (error || !data) {
+      toast.error("Week toevoegen mislukt");
+      return;
+    }
+    setWeken((prev) => [...prev, data as Week]);
+  }, [projectId, weken]);
+
+  const removeLastWeek = useCallback(async () => {
+    const last = weken[weken.length - 1];
+    if (!last) return;
+    setWeken((prev) => prev.slice(0, -1));
+    const { error } = await supabase.from("project_weken").delete().eq("id", last.id);
+    if (error) {
+      toast.error("Week verwijderen mislukt");
+      loadAll();
+    }
+  }, [weken, loadAll]);
+
+  const setWeekNr = useCallback(
+    async (week_id: string, newNr: number) => {
+      // find index of changed week, shift all subsequent
+      const idx = weken.findIndex((w) => w.id === week_id);
+      if (idx < 0) return;
+      const updated = weken.map((w, i) =>
+        i >= idx ? { ...w, week_nr: wrapWeek(newNr + (i - idx)) } : w
+      );
+      setWeken(updated);
+      // batch update affected
+      const updates = updated.slice(idx).map((w) =>
+        supabase.from("project_weken").update({ week_nr: w.week_nr }).eq("id", w.id)
+      );
+      const results = await Promise.all(updates);
+      if (results.some((r) => r.error)) {
+        toast.error("Weeknummers opslaan mislukt");
+        loadAll();
+      }
+    },
+    [weken, loadAll]
+  );
+
+  /* ----------------------------- activiteit ops ----------------------------- */
+  const addActiviteitFromType = useCallback(
+    async (typeId: string) => {
+      if (!projectId) return;
+      const t = activiteitTypes.find((x) => x.id === typeId);
+      if (!t) return;
+      const positie = activiteiten.length;
+      const { data, error } = await supabase
+        .from("project_activiteiten")
+        .insert({
+          project_id: projectId,
+          activiteit_type_id: t.id,
+          naam: t.naam,
+          capaciteit_type: t.capaciteit_type,
+          min_personen: t.min_personen ?? 1,
+          min_personen_totaal: t.min_personen_totaal ?? t.min_personen ?? 1,
+          min_personen_gekwalificeerd: t.min_personen_gekwalificeerd ?? t.min_personen ?? 1,
+          min_aanwijzing_ls: t.min_aanwijzing_ls,
+          min_aanwijzing_ms: t.min_aanwijzing_ms,
+          positie,
+        })
+        .select()
+        .single();
+      if (error || !data) {
+        toast.error("Activiteit toevoegen mislukt");
+        return;
+      }
+      setActiviteiten((prev) => [...prev, data as Activiteit]);
+      setShowAddActiviteit(false);
+      toast.success("Activiteit toegevoegd");
+    },
+    [projectId, activiteiten, activiteitTypes]
+  );
+
+  const removeActiviteit = useCallback(async (id: string) => {
+    setActiviteiten((prev) => prev.filter((a) => a.id !== id));
+    const { error } = await supabase.from("project_activiteiten").delete().eq("id", id);
+    if (error) {
+      toast.error("Verwijderen mislukt");
+      loadAll();
+    }
+  }, [loadAll]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleActiviteitDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIdx = activiteiten.findIndex((a) => a.id === active.id);
+      const newIdx = activiteiten.findIndex((a) => a.id === over.id);
+      if (oldIdx < 0 || newIdx < 0) return;
+      const reordered = arrayMove(activiteiten, oldIdx, newIdx).map((a, i) => ({
+        ...a,
+        positie: i,
+      }));
+      setActiviteiten(reordered);
+      const updates = reordered.map((a) =>
+        supabase.from("project_activiteiten").update({ positie: a.positie }).eq("id", a.id)
+      );
+      const results = await Promise.all(updates);
+      if (results.some((r) => r.error)) {
+        toast.error("Volgorde opslaan mislukt");
+        loadAll();
+      }
+    },
+    [activiteiten, loadAll]
+  );
+
+  /* ----------------------------- excel export ----------------------------- */
+  const exportExcel = useCallback(async () => {
+    if (!project) return;
+    try {
+      // dynamic load
+      const XLSX: any = await loadSheetJS();
+      const aoa: (string | number)[][] = [];
+      aoa.push([
+        "Case:",
+        project.case_nummer ?? "",
+        "Station:",
+        project.station_naam ?? "",
+        "WV:",
+        project.wv_naam ?? "",
+      ]);
+      aoa.push([]);
+      // week header row
+      const weekRow: string[] = [""];
+      weken.forEach((w) => {
+        weekRow.push(`Week ${w.week_nr}`, "", "", "", "");
+      });
+      aoa.push(weekRow);
+      // day row
+      const dayRow: string[] = [""];
+      weken.forEach(() => {
+        DAG_LABELS.forEach((d) => dayRow.push(d));
+      });
+      aoa.push(dayRow);
+      // activity rows
+      activiteiten.forEach((a) => {
+        const row: (string | number)[] = [a.naam];
+        weken.forEach((w) => {
+          for (let d = 0; d < 5; d++) {
+            const cel = cellen.get(cellKey(a.id, w.id, d));
+            if (!cel || !cel.kleur_code) {
+              row.push("");
+              continue;
+            }
+            const kleurNaam = COLOR_MAP[cel.kleur_code]?.naam ?? cel.kleur_code;
+            const ids = celMonteurs.get(cel.id) ?? [];
+            const namen = ids
+              .map((mid) => monteurs.find((m) => m.id === mid)?.naam)
+              .filter(Boolean)
+              .join(", ");
+            row.push(namen ? `${kleurNaam} — ${namen}` : kleurNaam);
+          }
+        });
+        aoa.push(row);
+      });
+      // opmerkingen row
+      const opmRow: string[] = ["Opmerkingen"];
+      weken.forEach((w) => {
+        opmRow.push(w.opmerking ?? "", "", "", "", "");
+      });
+      aoa.push(opmRow);
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Planning");
+      const filename = `Terrevolt_${project.case_nummer ?? "project"}_${project.jaar ?? new Date().getFullYear()}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch {
+      toast.error("Excel export mislukt");
+    }
+  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs]);
+
+  /* ----------------------------- derived ----------------------------- */
+  const monteurById = useMemo(() => {
+    const m = new Map<string, Monteur>();
+    monteurs.forEach((x) => m.set(x.id, x));
+    return m;
+  }, [monteurs]);
+
+  const openCel = useMemo(() => {
+    if (!openCellKey) return null;
+    const cel = cellen.get(openCellKey);
+    if (!cel) return null;
+    const a = activiteiten.find((x) => x.id === cel.activiteit_id) ?? null;
+    const w = weken.find((x) => x.id === cel.week_id) ?? null;
+    return { cel, activiteit: a, week: w };
+  }, [openCellKey, cellen, activiteiten, weken]);
+
+  /* ----------------------------- empty / no project ----------------------------- */
+  if (!projectId) {
+    return (
+      <div className="surface-card flex flex-col items-center justify-center px-6 py-24 text-center">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <CalendarDays className="h-7 w-7" strokeWidth={2} />
+        </div>
+        <h3 className="font-display text-lg font-bold text-foreground">
+          Selecteer een project om te beginnen
+        </h3>
+        <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+          Open een project vanuit de projectenlijst om de planning te bekijken
+        </p>
+        <Button
+          onClick={() => navigate("/")}
+          className="mt-6 font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> Naar projecten
+        </Button>
       </div>
+    );
+  }
+
+  if (loading || !project) {
+    return (
+      <div className="surface-card px-6 py-16 text-center text-sm text-muted-foreground">
+        Planning laden…
+      </div>
+    );
+  }
+
+  const totalGridWidth = weken.length * 5 * CELL_W;
+
+  return (
+    <div className="-mx-8 -my-8">
+      {/* Project info bar (sticky) */}
+      <div
+        className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b px-8 py-3"
+        style={{
+          backgroundColor: "rgba(10, 26, 48, 0.85)",
+          borderColor: "rgba(255,255,255,0.08)",
+          backdropFilter: "blur(14px)",
+        }}
+      >
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/")}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            title="Terug naar projecten"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="font-display text-xl font-extrabold text-primary">
+            {project.case_nummer || "—"}
+          </div>
+          <div className="font-display text-sm font-semibold text-foreground">
+            {project.station_naam || ""}
+          </div>
+          {project.case_type && (
+            <span className="inline-flex items-center rounded-md border border-white/15 px-2 py-0.5 text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+              {project.case_type}
+            </span>
+          )}
+          {project.status && (
+            <span
+              className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-display font-semibold"
+              style={{
+                backgroundColor:
+                  project.status === "in_uitvoering"
+                    ? "#3fff8b"
+                    : project.status === "gepland"
+                    ? "#feb300"
+                    : "rgba(255,255,255,0.08)",
+                color:
+                  project.status === "in_uitvoering" || project.status === "gepland"
+                    ? "#0a1a30"
+                    : "rgba(255,255,255,0.6)",
+              }}
+            >
+              {project.status === "in_uitvoering"
+                ? "In uitvoering"
+                : project.status === "gepland"
+                ? "Gepland"
+                : project.status === "afgerond"
+                ? "Afgerond"
+                : "Concept"}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-8 rounded-md border-warning/40 bg-warning/10 px-3 text-xs font-display font-semibold text-warning hover:bg-warning/20"
+            onClick={() => toast("Template-modal volgt in latere prompt")}
+          >
+            <FileText className="mr-1.5 h-3.5 w-3.5" /> Template
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+            onClick={() => setWeekModalOpen(true)}
+          >
+            <CalendarDays className="mr-1.5 h-3.5 w-3.5" /> Weken
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+            onClick={exportExcel}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" /> Excel
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 rounded-md border-white/15 bg-transparent px-3 text-xs font-display font-semibold text-foreground hover:bg-white/[0.06]"
+            onClick={() => window.print()}
+          >
+            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+          </Button>
+        </div>
+      </div>
+
+      {/* Planning grid */}
+      <div className="px-8 py-6">
+        <div
+          className="surface-card overflow-hidden"
+          style={{ padding: 0 }}
+        >
+          {/* Header row */}
+          <div className="flex border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+            <div
+              className="shrink-0 px-4 flex items-center"
+              style={{
+                width: SIDEBAR_W,
+                height: HEADER_H,
+                borderRight: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-primary/80">
+                Activiteiten
+              </span>
+            </div>
+            <div
+              ref={headerScrollRef}
+              onScroll={(e) => syncScroll("header", (e.target as HTMLDivElement).scrollLeft)}
+              className="overflow-x-auto overflow-y-hidden flex-1 no-scrollbar"
+              style={{ height: HEADER_H }}
+            >
+              <div className="flex" style={{ width: totalGridWidth, height: HEADER_H }}>
+                {weken.map((w) => (
+                  <WeekHeader
+                    key={w.id}
+                    week={w}
+                    jaar={project.jaar ?? new Date().getFullYear()}
+                    onWeekChange={(nr) => setWeekNr(w.id, nr)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="flex">
+            {/* Sidebar (frozen) */}
+            <div
+              className="shrink-0"
+              style={{ width: SIDEBAR_W, borderRight: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleActiviteitDragEnd}
+              >
+                <SortableContext
+                  items={activiteiten.map((a) => a.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {activiteiten.map((a) => (
+                    <SidebarRow key={a.id} a={a} onRemove={() => removeActiviteit(a.id)} />
+                  ))}
+                </SortableContext>
+              </DndContext>
+
+              {/* Add activiteit */}
+              <div style={{ minHeight: CELL_H }}>
+                {showAddActiviteit ? (
+                  <div className="px-3 py-2 space-y-2 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                    <Select onValueChange={addActiviteitFromType}>
+                      <SelectTrigger className="h-8 rounded-md border-white/10 bg-white/[0.04] text-xs">
+                        <SelectValue placeholder="Kies activiteit…" />
+                      </SelectTrigger>
+                      <SelectContent className="border-white/10 bg-[#0a1a30] text-foreground">
+                        {activiteitTypes.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.naam}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      onClick={() => setShowAddActiviteit(false)}
+                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      Annuleren
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAddActiviteit(true)}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs font-display font-semibold text-primary/80 hover:bg-white/[0.04] hover:text-primary"
+                  >
+                    <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    Activiteit toevoegen
+                  </button>
+                )}
+              </div>
+
+              {/* Opmerkingen label */}
+              <div
+                className="px-4 flex items-center border-t"
+                style={{ height: CELL_H, borderColor: "rgba(255,255,255,0.06)" }}
+              >
+                <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-primary/80">
+                  Opmerkingen
+                </span>
+              </div>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-hidden">
+              <div
+                ref={bodyScrollRef}
+                onScroll={(e) => syncScroll("body", (e.target as HTMLDivElement).scrollLeft)}
+                className="overflow-x-auto overflow-y-hidden"
+              >
+                <div style={{ width: totalGridWidth }}>
+                  {activiteiten.map((a) => (
+                    <GridRow
+                      key={a.id}
+                      activiteit={a}
+                      weken={weken}
+                      cellen={cellen}
+                      celMonteurs={celMonteurs}
+                      monteurById={monteurById}
+                      onClick={handleCellClick}
+                      onRightClick={handleCellRightClick}
+                    />
+                  ))}
+                  {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
+                  <div style={{ height: showAddActiviteit ? 80 : CELL_H }} />
+                </div>
+              </div>
+
+              {/* Opmerkingen row */}
+              <div
+                ref={commentsScrollRef}
+                onScroll={(e) => syncScroll("comments", (e.target as HTMLDivElement).scrollLeft)}
+                className="overflow-x-auto overflow-y-hidden border-t"
+                style={{ borderColor: "rgba(255,255,255,0.06)" }}
+              >
+                <div className="flex" style={{ width: totalGridWidth, height: CELL_H }}>
+                  {weken.map((w) => (
+                    <OpmerkingCell
+                      key={w.id}
+                      week={w}
+                      onSave={(val) => updateWeekOpmerking(w.id, val)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cel modal */}
+      {openCel?.cel && openCel.activiteit && openCel.week && (
+        <CelModal
+          open={!!openCellKey}
+          onClose={() => setOpenCellKey(null)}
+          cel={openCel.cel}
+          activiteit={openCel.activiteit}
+          week={openCel.week}
+          monteurs={monteurs}
+          monteurIdsAssigned={celMonteurs.get(openCel.cel.id) ?? []}
+          monteurById={monteurById}
+          onColorChange={(c) => updateCellColor(openCel.cel, c)}
+          onNotitieChange={(n) => updateCellNotitie(openCel.cel, n)}
+          onAddMonteur={(id) => addMonteurToCell(openCel.cel, id)}
+          onRemoveMonteur={(id) => removeMonteurFromCell(openCel.cel, id)}
+        />
+      )}
+
+      {/* Week mgmt modal */}
+      <Dialog open={weekModalOpen} onOpenChange={setWeekModalOpen}>
+        <DialogContent
+          className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
+          style={{
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px",
+            backdropFilter: "blur(18px)",
+          }}
+        >
+          <div className="flex items-start justify-between px-6 pt-6">
+            <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
+              Weken beheren
+            </h2>
+            <button
+              onClick={() => setWeekModalOpen(false)}
+              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" /> Sluiten
+            </button>
+          </div>
+          <div className="space-y-3 px-6 py-6 max-h-[60vh] overflow-y-auto">
+            {weken.length === 0 && (
+              <div className="text-sm text-muted-foreground">Nog geen weken.</div>
+            )}
+            {weken.map((w, i) => (
+              <div
+                key={w.id}
+                className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+              >
+                <span className="font-display text-xs uppercase tracking-wider text-muted-foreground w-12">
+                  Pos {i + 1}
+                </span>
+                <Label className="font-display text-xs text-muted-foreground">Week</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={53}
+                  value={w.week_nr}
+                  onChange={(e) => setWeekNr(w.id, parseInt(e.target.value) || 1)}
+                  className="h-8 w-20 rounded-md border-white/10 bg-white/[0.04] text-foreground"
+                />
+              </div>
+            ))}
+            <div className="flex gap-2 pt-2">
+              <Button
+                onClick={addWeek}
+                className="flex-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-display font-bold"
+              >
+                <Plus className="mr-1 h-4 w-4" /> Week toevoegen rechts
+              </Button>
+              <Button
+                onClick={removeLastWeek}
+                variant="outline"
+                disabled={weken.length === 0}
+                className="rounded-md border-destructive/40 bg-transparent text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="mr-1 h-4 w-4" /> Laatste
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+/* ----------------------------- Sub components ----------------------------- */
+
+const WeekHeader = memo(function WeekHeader({
+  week,
+  jaar,
+  onWeekChange,
+}: {
+  week: Week;
+  jaar: number;
+  onWeekChange: (nr: number) => void;
+}) {
+  const monday = getMondayOfWeek(week.week_nr, jaar);
+  const dayWidth = CELL_W * 5;
+  return (
+    <div
+      className="shrink-0 flex flex-col"
+      style={{ width: dayWidth, borderRight: "1px solid rgba(255,255,255,0.06)" }}
+    >
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-display font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+            Week {week.week_nr}
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="center"
+          className="border-white/10 bg-[#0a1a30] text-foreground max-h-72 overflow-y-auto"
+        >
+          {Array.from({ length: 53 }, (_, i) => i + 1).map((n) => (
+            <DropdownMenuItem
+              key={n}
+              onSelect={() => onWeekChange(n)}
+              className="cursor-pointer focus:bg-primary/15 focus:text-primary text-xs"
+            >
+              Week {n}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <div className="flex flex-1">
+        {DAG_LABELS.map((d, i) => {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + i);
+          return (
+            <div
+              key={d}
+              className="flex flex-col items-center justify-center"
+              style={{
+                width: CELL_W,
+                borderRight:
+                  i < 4 ? "1px solid rgba(255,255,255,0.04)" : undefined,
+              }}
+            >
+              <div className="font-display text-[10px] font-bold tracking-wider text-foreground/80">
+                {d}
+              </div>
+              <div className="text-[9px] text-muted-foreground">{formatDate(date)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+const SidebarRow = ({ a, onRemove }: { a: Activiteit; onRemove: () => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: a.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    height: CELL_H,
+    borderTop: "1px solid rgba(255,255,255,0.06)",
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group flex items-center gap-2 px-3"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="opacity-0 group-hover:opacity-100 cursor-grab touch-none p-0.5 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <div className="flex-1 truncate font-display text-[13px] font-semibold text-foreground">
+        {a.naam}
+      </div>
+      <button
+        onClick={onRemove}
+        className="opacity-0 group-hover:opacity-100 rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+        title="Verwijderen"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+};
+
+interface GridRowProps {
+  activiteit: Activiteit;
+  weken: Week[];
+  cellen: CelMap;
+  celMonteurs: CelMonteurMap;
+  monteurById: Map<string, Monteur>;
+  onClick: (a: Activiteit, week_id: string, dag_index: number) => void;
+  onRightClick: (
+    e: ReactMouseEvent,
+    activiteit_id: string,
+    week_id: string,
+    dag_index: number
+  ) => void;
+}
+
+const GridRow = memo(function GridRow({
+  activiteit,
+  weken,
+  cellen,
+  celMonteurs,
+  monteurById,
+  onClick,
+  onRightClick,
+}: GridRowProps) {
+  return (
+    <div
+      className="flex"
+      style={{
+        height: CELL_H,
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      {weken.map((w) =>
+        DAG_LABELS.map((_, d) => {
+          const cel = cellen.get(cellKey(activiteit.id, w.id, d));
+          return (
+            <CellBox
+              key={`${w.id}-${d}`}
+              cel={cel}
+              activiteit={activiteit}
+              monteurIds={cel ? celMonteurs.get(cel.id) ?? [] : []}
+              monteurById={monteurById}
+              onClick={() => onClick(activiteit, w.id, d)}
+              onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
+            />
+          );
+        })
+      )}
+    </div>
+  );
+});
+
+const CellBox = memo(function CellBox({
+  cel,
+  activiteit,
+  monteurIds,
+  monteurById,
+  onClick,
+  onContextMenu,
+}: {
+  cel: Cel | undefined;
+  activiteit: Activiteit;
+  monteurIds: string[];
+  monteurById: Map<string, Monteur>;
+  onClick: () => void;
+  onContextMenu: (e: ReactMouseEvent) => void;
+}) {
+  const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
+  const isCap =
+    activiteit.capaciteit_type === "schakel" || activiteit.capaciteit_type === "montage";
+
+  let voldoet = true;
+  let warningReason: string | null = null;
+  if (cel && isCap) {
+    const monteursForCheck = monteurIds
+      .map((id) => monteurById.get(id))
+      .filter((m): m is Monteur => !!m && !!m.aanwijzing_ls && !!m.aanwijzing_ms)
+      .map((m) => ({
+        aanwijzing_ls: m.aanwijzing_ls as Aanwijzing,
+        aanwijzing_ms: m.aanwijzing_ms as Aanwijzing,
+      }));
+    const res = checkCelVoldoet({
+      monteurs: monteursForCheck,
+      min_personen_totaal: activiteit.min_personen_totaal ?? activiteit.min_personen ?? 1,
+      min_personen_gekwalificeerd:
+        activiteit.min_personen_gekwalificeerd ?? activiteit.min_personen ?? 1,
+      min_aanwijzing_ls: activiteit.min_aanwijzing_ls,
+      min_aanwijzing_ms: activiteit.min_aanwijzing_ms,
+      discipline:
+        activiteit.capaciteit_type === "schakel"
+          ? "beide"
+          : activiteit.capaciteit_type === "montage"
+          ? "beide"
+          : "beide",
+    });
+    voldoet = res.voldoet;
+    warningReason = res.reden;
+  }
+
+  const firstMonteur = monteurIds[0] ? monteurById.get(monteurIds[0]) : undefined;
+  const showInitials =
+    isCap && firstMonteur && (cel?.kleur_code != null);
+
+  return (
+    <button
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      title={warningReason ?? undefined}
+      className="relative shrink-0 transition-colors"
+      style={{
+        width: CELL_W,
+        height: CELL_H,
+        backgroundColor: kleur ?? "transparent",
+        border: kleur
+          ? !voldoet
+            ? "2px solid #feb300"
+            : "none"
+          : "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      {showInitials && (
+        <span className="text-[10px] font-display font-bold text-white">
+          {initialen(firstMonteur!.naam)}
+          {monteurIds.length > 1 && (
+            <span className="ml-0.5 opacity-80">+{monteurIds.length - 1}</span>
+          )}
+        </span>
+      )}
+      {!voldoet && cel && (
+        <span
+          className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full text-[8px] font-bold"
+          style={{ backgroundColor: "#feb300", color: "#0a1a30" }}
+        >
+          !
+        </span>
+      )}
+    </button>
+  );
+});
+
+const OpmerkingCell = ({
+  week,
+  onSave,
+}: {
+  week: Week;
+  onSave: (val: string) => void;
+}) => {
+  const [val, setVal] = useState(week.opmerking ?? "");
+  useEffect(() => {
+    setVal(week.opmerking ?? "");
+  }, [week.opmerking]);
+  return (
+    <div
+      className="shrink-0 px-1 py-1"
+      style={{
+        width: CELL_W * 5,
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={() => {
+          if (val !== (week.opmerking ?? "")) onSave(val);
+        }}
+        placeholder={`Opmerking week ${week.week_nr}…`}
+        className="h-7 w-full rounded-sm bg-transparent px-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:bg-white/[0.04] focus:outline-none"
+      />
+    </div>
+  );
+};
+
+/* ----------------------------- Cel modal ----------------------------- */
+
+const DAG_NAMEN = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
+
+interface CelModalProps {
+  open: boolean;
+  onClose: () => void;
+  cel: Cel;
+  activiteit: Activiteit;
+  week: Week;
+  monteurs: Monteur[];
+  monteurIdsAssigned: string[];
+  monteurById: Map<string, Monteur>;
+  onColorChange: (c: string) => void;
+  onNotitieChange: (n: string) => void;
+  onAddMonteur: (id: string) => void;
+  onRemoveMonteur: (id: string) => void;
+}
+
+const CelModal = ({
+  open,
+  onClose,
+  cel,
+  activiteit,
+  week,
+  monteurs,
+  monteurIdsAssigned,
+  monteurById,
+  onColorChange,
+  onNotitieChange,
+  onAddMonteur,
+  onRemoveMonteur,
+}: CelModalProps) => {
+  const [notitie, setNotitie] = useState(cel.notitie ?? "");
+  useEffect(() => {
+    setNotitie(cel.notitie ?? "");
+  }, [cel.id, cel.notitie]);
+
+  const isCap =
+    activiteit.capaciteit_type === "schakel" || activiteit.capaciteit_type === "montage";
+
+  const assigned = monteurIdsAssigned
+    .map((id) => monteurById.get(id))
+    .filter((m): m is Monteur => !!m);
+
+  const eligibleMonteurs = useMemo(() => {
+    return monteurs.filter((m) => {
+      if (monteurIdsAssigned.includes(m.id)) return false;
+      if (activiteit.capaciteit_type === "schakel") return m.type === "schakelmonteur";
+      if (activiteit.capaciteit_type === "montage") return true; // both types can do montage
+      return false;
+    });
+  }, [monteurs, monteurIdsAssigned, activiteit.capaciteit_type]);
+
+  const check = checkCelVoldoet({
+    monteurs: assigned
+      .filter((m) => m.aanwijzing_ls && m.aanwijzing_ms)
+      .map((m) => ({
+        aanwijzing_ls: m.aanwijzing_ls as Aanwijzing,
+        aanwijzing_ms: m.aanwijzing_ms as Aanwijzing,
+      })),
+    min_personen_totaal: activiteit.min_personen_totaal ?? activiteit.min_personen ?? 1,
+    min_personen_gekwalificeerd:
+      activiteit.min_personen_gekwalificeerd ?? activiteit.min_personen ?? 1,
+    min_aanwijzing_ls: activiteit.min_aanwijzing_ls,
+    min_aanwijzing_ms: activiteit.min_aanwijzing_ms,
+    discipline: "beide",
+  });
+
+  const vereistAanwijzing =
+    activiteit.min_aanwijzing_ms ?? activiteit.min_aanwijzing_ls ?? null;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        className="max-w-lg gap-0 border-0 p-0 [&>button]:hidden"
+        style={{
+          backgroundColor: "rgba(10, 26, 48, 0.95)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "12px",
+          backdropFilter: "blur(18px)",
+        }}
+      >
+        <div className="flex items-start justify-between px-6 pt-6">
+          <div>
+            <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
+              {activiteit.naam}
+            </h2>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {DAG_NAMEN[cel.dag_index]} — Week {week.week_nr}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" /> Sluiten
+          </button>
+        </div>
+
+        <div className="space-y-5 px-6 py-6 max-h-[70vh] overflow-y-auto">
+          {/* Kleur */}
+          <div className="space-y-2">
+            <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Kleur
+            </Label>
+            <div className="grid grid-cols-6 gap-2.5">
+              {COLOR_CODES.map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => onColorChange(code)}
+                  title={COLOR_MAP[code].naam}
+                  className={[
+                    "relative h-9 w-9 rounded-full transition-transform hover:scale-110",
+                    cel.kleur_code === code
+                      ? "ring-2 ring-white ring-offset-2 ring-offset-[#0a1a30]"
+                      : "",
+                  ].join(" ")}
+                  style={{ backgroundColor: COLOR_MAP[code].hex }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Monteurs */}
+          {isCap && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Monteurs
+                </Label>
+                <span className="text-[11px] font-display font-semibold text-muted-foreground">
+                  min. {activiteit.min_personen_totaal ?? 1} man ·{" "}
+                  {activiteit.min_personen_gekwalificeerd ?? 1} gekwal.
+                  {vereistAanwijzing ? ` ${vereistAanwijzing}+` : ""}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                {assigned.length === 0 && (
+                  <div className="rounded-md bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground">
+                    Nog geen monteurs toegewezen
+                  </div>
+                )}
+                {assigned.map((m) => {
+                  const okLs =
+                    !activiteit.min_aanwijzing_ls ||
+                    (m.aanwijzing_ls
+                      ? rankAanwijzing(m.aanwijzing_ls) >=
+                        rankAanwijzing(activiteit.min_aanwijzing_ls)
+                      : false);
+                  const okMs =
+                    !activiteit.min_aanwijzing_ms ||
+                    (m.aanwijzing_ms
+                      ? rankAanwijzing(m.aanwijzing_ms) >=
+                        rankAanwijzing(activiteit.min_aanwijzing_ms)
+                      : false);
+                  const ok = okLs && okMs;
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                    >
+                      <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-display font-bold"
+                        style={{
+                          backgroundColor:
+                            m.type === "schakelmonteur" ? "#feb300" : "#378add",
+                          color: "#0a1a30",
+                        }}
+                      >
+                        {initialen(m.naam)}
+                      </div>
+                      <div className="flex-1 font-display text-sm font-semibold text-foreground">
+                        {m.naam}
+                      </div>
+                      {m.aanwijzing_ls && (
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                          style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                        >
+                          LS {m.aanwijzing_ls}
+                        </span>
+                      )}
+                      {m.aanwijzing_ms && (
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                          style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                        >
+                          MS {m.aanwijzing_ms}
+                        </span>
+                      )}
+                      {ok ? (
+                        <Check className="h-4 w-4 text-primary" strokeWidth={2.5} />
+                      ) : (
+                        <span className="text-warning text-xs font-bold">!</span>
+                      )}
+                      <button
+                        onClick={() => onRemoveMonteur(m.id)}
+                        className="rounded p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {eligibleMonteurs.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 px-3 py-2 text-xs font-display font-semibold text-muted-foreground hover:bg-white/[0.04] hover:text-foreground">
+                      <Plus className="h-3.5 w-3.5" /> Monteur toevoegen
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="w-[360px] border-white/10 bg-[#0a1a30] text-foreground max-h-72 overflow-y-auto"
+                  >
+                    {eligibleMonteurs.map((m) => (
+                      <DropdownMenuItem
+                        key={m.id}
+                        onSelect={() => onAddMonteur(m.id)}
+                        className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
+                      >
+                        <span className="font-display text-sm font-semibold flex-1">
+                          {m.naam}
+                        </span>
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                          style={{
+                            backgroundColor:
+                              m.type === "schakelmonteur" ? "#feb300" : "#378add",
+                            color: "#0a1a30",
+                          }}
+                        >
+                          {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
+                        </span>
+                        {m.aanwijzing_ls && (
+                          <span
+                            className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                            style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                          >
+                            LS {m.aanwijzing_ls}
+                          </span>
+                        )}
+                        {m.aanwijzing_ms && (
+                          <span
+                            className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                            style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                          >
+                            MS {m.aanwijzing_ms}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {/* Banner */}
+              <div
+                className="rounded-md px-3 py-2 text-xs font-display font-semibold"
+                style={
+                  check.voldoet
+                    ? {
+                        backgroundColor: "rgba(63,255,139,0.12)",
+                        color: "#3fff8b",
+                        border: "1px solid rgba(63,255,139,0.25)",
+                      }
+                    : {
+                        backgroundColor: "rgba(254,179,0,0.12)",
+                        color: "#feb300",
+                        border: "1px solid rgba(254,179,0,0.3)",
+                      }
+                }
+              >
+                {check.voldoet
+                  ? "Bezetting voldoet aan vereisten"
+                  : check.reden ?? "Bezetting voldoet niet"}
+              </div>
+            </div>
+          )}
+
+          {/* Notitie */}
+          <div className="space-y-2">
+            <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Notitie
+            </Label>
+            <Textarea
+              value={notitie}
+              onChange={(e) => setNotitie(e.target.value)}
+              onBlur={() => {
+                if (notitie !== (cel.notitie ?? "")) onNotitieChange(notitie);
+              }}
+              rows={2}
+              placeholder="Notitie voor deze cel…"
+              className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end px-6 pb-6">
+          <Button
+            onClick={onClose}
+            className="rounded-md bg-white/[0.06] text-foreground hover:bg-white/[0.1] font-display font-semibold"
+          >
+            Sluiten
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/* ----------------------------- helpers ----------------------------- */
+
+const aanwijzingPillStyle = (a: Aanwijzing): React.CSSProperties => {
+  if (a === "AVP") return { backgroundColor: "#3fff8b", color: "#0a1a30" };
+  if (a === "VP") return { backgroundColor: "#7cc1ff", color: "#0a1a30" };
+  return { backgroundColor: "#cbd5e1", color: "#0a1a30" };
+};
+
+const rankAanwijzing = (a: Aanwijzing | null): number =>
+  a === "AVP" ? 3 : a === "VP" ? 2 : a === "VOP" ? 1 : 0;
+
+let sheetJsPromise: Promise<any> | null = null;
+function loadSheetJS(): Promise<any> {
+  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  const w = window as unknown as { XLSX?: any };
+  if (w.XLSX) return Promise.resolve(w.XLSX);
+  if (sheetJsPromise) return sheetJsPromise;
+  sheetJsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+    s.onload = () => {
+      const xw = window as unknown as { XLSX?: any };
+      if (xw.XLSX) resolve(xw.XLSX);
+      else reject(new Error("XLSX not available"));
+    };
+    s.onerror = () => reject(new Error("Failed to load SheetJS"));
+    document.head.appendChild(s);
+  });
+  return sheetJsPromise;
+}
 
 export default Plannen;
