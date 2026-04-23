@@ -1084,6 +1084,7 @@ const Plannen = () => {
                       cellen={cellen}
                       celMonteurs={celMonteurs}
                       monteurById={monteurById}
+                      highlightedMonteurId={highlightedMonteurId}
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
                     />
