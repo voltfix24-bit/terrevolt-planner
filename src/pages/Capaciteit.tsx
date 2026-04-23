@@ -1241,7 +1241,7 @@ const GroupLabel = ({ label }: { label: string }) => (
   </div>
 );
 
-const ConflictBlock = ({
+const ConflictBlock = memo(function ConflictBlock({
   projectIds,
   projects,
   onNavigate,
@@ -1249,7 +1249,7 @@ const ConflictBlock = ({
   projectIds: string[];
   projects: Record<string, ProjectInfo>;
   onNavigate: (id: string) => void;
-}) => {
+}) {
   const [open, setOpen] = useState(false);
   // Stable order: by case_nummer asc (fallback to id), so the list is
   // identical across renders and across cells with the same projects.
