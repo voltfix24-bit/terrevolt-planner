@@ -1612,6 +1612,7 @@ interface GridRowProps {
   celMonteurs: CelMonteurMap;
   monteurById: Map<string, Monteur>;
   highlightedMonteurId: string | null;
+  currentWeekTooltip: string | null;
   onClick: (a: Activiteit, week_id: string, dag_index: number) => void;
   onRightClick: (
     e: ReactMouseEvent,
