@@ -1894,3 +1894,158 @@ function loadSheetJS(): Promise<any> {
 }
 
 export default Plannen;
+
+/* ----------------------------- History Panel ----------------------------- */
+
+const dotColor = (type: HistoryEntry["type"]): string => {
+  switch (type) {
+    case "cel_created":
+    case "monteur_added":
+      return "#3fff8b";
+    case "cel_deleted":
+    case "monteur_removed":
+      return "#ef4444";
+    case "cel_color_changed":
+      return "#feb300";
+    case "cel_notitie_changed":
+      return "#7cc1ff";
+  }
+};
+
+const describeEntry = (
+  entry: HistoryEntry,
+  activiteiten: Activiteit[],
+  weken: Week[],
+  monteurById: Map<string, Monteur>
+): string => {
+  const actNaam = (id: string) =>
+    activiteiten.find((a) => a.id === id)?.naam ?? "—";
+  const weekNr = (id: string) =>
+    weken.find((w) => w.id === id)?.week_nr ?? "—";
+  const dag = (idx: number) => DAG_NAMEN_KORT[idx] ?? "";
+  switch (entry.type) {
+    case "cel_created":
+      return `Cel aangemaakt — ${actNaam(entry.cel.activiteit_id)} ${dag(
+        entry.cel.dag_index
+      )} week ${weekNr(entry.cel.week_id)}`;
+    case "cel_deleted":
+      return `Cel gewist — ${actNaam(entry.cel.activiteit_id)} ${dag(
+        entry.cel.dag_index
+      )} week ${weekNr(entry.cel.week_id)}`;
+    case "cel_color_changed":
+      return `Kleur gewijzigd — ${actNaam(entry.cel.activiteit_id)}`;
+    case "monteur_added":
+      return `Monteur toegevoegd — ${
+        monteurById.get(entry.monteurId)?.naam ?? "—"
+      }`;
+    case "monteur_removed":
+      return `Monteur verwijderd — ${
+        monteurById.get(entry.monteurId)?.naam ?? "—"
+      }`;
+    case "cel_notitie_changed":
+      return "Notitie gewijzigd";
+  }
+};
+
+const HistoryPanel = ({
+  history,
+  activiteiten,
+  monteurById,
+  weken,
+  onClose,
+  onClear,
+  onUndoEntry,
+}: {
+  history: HistoryEntry[];
+  activiteiten: Activiteit[];
+  monteurById: Map<string, Monteur>;
+  weken: Week[];
+  onClose: () => void;
+  onClear: () => void;
+  onUndoEntry: (entry: HistoryEntry, idx: number) => void;
+}) => {
+  const reversed = [...history].map((e, i) => ({ entry: e, idx: i })).reverse();
+  return (
+    <div
+      className="fixed right-0 overflow-y-auto"
+      style={{
+        top: 52,
+        width: 320,
+        height: "calc(100vh - 52px)",
+        backgroundColor: "rgba(10, 26, 48, 0.97)",
+        borderLeft: "1px solid rgba(255,255,255,0.08)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        zIndex: 40,
+      }}
+    >
+      <div
+        className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+        style={{
+          backgroundColor: "rgba(10, 26, 48, 0.97)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
+          Geschiedenis
+        </h3>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={history.length === 0}
+            className={[
+              "rounded-md px-2 py-1 text-[11px] font-display font-semibold",
+              history.length === 0
+                ? "cursor-not-allowed text-muted-foreground/40"
+                : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+            ].join(" ")}
+          >
+            Wissen
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {history.length === 0 ? (
+        <div className="px-4 py-12 text-center text-xs text-muted-foreground">
+          Nog geen wijzigingen in deze sessie
+        </div>
+      ) : (
+        <div className="px-2 py-2">
+          {reversed.map(({ entry, idx }) => (
+            <div
+              key={idx}
+              className="group flex items-start gap-2 rounded-md px-2 py-2 hover:bg-white/[0.04]"
+            >
+              <span
+                className="mt-1 inline-block shrink-0 rounded-full"
+                style={{
+                  width: 8,
+                  height: 8,
+                  backgroundColor: dotColor(entry.type),
+                }}
+              />
+              <div className="flex-1 text-[12px] leading-snug text-foreground">
+                {describeEntry(entry, activiteiten, weken, monteurById)}
+              </div>
+              <button
+                type="button"
+                onClick={() => onUndoEntry(entry, idx)}
+                className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-display font-bold text-primary opacity-0 transition-opacity hover:bg-primary/10 group-hover:opacity-100"
+              >
+                Herstel
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
