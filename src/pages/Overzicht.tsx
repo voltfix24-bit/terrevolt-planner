@@ -374,16 +374,7 @@ export default function Overzicht() {
     return out;
   }, [scale, startWeek, jaar, currentISO]);
 
-  // Track viewport width so jaar-scale can fill the available grid area
-  // (each month gets an equal column, clamped between 70 and 110px).
-  const [viewportW, setViewportW] = useState<number>(
-    typeof window !== "undefined" ? window.innerWidth : 1280,
-  );
-  useEffect(() => {
-    const onResize = () => setViewportW(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  // (cellW for jaar uses viewport-derived width; declared below)
 
   const cellW = useMemo(() => {
     if (scale !== "jaar") return CELL_W_BY_SCALE[scale];
