@@ -1250,42 +1250,61 @@ const Plannen = () => {
           </span>
         ) : (
           <div className="flex flex-1 flex-wrap items-center" style={{ gap: 12 }}>
-            {ingeplandeMonteurs.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center"
-                style={{
-                  gap: 8,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 8,
-                  padding: "4px 10px 4px 6px",
-                }}
-              >
-                <MonteurAvatar
-                  naam={m.naam}
-                  type={m.type}
-                  size={28}
-                  fontSize={9}
-                  borderWidth={2}
-                  borderColor="rgba(0,0,0,0.4)"
-                />
-                <span
-                  className="font-display"
-                  style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}
+            {ingeplandeMonteurs.map((m) => {
+              const isActive = highlightedMonteurId === m.id;
+              const accentColor = m.type === "schakelmonteur" ? "#feb300" : "#378add";
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() =>
+                    setHighlightedMonteurId((prev) => (prev === m.id ? null : m.id))
+                  }
+                  className="flex items-center transition-all"
+                  title={
+                    isActive
+                      ? "Klik om highlight uit te zetten"
+                      : `Highlight alle cellen van ${m.naam}`
+                  }
+                  style={{
+                    gap: 8,
+                    background: isActive
+                      ? `${accentColor}26` // ~15% alpha hex
+                      : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${
+                      isActive ? accentColor : "rgba(255,255,255,0.08)"
+                    }`,
+                    borderRadius: 8,
+                    padding: "4px 10px 4px 6px",
+                    boxShadow: isActive ? `0 0 0 2px ${accentColor}40` : undefined,
+                    cursor: "pointer",
+                  }}
                 >
-                  {m.naam}
-                </span>
-                {m.aanwijzing_ms && (
+                  <MonteurAvatar
+                    naam={m.naam}
+                    type={m.type}
+                    size={28}
+                    fontSize={9}
+                    borderWidth={2}
+                    borderColor="rgba(0,0,0,0.4)"
+                  />
                   <span
-                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                    style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                    className="font-display"
+                    style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}
                   >
-                    MS {m.aanwijzing_ms}
+                    {m.naam}
                   </span>
-                )}
-              </div>
-            ))}
+                  {m.aanwijzing_ms && (
+                    <span
+                      className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                      style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                    >
+                      MS {m.aanwijzing_ms}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
