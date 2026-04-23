@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Edit2, Plus, Power, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
