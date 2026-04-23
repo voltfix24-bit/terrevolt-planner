@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Check,
   Layers,
+  MapPin,
   Pencil,
   Plus,
   Search,
