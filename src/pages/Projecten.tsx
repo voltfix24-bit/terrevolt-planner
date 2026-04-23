@@ -187,9 +187,16 @@ const Projecten = () => {
     return projects.filter((p) => {
       if (statusFilter !== "alle" && p.status !== statusFilter) return false;
       if (term) {
-        const a = (p.case_nummer ?? "").toLowerCase();
-        const b = (p.station_naam ?? "").toLowerCase();
-        if (!a.includes(term) && !b.includes(term)) return false;
+        const fields = [
+          p.case_nummer,
+          p.station_naam,
+          p.straat,
+          p.postcode,
+          p.stad,
+          p.gemeente,
+        ];
+        const hit = fields.some((f) => (f ?? "").toLowerCase().includes(term));
+        if (!hit) return false;
       }
       return true;
     });
