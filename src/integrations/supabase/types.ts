@@ -14,7 +14,334 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activiteit_types: {
+        Row: {
+          capaciteit_type: string | null
+          created_at: string | null
+          id: string
+          kleur_default: string | null
+          min_aanwijzing_ls: string | null
+          min_aanwijzing_ms: string | null
+          min_personen: number | null
+          naam: string
+          positie: number | null
+        }
+        Insert: {
+          capaciteit_type?: string | null
+          created_at?: string | null
+          id?: string
+          kleur_default?: string | null
+          min_aanwijzing_ls?: string | null
+          min_aanwijzing_ms?: string | null
+          min_personen?: number | null
+          naam: string
+          positie?: number | null
+        }
+        Update: {
+          capaciteit_type?: string | null
+          created_at?: string | null
+          id?: string
+          kleur_default?: string | null
+          min_aanwijzing_ls?: string | null
+          min_aanwijzing_ms?: string | null
+          min_personen?: number | null
+          naam?: string
+          positie?: number | null
+        }
+        Relationships: []
+      }
+      cel_monteurs: {
+        Row: {
+          cel_id: string | null
+          id: string
+          monteur_id: string | null
+        }
+        Insert: {
+          cel_id?: string | null
+          id?: string
+          monteur_id?: string | null
+        }
+        Update: {
+          cel_id?: string | null
+          id?: string
+          monteur_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cel_monteurs_cel_id_fkey"
+            columns: ["cel_id"]
+            isOneToOne: false
+            referencedRelation: "planning_cellen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cel_monteurs_monteur_id_fkey"
+            columns: ["monteur_id"]
+            isOneToOne: false
+            referencedRelation: "monteurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monteurs: {
+        Row: {
+          aanwijzing_ls: string | null
+          aanwijzing_ms: string | null
+          actief: boolean | null
+          created_at: string | null
+          id: string
+          naam: string
+          type: string
+        }
+        Insert: {
+          aanwijzing_ls?: string | null
+          aanwijzing_ms?: string | null
+          actief?: boolean | null
+          created_at?: string | null
+          id?: string
+          naam: string
+          type: string
+        }
+        Update: {
+          aanwijzing_ls?: string | null
+          aanwijzing_ms?: string | null
+          actief?: boolean | null
+          created_at?: string | null
+          id?: string
+          naam?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      planning_cellen: {
+        Row: {
+          activiteit_id: string | null
+          capaciteit: number | null
+          dag_index: number
+          id: string
+          kleur_code: string | null
+          notitie: string | null
+          week_id: string | null
+        }
+        Insert: {
+          activiteit_id?: string | null
+          capaciteit?: number | null
+          dag_index: number
+          id?: string
+          kleur_code?: string | null
+          notitie?: string | null
+          week_id?: string | null
+        }
+        Update: {
+          activiteit_id?: string | null
+          capaciteit?: number | null
+          dag_index?: number
+          id?: string
+          kleur_code?: string | null
+          notitie?: string | null
+          week_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_cellen_activiteit_id_fkey"
+            columns: ["activiteit_id"]
+            isOneToOne: false
+            referencedRelation: "project_activiteiten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_cellen_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "project_weken"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_activiteiten: {
+        Row: {
+          activiteit_type_id: string | null
+          capaciteit_type: string | null
+          id: string
+          min_aanwijzing_ls: string | null
+          min_aanwijzing_ms: string | null
+          min_personen: number | null
+          naam: string
+          positie: number | null
+          project_id: string | null
+        }
+        Insert: {
+          activiteit_type_id?: string | null
+          capaciteit_type?: string | null
+          id?: string
+          min_aanwijzing_ls?: string | null
+          min_aanwijzing_ms?: string | null
+          min_personen?: number | null
+          naam: string
+          positie?: number | null
+          project_id?: string | null
+        }
+        Update: {
+          activiteit_type_id?: string | null
+          capaciteit_type?: string | null
+          id?: string
+          min_aanwijzing_ls?: string | null
+          min_aanwijzing_ms?: string | null
+          min_personen?: number | null
+          naam?: string
+          positie?: number | null
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_activiteiten_activiteit_type_id_fkey"
+            columns: ["activiteit_type_id"]
+            isOneToOne: false
+            referencedRelation: "activiteit_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_activiteiten_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_templates: {
+        Row: {
+          activiteit_type_ids: string[] | null
+          created_at: string | null
+          id: string
+          naam: string
+          omschrijving: string | null
+          type: string
+        }
+        Insert: {
+          activiteit_type_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          naam: string
+          omschrijving?: string | null
+          type: string
+        }
+        Update: {
+          activiteit_type_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          naam?: string
+          omschrijving?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      project_weken: {
+        Row: {
+          id: string
+          opmerking: string | null
+          positie: number
+          project_id: string | null
+          week_nr: number
+        }
+        Insert: {
+          id?: string
+          opmerking?: string | null
+          positie: number
+          project_id?: string | null
+          week_nr: number
+        }
+        Update: {
+          id?: string
+          opmerking?: string | null
+          positie?: number
+          project_id?: string | null
+          week_nr?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_weken_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projecten: {
+        Row: {
+          case_nummer: string | null
+          case_type: string | null
+          created_at: string | null
+          gsu_geu: string | null
+          id: string
+          jaar: number | null
+          ls_rek_vervangen: string | null
+          ms_type: string | null
+          notities: string | null
+          station_naam: string | null
+          status: string | null
+          template_id: string | null
+          trafo_kva: string | null
+          updated_at: string | null
+          werkplan_lsh: boolean | null
+          werkplan_lsr: boolean | null
+          werkplan_msh: boolean | null
+          werkplan_msr: boolean | null
+          wv_naam: string | null
+        }
+        Insert: {
+          case_nummer?: string | null
+          case_type?: string | null
+          created_at?: string | null
+          gsu_geu?: string | null
+          id?: string
+          jaar?: number | null
+          ls_rek_vervangen?: string | null
+          ms_type?: string | null
+          notities?: string | null
+          station_naam?: string | null
+          status?: string | null
+          template_id?: string | null
+          trafo_kva?: string | null
+          updated_at?: string | null
+          werkplan_lsh?: boolean | null
+          werkplan_lsr?: boolean | null
+          werkplan_msh?: boolean | null
+          werkplan_msr?: boolean | null
+          wv_naam?: string | null
+        }
+        Update: {
+          case_nummer?: string | null
+          case_type?: string | null
+          created_at?: string | null
+          gsu_geu?: string | null
+          id?: string
+          jaar?: number | null
+          ls_rek_vervangen?: string | null
+          ms_type?: string | null
+          notities?: string | null
+          station_naam?: string | null
+          status?: string | null
+          template_id?: string | null
+          trafo_kva?: string | null
+          updated_at?: string | null
+          werkplan_lsh?: boolean | null
+          werkplan_lsr?: boolean | null
+          werkplan_msh?: boolean | null
+          werkplan_msr?: boolean | null
+          wv_naam?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projecten_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "project_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
