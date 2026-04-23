@@ -284,6 +284,32 @@ export default function Overzicht() {
     return m;
   }, [cellen, weekById, activiteitById, visibleWeekNrSet]);
 
+  // project_id → Set<dayKey> of days where any assigned monteur on this project is double-booked
+  const projectConflictDayKeys = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const c of cellen) {
+      if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
+      const w = weekById.get(c.week_id);
+      if (!w) continue;
+      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      const act = activiteitById.get(c.activiteit_id);
+      if (!act?.project_id) continue;
+      const k = dayKey(w.week_nr, c.dag_index);
+      const conflictSet = dayConflictMonteurs.get(k);
+      if (!conflictSet || conflictSet.size === 0) continue;
+      const mids = monteurIdsByCel.get(c.id) ?? [];
+      const hasConflict = mids.some((mid) => conflictSet.has(mid));
+      if (!hasConflict) continue;
+      let s = m.get(act.project_id);
+      if (!s) {
+        s = new Set();
+        m.set(act.project_id, s);
+      }
+      s.add(k);
+    }
+    return m;
+  }, [cellen, weekById, activiteitById, visibleWeekNrSet, dayConflictMonteurs, monteurIdsByCel]);
+
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
     for (const a of activiteiten) {
