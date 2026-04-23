@@ -760,6 +760,24 @@ export default function Overzicht() {
     return m;
   }, [monteurDayProjects, dayKeyToSlot]);
 
+  // monteurId → Set<slotIndex> waar deze monteur op minstens één dag écht
+  // dubbel staat (≥2 projecten op dezelfde dag). Alleen díe slots tonen we
+  // als "dubbel gepland" — niet slots die meerdere projecten bevatten over
+  // verschillende dagen (kwartaal/jaar weergave).
+  const monteurSlotDubbel = useMemo(() => {
+    const m = new Map<string, Set<number>>();
+    for (const [k, mids] of dayConflictMonteurs.entries()) {
+      const si = dayKeyToSlot.get(k);
+      if (si === undefined) continue;
+      for (const mid of mids) {
+        let s = m.get(mid);
+        if (!s) { s = new Set(); m.set(mid, s); }
+        s.add(si);
+      }
+    }
+    return m;
+  }, [dayConflictMonteurs, dayKeyToSlot]);
+
   // project_id → slotIndex → boolean (any cel that slot)
   const projectSlotsFilled = useMemo(() => {
     const m = new Map<string, Set<number>>();
