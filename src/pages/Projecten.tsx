@@ -848,7 +848,7 @@ const ProjectCard = ({
       </div>
 
       {/* Second row */}
-      <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
         <div className="font-display text-base font-semibold text-foreground">
           {p.station_naam || <span className="text-muted-foreground">Geen stationsnaam</span>}
         </div>
@@ -858,6 +858,18 @@ const ProjectCard = ({
           </span>
         )}
       </div>
+
+      {/* Adres row */}
+      {p.straat && (
+        <div className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="h-3 w-3" />
+          <span>
+            {p.straat}
+            {p.stad ? `, ${p.stad}` : ""}
+          </span>
+        </div>
+      )}
+      {!p.straat && <div className="mb-3" />}
 
       {/* Info row */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
