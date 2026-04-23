@@ -1057,6 +1057,7 @@ const Plannen = () => {
                       key={a.id}
                       activiteit={a}
                       weken={weken}
+                      jaar={project.jaar ?? new Date().getFullYear()}
                       cellen={cellen}
                       celMonteurs={celMonteurs}
                       monteurById={monteurById}
