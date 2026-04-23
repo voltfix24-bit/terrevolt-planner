@@ -1246,7 +1246,10 @@ function ActiviteitCellsRow({
   visibleWeekNrs,
   jaar,
   currentISO,
+  isTodayCol,
   totalGridWidth,
+  isLast: isLastRow,
+  onClick,
 }: {
   activiteit: Activiteit;
   cellMap: Map<string, Map<string, Cel>> | undefined;
@@ -1255,28 +1258,34 @@ function ActiviteitCellsRow({
   visibleWeekNrs: number[];
   jaar: number;
   currentISO: { week: number; year: number };
+  isTodayCol: (wnr: number, d: number) => boolean;
   totalGridWidth: number;
+  isLast: boolean;
+  onClick: () => void;
 }) {
   return (
     <div
-      className="flex"
+      onClick={onClick}
+      className="flex cursor-pointer hover:bg-white/[0.03]"
       style={{
         width: totalGridWidth,
         height: ROW_H_ACTIVITEIT,
-        borderBottom: "1px solid rgba(255,255,255,0.03)",
+        borderBottom: isLastRow
+          ? "2px solid rgba(255,255,255,0.06)"
+          : "1px solid rgba(255,255,255,0.03)",
         background: "rgba(255,255,255,0.015)",
       }}
     >
       {visibleWeekNrs.map((wnr, wi) => {
-        const isNow = wnr === currentISO.week && jaar === currentISO.year;
         return (
-          <div key={wi} className="flex" style={{ background: isNow ? "rgba(63,255,139,0.03)" : "transparent" }}>
+          <div key={wi} className="flex">
             {DAG_LABELS.map((_, d) => {
-              const isLast = d === DAYS_PER_WEEK - 1;
+              const isLastDay = d === DAYS_PER_WEEK - 1;
               const cel = cellMap?.get(dayKey(wnr, d))?.get(activiteit.id);
               const kleur = cel?.kleur_code;
               const colorHex = kleur ? colorHexFor(kleur) : null;
               const monteurIds = cel ? monteurIdsByCel.get(cel.id) ?? [] : [];
+              const todayBg = isTodayCol(wnr, d) && !colorHex ? "rgba(63,255,139,0.03)" : undefined;
               return (
                 <div
                   key={d}
@@ -1284,17 +1293,17 @@ function ActiviteitCellsRow({
                   style={{
                     width: CELL_W,
                     height: ROW_H_ACTIVITEIT,
-                    borderRight: isLast
+                    borderRight: isLastDay
                       ? "1px solid rgba(255,255,255,0.1)"
                       : "1px solid rgba(255,255,255,0.04)",
-                    background: colorHex ? hexToRgba(colorHex, 0.5) : "transparent",
+                    background: colorHex ? hexToRgba(colorHex, 0.45) : todayBg,
                     borderLeft: colorHex ? `2px solid ${colorHex}` : undefined,
                   }}
                 >
                   {monteurIds.length > 0 && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="flex">
-                        {monteurIds.slice(0, 3).map((mid, idx) => {
+                        {monteurIds.slice(0, 2).map((mid, idx) => {
                           const m = monteurById.get(mid);
                           if (!m) return null;
                           const isS = m.type === "schakelmonteur";
@@ -1303,14 +1312,14 @@ function ActiviteitCellsRow({
                               key={mid}
                               className="flex items-center justify-center rounded-full"
                               style={{
-                                width: 18,
-                                height: 18,
+                                width: 16,
+                                height: 16,
                                 background: isS ? "#feb300" : "#378add",
                                 color: isS ? "#0a1a30" : "#fff",
-                                fontSize: 7,
+                                fontSize: 6,
                                 fontWeight: 700,
                                 border: "1.5px solid rgba(0,0,0,0.4)",
-                                marginLeft: idx === 0 ? 0 : -6,
+                                marginLeft: idx === 0 ? 0 : -4,
                               }}
                               title={m.naam}
                             >
