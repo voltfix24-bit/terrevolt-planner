@@ -394,6 +394,7 @@ export default function Overzicht() {
     return Math.round(Math.min(110, Math.max(70, ideal)));
   }, [scale, viewportW]);
   const totalGridWidth = slots.length * cellW;
+  const bodyRowW = totalGridWidth + BESCHIKBAAR_W;
 
   const visibleWeekNrSet = useMemo(() => {
     const s = new Set<number>();
