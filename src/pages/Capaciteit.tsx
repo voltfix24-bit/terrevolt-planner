@@ -1139,7 +1139,7 @@ const GroupLabel = ({ label }: { label: string }) => (
   </div>
 );
 
-const CellView = ({
+const ConflictBlock = ({
   projectIds,
   projects,
   onNavigate,
@@ -1148,56 +1148,22 @@ const CellView = ({
   projects: Record<string, ProjectInfo>;
   onNavigate: (id: string) => void;
 }) => {
-  const baseStyle: React.CSSProperties = {
-    width: CELL_W,
-    height: CELL_H,
-    borderLeft: "1px solid rgba(255,255,255,0.06)",
-  };
-
-  if (projectIds.length === 0) {
-    return <div style={baseStyle} />;
-  }
-
-  if (projectIds.length === 1) {
-    const id = projectIds[0];
-    const p = projects[id];
-    const label = p?.case_nummer ?? "—";
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => onNavigate(id)}
-            className="flex items-center justify-center overflow-hidden font-display font-bold transition-opacity hover:opacity-80"
-            style={{
-              ...baseStyle,
-              backgroundColor: "#3fff8b",
-              color: "#0a1a30",
-              fontSize: 8,
-              padding: 2,
-            }}
-          >
-            <span className="truncate">{label}</span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <span className="text-xs">{label}</span>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  // Multiple projects → red, popover
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex items-center justify-center font-display font-bold text-white transition-opacity hover:opacity-80"
+          className="font-display font-bold text-white transition-opacity hover:opacity-80"
           style={{
-            ...baseStyle,
+            width: 46,
+            height: BLOCK_H,
             backgroundColor: "#ef4444",
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             fontSize: 14,
+            cursor: "pointer",
           }}
         >
           !
