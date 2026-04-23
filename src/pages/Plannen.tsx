@@ -1091,57 +1091,122 @@ const Plannen = () => {
         </div>
       </div>
 
-      {/* Monteurs legenda — alleen ingeplande monteurs */}
-      {ingeplandeMonteurs.length > 0 && (
-        <div
-          className="mt-3 rounded-lg border px-4 py-3"
-          style={{
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(10,26,48,0.4)",
-          }}
-        >
-          <div className="mb-2 flex items-center gap-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Ingeplande monteurs
-            </span>
-            <span className="text-[10px] text-muted-foreground/70">
+      {/* Ingeplande monteurs balk */}
+      <div
+        style={{
+          marginTop: "16px",
+          padding: "12px 20px",
+          background: "rgba(10, 26, 48, 0.7)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Left side: label + count */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className="font-display"
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "rgba(63,255,139,0.6)",
+            }}
+          >
+            Ingeplande monteurs
+          </span>
+          {ingeplandeMonteurs.length > 0 && (
+            <span
+              className="rounded-full px-2 py-0.5 font-display"
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                backgroundColor: "rgba(63,255,139,0.15)",
+                color: "#3fff8b",
+              }}
+            >
               {ingeplandeMonteurs.length}
             </span>
-            <div className="ml-auto flex items-center gap-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: "#feb300" }}
-                />
-                Schakel
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: "#378add" }}
-                />
-                Montage
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
+          )}
+        </div>
+
+        {/* Monteur chips */}
+        {ingeplandeMonteurs.length === 0 ? (
+          <span className="text-[12px] text-muted-foreground">
+            Nog geen monteurs ingepland
+          </span>
+        ) : (
+          <div className="flex flex-1 flex-wrap items-center" style={{ gap: 12 }}>
             {ingeplandeMonteurs.map((m) => (
               <div
                 key={m.id}
-                className="flex items-center gap-2 rounded-full border px-2 py-1"
+                className="flex items-center"
                 style={{
-                  borderColor: "rgba(255,255,255,0.08)",
-                  backgroundColor: "rgba(255,255,255,0.03)",
+                  gap: 8,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 8,
+                  padding: "4px 10px 4px 6px",
                 }}
-                title={m.naam}
               >
-                <MonteurAvatar naam={m.naam} type={m.type} size={20} fontSize={8} />
-                <span className="text-[12px] font-medium text-foreground">{m.naam}</span>
+                <MonteurAvatar
+                  naam={m.naam}
+                  type={m.type}
+                  size={28}
+                  fontSize={9}
+                  borderWidth={2}
+                  borderColor="rgba(0,0,0,0.4)"
+                />
+                <span
+                  className="font-display"
+                  style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}
+                >
+                  {m.naam}
+                </span>
+                {m.aanwijzing_ms && (
+                  <span
+                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                    style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                  >
+                    MS {m.aanwijzing_ms}
+                  </span>
+                )}
               </div>
             ))}
           </div>
+        )}
+
+        {/* Right end: legend pills with divider */}
+        <div className="ml-auto flex items-center gap-3 shrink-0">
+          <span
+            aria-hidden
+            style={{
+              width: 1,
+              height: 20,
+              backgroundColor: "rgba(255,255,255,0.08)",
+              display: "inline-block",
+            }}
+          />
+          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span
+              className="inline-block rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: "#feb300" }}
+            />
+            Schakel
+          </span>
+          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span
+              className="inline-block rounded-full"
+              style={{ width: 8, height: 8, backgroundColor: "#378add" }}
+            />
+            Montage
+          </span>
         </div>
-      )}
+      </div>
 
       {openCel?.cel && openCel.activiteit && openCel.week && (
         <CelModal
