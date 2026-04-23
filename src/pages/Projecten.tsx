@@ -285,8 +285,18 @@ const Projecten = () => {
     setModalOpen(true);
   };
 
-  const seedTemplateForProject = async (projectId: string, template: ProjectTemplate) => {
-    const ids = template.activiteit_type_ids ?? [];
+  const seedTemplateForProject = async (
+    projectId: string,
+    templateId: string,
+  ): Promise<number> => {
+    // Always fetch fresh template to ensure latest activiteit_type_ids
+    const { data: tplData } = await supabase
+      .from("project_templates")
+      .select("id, activiteit_type_ids")
+      .eq("id", templateId)
+      .single();
+    const ids = (tplData?.activiteit_type_ids ?? []) as string[];
+    let createdCount = 0;
     if (ids.length > 0) {
       const { data: types } = await supabase
         .from("activiteit_types")
@@ -310,14 +320,20 @@ const Projecten = () => {
           min_aanwijzing_ms: t.min_aanwijzing_ms,
           positie: idx,
         }));
-        await supabase.from("project_activiteiten").insert(rows);
+        const { error: insErr } = await supabase
+          .from("project_activiteiten")
+          .insert(rows);
+        if (!insErr) createdCount = rows.length;
       }
     }
-    // 6 weeks starting at current ISO week
+    return createdCount;
+  };
+
+  const seedWeeksForProject = async (projectId: string) => {
     const startWeek = getIsoWeek();
     const weekRows = Array.from({ length: 6 }).map((_, i) => ({
       project_id: projectId,
-      week_nr: ((startWeek - 1 + i) % 53) + 1,
+      week_nr: wrapWeek(startWeek + i),
       positie: i,
       opmerking: "",
     }));
