@@ -1566,6 +1566,7 @@ const CellBox = memo(function CellBox({
   activiteit,
   monteurIds,
   monteurById,
+  isCurrentWeek = false,
   onClick,
   onContextMenu,
 }: {
@@ -1573,6 +1574,7 @@ const CellBox = memo(function CellBox({
   activiteit: Activiteit;
   monteurIds: string[];
   monteurById: Map<string, Monteur>;
+  isCurrentWeek?: boolean;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
 }) {
