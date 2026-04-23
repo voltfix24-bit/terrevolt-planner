@@ -760,6 +760,24 @@ export default function Overzicht() {
     return m;
   }, [monteurDayProjects, dayKeyToSlot]);
 
+  // monteurId → Set<slotIndex> waar deze monteur op minstens één dag écht
+  // dubbel staat (≥2 projecten op dezelfde dag). Alleen díe slots tonen we
+  // als "dubbel gepland" — niet slots die meerdere projecten bevatten over
+  // verschillende dagen (kwartaal/jaar weergave).
+  const monteurSlotDubbel = useMemo(() => {
+    const m = new Map<string, Set<number>>();
+    for (const [k, mids] of dayConflictMonteurs.entries()) {
+      const si = dayKeyToSlot.get(k);
+      if (si === undefined) continue;
+      for (const mid of mids) {
+        let s = m.get(mid);
+        if (!s) { s = new Set(); m.set(mid, s); }
+        s.add(si);
+      }
+    }
+    return m;
+  }, [dayConflictMonteurs, dayKeyToSlot]);
+
   // project_id → slotIndex → boolean (any cel that slot)
   const projectSlotsFilled = useMemo(() => {
     const m = new Map<string, Set<number>>();
@@ -838,13 +856,16 @@ export default function Overzicht() {
     (monteurId: string): MonteurSeg[] => {
       const bySlot = monteurSlotProjects.get(monteurId);
       if (!bySlot) return [];
+      const dubbelSlots = monteurSlotDubbel.get(monteurId);
       const segs: MonteurSeg[] = [];
       let cur: MonteurSeg | null = null;
       const flush = () => { if (cur) segs.push(cur); cur = null; };
       for (let i = 0; i < slots.length; i++) {
         const projs = bySlot.get(i);
         if (!projs || projs.size === 0) { flush(); continue; }
-        if (projs.size > 1) {
+        // Alleen écht dubbel als deze monteur op minstens één dag binnen
+        // dit slot ≥2 projecten op dezelfde dag heeft.
+        if (dubbelSlots?.has(i)) {
           flush();
           segs.push({
             startSlot: i, endSlot: i,
@@ -854,18 +875,21 @@ export default function Overzicht() {
           });
           continue;
         }
+        // Meerdere projecten in een slot zonder dag-conflict (bv. ma project A,
+        // vr project B in kwartaal-weergave) → toon als één pill van het eerste
+        // project, zodat het niet ten onrechte rood wordt.
         const pid = Array.from(projs)[0];
         if (cur && !cur.dubbel && cur.projectId === pid && cur.endSlot === i - 1) {
           cur.endSlot = i;
         } else {
           flush();
-          cur = { startSlot: i, endSlot: i, projectId: pid, projectIds: [pid], dubbel: false };
+          cur = { startSlot: i, endSlot: i, projectId: pid, projectIds: Array.from(projs), dubbel: false };
         }
       }
       flush();
       return segs;
     },
-    [monteurSlotProjects, slots.length],
+    [monteurSlotProjects, monteurSlotDubbel, slots.length],
   );
 
   // ====== Project bar segments (consecutive filled slots) ======
