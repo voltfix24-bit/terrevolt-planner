@@ -183,6 +183,13 @@ const Plannen = () => {
   const [weekModalOpen, setWeekModalOpen] = useState(false);
   const [showAddActiviteit, setShowAddActiviteit] = useState(false);
 
+  // Filter voor de "Ingeplande monteurs" balk: filter op week en/of dag.
+  // weekId === null => alle weken; dagIndex === null => alle dagen
+  const [monteursFilter, setMonteursFilter] = useState<{
+    weekId: string | null;
+    dagIndex: number | null;
+  }>({ weekId: null, dagIndex: null });
+
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
