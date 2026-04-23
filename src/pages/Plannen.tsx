@@ -190,6 +190,12 @@ const Plannen = () => {
     dagIndex: number | null;
   }>({ weekId: null, dagIndex: null });
 
+  // Scope voor de "Ingeplande monteurs" balk:
+  // - "visible": alleen monteurs van de weken die nu in de grid-viewport zichtbaar zijn (default)
+  // - "all":     monteurs van het hele project
+  // Een expliciete week-filter (monteursFilter.weekId) overschrijft beide.
+  const [monteursScope, setMonteursScope] = useState<"visible" | "all">("visible");
+
   // Geselecteerde monteur waarvan alle ingeplande cellen worden gehighlight in de grid.
   // null => geen highlight actief.
   const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
