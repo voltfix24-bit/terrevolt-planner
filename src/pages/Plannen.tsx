@@ -1374,6 +1374,8 @@ const Plannen = () => {
           <span className="text-[12px] text-muted-foreground">
             {monteursFilter.weekId !== null || monteursFilter.dagIndex !== null
               ? "Geen monteurs ingepland in deze selectie"
+              : monteursScope === "visible"
+              ? "Geen monteurs ingepland in de zichtbare weken"
               : "Nog geen monteurs ingepland"}
           </span>
         ) : (
