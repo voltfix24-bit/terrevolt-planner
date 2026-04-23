@@ -1755,6 +1755,7 @@ const CellBox = memo(function CellBox({
   isHighlighted = false,
   highlightColor = null,
   isDimmed = false,
+  currentWeekTooltip = null,
   onClick,
   onContextMenu,
 }: {
@@ -1766,6 +1767,7 @@ const CellBox = memo(function CellBox({
   isHighlighted?: boolean;
   highlightColor?: string | null;
   isDimmed?: boolean;
+  currentWeekTooltip?: string | null;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
 }) {
