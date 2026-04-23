@@ -26,6 +26,7 @@ interface Project {
   case_nummer: string | null;
   station_naam: string | null;
   status: Status | null;
+  jaar: number | null;
   created_at: string | null;
 }
 
@@ -175,7 +176,7 @@ export default function Overzicht() {
     (async () => {
       setLoading(true);
       const [pRes, wRes, aRes, cRes, mRes, cmRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, created_at").order("created_at", { ascending: true }),
+        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
         supabase.from("project_weken").select("id, project_id, week_nr, positie"),
         supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
         supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -203,19 +204,35 @@ export default function Overzicht() {
     return arr;
   }, [startWeek, numWeeks]);
 
+  const visibleWeekNrSet = useMemo(() => new Set(visibleWeekNrs), [visibleWeekNrs]);
+
   const totalGridWidth = numWeeks * DAYS_PER_WEEK * CELL_W;
 
+  // Only projecten matching the selected jaar are shown
+  const visibleProjecten = useMemo(
+    () => projecten.filter((p) => (p.jaar ?? null) === jaar),
+    [projecten, jaar],
+  );
+
+  const visibleProjectIds = useMemo(
+    () => new Set(visibleProjecten.map((p) => p.id)),
+    [visibleProjecten],
+  );
+
+  // Only weken belonging to a visible project AND within the visible week range
   const wekenByProject = useMemo(() => {
     const m = new Map<string, Week[]>();
     for (const w of weken) {
       if (!w.project_id) continue;
+      if (!visibleProjectIds.has(w.project_id)) continue;
+      if (!visibleWeekNrSet.has(w.week_nr)) continue;
       const arr = m.get(w.project_id) ?? [];
       arr.push(w);
       m.set(w.project_id, arr);
     }
     for (const arr of m.values()) arr.sort((a, b) => a.positie - b.positie);
     return m;
-  }, [weken]);
+  }, [weken, visibleProjectIds, visibleWeekNrSet]);
 
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
@@ -266,7 +283,7 @@ export default function Overzicht() {
   // slot index = visibleWeekIndex * 5 + dag
   const projectSpanByProject = useMemo(() => {
     const result = new Map<string, { first: number; last: number } | null>();
-    for (const p of projecten) {
+    for (const p of visibleProjecten) {
       const projWeken = wekenByProject.get(p.id) ?? [];
       const projActs = activiteitenByProject.get(p.id) ?? [];
       let first = Infinity;
@@ -290,12 +307,12 @@ export default function Overzicht() {
       result.set(p.id, first === Infinity ? null : { first, last });
     }
     return result;
-  }, [projecten, wekenByProject, activiteitenByProject, visibleWeekNrs, celByKey]);
+  }, [visibleProjecten, wekenByProject, activiteitenByProject, visibleWeekNrs, celByKey]);
 
   // For empty projects: thin dashed bar across project_weken visible range
   const projectVisibleWeekRangeByProject = useMemo(() => {
     const result = new Map<string, { first: number; last: number } | null>();
-    for (const p of projecten) {
+    for (const p of visibleProjecten) {
       const projWeken = wekenByProject.get(p.id) ?? [];
       let first = Infinity;
       let last = -Infinity;
@@ -311,7 +328,7 @@ export default function Overzicht() {
       result.set(p.id, first === Infinity ? null : { first, last });
     }
     return result;
-  }, [projecten, wekenByProject, visibleWeekNrs]);
+  }, [visibleProjecten, wekenByProject, visibleWeekNrs]);
 
   // ====== Handlers ======
   const toggleExpand = (id: string) => {
@@ -470,7 +487,7 @@ export default function Overzicht() {
         {/* Body */}
         {loading ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Laden…</div>
-        ) : projecten.length === 0 ? (
+        ) : visibleProjecten.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
             Nog geen projecten — maak een project aan op de Projecten pagina
           </div>
@@ -485,7 +502,7 @@ export default function Overzicht() {
                 backgroundColor: "rgba(255,255,255,0.015)",
               }}
             >
-              {projecten.map((p) => {
+              {visibleProjecten.map((p) => {
                 const expanded = expandedProjects.has(p.id);
                 const projActs = activiteitenByProject.get(p.id) ?? [];
                 return (
@@ -575,7 +592,7 @@ export default function Overzicht() {
               onScroll={(e) => syncScroll("body", e.currentTarget.scrollLeft)}
             >
               <div style={{ width: totalGridWidth }}>
-                {projecten.map((p) => {
+                {visibleProjecten.map((p) => {
                   const expanded = expandedProjects.has(p.id);
                   const projActs = activiteitenByProject.get(p.id) ?? [];
                   const projWeken = wekenByProject.get(p.id) ?? [];
