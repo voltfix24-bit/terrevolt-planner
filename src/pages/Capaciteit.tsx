@@ -1308,6 +1308,6 @@ const ConflictBlock = memo(function ConflictBlock({
       </PopoverContent>
     </Popover>
   );
-};
+});
 
 export default Capaciteit;
