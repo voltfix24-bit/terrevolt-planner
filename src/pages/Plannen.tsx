@@ -1319,15 +1319,41 @@ const WeekHeader = memo(function WeekHeader({
 }) {
   const monday = getMondayOfWeek(week.week_nr, jaar);
   const dayWidth = CELL_W * 5;
+  const isCurrentWeek = week.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
   return (
     <div
       className="shrink-0 flex flex-col"
-      style={{ width: dayWidth, borderRight: "1px solid rgba(255,255,255,0.06)" }}
+      style={{
+        width: dayWidth,
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+        backgroundColor: isCurrentWeek ? "rgba(63,255,139,0.04)" : undefined,
+      }}
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-display font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+          <button
+            className={[
+              "flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-display font-bold uppercase tracking-wider hover:text-foreground",
+              isCurrentWeek ? "" : "text-muted-foreground",
+            ].join(" ")}
+            style={isCurrentWeek ? { color: "#3fff8b" } : undefined}
+          >
             Week {week.week_nr}
+            {isCurrentWeek && (
+              <span
+                style={{
+                  background: "rgba(63,255,139,0.2)",
+                  color: "#3fff8b",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: "999px",
+                  marginLeft: "6px",
+                }}
+              >
+                Nu
+              </span>
+            )}
             <ChevronDown className="h-3 w-3" />
           </button>
         </DropdownMenuTrigger>
