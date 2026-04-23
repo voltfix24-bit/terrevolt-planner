@@ -853,24 +853,24 @@ const Plannen = () => {
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
                   <div style={{ height: showAddActiviteit ? 80 : CELL_H }} />
-                </div>
-              </div>
 
-              {/* Opmerkingen row */}
-              <div
-                ref={commentsScrollRef}
-                onScroll={(e) => syncScroll("comments", (e.target as HTMLDivElement).scrollLeft)}
-                className="overflow-x-auto overflow-y-hidden border-t"
-                style={{ borderColor: "rgba(255,255,255,0.06)" }}
-              >
-                <div className="flex" style={{ width: totalGridWidth, height: CELL_H }}>
-                  {weken.map((w) => (
-                    <OpmerkingCell
-                      key={w.id}
-                      week={w}
-                      onSave={(val) => updateWeekOpmerking(w.id, val)}
-                    />
-                  ))}
+                  {/* Opmerkingen row — inside same scroll container as activity rows */}
+                  <div
+                    className="flex border-t"
+                    style={{
+                      width: totalGridWidth,
+                      height: CELL_H,
+                      borderColor: "rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    {weken.map((w) => (
+                      <OpmerkingCell
+                        key={w.id}
+                        week={w}
+                        onSave={(val) => updateWeekOpmerking(w.id, val)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
