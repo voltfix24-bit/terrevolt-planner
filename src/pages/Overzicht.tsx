@@ -1072,6 +1072,33 @@ export default function Overzicht() {
           >
             {renderHeader()}
           </div>
+          {/* Sticky right "Beschikbaar" header cell */}
+          <div
+            style={{
+              width: 100,
+              flexShrink: 0,
+              height: HEADER_H,
+              backgroundColor: "rgba(10, 26, 48, 0.97)",
+              borderLeft: "1px solid rgba(255,255,255,0.08)",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "center",
+              paddingBottom: 6,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.3)",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              }}
+            >
+              Beschikbaar
+            </span>
+          </div>
         </div>
 
         {/* ====== Scrollable body (vertical) ====== */}
