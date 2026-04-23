@@ -1664,6 +1664,117 @@ export default function Overzicht() {
           </div>
         </div>
       </div>
+
+      {/* Conflict legend (collapsible, footer) */}
+      <div
+        className="mt-3 rounded-lg border"
+        style={{
+          borderColor: "rgba(255,255,255,0.08)",
+          background: "rgba(10,26,48,0.4)",
+        }}
+        aria-label="Legenda planning-conflicten"
+      >
+        <button
+          type="button"
+          onClick={() => setLegendOpen((o) => !o)}
+          aria-expanded={legendOpen}
+          className="flex w-full items-center gap-2 px-3 py-2 hover:bg-white/[0.03]"
+        >
+          <ChevronRight
+            className="h-3 w-3 text-muted-foreground"
+            style={{
+              transform: legendOpen ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 0.2s ease",
+            }}
+          />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Legenda
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Wat betekenen de rode pills en markers?
+          </span>
+          <span className="ml-auto text-[10px] text-muted-foreground">
+            {legendOpen ? "Verberg" : "Toon"}
+          </span>
+        </button>
+        <div
+          style={{
+            maxHeight: legendOpen ? 400 : 0,
+            opacity: legendOpen ? 1 : 0,
+            overflow: "hidden",
+            transition: "max-height 0.25s ease, opacity 0.15s ease",
+          }}
+        >
+          <div
+            className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t px-3 py-3 text-[11px]"
+            style={{
+              borderColor: "rgba(255,255,255,0.06)",
+              color: "rgba(255,255,255,0.75)",
+            }}
+          >
+            {/* Monteur dubbel gepland */}
+            <div className="flex items-center gap-2">
+              <span
+                className="flex h-[22px] w-[34px] items-center justify-center"
+                style={{
+                  background: "#ef4444",
+                  color: "#ffffff",
+                  borderRadius: 4,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                !
+              </span>
+              <span>
+                <span className="font-semibold text-foreground">Rode pill met "!"</span>
+                {" "}— monteur is op dezelfde dag aan meerdere projecten gekoppeld (dubbel gepland).
+              </span>
+            </div>
+
+            <span className="hidden h-4 w-px bg-white/10 sm:inline-block" />
+
+            {/* Activiteit-cel met conflict */}
+            <div className="flex items-center gap-2">
+              <span
+                className="relative inline-block"
+                style={{
+                  width: 22,
+                  height: 22,
+                  background: "rgba(239,68,68,0.18)",
+                  borderLeft: "2px solid #ef4444",
+                  boxShadow: "inset 0 0 0 1px rgba(239,68,68,0.55)",
+                  borderRadius: 2,
+                }}
+              >
+                <span
+                  className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
+                  style={{
+                    background: "#ef4444",
+                    color: "#fff",
+                    fontSize: 8,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                  }}
+                >
+                  !
+                </span>
+              </span>
+              <span>
+                <span className="font-semibold text-foreground">Rood gemarkeerde cel</span>
+                {" "}— deze activiteit deelt een monteur met een andere planning op dezelfde dag.
+              </span>
+            </div>
+
+            <span className="hidden h-4 w-px bg-white/10 sm:inline-block" />
+
+            {/* Tip */}
+            <span className="text-muted-foreground">
+              Tip: hover op de rode pill voor de betrokken projecten, klik op een rij om naar Plannen te gaan.
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
