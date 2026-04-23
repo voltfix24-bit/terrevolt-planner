@@ -281,7 +281,7 @@ export default function Overzicht() {
   const weeksToShow = useMemo(() => {
     if (scale !== "maand") return 5;
     const sidebarPx = SIDEBAR_W; // not collapsed-aware: keep stable so scrolling doesn't reflow weeks
-    const available = Math.max(0, viewportW - 220 /* app sidebar */ - sidebarPx - 100 /* beschikbaar */ - 80 /* padding */);
+    const available = Math.max(0, viewportW - 220 /* app sidebar */ - sidebarPx - BESCHIKBAAR_W - 80 /* padding */);
     const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand; // 220
     return Math.max(4, Math.min(16, Math.floor(available / weekPx)));
   }, [scale, viewportW]);
