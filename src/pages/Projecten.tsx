@@ -201,10 +201,22 @@ const Projecten = () => {
     return m;
   }, [templates]);
 
-  const filteredTemplates = useMemo(
-    () => (caseType ? templates.filter((t) => t.type === caseType) : []),
-    [templates, caseType]
-  );
+  const filteredTemplates = useMemo(() => {
+    if (!caseType) return [];
+    if (caseType === "custom") return templates;
+    return templates.filter((t) => t.type === caseType);
+  }, [templates, caseType]);
+
+  const handleCaseTypeSelect = (c: CaseType) => {
+    setCaseType(c);
+    if (editing) return;
+    if (c === "custom") {
+      setTemplateId(null);
+      return;
+    }
+    const match = templates.find((t) => t.type === c);
+    setTemplateId(match ? match.id : null);
+  };
 
   const openNew = () => {
     setEditing(null);
