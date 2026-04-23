@@ -672,11 +672,13 @@ export default function Overzicht() {
                 background: "rgba(255,255,255,0.02)",
               }}
             >
-              {medewerkersOpen ? (
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-              )}
+              <ChevronRight
+                className="h-3 w-3 text-muted-foreground"
+                style={{
+                  transform: medewerkersOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s ease",
+                }}
+              />
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Medewerkers
               </span>
