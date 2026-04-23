@@ -586,7 +586,18 @@ const EmptyState = ({
 
 const SIDEBAR_W = 160;
 const CELL_W = 48;
-const CELL_H = 44;
+const CELL_H = 52;
+const BLOCK_H = 40;
+
+const DAG_FULL = ["MA", "DI", "WO", "DO", "VR"] as const;
+
+// Custom scrollbar styles for the timeline scroll areas
+const TIMELINE_SCROLL_STYLES = `
+  .tijdlijn-scroll::-webkit-scrollbar { height: 4px; }
+  .tijdlijn-scroll::-webkit-scrollbar-track { background: transparent; }
+  .tijdlijn-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  .tijdlijn-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+`;
 
 const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
   const navigate = useNavigate();
@@ -822,7 +833,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
     return (
       <div
         key={m.id}
-        className="flex border-b"
+        className="flex border-b transition-colors hover:bg-white/[0.04]"
         style={{ borderColor: "rgba(255,255,255,0.06)", height: CELL_H }}
       >
         <div
@@ -839,15 +850,138 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
           </div>
         </div>
         <div className="flex">
-          {visibleDays.map((d) => {
-            const projIds = days[d.key] ?? [];
+          {visibleWeeks.map((w, wi) => {
+            // Build 5 slots for this week
+            type Slot =
+              | { kind: "vrij" }
+              | { kind: "single"; projectId: string }
+              | { kind: "conflict"; projectIds: string[] };
+            const slots: Slot[] = [];
+            for (let d = 0; d < 5; d++) {
+              const date = addDays(w.monday, d);
+              const ids = days[isoKey(date)] ?? [];
+              if (ids.length === 0) slots.push({ kind: "vrij" });
+              else if (ids.length === 1)
+                slots.push({ kind: "single", projectId: ids[0] });
+              else slots.push({ kind: "conflict", projectIds: ids });
+            }
+
+            const items: React.ReactNode[] = [];
+            let i = 0;
+            while (i < 5) {
+              const slot = slots[i];
+              const isLastDay = i === 4;
+              const borderRight = isLastDay
+                ? "1px solid rgba(255,255,255,0.12)"
+                : "1px solid rgba(255,255,255,0.04)";
+              const date = addDays(w.monday, i);
+
+              if (slot.kind === "vrij") {
+                items.push(
+                  <div
+                    key={`v-${wi}-${i}`}
+                    title={`${DAG_FULL[i]} ${fmtDayMonth(date)}`}
+                    style={{
+                      width: CELL_W,
+                      height: CELL_H,
+                      borderRight,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  />
+                );
+                i++;
+                continue;
+              }
+
+              if (slot.kind === "conflict") {
+                items.push(
+                  <div
+                    key={`c-${wi}-${i}`}
+                    style={{
+                      width: CELL_W,
+                      height: CELL_H,
+                      borderRight,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ConflictBlock
+                      projectIds={slot.projectIds}
+                      projects={projects}
+                      onNavigate={(id) => navigate(`/plannen?project=${id}`)}
+                    />
+                  </div>
+                );
+                i++;
+                continue;
+              }
+
+              // single → look ahead for consecutive same project
+              const pid = slot.projectId;
+              let span = 1;
+              while (
+                i + span < 5 &&
+                slots[i + span].kind === "single" &&
+                (slots[i + span] as { kind: "single"; projectId: string })
+                  .projectId === pid
+              ) {
+                span++;
+              }
+              const blockWidth = span * CELL_W - 2;
+              const p = projects[pid];
+              const fullLabel = p?.case_nummer ?? "—";
+              const label =
+                blockWidth > 80 ? fullLabel : fullLabel.slice(0, 6);
+
+              items.push(
+                <div
+                  key={`s-${wi}-${i}`}
+                  style={{
+                    width: span * CELL_W,
+                    height: CELL_H,
+                    borderRight: i + span - 1 === 4
+                      ? "1px solid rgba(255,255,255,0.12)"
+                      : "1px solid rgba(255,255,255,0.04)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 1px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/plannen?project=${pid}`)}
+                    title={fullLabel}
+                    style={{
+                      width: blockWidth,
+                      height: BLOCK_H,
+                      backgroundColor: "#3fff8b",
+                      color: "#0a1a30",
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      overflow: "hidden",
+                    }}
+                    className="font-display transition-opacity hover:opacity-80"
+                  >
+                    <span className="truncate px-1">{label}</span>
+                  </button>
+                </div>
+              );
+              i += span;
+            }
+
             return (
-              <CellView
-                key={d.key}
-                projectIds={projIds}
-                projects={projects}
-                onNavigate={(id) => navigate(`/plannen?project=${id}`)}
-              />
+              <div key={`w-${wi}`} className="flex">
+                {items}
+              </div>
             );
           })}
         </div>
@@ -857,6 +991,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
 
   return (
     <TooltipProvider delayDuration={200}>
+      <style>{TIMELINE_SCROLL_STYLES}</style>
       <div className="space-y-4">
         {/* Controls bar */}
         <div className="surface-card sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -916,7 +1051,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
             />
             <div
               ref={headerRef}
-              className="overflow-x-auto"
+              className="overflow-x-auto tijdlijn-scroll"
               style={{ scrollbarWidth: "thin" }}
             >
               <div style={{ width: totalGridWidth }}>
@@ -944,6 +1079,10 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
                       style={{
                         width: CELL_W,
                         borderColor: "rgba(255,255,255,0.06)",
+                        borderRight:
+                          d.dayIdx === 4
+                            ? "1px solid rgba(255,255,255,0.12)"
+                            : "1px solid rgba(255,255,255,0.04)",
                       }}
                     >
                       <div className="font-display text-[10px] font-bold text-foreground">
@@ -960,7 +1099,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
           </div>
 
           {/* Body */}
-          <div ref={bodyRef} className="overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+          <div ref={bodyRef} className="overflow-x-auto tijdlijn-scroll" style={{ scrollbarWidth: "thin" }}>
             <div style={{ minWidth: SIDEBAR_W + totalGridWidth }}>
               {loadingPlan && (
                 <div className="px-4 py-2 text-xs text-muted-foreground">Laden…</div>
@@ -1001,7 +1140,7 @@ const GroupLabel = ({ label }: { label: string }) => (
   </div>
 );
 
-const CellView = ({
+const ConflictBlock = ({
   projectIds,
   projects,
   onNavigate,
@@ -1010,56 +1149,22 @@ const CellView = ({
   projects: Record<string, ProjectInfo>;
   onNavigate: (id: string) => void;
 }) => {
-  const baseStyle: React.CSSProperties = {
-    width: CELL_W,
-    height: CELL_H,
-    borderLeft: "1px solid rgba(255,255,255,0.06)",
-  };
-
-  if (projectIds.length === 0) {
-    return <div style={baseStyle} />;
-  }
-
-  if (projectIds.length === 1) {
-    const id = projectIds[0];
-    const p = projects[id];
-    const label = p?.case_nummer ?? "—";
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => onNavigate(id)}
-            className="flex items-center justify-center overflow-hidden font-display font-bold transition-opacity hover:opacity-80"
-            style={{
-              ...baseStyle,
-              backgroundColor: "#3fff8b",
-              color: "#0a1a30",
-              fontSize: 8,
-              padding: 2,
-            }}
-          >
-            <span className="truncate">{label}</span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <span className="text-xs">{label}</span>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  // Multiple projects → red, popover
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex items-center justify-center font-display font-bold text-white transition-opacity hover:opacity-80"
+          className="font-display font-bold text-white transition-opacity hover:opacity-80"
           style={{
-            ...baseStyle,
+            width: 46,
+            height: BLOCK_H,
             backgroundColor: "#ef4444",
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             fontSize: 14,
+            cursor: "pointer",
           }}
         >
           !
