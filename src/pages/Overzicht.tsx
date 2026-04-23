@@ -1053,34 +1053,16 @@ export default function Overzicht() {
             WebkitBackdropFilter: "blur(12px)",
           }}
         >
-          {/* Sidebar-aligned spacer with collapse toggle */}
+          {/* Sidebar-aligned spacer */}
           <div
-            className="flex items-center"
             style={{
               width: sidebarW,
               flexShrink: 0,
               height: HEADER_H,
               borderRight: "1px solid rgba(255,255,255,0.08)",
-              paddingLeft: sidebarCollapsed ? 0 : 8,
-              paddingRight: 6,
-              justifyContent: sidebarCollapsed ? "center" : "flex-end",
               transition: "width 0.2s ease",
             }}
-          >
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed((c) => !c)}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
-              title={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
-              aria-label={sidebarCollapsed ? "Sidebar uitklappen" : "Sidebar inklappen"}
-            >
-              {sidebarCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" />
-              )}
-            </button>
-          </div>
+          />
           {/* Horizontally-scrollable header (week/day labels) */}
           <div
             ref={headerScrollRef}
