@@ -36,9 +36,60 @@ interface Monteur {
   aanwijzing_ms: Aanwijzing | null;
   actief: boolean;
   created_at: string;
+  werkdagen?: number[] | null;
 }
 
-const AANWIJZINGEN: Aanwijzing[] = ["VOP", "VP", "AVP"];
+interface Feestdag {
+  id: string;
+  datum: string;
+  naam: string;
+  jaar: number;
+}
+
+type AfwezigheidType = "vakantie" | "ziek" | "opleiding" | "vrije_dag" | "overig";
+
+interface Afwezigheid {
+  id: string;
+  monteur_id: string;
+  datum_van: string;
+  datum_tot: string;
+  type: AfwezigheidType;
+  omschrijving: string | null;
+}
+
+const AFWEZIGHEID_TYPES: { id: AfwezigheidType; label: string; color: string }[] = [
+  { id: "vakantie", label: "Vakantie", color: "#378add" },
+  { id: "ziek", label: "Ziek", color: "#ef4444" },
+  { id: "opleiding", label: "Opleiding", color: "#9333ea" },
+  { id: "vrije_dag", label: "Vrije dag", color: "#feb300" },
+  { id: "overig", label: "Overig", color: "#9ca3af" },
+];
+
+function formatDatum(date: string): string {
+  return new Date(date).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatRange(van: string, tot: string): string {
+  const v = new Date(van);
+  const t = new Date(tot);
+  if (van === tot) return formatDatum(van);
+  const sameYear = v.getFullYear() === t.getFullYear();
+  const sameMonth = sameYear && v.getMonth() === t.getMonth();
+  if (sameMonth) {
+    return `${v.getDate()} — ${t.getDate()} ${t.toLocaleDateString("nl-NL", { month: "short", year: "numeric" })}`;
+  }
+  if (sameYear) {
+    return `${v.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} — ${t.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}`;
+  }
+  return `${formatDatum(van)} — ${formatDatum(tot)}`;
+}
+
+const WEEKDAG_LABELS = ["MA", "DI", "WO", "DO", "VR"] as const;
+const WEEKDAG_NUMS = [1, 2, 3, 4, 5] as const;
 
 const aanwijzingStyle = (a: Aanwijzing | null): React.CSSProperties => {
   if (a === "AVP") return { backgroundColor: "#3fff8b", color: "#0a1a30" };
