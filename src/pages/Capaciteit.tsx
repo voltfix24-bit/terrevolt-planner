@@ -91,6 +91,8 @@ function formatRange(van: string, tot: string): string {
 const WEEKDAG_LABELS = ["MA", "DI", "WO", "DO", "VR"] as const;
 const WEEKDAG_NUMS = [1, 2, 3, 4, 5] as const;
 
+const AANWIJZINGEN: Aanwijzing[] = ["VOP", "VP", "AVP"];
+
 const aanwijzingStyle = (a: Aanwijzing | null): React.CSSProperties => {
   if (a === "AVP") return { backgroundColor: "#3fff8b", color: "#0a1a30" };
   if (a === "VP") return { backgroundColor: "#7cc1ff", color: "#0a1a30" };
