@@ -240,6 +240,24 @@ export default function Overzicht() {
     return m;
   }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet]);
 
+  // dayKey → Set<monteurId> of monteurs that are double-booked on that day
+  const dayConflictMonteurs = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const [mid, byDay] of monteurDayProjects.entries()) {
+      for (const [k, projs] of byDay.entries()) {
+        if (projs.size > 1) {
+          let set = m.get(k);
+          if (!set) {
+            set = new Set();
+            m.set(k, set);
+          }
+          set.add(mid);
+        }
+      }
+    }
+    return m;
+  }, [monteurDayProjects]);
+
   // For project section: project_id → dayKey → activiteit_id → cel
   const projectDayActivities = useMemo(() => {
     const m = new Map<string, Map<string, Map<string, Cel>>>();
@@ -265,6 +283,32 @@ export default function Overzicht() {
     }
     return m;
   }, [cellen, weekById, activiteitById, visibleWeekNrSet]);
+
+  // project_id → Set<dayKey> of days where any assigned monteur on this project is double-booked
+  const projectConflictDayKeys = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const c of cellen) {
+      if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
+      const w = weekById.get(c.week_id);
+      if (!w) continue;
+      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      const act = activiteitById.get(c.activiteit_id);
+      if (!act?.project_id) continue;
+      const k = dayKey(w.week_nr, c.dag_index);
+      const conflictSet = dayConflictMonteurs.get(k);
+      if (!conflictSet || conflictSet.size === 0) continue;
+      const mids = monteurIdsByCel.get(c.id) ?? [];
+      const hasConflict = mids.some((mid) => conflictSet.has(mid));
+      if (!hasConflict) continue;
+      let s = m.get(act.project_id);
+      if (!s) {
+        s = new Set();
+        m.set(act.project_id, s);
+      }
+      s.add(k);
+    }
+    return m;
+  }, [cellen, weekById, activiteitById, visibleWeekNrSet, dayConflictMonteurs, monteurIdsByCel]);
 
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
@@ -978,6 +1022,18 @@ export default function Overzicht() {
               const sc = statusColor(p.status);
               const segs = projectSegments(p.id);
               const acts = activiteitenByProject.get(p.id) ?? [];
+              const conflictKeys = projectConflictDayKeys.get(p.id);
+              const conflictSlots: number[] = [];
+              if (conflictKeys && conflictKeys.size > 0) {
+                for (let wi = 0; wi < visibleWeekNrs.length; wi++) {
+                  const wnr = visibleWeekNrs[wi];
+                  for (let d = 0; d < DAYS_PER_WEEK; d++) {
+                    if (conflictKeys.has(dayKey(wnr, d))) {
+                      conflictSlots.push(wi * DAYS_PER_WEEK + d);
+                    }
+                  }
+                }
+              }
               return (
                 <div key={p.id}>
                   {/* Project bar row */}
@@ -994,6 +1050,9 @@ export default function Overzicht() {
                     {segs.map((s, i) => {
                       const left = s.startSlot * CELL_W + 2;
                       const width = (s.endSlot - s.startSlot + 1) * CELL_W - 4;
+                      const segHasConflict =
+                        !!conflictKeys &&
+                        conflictSlots.some((sl) => sl >= s.startSlot && sl <= s.endSlot);
                       return (
                         <div
                           key={i}
@@ -1003,20 +1062,57 @@ export default function Overzicht() {
                             width,
                             top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
                             height: PILL_H_PROJECT,
-                            background: sc.bg,
-                            opacity: 0.8,
+                            background: segHasConflict ? "#ef4444" : sc.bg,
+                            opacity: segHasConflict ? 0.95 : 0.8,
                             borderRadius: 4,
-                            color: sc.text,
+                            color: segHasConflict ? "#ffffff" : sc.text,
                             fontSize: 10,
                             fontWeight: 700,
                             overflow: "hidden",
                             whiteSpace: "nowrap",
+                            boxShadow: segHasConflict
+                              ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
+                              : undefined,
                           }}
+                          title={segHasConflict ? "Conflict: monteur is dubbel ingepland" : undefined}
                         >
+                          {segHasConflict && (
+                            <span
+                              className="mr-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
+                              style={{ background: "rgba(0,0,0,0.25)", fontSize: 9 }}
+                            >
+                              !
+                            </span>
+                          )}
                           {width > 80 && (p.case_nummer ?? "")}
                         </div>
                       );
                     })}
+                    {/* Conflict markers for slots not covered by any status bar */}
+                    {conflictSlots
+                      .filter((sl) => !segs.some((s) => sl >= s.startSlot && sl <= s.endSlot))
+                      .map((sl) => (
+                        <div
+                          key={`cf-${sl}`}
+                          className="absolute flex items-center justify-center"
+                          style={{
+                            left: sl * CELL_W + 2,
+                            width: CELL_W - 4,
+                            top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
+                            height: PILL_H_PROJECT,
+                            background: "#ef4444",
+                            opacity: 0.95,
+                            borderRadius: 4,
+                            color: "#ffffff",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
+                          }}
+                          title="Conflict: monteur is dubbel ingepland"
+                        >
+                          !
+                        </div>
+                      ))}
                   </div>
 
                   {/* Activiteit cell rows */}
@@ -1028,6 +1124,7 @@ export default function Overzicht() {
                         cellMap={projectDayActivities.get(p.id)}
                         monteurIdsByCel={monteurIdsByCel}
                         monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
+                        dayConflictMonteurs={dayConflictMonteurs}
                         visibleWeekNrs={visibleWeekNrs}
                         jaar={jaar}
                         currentISO={currentISO}
@@ -1245,6 +1342,7 @@ function ActiviteitCellsRow({
   cellMap,
   monteurIdsByCel,
   monteurById,
+  dayConflictMonteurs,
   visibleWeekNrs,
   jaar,
   currentISO,
@@ -1257,6 +1355,7 @@ function ActiviteitCellsRow({
   cellMap: Map<string, Map<string, Cel>> | undefined;
   monteurIdsByCel: Map<string, string[]>;
   monteurById: Map<string, Monteur>;
+  dayConflictMonteurs: Map<string, Set<string>>;
   visibleWeekNrs: number[];
   jaar: number;
   currentISO: { week: number; year: number };
@@ -1288,6 +1387,12 @@ function ActiviteitCellsRow({
               const colorHex = kleur ? colorHexFor(kleur) : null;
               const monteurIds = cel ? monteurIdsByCel.get(cel.id) ?? [] : [];
               const todayBg = isTodayCol(wnr, d) && !colorHex ? "rgba(63,255,139,0.03)" : undefined;
+              const conflictSet = dayConflictMonteurs.get(dayKey(wnr, d));
+              const hasConflict =
+                !!cel && !!conflictSet && monteurIds.some((mid) => conflictSet.has(mid));
+              const conflictMids = hasConflict
+                ? monteurIds.filter((mid) => conflictSet!.has(mid))
+                : [];
               return (
                 <div
                   key={d}
@@ -1298,10 +1403,42 @@ function ActiviteitCellsRow({
                     borderRight: isLastDay
                       ? "1px solid rgba(255,255,255,0.1)"
                       : "1px solid rgba(255,255,255,0.04)",
-                    background: colorHex ? hexToRgba(colorHex, 0.45) : todayBg,
-                    borderLeft: colorHex ? `2px solid ${colorHex}` : undefined,
+                    background: hasConflict
+                      ? "rgba(239,68,68,0.18)"
+                      : colorHex
+                      ? hexToRgba(colorHex, 0.45)
+                      : todayBg,
+                    borderLeft: hasConflict
+                      ? "2px solid #ef4444"
+                      : colorHex
+                      ? `2px solid ${colorHex}`
+                      : undefined,
+                    boxShadow: hasConflict
+                      ? "inset 0 0 0 1px rgba(239,68,68,0.55)"
+                      : undefined,
                   }}
+                  title={
+                    hasConflict
+                      ? `Conflict: ${conflictMids
+                          .map((mid) => monteurById.get(mid)?.naam ?? "?")
+                          .join(", ")} dubbel ingepland`
+                      : undefined
+                  }
                 >
+                  {hasConflict && (
+                    <div
+                      className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
+                      style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        fontSize: 8,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                      }}
+                    >
+                      !
+                    </div>
+                  )}
                   {monteurIds.length > 0 && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="flex">
