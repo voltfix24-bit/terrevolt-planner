@@ -1657,13 +1657,19 @@ function MonteurSidebarRow({
       }}
     >
       <div
-        className="flex shrink-0 items-center justify-center rounded-full"
+        className="flex shrink-0 items-center justify-center"
         title={collapsed ? undefined : monteur.naam}
         style={{
-          width: 26, height: 26,
-          background: isSchakel ? "#feb300" : "#378add",
-          color: isSchakel ? "#0a1a30" : "#ffffff",
-          fontSize: 9, fontWeight: 700,
+          width: 28,
+          height: 28,
+          borderRadius: 8,
+          background: isSchakel ? "rgba(251,191,36,0.1)" : "rgba(59,130,246,0.1)",
+          color: isSchakel ? "#feb300" : "#378add",
+          border: isSchakel
+            ? "1px solid rgba(251,191,36,0.2)"
+            : "1px solid rgba(59,130,246,0.2)",
+          fontSize: 9,
+          fontWeight: 900,
         }}
       >
         {initialen(monteur.naam)}
