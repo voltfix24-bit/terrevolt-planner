@@ -1244,21 +1244,21 @@ const Plannen = () => {
         </div>
       </div>
 
-      {/* Ingeplande monteurs balk */}
+      {/* Ingeplande monteurs balk — compacte horizontale balk */}
       <div
         style={{
-          marginTop: "16px",
-          padding: "12px 20px",
-          background: "rgba(10, 26, 48, 0.7)",
+          marginTop: 8,
+          padding: "10px 16px",
+          background: "rgba(10, 26, 48, 0.6)",
           border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "12px",
+          borderRadius: 12,
           display: "flex",
           alignItems: "center",
-          gap: "16px",
+          gap: 12,
           flexWrap: "wrap",
         }}
       >
-        {/* Left side: label + count */}
+        {/* Left: label + count */}
         <div className="flex items-center gap-2 shrink-0">
           <span
             className="font-display"
@@ -1272,211 +1272,112 @@ const Plannen = () => {
           >
             Ingeplande monteurs
           </span>
-          {ingeplandeMonteurs.length > 0 && (
-            <span
-              className="rounded-full px-2 py-0.5 font-display"
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                backgroundColor: "rgba(63,255,139,0.15)",
-                color: "#3fff8b",
-              }}
-            >
-              {ingeplandeMonteurs.length}
-            </span>
-          )}
-        </div>
-
-        {/* Scope toggle: zichtbare weken vs hele project */}
-        <div
-          className="flex items-center gap-0.5 rounded-md border border-white/15 p-0.5 shrink-0"
-          title={
-            monteursFilter.weekId
-              ? "Een week-filter is actief — scope wordt overschreven"
-              : "Bepaalt of alleen de zichtbare weken of het hele project geteld worden"
-          }
-          style={{ opacity: monteursFilter.weekId ? 0.5 : 1 }}
-        >
-          <button
-            type="button"
-            onClick={() => setMonteursScope("visible")}
-            disabled={monteursFilter.weekId !== null}
-            className={`h-6 px-2 rounded text-[10px] font-display font-bold transition-colors ${
-              monteursScope === "visible"
-                ? "bg-white/10 text-foreground"
-                : "text-muted-foreground hover:bg-white/[0.06]"
-            } disabled:cursor-not-allowed`}
+          <span
+            className="font-display"
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: "1px 8px",
+              borderRadius: 999,
+              backgroundColor: "rgba(63,255,139,0.15)",
+              color: "#3fff8b",
+            }}
           >
-            ZICHTBAAR
-          </button>
-          <button
-            type="button"
-            onClick={() => setMonteursScope("all")}
-            disabled={monteursFilter.weekId !== null}
-            className={`h-6 px-2 rounded text-[10px] font-display font-bold transition-colors ${
-              monteursScope === "all"
-                ? "bg-white/10 text-foreground"
-                : "text-muted-foreground hover:bg-white/[0.06]"
-            } disabled:cursor-not-allowed`}
-          >
-            HELE PROJECT
-          </button>
+            {ingeplandeMonteurs.length}
+          </span>
         </div>
 
-        {/* Filter controls: week dropdown + dag knoppen + clear */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Week filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center gap-1.5 rounded-md border border-white/15 bg-transparent px-2.5 h-7 text-[11px] font-display font-semibold text-foreground hover:bg-white/[0.06]"
-                title="Filter op week"
-              >
-                <CalendarDays className="h-3 w-3" />
-                {monteursFilter.weekId
-                  ? `Week ${weken.find((w) => w.id === monteursFilter.weekId)?.week_nr ?? "?"}`
-                  : "Alle weken"}
-                <ChevronDown className="h-3 w-3 opacity-70" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="border-white/10 bg-[#0a1a30] text-foreground max-h-72 overflow-y-auto"
-            >
-              <DropdownMenuItem
-                onSelect={() => setMonteursFilter((p) => ({ ...p, weekId: null }))}
-                className="text-[12px]"
-              >
-                Alle weken
-              </DropdownMenuItem>
-              {weken.map((w) => (
-                <DropdownMenuItem
-                  key={w.id}
-                  onSelect={() => setMonteursFilter((p) => ({ ...p, weekId: w.id }))}
-                  className="text-[12px]"
-                >
-                  Week {w.week_nr}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Divider */}
+        <span
+          aria-hidden
+          style={{
+            width: 1,
+            height: 20,
+            backgroundColor: "rgba(255,255,255,0.08)",
+            marginLeft: 4,
+            marginRight: 4,
+            display: "inline-block",
+          }}
+        />
 
-          {/* Dag filter */}
-          <div className="flex items-center gap-0.5 rounded-md border border-white/15 p-0.5">
-            <button
-              type="button"
-              onClick={() => setMonteursFilter((p) => ({ ...p, dagIndex: null }))}
-              className={`h-6 px-2 rounded text-[10px] font-display font-bold ${
-                monteursFilter.dagIndex === null
-                  ? "bg-white/10 text-foreground"
-                  : "text-muted-foreground hover:bg-white/[0.06]"
-              }`}
-              title="Alle dagen"
-            >
-              ALLE
-            </button>
-            {DAG_LABELS.map((d, i) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setMonteursFilter((p) => ({ ...p, dagIndex: i }))}
-                className={`h-6 w-7 rounded text-[10px] font-display font-bold ${
-                  monteursFilter.dagIndex === i
-                    ? "bg-white/10 text-foreground"
-                    : "text-muted-foreground hover:bg-white/[0.06]"
-                }`}
-                title={DAG_NAMEN_KORT[i]}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
-
-          {/* Clear filter (alleen tonen als er een filter actief is) */}
-          {(monteursFilter.weekId !== null || monteursFilter.dagIndex !== null) && (
-            <button
-              type="button"
-              onClick={() => setMonteursFilter({ weekId: null, dagIndex: null })}
-              className="flex items-center gap-1 rounded-md border border-white/15 bg-transparent px-2 h-7 text-[10px] font-display font-semibold text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
-              title="Filter wissen"
-            >
-              <X className="h-3 w-3" />
-              Wissen
-            </button>
-          )}
-        </div>
-
-        {/* Monteur chips */}
+        {/* Monteur chips of empty state */}
         {ingeplandeMonteurs.length === 0 ? (
-          <span className="text-[12px] text-muted-foreground">
-            {monteursFilter.weekId !== null || monteursFilter.dagIndex !== null
-              ? "Geen monteurs ingepland in deze selectie"
-              : monteursScope === "visible"
-              ? "Geen monteurs ingepland in de zichtbare weken"
-              : "Nog geen monteurs ingepland"}
+          <span
+            className="text-muted-foreground"
+            style={{ fontSize: 12, fontStyle: "italic" }}
+          >
+            Nog geen monteurs ingepland
           </span>
         ) : (
-          <div className="flex flex-1 flex-wrap items-center" style={{ gap: 12 }}>
-            {ingeplandeMonteurs.map((m) => {
-              const isActive = highlightedMonteurId === m.id;
-              const accentColor = m.type === "schakelmonteur" ? "#feb300" : "#378add";
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() =>
-                    setHighlightedMonteurId((prev) => (prev === m.id ? null : m.id))
-                  }
-                  className="flex items-center transition-all"
-                  title={
-                    isActive
-                      ? "Klik om highlight uit te zetten"
-                      : `Highlight alle cellen van ${m.naam}`
-                  }
+          ingeplandeMonteurs.map((m) => {
+            const isSchakel = m.type === "schakelmonteur";
+            const avatarBg = isSchakel ? "#feb300" : "#378add";
+            const avatarColor = isSchakel ? "#0a1a30" : "#ffffff";
+            const ms = m.aanwijzing_ms;
+            let msStyle: React.CSSProperties | null = null;
+            if (ms === "AVP") msStyle = { backgroundColor: "#3fff8b", color: "#0a1a30" };
+            else if (ms === "VP") msStyle = { backgroundColor: "#7cc1ff", color: "#0a1a30" };
+            else if (ms === "VOP")
+              msStyle = { backgroundColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" };
+            return (
+              <div
+                key={m.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 8,
+                  padding: "4px 10px 4px 4px",
+                  cursor: "default",
+                }}
+              >
+                <span
+                  className="font-display"
                   style={{
-                    gap: 8,
-                    background: isActive
-                      ? `${accentColor}26` // ~15% alpha hex
-                      : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${
-                      isActive ? accentColor : "rgba(255,255,255,0.08)"
-                    }`,
-                    borderRadius: 8,
-                    padding: "4px 10px 4px 6px",
-                    boxShadow: isActive ? `0 0 0 2px ${accentColor}40` : undefined,
-                    cursor: "pointer",
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: avatarBg,
+                    color: avatarColor,
+                    fontSize: 8,
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <MonteurAvatar
-                    naam={m.naam}
-                    type={m.type}
-                    size={28}
-                    fontSize={9}
-                    borderWidth={2}
-                    borderColor="rgba(0,0,0,0.4)"
-                  />
+                  {initialen(m.naam)}
+                </span>
+                <span
+                  className="font-display"
+                  style={{ fontSize: 12, fontWeight: 600, color: "#ffffff" }}
+                >
+                  {m.naam}
+                </span>
+                {ms && msStyle && (
                   <span
                     className="font-display"
-                    style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      ...msStyle,
+                    }}
                   >
-                    {m.naam}
+                    {ms}
                   </span>
-                  {m.aanwijzing_ms && (
-                    <span
-                      className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                      style={aanwijzingPillStyle(m.aanwijzing_ms)}
-                    >
-                      MS {m.aanwijzing_ms}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                )}
+              </div>
+            );
+          })
         )}
 
-        {/* Right end: legend pills with divider */}
-        <div className="ml-auto flex items-center gap-3 shrink-0">
+        {/* Right: legend */}
+        <div className="ml-auto flex items-center" style={{ gap: 12 }}>
           <span
             aria-hidden
             style={{
@@ -1486,17 +1387,33 @@ const Plannen = () => {
               display: "inline-block",
             }}
           />
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span
+            className="text-muted-foreground"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10 }}
+          >
             <span
-              className="inline-block rounded-full"
-              style={{ width: 8, height: 8, backgroundColor: "#feb300" }}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                backgroundColor: "#feb300",
+                display: "inline-block",
+              }}
             />
             Schakel
           </span>
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <span
+            className="text-muted-foreground"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10 }}
+          >
             <span
-              className="inline-block rounded-full"
-              style={{ width: 8, height: 8, backgroundColor: "#378add" }}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                backgroundColor: "#378add",
+                display: "inline-block",
+              }}
             />
             Montage
           </span>
