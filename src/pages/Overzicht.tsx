@@ -1614,25 +1614,45 @@ export default function Overzicht() {
                     >
                       <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} />
                       {segs.map((s, i) => {
-                        const left = s.startSlot * cellW + 2;
-                        const width = (s.endSlot - s.startSlot + 1) * cellW - 4;
+                        const isJaar = scale === "jaar";
+                        // Jaar: pill spans the full month column(s); other
+                        // scales keep the original 2px inset.
+                        const left = s.startSlot * cellW + (isJaar ? 3 : 2);
+                        const width =
+                          (s.endSlot - s.startSlot + 1) * cellW -
+                          (isJaar ? 6 : 4);
                         const segHasConflict =
                           !!conflictSet &&
                           [...Array(s.endSlot - s.startSlot + 1)].some((_, off) =>
                             conflictSet.has(s.startSlot + off),
                           );
+                        const pillTop = isJaar
+                          ? 11
+                          : (ROW_H_PROJECT - PILL_H_PROJECT) / 2;
+                        const pillHeight = isJaar
+                          ? ROW_H_PROJECT - 22
+                          : PILL_H_PROJECT;
+                        const pillBg = segHasConflict
+                          ? "#ef4444"
+                          : isJaar
+                            ? "rgba(254,179,0,0.8)"
+                            : sc.bg;
                         return (
                           <div
                             key={i}
                             className="absolute flex items-center justify-center px-2"
                             style={{
                               left, width,
-                              top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
-                              height: PILL_H_PROJECT,
-                              background: segHasConflict ? "#ef4444" : sc.bg,
-                              opacity: segHasConflict ? 0.95 : 0.8,
+                              top: pillTop,
+                              height: pillHeight,
+                              background: pillBg,
+                              opacity: segHasConflict ? 0.95 : isJaar ? 1 : 0.8,
                               borderRadius: 4,
-                              color: segHasConflict ? "#ffffff" : sc.text,
+                              color: segHasConflict
+                                ? "#ffffff"
+                                : isJaar
+                                  ? "#0a1a30"
+                                  : sc.text,
                               fontSize: 10, fontWeight: 700,
                               overflow: "hidden", whiteSpace: "nowrap",
                               boxShadow: segHasConflict
@@ -1649,7 +1669,7 @@ export default function Overzicht() {
                                 !
                               </span>
                             )}
-                            {width > 80 && (p.case_nummer ?? "")}
+                            {width > (isJaar ? 50 : 80) && (p.case_nummer ?? "")}
                           </div>
                         );
                       })}
