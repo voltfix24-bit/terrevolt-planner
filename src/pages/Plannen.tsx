@@ -1491,16 +1491,12 @@ const CelModal = ({
                       key={m.id}
                       className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
                     >
-                      <div
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-display font-bold"
-                        style={{
-                          backgroundColor:
-                            m.type === "schakelmonteur" ? "#feb300" : "#378add",
-                          color: "#0a1a30",
-                        }}
-                      >
-                        {initialen(m.naam)}
-                      </div>
+                      <MonteurAvatar
+                        naam={m.naam}
+                        type={m.type}
+                        size={32}
+                        fontSize={11}
+                      />
                       <div className="flex-1 font-display text-sm font-semibold text-foreground">
                         {m.naam}
                       </div>
