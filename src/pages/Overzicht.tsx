@@ -283,7 +283,7 @@ export default function Overzicht() {
   // slot index = visibleWeekIndex * 5 + dag
   const projectSpanByProject = useMemo(() => {
     const result = new Map<string, { first: number; last: number } | null>();
-    for (const p of projecten) {
+    for (const p of visibleProjecten) {
       const projWeken = wekenByProject.get(p.id) ?? [];
       const projActs = activiteitenByProject.get(p.id) ?? [];
       let first = Infinity;
@@ -307,12 +307,12 @@ export default function Overzicht() {
       result.set(p.id, first === Infinity ? null : { first, last });
     }
     return result;
-  }, [projecten, wekenByProject, activiteitenByProject, visibleWeekNrs, celByKey]);
+  }, [visibleProjecten, wekenByProject, activiteitenByProject, visibleWeekNrs, celByKey]);
 
   // For empty projects: thin dashed bar across project_weken visible range
   const projectVisibleWeekRangeByProject = useMemo(() => {
     const result = new Map<string, { first: number; last: number } | null>();
-    for (const p of projecten) {
+    for (const p of visibleProjecten) {
       const projWeken = wekenByProject.get(p.id) ?? [];
       let first = Infinity;
       let last = -Infinity;
@@ -328,7 +328,7 @@ export default function Overzicht() {
       result.set(p.id, first === Infinity ? null : { first, last });
     }
     return result;
-  }, [projecten, wekenByProject, visibleWeekNrs]);
+  }, [visibleProjecten, wekenByProject, visibleWeekNrs]);
 
   // ====== Handlers ======
   const toggleExpand = (id: string) => {
