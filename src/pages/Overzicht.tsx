@@ -1439,12 +1439,13 @@ export default function Overzicht() {
             </div>
           </div>
 
-          {/* ====== Single scrollable right area ====== */}
-          <div className="overzicht-scroll" style={{ flex: 1, overflowX: "auto" }}>
-            {/* Shared header */}
-            <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
-              {renderHeader()}
-            </div>
+          {/* ====== Single horizontally-scrollable right area (synced with header) ====== */}
+          <div
+            ref={bodyScrollRef}
+            className="overzicht-scroll"
+            style={{ flex: 1, overflowX: "auto" }}
+            onScroll={(e) => syncScroll("body", e.currentTarget.scrollLeft)}
+          >
 
             {/* Medewerkers toggle row spacer (matches sidebar 32px) */}
             <div
