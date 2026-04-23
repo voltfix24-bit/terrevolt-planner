@@ -1820,6 +1820,10 @@ const CellBox = memo(function CellBox({
     hoverTitle = kleurNaam;
   } else if (namen) {
     hoverTitle = namen;
+  } else if (isCurrentWeek && !cel?.kleur_code && currentWeekTooltip) {
+    // Lege cel in de huidige (groen getinte) week: leg uit waarom de tint er is
+    // en toon wat er deze week wel gepland staat.
+    hoverTitle = currentWeekTooltip;
   }
 
   const visibleAvatars = assignedMonteurs.slice(0, 2);
