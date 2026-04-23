@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/hover-card";
 
 // ============== Constants ==============
-const SIDEBAR_W = 230;
+const SIDEBAR_W = 260;
 const SIDEBAR_W_COLLAPSED = 48;
 const ROW_H_MONTEUR = 44;
 const ROW_H_PROJECT = 44;
@@ -901,6 +901,17 @@ export default function Overzicht() {
 
   return (
     <div className="font-sans">
+      <style>{`
+        .overzicht-scroll::-webkit-scrollbar { height: 4px; width: 4px; }
+        .overzicht-scroll::-webkit-scrollbar-track { background: transparent; }
+        .overzicht-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.1);
+          border-radius: 10px;
+        }
+        .overzicht-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(63,255,139,0.3);
+        }
+      `}</style>
       {/* Page header */}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
@@ -1191,7 +1202,7 @@ export default function Overzicht() {
               {!sidebarCollapsed && (
                 <>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Project / Taak
+                    Projecten
                   </span>
                   <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
                     {visibleProjecten.length}
@@ -1274,18 +1285,36 @@ export default function Overzicht() {
                               }}
                             />
                           </button>
-                          <span
-                            className="font-display text-[13px] font-bold tabular-nums"
-                            style={{ color: "#3fff8b" }}
-                          >
-                            {p.case_nummer ?? "—"}
-                          </span>
-                          <span
-                            className="truncate text-[11px] text-foreground/80"
-                            title={p.station_naam ?? ""}
-                          >
-                            {p.station_naam ? `— ${p.station_naam}` : ""}
-                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: "#3fff8b",
+                                letterSpacing: "0.15em",
+                                textTransform: "uppercase",
+                                marginBottom: 2,
+                                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                              }}
+                            >
+                              {p.case_nummer ?? "—"}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "white",
+                                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                maxWidth: 160,
+                              }}
+                              title={p.station_naam ?? ""}
+                            >
+                              {p.station_naam ?? ""}
+                            </p>
+                          </div>
                           <span
                             className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
                             style={{ background: sc.bg, color: sc.text }}
@@ -1355,7 +1384,7 @@ export default function Overzicht() {
           </div>
 
           {/* ====== Single scrollable right area ====== */}
-          <div style={{ flex: 1, overflowX: "auto" }}>
+          <div className="overzicht-scroll" style={{ flex: 1, overflowX: "auto" }}>
             {/* Shared header */}
             <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
               {renderHeader()}
@@ -1517,11 +1546,14 @@ export default function Overzicht() {
                         const pillHeight = isJaar
                           ? ROW_H_PROJECT - 22
                           : PILL_H_PROJECT;
+                        const isConcept = p.status === "concept" && !segHasConflict;
                         const pillBg = segHasConflict
                           ? "#ef4444"
-                          : isJaar
-                            ? "rgba(254,179,0,0.8)"
-                            : sc.bg;
+                          : isConcept
+                            ? "transparent"
+                            : isJaar
+                              ? "rgba(254,179,0,0.8)"
+                              : sc.bg;
                         return (
                           <div
                             key={i}
@@ -1531,14 +1563,20 @@ export default function Overzicht() {
                               top: pillTop,
                               height: pillHeight,
                               background: pillBg,
-                              opacity: segHasConflict ? 0.95 : isJaar ? 1 : 0.8,
+                              opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.8,
                               borderRadius: 4,
+                              border: isConcept ? "2px dashed rgba(255,255,255,0.15)" : undefined,
                               color: segHasConflict
                                 ? "#ffffff"
-                                : isJaar
-                                  ? "#0a1a30"
-                                  : sc.text,
-                              fontSize: 10, fontWeight: 700,
+                                : isConcept
+                                  ? "rgba(255,255,255,0.4)"
+                                  : isJaar
+                                    ? "#0a1a30"
+                                    : sc.text,
+                              fontSize: isConcept ? 9 : 10,
+                              fontWeight: 700,
+                              letterSpacing: isConcept ? "0.1em" : undefined,
+                              textTransform: isConcept ? "uppercase" : undefined,
                               overflow: "hidden", whiteSpace: "nowrap",
                               boxShadow: segHasConflict
                                 ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
@@ -1554,7 +1592,9 @@ export default function Overzicht() {
                                 !
                               </span>
                             )}
-                            {width > (isJaar ? 50 : 80) && (p.case_nummer ?? "")}
+                            {isConcept
+                              ? (width > 60 ? "CONCEPT" : "")
+                              : (width > (isJaar ? 50 : 80) && (p.case_nummer ?? ""))}
                           </div>
                         );
                       })}
@@ -1639,13 +1679,19 @@ function MonteurSidebarRow({
       }}
     >
       <div
-        className="flex shrink-0 items-center justify-center rounded-full"
+        className="flex shrink-0 items-center justify-center"
         title={collapsed ? undefined : monteur.naam}
         style={{
-          width: 26, height: 26,
-          background: isSchakel ? "#feb300" : "#378add",
-          color: isSchakel ? "#0a1a30" : "#ffffff",
-          fontSize: 9, fontWeight: 700,
+          width: 28,
+          height: 28,
+          borderRadius: 8,
+          background: isSchakel ? "rgba(251,191,36,0.1)" : "rgba(59,130,246,0.1)",
+          color: isSchakel ? "#feb300" : "#378add",
+          border: isSchakel
+            ? "1px solid rgba(251,191,36,0.2)"
+            : "1px solid rgba(59,130,246,0.2)",
+          fontSize: 9,
+          fontWeight: 900,
         }}
       >
         {initialen(monteur.naam)}
@@ -1984,7 +2030,7 @@ function ActiviteitCellsRow({
                           background: isS ? "#feb300" : "#378add",
                           color: isS ? "#0a1a30" : "#fff",
                           fontSize: 6, fontWeight: 700,
-                          border: "1.5px solid rgba(0,0,0,0.4)",
+                          border: "1px solid rgba(10,26,48,0.5)",
                           marginLeft: idx === 0 ? 0 : -4,
                         }}
                         title={m.naam}
@@ -1993,6 +2039,22 @@ function ActiviteitCellsRow({
                       </div>
                     );
                   })}
+                  {monteurIds.length > 2 && (
+                    <div
+                      className="flex items-center justify-center rounded-full"
+                      style={{
+                        width: 16, height: 16,
+                        background: "rgba(255,255,255,0.2)",
+                        color: "#fff",
+                        fontSize: 6, fontWeight: 700,
+                        border: "1px solid rgba(10,26,48,0.5)",
+                        marginLeft: -4,
+                      }}
+                      title={`+${monteurIds.length - 2} meer`}
+                    >
+                      +{monteurIds.length - 2}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
