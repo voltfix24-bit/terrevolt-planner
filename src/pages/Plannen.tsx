@@ -763,10 +763,15 @@ const Plannen = () => {
   }, [monteurs]);
 
   // Unique monteurs that are actually scheduled in any cell of this project,
-  // sorted: schakelmonteurs (amber) first, then montagemonteurs (blue), then by name.
+  // gefilterd op de geselecteerde week en/of dag (monteursFilter).
+  // Sortering: schakelmonteurs (amber) eerst, dan montagemonteurs (blue), daarna op naam.
   const ingeplandeMonteurs = useMemo(() => {
     const ids = new Set<string>();
-    for (const monteurIds of celMonteurs.values()) {
+    for (const cel of cellen.values()) {
+      if (monteursFilter.weekId && cel.week_id !== monteursFilter.weekId) continue;
+      if (monteursFilter.dagIndex !== null && cel.dag_index !== monteursFilter.dagIndex) continue;
+      const monteurIds = celMonteurs.get(cel.id);
+      if (!monteurIds) continue;
       for (const id of monteurIds) ids.add(id);
     }
     const list: Monteur[] = [];
@@ -779,7 +784,14 @@ const Plannen = () => {
       return a.naam.localeCompare(b.naam, "nl");
     });
     return list;
-  }, [celMonteurs, monteurById]);
+  }, [cellen, celMonteurs, monteurById, monteursFilter]);
+
+  // Reset filter wanneer de geselecteerde week niet meer bestaat (bv. na week verwijderen)
+  useEffect(() => {
+    if (monteursFilter.weekId && !weken.some((w) => w.id === monteursFilter.weekId)) {
+      setMonteursFilter((p) => ({ ...p, weekId: null }));
+    }
+  }, [weken, monteursFilter.weekId]);
 
   const openCel = useMemo(() => {
     if (!openCellKey) return null;
