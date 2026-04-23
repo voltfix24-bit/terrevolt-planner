@@ -247,6 +247,10 @@ const Projecten = () => {
     setWerkplanMsr(!!p.werkplan_msr);
     setWerkplanLsr(!!p.werkplan_lsr);
     setNotities(p.notities ?? "");
+    setStraat(p.straat ?? "");
+    setPostcode(p.postcode ?? "");
+    setStad(p.stad ?? "");
+    setGemeente(p.gemeente ?? "");
     setModalOpen(true);
   };
 
