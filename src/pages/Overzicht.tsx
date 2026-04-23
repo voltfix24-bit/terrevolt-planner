@@ -1191,7 +1191,7 @@ export default function Overzicht() {
               {!sidebarCollapsed && (
                 <>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Project / Taak
+                    Projecten
                   </span>
                   <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
                     {visibleProjecten.length}
