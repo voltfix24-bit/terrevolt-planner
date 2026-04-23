@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
@@ -23,8 +23,8 @@ const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
 const DAYS_PER_WEEK = 5;
-const PILL_H_MONTEUR = 28;
-const PILL_H_PROJECT = 24;
+const PILL_H_MONTEUR = 26;
+const PILL_H_PROJECT = 22;
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 type NumWeeks = 2 | 4 | 8;
@@ -807,11 +807,13 @@ export default function Overzicht() {
                       }}
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
                     >
-                      {expanded ? (
-                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                      )}
+                      <ChevronRight
+                        className="h-3 w-3 text-muted-foreground"
+                        style={{
+                          transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 0.2s ease",
+                        }}
+                      />
                     </button>
                     <span
                       className="font-display text-[13px] font-bold tabular-nums"
