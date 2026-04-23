@@ -1648,7 +1648,11 @@ const CellBox = memo(function CellBox({
       style={{
         width: CELL_W,
         height: CELL_H,
-        backgroundColor: filled ? hexToRgba(kleur!, 0.35) : "transparent",
+        backgroundColor: filled
+          ? hexToRgba(kleur!, 0.35)
+          : isCurrentWeek
+          ? "rgba(63,255,139,0.02)"
+          : "transparent",
         borderTop: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
         borderRight: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
         borderBottom: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
