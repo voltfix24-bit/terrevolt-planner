@@ -1377,4 +1377,790 @@ const ConflictBlock = memo(function ConflictBlock({
   );
 });
 
+// ===================== Beschikbaarheid =====================
+
+const BeschikbaarheidView = ({
+  monteurs,
+  onMonteurUpdate,
+}: {
+  monteurs: Monteur[];
+  onMonteurUpdate: (id: string, patch: Partial<Monteur>) => void;
+}) => {
+  return (
+    <div className="space-y-6">
+      <FeestdagenSection />
+      <MonteurBeschikbaarheidSection monteurs={monteurs} onMonteurUpdate={onMonteurUpdate} />
+    </div>
+  );
+};
+
+// ----- Feestdagen -----
+
+const JAREN = [2025, 2026, 2027] as const;
+
+const FeestdagenSection = () => {
+  const [jaar, setJaar] = useState<number>(new Date().getFullYear());
+  const [items, setItems] = useState<Feestdag[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirmDel, setConfirmDel] = useState<Feestdag | null>(null);
+
+  const [datum, setDatum] = useState("");
+  const [naam, setNaam] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await sb
+      .from("feestdagen")
+      .select("*")
+      .eq("jaar", jaar)
+      .order("datum", { ascending: true });
+    if (error) {
+      toast.error("Kon feestdagen niet laden");
+    } else {
+      setItems((data ?? []) as Feestdag[]);
+    }
+    setLoading(false);
+  }, [jaar]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const openNew = () => {
+    setDatum(`${jaar}-01-01`);
+    setNaam("");
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!datum || !naam.trim()) {
+      toast.error("Datum en naam zijn verplicht");
+      return;
+    }
+    const dJaar = new Date(datum).getFullYear();
+    setSaving(true);
+    const { data, error } = await sb
+      .from("feestdagen")
+      .insert({ datum, naam: naam.trim(), jaar: dJaar })
+      .select()
+      .single();
+    setSaving(false);
+    if (error || !data) {
+      toast.error("Opslaan mislukt — datum mogelijk al ingevoerd");
+      return;
+    }
+    if (dJaar === jaar) {
+      setItems((cur) => [...cur, data as Feestdag].sort((a, b) => a.datum.localeCompare(b.datum)));
+    }
+    toast.success("Feestdag opgeslagen");
+    setModalOpen(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDel) return;
+    const id = confirmDel.id;
+    const prev = items;
+    setItems(items.filter((x) => x.id !== id));
+    setConfirmDel(null);
+    const { error } = await sb.from("feestdagen").delete().eq("id", id);
+    if (error) {
+      setItems(prev);
+      toast.error("Verwijderen mislukt");
+    } else {
+      toast.success("Feestdag verwijderd");
+    }
+  };
+
+  return (
+    <div className="surface-card overflow-hidden">
+      <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-display text-base font-bold tracking-tight text-foreground">
+            Feestdagen
+          </h3>
+          <select
+            value={jaar}
+            onChange={(e) => setJaar(parseInt(e.target.value, 10))}
+            className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-display font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {JAREN.map((j) => (
+              <option key={j} value={j} className="bg-[#0a1a30]">
+                {j}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button
+          onClick={openNew}
+          size="sm"
+          className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.5} />
+          Feestdag toevoegen
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="px-6 py-12 text-center text-sm text-muted-foreground">Laden…</div>
+      ) : items.length === 0 ? (
+        <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+          Geen feestdagen voor {jaar}
+        </div>
+      ) : (
+        <ul className="divide-y divide-white/[0.06]">
+          {items.map((f) => (
+            <li
+              key={f.id}
+              className="group flex items-center justify-between px-6 py-3 transition-colors hover:bg-white/[0.03]"
+            >
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="min-w-[150px] font-display text-sm font-semibold text-foreground">
+                  {formatDatum(f.datum)}
+                </span>
+                <span className="truncate text-sm text-muted-foreground">{f.naam}</span>
+              </div>
+              <button
+                onClick={() => setConfirmDel(f)}
+                className="rounded-md p-2 text-muted-foreground opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                aria-label="Verwijderen"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Add modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent
+          className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
+          style={{
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px",
+            backdropFilter: "blur(18px)",
+          }}
+        >
+          <div className="flex items-start justify-between px-6 pt-6">
+            <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
+              Feestdag toevoegen
+            </h2>
+            <button
+              onClick={() => setModalOpen(false)}
+              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              Annuleren
+            </button>
+          </div>
+          <div className="space-y-5 px-6 py-6">
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Datum
+              </Label>
+              <Input
+                type="date"
+                value={datum}
+                onChange={(e) => setDatum(e.target.value)}
+                className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Naam
+              </Label>
+              <Input
+                value={naam}
+                onChange={(e) => setNaam(e.target.value)}
+                placeholder="Bijv. Koningsdag"
+                className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Jaar wordt automatisch bepaald uit de datum.
+            </div>
+          </div>
+          <div className="px-6 pb-6">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+            >
+              {saving ? "Bezig met opslaan…" : "Opslaan"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <Dialog open={!!confirmDel} onOpenChange={(o) => !o && setConfirmDel(null)}>
+        <DialogContent
+          className="max-w-sm gap-0 border-0 p-6 [&>button]:hidden"
+          style={{
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px",
+            backdropFilter: "blur(18px)",
+          }}
+        >
+          <h2 className="font-display text-lg font-bold text-foreground">
+            Feestdag verwijderen?
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {confirmDel ? `${formatDatum(confirmDel.datum)} — ${confirmDel.naam}` : ""}
+          </p>
+          <div className="mt-5 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDel(null)}
+              className="flex-1 border-white/10 bg-white/[0.04] text-foreground hover:bg-white/[0.08]"
+            >
+              Annuleren
+            </Button>
+            <Button
+              onClick={handleDelete}
+              className="flex-1 bg-red-500 text-white hover:bg-red-600"
+            >
+              Verwijderen
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ----- Monteur beschikbaarheid -----
+
+const MonteurBeschikbaarheidSection = ({
+  monteurs,
+  onMonteurUpdate,
+}: {
+  monteurs: Monteur[];
+  onMonteurUpdate: (id: string, patch: Partial<Monteur>) => void;
+}) => {
+  const [afwezigByMonteur, setAfwezigByMonteur] = useState<Record<string, Afwezigheid[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await sb
+      .from("monteur_afwezigheid")
+      .select("*")
+      .order("datum_van", { ascending: true });
+    if (error) {
+      toast.error("Kon afwezigheid niet laden");
+    } else {
+      const map: Record<string, Afwezigheid[]> = {};
+      ((data ?? []) as Afwezigheid[]).forEach((a) => {
+        if (!map[a.monteur_id]) map[a.monteur_id] = [];
+        map[a.monteur_id].push(a);
+      });
+      setAfwezigByMonteur(map);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const actieve = useMemo(
+    () =>
+      monteurs
+        .filter((m) => m.actief)
+        .sort((a, b) => a.naam.localeCompare(b.naam)),
+    [monteurs]
+  );
+
+  return (
+    <div className="surface-card overflow-hidden">
+      <div className="border-b border-white/10 px-6 py-4">
+        <h3 className="font-display text-base font-bold tracking-tight text-foreground">
+          Beschikbaarheid per monteur
+        </h3>
+      </div>
+      {loading ? (
+        <div className="px-6 py-12 text-center text-sm text-muted-foreground">Laden…</div>
+      ) : actieve.length === 0 ? (
+        <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+          Geen actieve monteurs
+        </div>
+      ) : (
+        <ul className="divide-y divide-white/[0.06]">
+          {actieve.map((m) => (
+            <MonteurCard
+              key={m.id}
+              monteur={m}
+              afwezigheden={afwezigByMonteur[m.id] ?? []}
+              expanded={!!expanded[m.id]}
+              onToggle={() => setExpanded((c) => ({ ...c, [m.id]: !c[m.id] }))}
+              onMonteurUpdate={onMonteurUpdate}
+              onAfwezigChange={reload}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const MonteurCard = ({
+  monteur,
+  afwezigheden,
+  expanded,
+  onToggle,
+  onMonteurUpdate,
+  onAfwezigChange,
+}: {
+  monteur: Monteur;
+  afwezigheden: Afwezigheid[];
+  expanded: boolean;
+  onToggle: () => void;
+  onMonteurUpdate: (id: string, patch: Partial<Monteur>) => void;
+  onAfwezigChange: () => void;
+}) => {
+  const werkdagen = useMemo<number[]>(
+    () => (monteur.werkdagen && monteur.werkdagen.length ? monteur.werkdagen : [1, 2, 3, 4, 5]),
+    [monteur.werkdagen]
+  );
+
+  const [flashDay, setFlashDay] = useState<number | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [confirmDel, setConfirmDel] = useState<Afwezigheid | null>(null);
+
+  const toggleDag = async (dag: number) => {
+    const next = werkdagen.includes(dag)
+      ? werkdagen.filter((d) => d !== dag)
+      : [...werkdagen, dag].sort();
+    const prev = werkdagen;
+    onMonteurUpdate(monteur.id, { werkdagen: next });
+    const { error } = await sb
+      .from("monteurs")
+      .update({ werkdagen: next })
+      .eq("id", monteur.id);
+    if (error) {
+      onMonteurUpdate(monteur.id, { werkdagen: prev });
+      toast.error("Wijzigen mislukt");
+    } else {
+      setFlashDay(dag);
+      setTimeout(() => setFlashDay((cur) => (cur === dag ? null : cur)), 600);
+    }
+  };
+
+  const handleDeleteAfw = async () => {
+    if (!confirmDel) return;
+    const { error } = await sb.from("monteur_afwezigheid").delete().eq("id", confirmDel.id);
+    setConfirmDel(null);
+    if (error) {
+      toast.error("Verwijderen mislukt");
+    } else {
+      toast.success("Afwezigheid verwijderd");
+      onAfwezigChange();
+    }
+  };
+
+  const initials = monteur.naam
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-white/[0.03]"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-xs font-bold"
+            style={typeStyle(monteur.type)}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <div className="font-display text-sm font-semibold text-foreground">
+              {monteur.naam}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5">
+              {WEEKDAG_NUMS.map((n, i) => {
+                const on = werkdagen.includes(n);
+                return (
+                  <span
+                    key={n}
+                    className="inline-flex h-4 min-w-[20px] items-center justify-center rounded text-[9px] font-display font-bold"
+                    style={
+                      on
+                        ? { backgroundColor: "rgba(63,255,139,0.85)", color: "#0a1a30" }
+                        : {
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "rgba(255,255,255,0.35)",
+                          }
+                    }
+                  >
+                    {WEEKDAG_LABELS[i]}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {afwezigheden.length > 0 && (
+            <span
+              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-display font-bold"
+              style={{ backgroundColor: "rgba(254,179,0,0.18)", color: "#feb300" }}
+            >
+              {afwezigheden.length} afwezig
+            </span>
+          )}
+          {expanded ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="space-y-6 border-t border-white/[0.06] bg-white/[0.015] px-6 py-5">
+          {/* Werkdagen */}
+          <div>
+            <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Vaste werkdagen
+            </Label>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {WEEKDAG_NUMS.map((n, i) => {
+                const on = werkdagen.includes(n);
+                const flashing = flashDay === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => toggleDag(n)}
+                    className="rounded-md px-4 py-1.5 text-xs font-display font-bold tracking-wide transition-all"
+                    style={
+                      on
+                        ? {
+                            backgroundColor: flashing
+                              ? "rgba(63,255,139,1)"
+                              : "rgba(63,255,139,0.85)",
+                            color: "#0a1a30",
+                            boxShadow: flashing
+                              ? "0 0 0 3px rgba(63,255,139,0.35)"
+                              : "none",
+                          }
+                        : {
+                            border: "1px solid rgba(255,255,255,0.14)",
+                            color: "rgba(255,255,255,0.55)",
+                            backgroundColor: "transparent",
+                          }
+                    }
+                  >
+                    {WEEKDAG_LABELS[i]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Afwezigheid */}
+          <div>
+            <div className="flex items-center justify-between">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Afwezigheid
+              </Label>
+              <Button
+                onClick={() => setAddOpen(true)}
+                size="sm"
+                variant="outline"
+                className="h-7 border-white/10 bg-white/[0.04] text-xs font-display font-semibold text-foreground hover:bg-white/[0.08]"
+              >
+                <Plus className="mr-1 h-3 w-3" strokeWidth={2.5} />
+                Toevoegen
+              </Button>
+            </div>
+            {afwezigheden.length === 0 ? (
+              <div className="mt-3 text-xs text-muted-foreground">
+                Geen afwezigheid ingevoerd
+              </div>
+            ) : (
+              <ul className="mt-3 space-y-1.5">
+                {afwezigheden.map((a) => {
+                  const def = AFWEZIGHEID_TYPES.find((t) => t.id === a.type);
+                  return (
+                    <li
+                      key={a.id}
+                      className="group flex items-center justify-between gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className="inline-flex shrink-0 items-center rounded px-2 py-0.5 text-[10px] font-display font-bold uppercase tracking-wider"
+                          style={{
+                            backgroundColor: def?.color ?? "#9ca3af",
+                            color: "#0a1a30",
+                          }}
+                        >
+                          {def?.label ?? a.type}
+                        </span>
+                        <span className="text-xs font-display font-semibold text-foreground">
+                          {formatRange(a.datum_van, a.datum_tot)}
+                        </span>
+                        {a.omschrijving && (
+                          <span className="truncate text-xs text-muted-foreground">
+                            {a.omschrijving}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setConfirmDel(a)}
+                        className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                        aria-label="Verwijderen"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      <AfwezigheidModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        monteur={monteur}
+        existing={afwezigheden}
+        onSaved={onAfwezigChange}
+      />
+
+      <Dialog open={!!confirmDel} onOpenChange={(o) => !o && setConfirmDel(null)}>
+        <DialogContent
+          className="max-w-sm gap-0 border-0 p-6 [&>button]:hidden"
+          style={{
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px",
+            backdropFilter: "blur(18px)",
+          }}
+        >
+          <h2 className="font-display text-lg font-bold text-foreground">
+            Afwezigheid verwijderen?
+          </h2>
+          {confirmDel && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {formatRange(confirmDel.datum_van, confirmDel.datum_tot)}
+            </p>
+          )}
+          <div className="mt-5 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDel(null)}
+              className="flex-1 border-white/10 bg-white/[0.04] text-foreground hover:bg-white/[0.08]"
+            >
+              Annuleren
+            </Button>
+            <Button
+              onClick={handleDeleteAfw}
+              className="flex-1 bg-red-500 text-white hover:bg-red-600"
+            >
+              Verwijderen
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </li>
+  );
+};
+
+const AfwezigheidModal = ({
+  open,
+  onOpenChange,
+  monteur,
+  existing,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  monteur: Monteur;
+  existing: Afwezigheid[];
+  onSaved: () => void;
+}) => {
+  const [type, setType] = useState<AfwezigheidType>("vakantie");
+  const [van, setVan] = useState("");
+  const [tot, setTot] = useState("");
+  const [omschrijving, setOmschrijving] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setType("vakantie");
+      const today = new Date().toISOString().slice(0, 10);
+      setVan(today);
+      setTot(today);
+      setOmschrijving("");
+    }
+  }, [open]);
+
+  // For vrije_dag, force tot = van
+  useEffect(() => {
+    if (type === "vrije_dag") setTot(van);
+  }, [type, van]);
+
+  const handleSave = async () => {
+    if (!van || !tot) {
+      toast.error("Datum is verplicht");
+      return;
+    }
+    if (tot < van) {
+      toast.error("Datum tot moet later of gelijk zijn aan datum van");
+      return;
+    }
+    // Overlap check
+    const overlap = existing.some(
+      (a) => !(tot < a.datum_van || van > a.datum_tot)
+    );
+    if (overlap) {
+      toast.error("Overlapt met bestaande afwezigheid");
+      return;
+    }
+    setSaving(true);
+    const { error } = await sb.from("monteur_afwezigheid").insert({
+      monteur_id: monteur.id,
+      datum_van: van,
+      datum_tot: tot,
+      type,
+      omschrijving: omschrijving.trim() || null,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error("Opslaan mislukt");
+      return;
+    }
+    toast.success("Afwezigheid opgeslagen");
+    onOpenChange(false);
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
+        style={{
+          backgroundColor: "rgba(10, 26, 48, 0.95)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "12px",
+          backdropFilter: "blur(18px)",
+        }}
+      >
+        <div className="flex items-start justify-between px-6 pt-6">
+          <div>
+            <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
+              Afwezigheid toevoegen
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">{monteur.naam}</p>
+          </div>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+            Annuleren
+          </button>
+        </div>
+        <div className="space-y-5 px-6 py-6">
+          <div className="space-y-2">
+            <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Type
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {AFWEZIGHEID_TYPES.map((t) => {
+                const active = type === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setType(t.id)}
+                    className="rounded-md px-3 py-1.5 text-xs font-display font-bold tracking-wide transition-all"
+                    style={
+                      active
+                        ? { backgroundColor: t.color, color: "#0a1a30" }
+                        : {
+                            border: "1px solid rgba(255,255,255,0.14)",
+                            color: "rgba(255,255,255,0.6)",
+                            backgroundColor: "transparent",
+                          }
+                    }
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Van
+              </Label>
+              <Input
+                type="date"
+                value={van}
+                onChange={(e) => setVan(e.target.value)}
+                className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Tot
+              </Label>
+              <Input
+                type="date"
+                value={tot}
+                min={van}
+                disabled={type === "vrije_dag"}
+                onChange={(e) => setTot(e.target.value)}
+                className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Omschrijving
+            </Label>
+            <Input
+              value={omschrijving}
+              onChange={(e) => setOmschrijving(e.target.value)}
+              placeholder="bijv. Zomervakantie"
+              className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+            />
+          </div>
+        </div>
+        <div className="px-6 pb-6">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+          >
+            {saving ? "Bezig met opslaan…" : "Opslaan"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default Capaciteit;
