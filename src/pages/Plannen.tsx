@@ -1122,6 +1122,59 @@ const GridRow = memo(function GridRow({
   );
 });
 
+const MonteurAvatar = ({
+  naam,
+  type,
+  overflow,
+  size = 20,
+  fontSize = 7,
+  overlap = false,
+}: {
+  naam?: string;
+  type?: "schakelmonteur" | "montagemonteur";
+  overflow?: number;
+  size?: number;
+  fontSize?: number;
+  overlap?: boolean;
+}) => {
+  let bg = "rgba(255,255,255,0.2)";
+  let color = "white";
+  let label = "";
+  if (overflow != null) {
+    label = `+${overflow}`;
+  } else if (type === "schakelmonteur") {
+    bg = "#feb300";
+    color = "#0a1a30";
+    label = initialen(naam ?? "");
+  } else {
+    bg = "#378add";
+    color = "white";
+    label = initialen(naam ?? "");
+  }
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        backgroundColor: bg,
+        color,
+        border: "1.5px solid rgba(0,0,0,0.3)",
+        marginLeft: overlap ? -5 : 0,
+        fontSize,
+        fontWeight: 700,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+      }}
+      className="font-display"
+    >
+      {label}
+    </span>
+  );
+};
+
 const CellBox = memo(function CellBox({
   cel,
   activiteit,
@@ -1169,15 +1222,33 @@ const CellBox = memo(function CellBox({
     warningReason = res.reden;
   }
 
-  const firstMonteur = monteurIds[0] ? monteurById.get(monteurIds[0]) : undefined;
-  const showInitials =
-    isCap && firstMonteur && (cel?.kleur_code != null);
+  const assignedMonteurs = monteurIds
+    .map((id) => monteurById.get(id))
+    .filter((m): m is Monteur => !!m);
+  const showAvatars = isCap && cel?.kleur_code != null && assignedMonteurs.length > 0;
+
+  // Build hover title: kleur naam + monteur namen
+  const namen = assignedMonteurs.map((m) => m.naam).join(", ");
+  const kleurNaam = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.naam : null;
+  let hoverTitle: string | undefined;
+  if (warningReason) {
+    hoverTitle = warningReason;
+  } else if (kleurNaam && namen) {
+    hoverTitle = `${kleurNaam} — ${namen}`;
+  } else if (kleurNaam) {
+    hoverTitle = kleurNaam;
+  } else if (namen) {
+    hoverTitle = namen;
+  }
+
+  const visibleAvatars = assignedMonteurs.slice(0, 2);
+  const overflow = assignedMonteurs.length - visibleAvatars.length;
 
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
-      title={warningReason ?? undefined}
+      title={hoverTitle}
       className="relative shrink-0 transition-colors"
       style={{
         width: CELL_W,
@@ -1190,13 +1261,27 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {showInitials && (
-        <span className="text-[10px] font-display font-bold text-white">
-          {initialen(firstMonteur!.naam)}
-          {monteurIds.length > 1 && (
-            <span className="ml-0.5 opacity-80">+{monteurIds.length - 1}</span>
+      {showAvatars && (
+        <div className="flex h-full w-full items-center justify-center">
+          {visibleAvatars.map((m, idx) => (
+            <MonteurAvatar
+              key={m.id}
+              naam={m.naam}
+              type={m.type}
+              size={20}
+              fontSize={7}
+              overlap={idx > 0}
+            />
+          ))}
+          {overflow > 0 && (
+            <MonteurAvatar
+              overflow={overflow}
+              size={20}
+              fontSize={7}
+              overlap
+            />
           )}
-        </span>
+        </div>
       )}
       {!voldoet && cel && (
         <span
@@ -1406,16 +1491,12 @@ const CelModal = ({
                       key={m.id}
                       className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
                     >
-                      <div
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-display font-bold"
-                        style={{
-                          backgroundColor:
-                            m.type === "schakelmonteur" ? "#feb300" : "#378add",
-                          color: "#0a1a30",
-                        }}
-                      >
-                        {initialen(m.naam)}
-                      </div>
+                      <MonteurAvatar
+                        naam={m.naam}
+                        type={m.type}
+                        size={32}
+                        fontSize={11}
+                      />
                       <div className="flex-1 font-display text-sm font-semibold text-foreground">
                         {m.naam}
                       </div>
