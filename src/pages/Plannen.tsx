@@ -190,6 +190,12 @@ const Plannen = () => {
     dagIndex: number | null;
   }>({ weekId: null, dagIndex: null });
 
+  // Scope voor de "Ingeplande monteurs" balk:
+  // - "visible": alleen monteurs van de weken die nu in de grid-viewport zichtbaar zijn (default)
+  // - "all":     monteurs van het hele project
+  // Een expliciete week-filter (monteursFilter.weekId) overschrijft beide.
+  const [monteursScope, setMonteursScope] = useState<"visible" | "all">("visible");
+
   // Geselecteerde monteur waarvan alle ingeplande cellen worden gehighlight in de grid.
   // null => geen highlight actief.
   const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
@@ -291,15 +297,34 @@ const Plannen = () => {
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
   const scrollLock = useRef(false);
+  // Track horizontale scroll & viewportbreedte van het body-scroll-container,
+  // zodat we kunnen bepalen welke weken op dit moment zichtbaar zijn.
+  const [gridScrollLeft, setGridScrollLeft] = useState(0);
+  const [gridViewportWidth, setGridViewportWidth] = useState(0);
   const syncScroll = useCallback((source: "header" | "body", left: number) => {
     if (scrollLock.current) return;
     scrollLock.current = true;
     if (source !== "header" && headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
     if (source !== "body" && bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
+    setGridScrollLeft(left);
     requestAnimationFrame(() => {
       scrollLock.current = false;
     });
   }, []);
+
+  // Meet de viewportbreedte van de grid en luister naar resize.
+  useEffect(() => {
+    const el = bodyScrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setGridViewportWidth(el.clientWidth);
+      setGridScrollLeft(el.scrollLeft);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [bodyScrollRef.current]);
 
   /* ----------------------------- cell ops ----------------------------- */
   const updateCellLocal = useCallback((cel: Cel) => {
@@ -803,13 +828,39 @@ const Plannen = () => {
     return m;
   }, [monteurs]);
 
+  // Bereken welke weken op dit moment (deels) zichtbaar zijn in de grid-viewport.
+  // Een week neemt 5 * CELL_W pixels in. Een week telt als zichtbaar als zijn
+  // [start, eind)-bereik overlapt met [scrollLeft, scrollLeft + viewportWidth].
+  const visibleWeekIds = useMemo(() => {
+    if (gridViewportWidth <= 0 || weken.length === 0) return new Set<string>();
+    const weekW = CELL_W * 5;
+    const left = gridScrollLeft;
+    const right = gridScrollLeft + gridViewportWidth;
+    const ids = new Set<string>();
+    weken.forEach((w, idx) => {
+      const wLeft = idx * weekW;
+      const wRight = wLeft + weekW;
+      // Overlap-check; we tellen een week mee zodra >=20% zichtbaar is om
+      // randgevallen (1px van een week net zichtbaar) uit te sluiten.
+      const overlap = Math.max(0, Math.min(right, wRight) - Math.max(left, wLeft));
+      if (overlap >= weekW * 0.2) ids.add(w.id);
+    });
+    return ids;
+  }, [weken, gridScrollLeft, gridViewportWidth]);
+
   // Unique monteurs that are actually scheduled in any cell of this project,
-  // gefilterd op de geselecteerde week en/of dag (monteursFilter).
+  // gefilterd op:
+  //  - expliciete week-filter (monteursFilter.weekId) als gezet
+  //  - anders: scope ("visible" => alleen zichtbare weken, "all" => hele project)
+  //  - en altijd op dagIndex als gezet
   // Sortering: schakelmonteurs (amber) eerst, dan montagemonteurs (blue), daarna op naam.
   const ingeplandeMonteurs = useMemo(() => {
     const ids = new Set<string>();
+    const useVisibleScope =
+      monteursScope === "visible" && monteursFilter.weekId === null;
     for (const cel of cellen.values()) {
       if (monteursFilter.weekId && cel.week_id !== monteursFilter.weekId) continue;
+      if (useVisibleScope && !visibleWeekIds.has(cel.week_id)) continue;
       if (monteursFilter.dagIndex !== null && cel.dag_index !== monteursFilter.dagIndex) continue;
       const monteurIds = celMonteurs.get(cel.id);
       if (!monteurIds) continue;
@@ -825,7 +876,7 @@ const Plannen = () => {
       return a.naam.localeCompare(b.naam, "nl");
     });
     return list;
-  }, [cellen, celMonteurs, monteurById, monteursFilter]);
+  }, [cellen, celMonteurs, monteurById, monteursFilter, monteursScope, visibleWeekIds]);
 
   // Reset filter wanneer de geselecteerde week niet meer bestaat (bv. na week verwijderen)
   useEffect(() => {
@@ -1236,6 +1287,42 @@ const Plannen = () => {
           )}
         </div>
 
+        {/* Scope toggle: zichtbare weken vs hele project */}
+        <div
+          className="flex items-center gap-0.5 rounded-md border border-white/15 p-0.5 shrink-0"
+          title={
+            monteursFilter.weekId
+              ? "Een week-filter is actief — scope wordt overschreven"
+              : "Bepaalt of alleen de zichtbare weken of het hele project geteld worden"
+          }
+          style={{ opacity: monteursFilter.weekId ? 0.5 : 1 }}
+        >
+          <button
+            type="button"
+            onClick={() => setMonteursScope("visible")}
+            disabled={monteursFilter.weekId !== null}
+            className={`h-6 px-2 rounded text-[10px] font-display font-bold transition-colors ${
+              monteursScope === "visible"
+                ? "bg-white/10 text-foreground"
+                : "text-muted-foreground hover:bg-white/[0.06]"
+            } disabled:cursor-not-allowed`}
+          >
+            ZICHTBAAR
+          </button>
+          <button
+            type="button"
+            onClick={() => setMonteursScope("all")}
+            disabled={monteursFilter.weekId !== null}
+            className={`h-6 px-2 rounded text-[10px] font-display font-bold transition-colors ${
+              monteursScope === "all"
+                ? "bg-white/10 text-foreground"
+                : "text-muted-foreground hover:bg-white/[0.06]"
+            } disabled:cursor-not-allowed`}
+          >
+            HELE PROJECT
+          </button>
+        </div>
+
         {/* Filter controls: week dropdown + dag knoppen + clear */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Week filter */}
@@ -1324,6 +1411,8 @@ const Plannen = () => {
           <span className="text-[12px] text-muted-foreground">
             {monteursFilter.weekId !== null || monteursFilter.dagIndex !== null
               ? "Geen monteurs ingepland in deze selectie"
+              : monteursScope === "visible"
+              ? "Geen monteurs ingepland in de zichtbare weken"
               : "Nog geen monteurs ingepland"}
           </span>
         ) : (
