@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Check,
   Layers,
+  MapPin,
   Pencil,
   Plus,
   Search,
@@ -62,6 +63,10 @@ interface Project {
   werkplan_lsr: boolean | null;
   notities: string | null;
   template_id: string | null;
+  straat: string | null;
+  postcode: string | null;
+  stad: string | null;
+  gemeente: string | null;
   created_at: string;
 }
 
@@ -155,6 +160,10 @@ const Projecten = () => {
   const [werkplanMsr, setWerkplanMsr] = useState(false);
   const [werkplanLsr, setWerkplanLsr] = useState(false);
   const [notities, setNotities] = useState("");
+  const [straat, setStraat] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [stad, setStad] = useState("");
+  const [gemeente, setGemeente] = useState("");
 
   const loadAll = async () => {
     setLoading(true);
@@ -192,10 +201,22 @@ const Projecten = () => {
     return m;
   }, [templates]);
 
-  const filteredTemplates = useMemo(
-    () => (caseType ? templates.filter((t) => t.type === caseType) : []),
-    [templates, caseType]
-  );
+  const filteredTemplates = useMemo(() => {
+    if (!caseType) return [];
+    if (caseType === "custom") return templates;
+    return templates.filter((t) => t.type === caseType);
+  }, [templates, caseType]);
+
+  const handleCaseTypeSelect = (c: CaseType) => {
+    setCaseType(c);
+    if (editing) return;
+    if (c === "custom") {
+      setTemplateId(null);
+      return;
+    }
+    const match = templates.find((t) => t.type === c);
+    setTemplateId(match ? match.id : null);
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -214,6 +235,10 @@ const Projecten = () => {
     setWerkplanMsr(false);
     setWerkplanLsr(false);
     setNotities("");
+    setStraat("");
+    setPostcode("");
+    setStad("");
+    setGemeente("");
     setModalOpen(true);
   };
 
@@ -234,6 +259,10 @@ const Projecten = () => {
     setWerkplanMsr(!!p.werkplan_msr);
     setWerkplanLsr(!!p.werkplan_lsr);
     setNotities(p.notities ?? "");
+    setStraat(p.straat ?? "");
+    setPostcode(p.postcode ?? "");
+    setStad(p.stad ?? "");
+    setGemeente(p.gemeente ?? "");
     setModalOpen(true);
   };
 
@@ -298,6 +327,10 @@ const Projecten = () => {
       werkplan_lsr: werkplanLsr,
       notities: notities.trim() || null,
       template_id: templateId,
+      straat: straat.trim() || null,
+      postcode: postcode.trim() || null,
+      stad: stad.trim() || null,
+      gemeente: gemeente.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -559,6 +592,36 @@ const Projecten = () => {
               </Field>
             </div>
 
+            {/* Locatie */}
+            <Field label="Locatie">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  value={straat}
+                  onChange={(e) => setStraat(e.target.value)}
+                  placeholder="bijv. Kalverstraat 12"
+                  className={inputCls}
+                />
+                <Input
+                  value={stad}
+                  onChange={(e) => setStad(e.target.value)}
+                  placeholder="bijv. Amsterdam"
+                  className={inputCls}
+                />
+                <Input
+                  value={postcode}
+                  onChange={(e) => setPostcode(e.target.value)}
+                  placeholder="bijv. 1012 NX"
+                  className={inputCls}
+                />
+                <Input
+                  value={gemeente}
+                  onChange={(e) => setGemeente(e.target.value)}
+                  placeholder="bijv. Amsterdam"
+                  className={inputCls}
+                />
+              </div>
+            </Field>
+
             {/* Case type */}
             <Field label="Case type">
               <div className="grid grid-cols-4 gap-2">
@@ -566,10 +629,7 @@ const Projecten = () => {
                   <button
                     key={c}
                     type="button"
-                    onClick={() => {
-                      setCaseType(c);
-                      setTemplateId(null);
-                    }}
+                    onClick={() => handleCaseTypeSelect(c)}
                     className={[
                       "rounded-md px-4 py-3 text-sm font-display font-bold tracking-tight transition-all",
                       caseType === c
@@ -788,7 +848,7 @@ const ProjectCard = ({
       </div>
 
       {/* Second row */}
-      <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
         <div className="font-display text-base font-semibold text-foreground">
           {p.station_naam || <span className="text-muted-foreground">Geen stationsnaam</span>}
         </div>
@@ -798,6 +858,18 @@ const ProjectCard = ({
           </span>
         )}
       </div>
+
+      {/* Adres row */}
+      {p.straat && (
+        <div className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="h-3 w-3" />
+          <span>
+            {p.straat}
+            {p.stad ? `, ${p.stad}` : ""}
+          </span>
+        </div>
+      )}
+      {!p.straat && <div className="mb-3" />}
 
       {/* Info row */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
