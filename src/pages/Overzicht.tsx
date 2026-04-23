@@ -1779,7 +1779,7 @@ function MonteurSidebarRow({
         <>
           <span
             className="truncate text-[13px] font-semibold text-foreground"
-            style={{ maxWidth: 130 }}
+            style={{ maxWidth: 160 }}
             title={monteur.naam}
           >
             {monteur.naam}
@@ -1787,10 +1787,11 @@ function MonteurSidebarRow({
           {ms && msStyle && (
             <span
               className="ml-auto shrink-0"
+              title={ms}
               style={{
                 ...msStyle,
-                fontSize: 9, fontWeight: 700,
-                padding: "1px 5px", borderRadius: 4,
+                fontSize: 8, fontWeight: 700,
+                padding: "1px 4px", borderRadius: 3,
               }}
             >
               {ms}
