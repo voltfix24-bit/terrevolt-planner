@@ -744,47 +744,87 @@ export default function Overzicht() {
             >
               {/* Schakelmonteurs label */}
               {schakelMonteurs.length > 0 && (
-                <div
+                <button
+                  type="button"
+                  onClick={() => setSchakelOpen((o) => !o)}
+                  className="flex w-full items-center gap-2 hover:bg-white/[0.04]"
                   style={{
                     height: 28,
                     paddingLeft: 16,
-                    display: "flex",
-                    alignItems: "center",
                     borderRight: "1px solid rgba(255,255,255,0.08)",
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
                 >
+                  <ChevronRight
+                    className="h-3 w-3 text-muted-foreground"
+                    style={{
+                      transform: schakelOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Schakelmonteurs
                   </span>
-                </div>
+                  <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                    {schakelMonteurs.length}
+                  </span>
+                </button>
               )}
-              {schakelMonteurs.map((m) => (
-                <MonteurSidebarRow key={m.id} monteur={m} />
-              ))}
+              <div
+                style={{
+                  maxHeight: schakelOpen ? 2000 : 0,
+                  opacity: schakelOpen ? 1 : 0,
+                  overflow: "hidden",
+                  transition: "max-height 0.2s ease, opacity 0.15s ease",
+                }}
+              >
+                {schakelMonteurs.map((m) => (
+                  <MonteurSidebarRow key={m.id} monteur={m} />
+                ))}
+              </div>
 
               {/* Montagemonteurs label */}
               {montageMonteurs.length > 0 && (
-                <div
+                <button
+                  type="button"
+                  onClick={() => setMontageOpen((o) => !o)}
+                  className="flex w-full items-center gap-2 hover:bg-white/[0.04]"
                   style={{
                     height: 28,
                     paddingLeft: 16,
-                    display: "flex",
-                    alignItems: "center",
                     borderRight: "1px solid rgba(255,255,255,0.08)",
                     borderBottom: "1px solid rgba(255,255,255,0.04)",
                     background: "rgba(255,255,255,0.02)",
                   }}
                 >
+                  <ChevronRight
+                    className="h-3 w-3 text-muted-foreground"
+                    style={{
+                      transform: montageOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Montagemonteurs
                   </span>
-                </div>
+                  <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                    {montageMonteurs.length}
+                  </span>
+                </button>
               )}
-              {montageMonteurs.map((m) => (
-                <MonteurSidebarRow key={m.id} monteur={m} />
-              ))}
+              <div
+                style={{
+                  maxHeight: montageOpen ? 2000 : 0,
+                  opacity: montageOpen ? 1 : 0,
+                  overflow: "hidden",
+                  transition: "max-height 0.2s ease, opacity 0.15s ease",
+                }}
+              >
+                {montageMonteurs.map((m) => (
+                  <MonteurSidebarRow key={m.id} monteur={m} />
+                ))}
+              </div>
 
               {monteurs.length === 0 && (
                 <div
