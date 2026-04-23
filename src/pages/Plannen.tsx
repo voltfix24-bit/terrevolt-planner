@@ -173,7 +173,9 @@ const Plannen = () => {
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const skipHistoryRef = useRef(false);
   const pushHistory = useCallback((entry: HistoryEntry) => {
+    if (skipHistoryRef.current) return;
     setHistory((prev) => [...prev.slice(-29), entry]);
   }, []);
 
