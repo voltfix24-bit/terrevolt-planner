@@ -23,8 +23,8 @@ const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
 const DAYS_PER_WEEK = 5;
-const PILL_H_MONTEUR = 28;
-const PILL_H_PROJECT = 24;
+const PILL_H_MONTEUR = 26;
+const PILL_H_PROJECT = 22;
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 type NumWeeks = 2 | 4 | 8;
