@@ -786,16 +786,35 @@ export default function Overzicht() {
   // ====== Navigator label & shift ======
   const navigatorLabel = useMemo(() => {
     if (scale === "maand") {
-      const monday = getMondayOfWeek(startWeek, jaar);
-      const m = NL_MONTHS_LONG[monday.getMonth()];
-      return `${m} ${monday.getFullYear()}`;
+      const wkCount = weeksInYear(jaar);
+      const firstWnr = startWeek;
+      const lastWnr = wrapWeek(((startWeek - 1 + (weeksToShow - 1)) % wkCount) + 1);
+      const firstMonday = getMondayOfWeek(firstWnr, jaar);
+      // For the last week we may have wrapped into next year
+      const lastWeekWrapped = startWeek + weeksToShow - 1 > wkCount;
+      const lastYear = lastWeekWrapped ? jaar + 1 : jaar;
+      const lastMonday = getMondayOfWeek(lastWnr, lastYear);
+
+      const fM = firstMonday.getMonth();
+      const fY = firstMonday.getFullYear();
+      const lM = lastMonday.getMonth();
+      const lY = lastMonday.getFullYear();
+
+      const rangePart = `Wk ${firstWnr}–${lastWnr}`;
+      if (fM === lM && fY === lY) {
+        return `${NL_MONTHS_LONG[fM]} ${fY} · ${rangePart}`;
+      }
+      if (fY === lY) {
+        return `${NL_MONTHS_LONG[fM]} – ${NL_MONTHS_LONG[lM]} ${fY} · ${rangePart}`;
+      }
+      return `${NL_MONTHS_LONG[fM]} ${fY} – ${NL_MONTHS_LONG[lM]} ${lY} · ${rangePart}`;
     }
     if (scale === "kwartaal") {
       const q = quarterOfWeek(startWeek, jaar);
       return `Q${q} ${jaar}`;
     }
     return `${jaar}`;
-  }, [scale, startWeek, jaar]);
+  }, [scale, startWeek, jaar, weeksToShow]);
 
   const shiftLeft = () => {
     if (scale === "maand") {
