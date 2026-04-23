@@ -143,6 +143,7 @@ const Projecten = () => {
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savedLocation, setSavedLocation] = useState<{ straat: string; stad: string } | null>(null);
 
   // form state
   const [caseNummer, setCaseNummer] = useState("");
