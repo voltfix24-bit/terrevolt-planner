@@ -879,59 +879,66 @@ export default function Overzicht() {
               }}
             />
 
-            {medewerkersOpen && (
-              <>
-                {schakelMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      width: totalGridWidth,
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  />
-                )}
-                {schakelMonteurs.map((m) => (
-                  <MonteurCellsRow
-                    key={m.id}
-                    monteur={m}
-                    segments={monteurSegments(m.id)}
-                    projectById={projectById}
-                    visibleWeekNrs={visibleWeekNrs}
-                    jaar={jaar}
-                    currentISO={currentISO}
-                    totalGridWidth={totalGridWidth}
-                    onProjectClick={navigateToProject}
-                  />
-                ))}
-                {montageMonteurs.length > 0 && (
-                  <div
-                    style={{
-                      height: 28,
-                      width: totalGridWidth,
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}
-                  />
-                )}
-                {montageMonteurs.map((m) => (
-                  <MonteurCellsRow
-                    key={m.id}
-                    monteur={m}
-                    segments={monteurSegments(m.id)}
-                    projectById={projectById}
-                    visibleWeekNrs={visibleWeekNrs}
-                    jaar={jaar}
-                    currentISO={currentISO}
-                    totalGridWidth={totalGridWidth}
-                    onProjectClick={navigateToProject}
-                  />
-                ))}
-                {monteurs.length === 0 && (
-                  <div style={{ height: 60, width: totalGridWidth }} />
-                )}
-              </>
-            )}
+            <div
+              style={{
+                maxHeight: medewerkersOpen ? 2000 : 0,
+                opacity: medewerkersOpen ? 1 : 0,
+                overflow: "hidden",
+                transition: "max-height 0.2s ease, opacity 0.15s ease",
+              }}
+            >
+              {schakelMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    width: totalGridWidth,
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                />
+              )}
+              {schakelMonteurs.map((m) => (
+                <MonteurCellsRow
+                  key={m.id}
+                  monteur={m}
+                  segments={monteurSegments(m.id)}
+                  projectById={projectById}
+                  visibleWeekNrs={visibleWeekNrs}
+                  jaar={jaar}
+                  currentISO={currentISO}
+                  isTodayCol={isTodayCol}
+                  totalGridWidth={totalGridWidth}
+                  onProjectClick={navigateToProject}
+                />
+              ))}
+              {montageMonteurs.length > 0 && (
+                <div
+                  style={{
+                    height: 28,
+                    width: totalGridWidth,
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                />
+              )}
+              {montageMonteurs.map((m) => (
+                <MonteurCellsRow
+                  key={m.id}
+                  monteur={m}
+                  segments={monteurSegments(m.id)}
+                  projectById={projectById}
+                  visibleWeekNrs={visibleWeekNrs}
+                  jaar={jaar}
+                  currentISO={currentISO}
+                  isTodayCol={isTodayCol}
+                  totalGridWidth={totalGridWidth}
+                  onProjectClick={navigateToProject}
+                />
+              ))}
+              {monteurs.length === 0 && (
+                <div style={{ height: 60, width: totalGridWidth }} />
+              )}
+            </div>
 
             {/* Projecten section header spacer */}
             <div
