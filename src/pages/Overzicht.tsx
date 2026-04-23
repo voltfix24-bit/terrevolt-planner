@@ -293,7 +293,7 @@ export default function Overzicht() {
         const monday = getMondayOfWeek(wnr, jaar);
         const isCurrentWeek = wnr === todayWeek && jaar === todayYear;
         const groupKey = `wk-${wnr}`;
-        const groupLabel = `Wk ${wnr} ${formatDate(monday)}`;
+        const groupLabel = `Wk ${wnr}`;
         for (let d = 0; d < DAYS_PER_WEEK; d++) {
           const date = new Date(monday);
           date.setDate(monday.getDate() + d);
