@@ -482,6 +482,15 @@ const Capaciteit = () => {
         <TijdlijnView monteurs={monteurs.filter((m) => m.actief)} />
       )}
 
+      {tab === "beschikbaarheid" && (
+        <BeschikbaarheidView
+          monteurs={monteurs}
+          onMonteurUpdate={(id, patch) =>
+            setMonteurs((cur) => cur.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+          }
+        />
+      )}
+
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent
