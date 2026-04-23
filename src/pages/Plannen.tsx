@@ -1064,7 +1064,58 @@ const Plannen = () => {
         </div>
       </div>
 
-      {/* Cel modal */}
+      {/* Monteurs legenda — alleen ingeplande monteurs */}
+      {ingeplandeMonteurs.length > 0 && (
+        <div
+          className="mt-3 rounded-lg border px-4 py-3"
+          style={{
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(10,26,48,0.4)",
+          }}
+        >
+          <div className="mb-2 flex items-center gap-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Ingeplande monteurs
+            </span>
+            <span className="text-[10px] text-muted-foreground/70">
+              {ingeplandeMonteurs.length}
+            </span>
+            <div className="ml-auto flex items-center gap-3 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: "#feb300" }}
+                />
+                Schakel
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: "#378add" }}
+                />
+                Montage
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {ingeplandeMonteurs.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center gap-2 rounded-full border px-2 py-1"
+                style={{
+                  borderColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: "rgba(255,255,255,0.03)",
+                }}
+                title={m.naam}
+              >
+                <MonteurAvatar naam={m.naam} type={m.type} size={20} fontSize={8} />
+                <span className="text-[12px] font-medium text-foreground">{m.naam}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {openCel?.cel && openCel.activiteit && openCel.week && (
         <CelModal
           open={!!openCellKey}
