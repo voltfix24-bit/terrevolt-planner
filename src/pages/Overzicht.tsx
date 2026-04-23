@@ -212,6 +212,237 @@ function firstWeekOfQuarter(q: number, jaar: number): number {
   return 1;
 }
 
+// ============== Dev raster check ==============
+// Walks every [data-grid-cell] in the rendered grid and verifies that:
+//  - borderRight is set (non-zero, non-transparent)
+//  - borderBottom is set (non-zero, non-transparent)
+//  - cells with data-today="1" use the today background tint
+//  - cells with data-current-group="1" (and no today/conflict/color) use the current-group tint
+type RasterIssue = {
+  kind: "border-right" | "border-bottom" | "today-bg" | "current-group-bg";
+  slot: string;
+  cellType: string;
+  detail: string;
+};
+
+type RasterReport = {
+  total: number;
+  empty: number;
+  activiteit: number;
+  issues: RasterIssue[];
+  ranAt: string;
+};
+
+function parseAlpha(rgb: string): number {
+  const m = rgb.match(/rgba?\(([^)]+)\)/i);
+  if (!m) return 0;
+  const parts = m[1].split(",").map((p) => p.trim());
+  if (parts.length < 4) return 1;
+  return parseFloat(parts[3]);
+}
+
+function isVisibleBorder(value: string): boolean {
+  if (!value || value === "none") return false;
+  const widthMatch = value.match(/^([\d.]+)px/);
+  const width = widthMatch ? parseFloat(widthMatch[1]) : 0;
+  if (width <= 0) return false;
+  const colorMatch = value.match(/rgba?\([^)]+\)/i);
+  if (!colorMatch) return true;
+  return parseAlpha(colorMatch[0]) > 0;
+}
+
+function backgroundHasTint(value: string): boolean {
+  if (!value || value === "transparent" || value === "none") return false;
+  if (value.startsWith("rgba")) return parseAlpha(value) > 0;
+  if (value.startsWith("rgb(")) return true;
+  return value !== "rgba(0, 0, 0, 0)";
+}
+
+function RasterCheck() {
+  const [report, setReport] = useState<RasterReport | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const runCheck = () => {
+    const root = document.getElementById("overzicht-grid-root");
+    if (!root) {
+      setReport({
+        total: 0,
+        empty: 0,
+        activiteit: 0,
+        issues: [
+          { kind: "border-right", slot: "-", cellType: "-", detail: "Grid-root niet gevonden" },
+        ],
+        ranAt: new Date().toLocaleTimeString("nl-NL"),
+      });
+      setOpen(true);
+      return;
+    }
+    const cells = root.querySelectorAll<HTMLElement>("[data-grid-cell]");
+    const issues: RasterIssue[] = [];
+    let empty = 0;
+    let activiteit = 0;
+    cells.forEach((cell) => {
+      const kind = cell.getAttribute("data-grid-cell") ?? "?";
+      if (kind === "empty") empty++;
+      else if (kind === "activiteit") activiteit++;
+      const slot = cell.getAttribute("data-slot") ?? "?";
+      const cs = window.getComputedStyle(cell);
+      if (!isVisibleBorder(cs.borderRight)) {
+        issues.push({
+          kind: "border-right",
+          slot,
+          cellType: kind,
+          detail: `borderRight = "${cs.borderRight}"`,
+        });
+      }
+      if (!isVisibleBorder(cs.borderBottom)) {
+        issues.push({
+          kind: "border-bottom",
+          slot,
+          cellType: kind,
+          detail: `borderBottom = "${cs.borderBottom}"`,
+        });
+      }
+      const isToday = cell.getAttribute("data-today") === "1";
+      const isCurrentGroup = cell.getAttribute("data-current-group") === "1";
+      const hasConflict = cell.getAttribute("data-has-conflict") === "1";
+      const hasColor = cell.getAttribute("data-has-color") === "1";
+      const expectsTint = kind === "empty" || (!hasConflict && !hasColor);
+      if (expectsTint && isToday && !backgroundHasTint(cs.backgroundColor)) {
+        issues.push({
+          kind: "today-bg",
+          slot,
+          cellType: kind,
+          detail: `verwacht today-tint, kreeg "${cs.backgroundColor}"`,
+        });
+      } else if (
+        expectsTint &&
+        !isToday &&
+        isCurrentGroup &&
+        !backgroundHasTint(cs.backgroundColor)
+      ) {
+        issues.push({
+          kind: "current-group-bg",
+          slot,
+          cellType: kind,
+          detail: `verwacht current-group-tint, kreeg "${cs.backgroundColor}"`,
+        });
+      }
+    });
+    setReport({
+      total: cells.length,
+      empty,
+      activiteit,
+      issues,
+      ranAt: new Date().toLocaleTimeString("nl-NL"),
+    });
+    setOpen(true);
+    // eslint-disable-next-line no-console
+    console.info("[Overzicht raster-check]", {
+      total: cells.length,
+      empty,
+      activiteit,
+      issueCount: issues.length,
+      issues: issues.slice(0, 20),
+    });
+  };
+
+  if (!import.meta.env.DEV) return null;
+
+  const ok = report && report.issues.length === 0;
+  return (
+    <div
+      className="mb-3 rounded-lg border"
+      style={{
+        borderColor: "rgba(255,255,255,0.08)",
+        background: "rgba(10,26,48,0.4)",
+      }}
+    >
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Dev — Raster check
+        </span>
+        <button
+          type="button"
+          onClick={runCheck}
+          className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.08]"
+        >
+          Run check
+        </button>
+        {report && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+            style={{
+              background: ok ? "rgba(63,255,139,0.15)" : "rgba(239,68,68,0.18)",
+              color: ok ? "#3fff8b" : "#ef4444",
+              border: ok
+                ? "1px solid rgba(63,255,139,0.3)"
+                : "1px solid rgba(239,68,68,0.4)",
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 999,
+                background: ok ? "#3fff8b" : "#ef4444",
+              }}
+            />
+            {ok
+              ? `OK · ${report.total} cellen`
+              : `${report.issues.length} issue${report.issues.length === 1 ? "" : "s"} / ${report.total} cellen`}
+          </span>
+        )}
+        {report && (
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {report.empty} leeg · {report.activiteit} activiteit · {report.ranAt}
+          </span>
+        )}
+        {report && (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="ml-auto text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            {open ? "Verberg details" : "Toon details"}
+          </button>
+        )}
+      </div>
+      {report && open && report.issues.length > 0 && (
+        <div
+          className="border-t px-3 py-2"
+          style={{ borderColor: "rgba(255,255,255,0.06)" }}
+        >
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Eerste {Math.min(report.issues.length, 10)} issue
+            {report.issues.length === 1 ? "" : "s"}
+          </div>
+          <ul className="space-y-0.5 font-mono text-[11px] text-foreground/90">
+            {report.issues.slice(0, 10).map((iss, i) => (
+              <li key={i}>
+                <span style={{ color: "#ef4444" }}>{iss.kind}</span>{" "}
+                <span className="text-muted-foreground">
+                  [{iss.cellType} slot {iss.slot}]
+                </span>{" "}
+                {iss.detail}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {report && open && report.issues.length === 0 && (
+        <div
+          className="border-t px-3 py-2 text-[11px] text-muted-foreground"
+          style={{ borderColor: "rgba(255,255,255,0.06)" }}
+        >
+          Alle {report.total} cellen hebben zichtbare borderRight + borderBottom en
+          de juiste week/dag-achtergrond.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============== Page ==============
 export default function Overzicht() {
   const navigate = useNavigate();
@@ -1839,233 +2070,3 @@ function ActiviteitCellsRow({
   );
 }
 
-// ============== Dev raster check ==============
-// Walks every [data-grid-cell] in the rendered grid and verifies that:
-//  - borderRight is set (non-zero, non-transparent)
-//  - borderBottom is set (non-zero, non-transparent)
-//  - cells with data-today="1" use the today background tint
-//  - cells with data-current-group="1" (and no today/conflict/color) use the current-group tint
-type RasterIssue = {
-  kind: "border-right" | "border-bottom" | "today-bg" | "current-group-bg";
-  slot: string;
-  cellType: string;
-  detail: string;
-};
-
-type RasterReport = {
-  total: number;
-  empty: number;
-  activiteit: number;
-  issues: RasterIssue[];
-  ranAt: string;
-};
-
-function parseAlpha(rgb: string): number {
-  const m = rgb.match(/rgba?\(([^)]+)\)/i);
-  if (!m) return 0;
-  const parts = m[1].split(",").map((p) => p.trim());
-  if (parts.length < 4) return 1;
-  return parseFloat(parts[3]);
-}
-
-function isVisibleBorder(value: string): boolean {
-  if (!value || value === "none") return false;
-  const widthMatch = value.match(/^([\d.]+)px/);
-  const width = widthMatch ? parseFloat(widthMatch[1]) : 0;
-  if (width <= 0) return false;
-  const colorMatch = value.match(/rgba?\([^)]+\)/i);
-  if (!colorMatch) return true;
-  return parseAlpha(colorMatch[0]) > 0;
-}
-
-function backgroundHasTint(value: string): boolean {
-  if (!value || value === "transparent" || value === "none") return false;
-  if (value.startsWith("rgba")) return parseAlpha(value) > 0;
-  if (value.startsWith("rgb(")) return true;
-  return value !== "rgba(0, 0, 0, 0)";
-}
-
-function RasterCheck() {
-  const [report, setReport] = useState<RasterReport | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const runCheck = () => {
-    const root = document.getElementById("overzicht-grid-root");
-    if (!root) {
-      setReport({
-        total: 0,
-        empty: 0,
-        activiteit: 0,
-        issues: [
-          { kind: "border-right", slot: "-", cellType: "-", detail: "Grid-root niet gevonden" },
-        ],
-        ranAt: new Date().toLocaleTimeString("nl-NL"),
-      });
-      setOpen(true);
-      return;
-    }
-    const cells = root.querySelectorAll<HTMLElement>("[data-grid-cell]");
-    const issues: RasterIssue[] = [];
-    let empty = 0;
-    let activiteit = 0;
-    cells.forEach((cell) => {
-      const kind = cell.getAttribute("data-grid-cell") ?? "?";
-      if (kind === "empty") empty++;
-      else if (kind === "activiteit") activiteit++;
-      const slot = cell.getAttribute("data-slot") ?? "?";
-      const cs = window.getComputedStyle(cell);
-      if (!isVisibleBorder(cs.borderRight)) {
-        issues.push({
-          kind: "border-right",
-          slot,
-          cellType: kind,
-          detail: `borderRight = "${cs.borderRight}"`,
-        });
-      }
-      if (!isVisibleBorder(cs.borderBottom)) {
-        issues.push({
-          kind: "border-bottom",
-          slot,
-          cellType: kind,
-          detail: `borderBottom = "${cs.borderBottom}"`,
-        });
-      }
-      const isToday = cell.getAttribute("data-today") === "1";
-      const isCurrentGroup = cell.getAttribute("data-current-group") === "1";
-      const hasConflict = cell.getAttribute("data-has-conflict") === "1";
-      const hasColor = cell.getAttribute("data-has-color") === "1";
-      const expectsTint = kind === "empty" || (!hasConflict && !hasColor);
-      if (expectsTint && isToday && !backgroundHasTint(cs.backgroundColor)) {
-        issues.push({
-          kind: "today-bg",
-          slot,
-          cellType: kind,
-          detail: `verwacht today-tint, kreeg "${cs.backgroundColor}"`,
-        });
-      } else if (
-        expectsTint &&
-        !isToday &&
-        isCurrentGroup &&
-        !backgroundHasTint(cs.backgroundColor)
-      ) {
-        issues.push({
-          kind: "current-group-bg",
-          slot,
-          cellType: kind,
-          detail: `verwacht current-group-tint, kreeg "${cs.backgroundColor}"`,
-        });
-      }
-    });
-    setReport({
-      total: cells.length,
-      empty,
-      activiteit,
-      issues,
-      ranAt: new Date().toLocaleTimeString("nl-NL"),
-    });
-    setOpen(true);
-    // eslint-disable-next-line no-console
-    console.info("[Overzicht raster-check]", {
-      total: cells.length,
-      empty,
-      activiteit,
-      issueCount: issues.length,
-      issues: issues.slice(0, 20),
-    });
-  };
-
-  if (!import.meta.env.DEV) return null;
-
-  const ok = report && report.issues.length === 0;
-  return (
-    <div
-      className="mb-3 rounded-lg border"
-      style={{
-        borderColor: "rgba(255,255,255,0.08)",
-        background: "rgba(10,26,48,0.4)",
-      }}
-    >
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Dev — Raster check
-        </span>
-        <button
-          type="button"
-          onClick={runCheck}
-          className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.08]"
-        >
-          Run check
-        </button>
-        {report && (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-            style={{
-              background: ok ? "rgba(63,255,139,0.15)" : "rgba(239,68,68,0.18)",
-              color: ok ? "#3fff8b" : "#ef4444",
-              border: ok
-                ? "1px solid rgba(63,255,139,0.3)"
-                : "1px solid rgba(239,68,68,0.4)",
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 999,
-                background: ok ? "#3fff8b" : "#ef4444",
-              }}
-            />
-            {ok
-              ? `OK · ${report.total} cellen`
-              : `${report.issues.length} issue${report.issues.length === 1 ? "" : "s"} / ${report.total} cellen`}
-          </span>
-        )}
-        {report && (
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {report.empty} leeg · {report.activiteit} activiteit · {report.ranAt}
-          </span>
-        )}
-        {report && (
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            className="ml-auto text-[11px] text-muted-foreground hover:text-foreground"
-          >
-            {open ? "Verberg details" : "Toon details"}
-          </button>
-        )}
-      </div>
-      {report && open && report.issues.length > 0 && (
-        <div
-          className="border-t px-3 py-2"
-          style={{ borderColor: "rgba(255,255,255,0.06)" }}
-        >
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Eerste {Math.min(report.issues.length, 10)} issue
-            {report.issues.length === 1 ? "" : "s"}
-          </div>
-          <ul className="space-y-0.5 font-mono text-[11px] text-foreground/90">
-            {report.issues.slice(0, 10).map((iss, i) => (
-              <li key={i}>
-                <span style={{ color: "#ef4444" }}>{iss.kind}</span>{" "}
-                <span className="text-muted-foreground">
-                  [{iss.cellType} slot {iss.slot}]
-                </span>{" "}
-                {iss.detail}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {report && open && report.issues.length === 0 && (
-        <div
-          className="border-t px-3 py-2 text-[11px] text-muted-foreground"
-          style={{ borderColor: "rgba(255,255,255,0.06)" }}
-        >
-          Alle {report.total} cellen hebben zichtbare borderRight + borderBottom en
-          de juiste week/dag-achtergrond.
-        </div>
-      )}
-    </div>
-  );
-}
