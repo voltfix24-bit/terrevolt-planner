@@ -1104,6 +1104,7 @@ function MonteurCellsRow({
   visibleWeekNrs,
   jaar,
   currentISO,
+  isTodayCol,
   totalGridWidth,
   onProjectClick,
 }: {
@@ -1113,9 +1114,11 @@ function MonteurCellsRow({
   visibleWeekNrs: number[];
   jaar: number;
   currentISO: { week: number; year: number };
+  isTodayCol: (wnr: number, d: number) => boolean;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
 }) {
+  const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
   return (
     <div
       className="relative"
@@ -1129,9 +1132,8 @@ function MonteurCellsRow({
       <div className="flex" style={{ width: totalGridWidth, height: ROW_H_MONTEUR }}>
         {visibleWeekNrs.map((wnr, wi) => {
           const monday = getMondayOfWeek(wnr, jaar);
-          const isNow = wnr === currentISO.week && jaar === currentISO.year;
           return (
-            <div key={wi} className="flex" style={{ background: isNow ? "rgba(63,255,139,0.03)" : "transparent" }}>
+            <div key={wi} className="flex">
               {DAG_LABELS.map((_, d) => {
                 const isLast = d === DAYS_PER_WEEK - 1;
                 const date = new Date(monday);
@@ -1146,6 +1148,7 @@ function MonteurCellsRow({
                       borderRight: isLast
                         ? "1px solid rgba(255,255,255,0.1)"
                         : "1px solid rgba(255,255,255,0.04)",
+                      background: isTodayCol(wnr, d) ? "rgba(63,255,139,0.03)" : undefined,
                     }}
                   />
                 );
