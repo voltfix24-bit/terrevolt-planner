@@ -797,6 +797,45 @@ const Plannen = () => {
     }
   }, [weken, monteursFilter.weekId]);
 
+  // Tooltip-tekst voor lege cellen in de huidige ISO-week.
+  // Verklaart waarom de week een groene tint heeft + samenvatting van wat er die week gepland staat.
+  const currentWeekTooltip = useMemo<string | null>(() => {
+    const projectJaar = project?.jaar ?? new Date().getFullYear();
+    if (projectJaar !== CURRENT_YEAR) return null;
+    const currentWeek = weken.find((w) => w.week_nr === CURRENT_WEEK);
+    if (!currentWeek) return null;
+
+    // Tel per activiteit hoeveel dagen er gepland zijn in deze week (cellen met kleur_code).
+    const dagenPerActiviteit = new Map<string, number>();
+    for (const cel of cellen.values()) {
+      if (cel.week_id !== currentWeek.id) continue;
+      if (!cel.kleur_code) continue;
+      dagenPerActiviteit.set(
+        cel.activiteit_id,
+        (dagenPerActiviteit.get(cel.activiteit_id) ?? 0) + 1,
+      );
+    }
+
+    const header = `Huidige week (week ${CURRENT_WEEK})`;
+    if (dagenPerActiviteit.size === 0) {
+      return `${header}\nNog niets ingepland deze week`;
+    }
+
+    const regels: string[] = [];
+    for (const a of activiteiten) {
+      const n = dagenPerActiviteit.get(a.id);
+      if (!n) continue;
+      const cap =
+        a.capaciteit_type === "schakel"
+          ? " (schakel)"
+          : a.capaciteit_type === "montage"
+          ? " (montage)"
+          : "";
+      regels.push(`• ${a.naam}${cap} — ${n} ${n === 1 ? "dag" : "dagen"}`);
+    }
+    return `${header}\nGepland deze week:\n${regels.join("\n")}`;
+  }, [project?.jaar, weken, cellen, activiteiten]);
+
   const openCel = useMemo(() => {
     if (!openCellKey) return null;
     const cel = cellen.get(openCellKey);
@@ -1085,6 +1124,7 @@ const Plannen = () => {
                       celMonteurs={celMonteurs}
                       monteurById={monteurById}
                       highlightedMonteurId={highlightedMonteurId}
+                      currentWeekTooltip={currentWeekTooltip}
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
                     />
@@ -1572,6 +1612,7 @@ interface GridRowProps {
   celMonteurs: CelMonteurMap;
   monteurById: Map<string, Monteur>;
   highlightedMonteurId: string | null;
+  currentWeekTooltip: string | null;
   onClick: (a: Activiteit, week_id: string, dag_index: number) => void;
   onRightClick: (
     e: ReactMouseEvent,
@@ -1589,6 +1630,7 @@ const GridRow = memo(function GridRow({
   celMonteurs,
   monteurById,
   highlightedMonteurId,
+  currentWeekTooltip,
   onClick,
   onRightClick,
 }: GridRowProps) {
@@ -1624,6 +1666,7 @@ const GridRow = memo(function GridRow({
               isHighlighted={isHighlighted}
               highlightColor={highlightColor}
               isDimmed={highlightedMonteurId !== null && !isHighlighted}
+              currentWeekTooltip={isCurrentWeek ? currentWeekTooltip : null}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
@@ -1712,6 +1755,7 @@ const CellBox = memo(function CellBox({
   isHighlighted = false,
   highlightColor = null,
   isDimmed = false,
+  currentWeekTooltip = null,
   onClick,
   onContextMenu,
 }: {
@@ -1723,6 +1767,7 @@ const CellBox = memo(function CellBox({
   isHighlighted?: boolean;
   highlightColor?: string | null;
   isDimmed?: boolean;
+  currentWeekTooltip?: string | null;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
 }) {
@@ -1775,6 +1820,10 @@ const CellBox = memo(function CellBox({
     hoverTitle = kleurNaam;
   } else if (namen) {
     hoverTitle = namen;
+  } else if (isCurrentWeek && !cel?.kleur_code && currentWeekTooltip) {
+    // Lege cel in de huidige (groen getinte) week: leg uit waarom de tint er is
+    // en toon wat er deze week wel gepland staat.
+    hoverTitle = currentWeekTooltip;
   }
 
   const visibleAvatars = assignedMonteurs.slice(0, 2);
