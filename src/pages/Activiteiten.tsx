@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Plus, Trash2, Users, X, Zap } from "lucide-react";
+import { Copy, GripVertical, Pencil, Plus, Trash2, Users, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -231,6 +231,30 @@ const Activiteiten = () => {
     setDeleteTarget(null);
   };
 
+  const handleDuplicate = async (a: ActiviteitType) => {
+    const { id: _id, positie: _p, naam: origNaam, ...rest } = a;
+    const payload = {
+      ...rest,
+      naam: origNaam + " (kopie)",
+      positie: maxPositie + 1,
+    };
+    const { data, error } = await supabase
+      .from("activiteit_types")
+      .insert(payload)
+      .select()
+      .single();
+    if (error || !data) {
+      toast.error("Dupliceren mislukt");
+      return;
+    }
+    setItems((cur) =>
+      [...cur, data as ActiviteitType].sort(
+        (x, y) => (x.positie ?? 0) - (y.positie ?? 0)
+      )
+    );
+    toast.success("Activiteit gedupliceerd");
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -309,6 +333,7 @@ const Activiteiten = () => {
                   key={a.id}
                   a={a}
                   onEdit={() => openEdit(a)}
+                  onDuplicate={() => handleDuplicate(a)}
                   onDelete={() => setDeleteTarget(a)}
                 />
               ))}
@@ -568,10 +593,12 @@ const PillButton = ({
 const ActiviteitRow = ({
   a,
   onEdit,
+  onDuplicate,
   onDelete,
 }: {
   a: ActiviteitType;
   onEdit: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -632,10 +659,12 @@ const ActiviteitRow = ({
           {capLabel(a.capaciteit_type)}
         </span>
 
-        <span className="inline-flex items-center rounded-md bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          min. {a.min_personen_totaal ?? a.min_personen ?? 1} man (
-          {a.min_personen_gekwalificeerd ?? a.min_personen ?? 1} gekwal.)
-        </span>
+        {showAanwijzing && (
+          <span className="inline-flex items-center rounded-md bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+            min. {a.min_personen_totaal ?? a.min_personen ?? 1} man (
+            {a.min_personen_gekwalificeerd ?? a.min_personen ?? 1} gekwal.)
+          </span>
+        )}
 
         {showAanwijzing && a.min_aanwijzing_ls && (
           <span
@@ -663,6 +692,13 @@ const ActiviteitRow = ({
           aria-label="Wijzigen"
         >
           <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onDuplicate}
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+          aria-label="Dupliceren"
+        >
+          <Copy className="h-4 w-4" />
         </button>
         <button
           onClick={onDelete}
