@@ -128,6 +128,8 @@ const getIsoWeek = (date = new Date()): number => {
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 };
 
+const wrapWeek = (n: number): number => ((n - 1 + 53) % 53) + 1;
+
 const Projecten = () => {
   const navigate = useNavigate();
   const setSelectedProjectId = useSelectedProject((s) => s.setProjectId);
@@ -283,8 +285,18 @@ const Projecten = () => {
     setModalOpen(true);
   };
 
-  const seedTemplateForProject = async (projectId: string, template: ProjectTemplate) => {
-    const ids = template.activiteit_type_ids ?? [];
+  const seedTemplateForProject = async (
+    projectId: string,
+    templateId: string,
+  ): Promise<number> => {
+    // Always fetch fresh template to ensure latest activiteit_type_ids
+    const { data: tplData } = await supabase
+      .from("project_templates")
+      .select("id, activiteit_type_ids")
+      .eq("id", templateId)
+      .single();
+    const ids = (tplData?.activiteit_type_ids ?? []) as string[];
+    let createdCount = 0;
     if (ids.length > 0) {
       const { data: types } = await supabase
         .from("activiteit_types")
@@ -308,14 +320,20 @@ const Projecten = () => {
           min_aanwijzing_ms: t.min_aanwijzing_ms,
           positie: idx,
         }));
-        await supabase.from("project_activiteiten").insert(rows);
+        const { error: insErr } = await supabase
+          .from("project_activiteiten")
+          .insert(rows);
+        if (!insErr) createdCount = rows.length;
       }
     }
-    // 6 weeks starting at current ISO week
+    return createdCount;
+  };
+
+  const seedWeeksForProject = async (projectId: string) => {
     const startWeek = getIsoWeek();
     const weekRows = Array.from({ length: 6 }).map((_, i) => ({
       project_id: projectId,
-      week_nr: ((startWeek - 1 + i) % 53) + 1,
+      week_nr: wrapWeek(startWeek + i),
       positie: i,
       opmerking: "",
     }));
@@ -379,17 +397,22 @@ const Projecten = () => {
       if (error || !data) {
         toast.error("Opslaan mislukt");
       } else {
+        let createdAct = 0;
         if (templateId) {
-          const tpl = templateById.get(templateId);
-          if (tpl) {
-            try {
-              await seedTemplateForProject(data.id, tpl);
-            } catch {
-              toast.error("Template kon niet volledig worden toegepast");
-            }
+          try {
+            createdAct = await seedTemplateForProject(data.id, templateId);
+          } catch {
+            toast.error("Template kon niet volledig worden toegepast");
           }
         }
-        toast.success("Project opgeslagen");
+        try {
+          await seedWeeksForProject(data.id);
+        } catch {
+          // non-fatal
+        }
+        toast.success(
+          `Project aangemaakt met ${createdAct} activiteiten en 6 weken`,
+        );
         setEditing(data as Project);
         showSavedBanner();
         await loadAll();
