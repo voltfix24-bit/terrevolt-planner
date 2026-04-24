@@ -278,15 +278,27 @@ export default function Overzicht() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // For "maand": auto-fit number of weeks to the available width.
-  // Each week = 5 days × 44px = 220px. Reserve sidebar + beschikbaar column + app chrome.
+  // Auto-fit number of weeks/slots to the available horizontal width so
+  // the grid always fills the viewport (no empty whitespace after last col).
+  const availableGridWidth = useMemo(() => {
+    const sidebarPx = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
+    const appSidebar = 220; // left nav sidebar
+    const padding = 80;
+    return Math.max(400, viewportW - appSidebar - sidebarPx - padding);
+  }, [viewportW, sidebarCollapsed]);
+
+  // For "maand": each week = 5 days × cellW. Min 4, max 12 weeks.
   const weeksToShow = useMemo(() => {
     if (scale !== "maand") return 5;
-    const sidebarPx = SIDEBAR_W; // not collapsed-aware: keep stable so scrolling doesn't reflow weeks
-    const available = Math.max(0, viewportW - 220 /* app sidebar */ - sidebarPx - 100 /* beschikbaar */ - 80 /* padding */);
-    const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand; // 220
-    return Math.max(4, Math.min(16, Math.floor(available / weekPx)));
-  }, [scale, viewportW]);
+    const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand;
+    return Math.max(4, Math.min(12, Math.ceil(availableGridWidth / weekPx)));
+  }, [scale, availableGridWidth]);
+
+  // For "kwartaal": each slot = cellW. Min 8, max 26 weeks.
+  const kwartaalWeeks = useMemo(() => {
+    if (scale !== "kwartaal") return 13;
+    return Math.max(8, Math.min(26, Math.ceil(availableGridWidth / CELL_W_BY_SCALE.kwartaal)));
+  }, [scale, availableGridWidth]);
 
   // Feestdagen lookup (datum YYYY-MM-DD → naam)
   const feestdagMap = useMemo(() => {
@@ -334,9 +346,9 @@ export default function Overzicht() {
         }
       }
     } else if (scale === "kwartaal") {
-      // 13 weeks; group by month of the week's Monday
+      // Auto-fit weeks; group by month of the week's Monday
       const wkCount = weeksInYear(jaar);
-      for (let i = 0; i < 13; i++) {
+      for (let i = 0; i < kwartaalWeeks; i++) {
         const wnr = wrapWeek(((startWeek - 1 + i) % wkCount) + 1);
         const monday = getMondayOfWeek(wnr, jaar);
         const monthIdx = monday.getMonth();
@@ -394,7 +406,7 @@ export default function Overzicht() {
       }
     }
     return out;
-  }, [scale, startWeek, jaar, currentISO, weeksToShow, feestdagMap]);
+  }, [scale, startWeek, jaar, currentISO, weeksToShow, kwartaalWeeks, feestdagMap]);
 
   // (cellW for jaar uses viewport-derived width; declared below)
 
