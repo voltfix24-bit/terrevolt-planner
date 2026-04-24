@@ -2164,13 +2164,38 @@ function BeschikbaarCell({ vrijeDagen }: { vrijeDagen: number }) {
 function MonteurSidebarRow({
   monteur,
   collapsed = false,
+  vrijeDagen,
 }: {
   monteur: Monteur;
   collapsed?: boolean;
+  vrijeDagen?: number;
 }) {
   const isSchakel = monteur.type === "schakelmonteur";
   const ms = monteur.aanwijzing_ms;
   const msStyle = msBadgeStyle(ms);
+
+  // Vrije dagen badge style
+  const vd = vrijeDagen ?? -1;
+  const vdStyle: React.CSSProperties =
+    vd === 0
+      ? {
+          background: "rgba(254,179,0,0.2)",
+          color: "#feb300",
+          border: "1px solid rgba(254,179,0,0.3)",
+        }
+      : vd > 0 && vd <= 3
+        ? {
+            background: "rgba(254,179,0,0.15)",
+            color: "#feb300",
+            border: "1px solid rgba(254,179,0,0.25)",
+          }
+        : {
+            background: "rgba(63,255,139,0.12)",
+            color: "#3fff8b",
+            border: "1px solid rgba(63,255,139,0.2)",
+          };
+  const vdLabel = vd === 0 ? "Vol" : `${vd}d vrij`;
+
   return (
     <div
       className="flex items-center gap-2"
@@ -2204,13 +2229,33 @@ function MonteurSidebarRow({
       </div>
       {!collapsed && (
         <>
-          <span
-            className="truncate text-[13px] font-semibold text-foreground"
-            style={{ maxWidth: 160 }}
-            title={monteur.naam}
-          >
-            {monteur.naam}
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+            <span
+              className="truncate text-[13px] font-semibold text-foreground"
+              style={{ maxWidth: 160, lineHeight: 1.15 }}
+              title={monteur.naam}
+            >
+              {monteur.naam}
+            </span>
+            {vd >= 0 && (
+              <span
+                style={{
+                  ...vdStyle,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                  padding: "1px 7px",
+                  borderRadius: 999,
+                  display: "inline-block",
+                  marginTop: 2,
+                  whiteSpace: "nowrap",
+                  alignSelf: "flex-start",
+                }}
+              >
+                {vdLabel}
+              </span>
+            )}
+          </div>
           {ms && msStyle && (
             <span
               className="ml-auto shrink-0"
