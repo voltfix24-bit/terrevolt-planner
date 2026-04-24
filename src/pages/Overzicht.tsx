@@ -121,6 +121,9 @@ interface Slot {
   // tint hints
   isCurrentGroup: boolean;
   isToday: boolean;
+  // feestdag (NL) — only relevant for "maand" scale where each slot is a single day
+  isFeestdag?: boolean;
+  feestdagNaam?: string;
 }
 
 // ============== Helpers ==============
