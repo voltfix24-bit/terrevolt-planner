@@ -1544,11 +1544,21 @@ export default function Overzicht() {
                     <div
                       onClick={() => navigateToProject(p.id)}
                       title={`${p.case_nummer ?? "—"}${p.station_naam ? ` — ${p.station_naam}` : ""}`}
-                      className="group relative flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
+                      className="group relative flex cursor-pointer items-center gap-1.5 pr-2 hover:bg-white/[0.03]"
                       style={{
                         height: ROW_H_PROJECT,
+                        paddingLeft: 12,
                         borderRight: "1px solid rgba(255,255,255,0.08)",
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        borderLeft: (() => {
+                          switch (p.status) {
+                            case "gepland": return "3px solid #feb300";
+                            case "in_uitvoering": return "3px solid #3fff8b";
+                            case "afgerond": return "3px solid rgba(255,255,255,0.2)";
+                            case "concept": return "3px dashed rgba(255,255,255,0.2)";
+                            default: return "3px solid rgba(255,255,255,0.1)";
+                          }
+                        })(),
                       }}
                     >
                       {sidebarCollapsed ? (
