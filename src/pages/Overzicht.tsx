@@ -346,9 +346,9 @@ export default function Overzicht() {
         }
       }
     } else if (scale === "kwartaal") {
-      // 13 weeks; group by month of the week's Monday
+      // Auto-fit weeks; group by month of the week's Monday
       const wkCount = weeksInYear(jaar);
-      for (let i = 0; i < 13; i++) {
+      for (let i = 0; i < kwartaalWeeks; i++) {
         const wnr = wrapWeek(((startWeek - 1 + i) % wkCount) + 1);
         const monday = getMondayOfWeek(wnr, jaar);
         const monthIdx = monday.getMonth();
