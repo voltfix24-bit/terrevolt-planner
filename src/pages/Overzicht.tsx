@@ -1453,37 +1453,74 @@ export default function Overzicht() {
             />
 
             {/* Projecten section header */}
-            <button
-              type="button"
-              onClick={() => setProjectenOpen((o) => !o)}
-              className="flex w-full items-center gap-2 hover:bg-white/[0.05]"
-              style={{
-                height: 32,
-                paddingLeft: 12,
-                paddingTop: 4,
-                borderRight: "1px solid rgba(255,255,255,0.08)",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-              }}
-            >
-              <ChevronRight
-                className="h-3 w-3 text-muted-foreground"
-                style={{
-                  transform: projectenOpen ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s ease",
-                }}
-              />
-              {!sidebarCollapsed && (
-                <>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Projecten
-                  </span>
-                  <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
-                    {visibleProjecten.length}
-                  </span>
-                </>
-              )}
-            </button>
+            {(() => {
+              const allExpanded =
+                visibleProjecten.length > 0 &&
+                visibleProjecten.every((p) => expandedProjects.has(p.id));
+              const toggleAllProjects = () => {
+                if (allExpanded) {
+                  setExpandedProjects(new Set());
+                } else {
+                  setExpandedProjects(new Set(visibleProjecten.map((p) => p.id)));
+                }
+              };
+              return (
+                <div
+                  className="flex w-full items-center gap-2"
+                  style={{
+                    height: 32,
+                    paddingLeft: 12,
+                    paddingTop: 4,
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    background: "rgba(255,255,255,0.03)",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setProjectenOpen((o) => !o)}
+                    className="flex flex-1 items-center gap-2 hover:bg-white/[0.05]"
+                    style={{ height: "100%", marginLeft: -12, paddingLeft: 12 }}
+                  >
+                    <ChevronRight
+                      className="h-3 w-3 text-muted-foreground"
+                      style={{
+                        transform: projectenOpen ? "rotate(90deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s ease",
+                      }}
+                    />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Projecten
+                        </span>
+                        <span className="ml-auto text-[10px] font-semibold text-muted-foreground tabular-nums">
+                          {visibleProjecten.length}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                  {!sidebarCollapsed && visibleProjecten.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={toggleAllProjects}
+                      className="text-[10px] font-semibold transition-colors hover:text-foreground"
+                      style={{
+                        color: "rgba(255,255,255,0.4)",
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        background: "rgba(255,255,255,0.03)",
+                        marginRight: 12,
+                      }}
+                      title={allExpanded ? "Alles inklappen" : "Alles uitklappen"}
+                    >
+                      {allExpanded ? "Inklappen" : "Uitklappen"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             <div
               style={{
