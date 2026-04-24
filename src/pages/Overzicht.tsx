@@ -1436,7 +1436,12 @@ export default function Overzicht() {
                 }}
               >
                 {montageMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
+                  <MonteurSidebarRow
+                    key={m.id}
+                    monteur={m}
+                    collapsed={sidebarCollapsed}
+                    vrijeDagen={monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5}
+                  />
                 ))}
               </div>
 
