@@ -199,6 +199,54 @@ const Instellingen = () => {
     setKoppelRunning(false);
   };
 
+  const handleSeedFeestdagen = async () => {
+    setFeestdagenRunning(true);
+    const feestdagen = [
+      { datum: "2025-01-01", naam: "Nieuwjaarsdag", jaar: 2025 },
+      { datum: "2025-04-18", naam: "Goede Vrijdag", jaar: 2025 },
+      { datum: "2025-04-20", naam: "Eerste Paasdag", jaar: 2025 },
+      { datum: "2025-04-21", naam: "Tweede Paasdag", jaar: 2025 },
+      { datum: "2025-04-26", naam: "Koningsdag", jaar: 2025 },
+      { datum: "2025-05-05", naam: "Bevrijdingsdag", jaar: 2025 },
+      { datum: "2025-05-29", naam: "Hemelvaartsdag", jaar: 2025 },
+      { datum: "2025-06-08", naam: "Eerste Pinksterdag", jaar: 2025 },
+      { datum: "2025-06-09", naam: "Tweede Pinksterdag", jaar: 2025 },
+      { datum: "2025-12-25", naam: "Eerste Kerstdag", jaar: 2025 },
+      { datum: "2025-12-26", naam: "Tweede Kerstdag", jaar: 2025 },
+      { datum: "2026-01-01", naam: "Nieuwjaarsdag", jaar: 2026 },
+      { datum: "2026-04-03", naam: "Goede Vrijdag", jaar: 2026 },
+      { datum: "2026-04-05", naam: "Eerste Paasdag", jaar: 2026 },
+      { datum: "2026-04-06", naam: "Tweede Paasdag", jaar: 2026 },
+      { datum: "2026-04-27", naam: "Koningsdag", jaar: 2026 },
+      { datum: "2026-05-05", naam: "Bevrijdingsdag", jaar: 2026 },
+      { datum: "2026-05-14", naam: "Hemelvaartsdag", jaar: 2026 },
+      { datum: "2026-05-24", naam: "Eerste Pinksterdag", jaar: 2026 },
+      { datum: "2026-05-25", naam: "Tweede Pinksterdag", jaar: 2026 },
+      { datum: "2026-12-25", naam: "Eerste Kerstdag", jaar: 2026 },
+      { datum: "2026-12-26", naam: "Tweede Kerstdag", jaar: 2026 },
+      { datum: "2027-01-01", naam: "Nieuwjaarsdag", jaar: 2027 },
+      { datum: "2027-03-26", naam: "Goede Vrijdag", jaar: 2027 },
+      { datum: "2027-03-28", naam: "Eerste Paasdag", jaar: 2027 },
+      { datum: "2027-03-29", naam: "Tweede Paasdag", jaar: 2027 },
+      { datum: "2027-04-27", naam: "Koningsdag", jaar: 2027 },
+      { datum: "2027-05-05", naam: "Bevrijdingsdag", jaar: 2027 },
+      { datum: "2027-05-06", naam: "Hemelvaartsdag", jaar: 2027 },
+      { datum: "2027-05-16", naam: "Eerste Pinksterdag", jaar: 2027 },
+      { datum: "2027-05-17", naam: "Tweede Pinksterdag", jaar: 2027 },
+      { datum: "2027-12-25", naam: "Eerste Kerstdag", jaar: 2027 },
+      { datum: "2027-12-26", naam: "Tweede Kerstdag", jaar: 2027 },
+    ];
+    const { error } = await supabase
+      .from("feestdagen")
+      .upsert(feestdagen, { onConflict: "datum" });
+    if (error) {
+      toast.error("Seeden mislukt: " + error.message);
+    } else {
+      toast.success(`${feestdagen.length} feestdagen toegevoegd ✓`);
+    }
+    setFeestdagenRunning(false);
+  };
+
   // ---------- mount ----------
   useEffect(() => {
     let cancelled = false;
