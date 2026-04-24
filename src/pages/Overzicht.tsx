@@ -707,10 +707,22 @@ export default function Overzicht() {
     return Math.round((planned.size / totalPossible) * 100);
   }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById]);
 
-  // Vrije dagen per monteur in zichtbare periode (totaal werkdagen − dagen met inplanning)
+  // Vrije dagen per monteur in zichtbare periode
+  // (werkdagen exclusief feestdagen − dagen met inplanning op niet-feestdagen)
   const monteurVrijeDagen = useMemo(() => {
     const map = new Map<string, number>();
-    const totalDays = visibleWeekNrSet.size * 5;
+    // Tel alle werkdagen (MA-VR) in zichtbare weken die geen feestdag zijn
+    const workingDateKeys = new Set<string>();
+    for (const wnr of visibleWeekNrSet) {
+      const monday = getMondayOfWeek(wnr, jaar);
+      for (let d = 0; d < 5; d++) {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + d);
+        const dStr = dateKey(date);
+        if (!feestdagMap.has(dStr)) workingDateKeys.add(`${wnr}-${d}`);
+      }
+    }
+    const totalDays = workingDateKeys.size;
     for (const m of monteurs) {
       const planned = new Set<string>();
       for (const cel of cellen) {
@@ -718,15 +730,15 @@ export default function Overzicht() {
         const week = weekById.get(cel.week_id);
         if (!week) continue;
         if (!visibleWeekNrSet.has(week.week_nr)) continue;
+        const key = `${week.week_nr}-${cel.dag_index}`;
+        if (!workingDateKeys.has(key)) continue;
         const mids = monteurIdsByCel.get(cel.id) ?? [];
-        if (mids.includes(m.id)) {
-          planned.add(`${week.week_nr}-${cel.dag_index}`);
-        }
+        if (mids.includes(m.id)) planned.add(key);
       }
       map.set(m.id, totalDays - planned.size);
     }
     return map;
-  }, [monteurs, visibleWeekNrSet, cellen, weekById, monteurIdsByCel]);
+  }, [monteurs, visibleWeekNrSet, cellen, weekById, monteurIdsByCel, jaar, feestdagMap]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
