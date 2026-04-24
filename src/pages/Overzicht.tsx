@@ -18,7 +18,7 @@ import {
 // ============== Constants ==============
 const SIDEBAR_W = 260;
 const SIDEBAR_W_COLLAPSED = 48;
-const ROW_H_MONTEUR = 44;
+const ROW_H_MONTEUR = 52;
 const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
@@ -266,6 +266,13 @@ export default function Overzicht() {
     });
   }, []);
 
+  // Reset horizontal scroll to 0 when the visible week range changes,
+  // so the first slot is never clipped (header and body stay aligned).
+  useEffect(() => {
+    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = 0;
+    if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = 0;
+  }, [startWeek, jaar, scale]);
+
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
   // Track viewport width so the grid can fill available horizontal space.
@@ -283,8 +290,9 @@ export default function Overzicht() {
   const availableGridWidth = useMemo(() => {
     const sidebarPx = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
     const appSidebar = 220; // left nav sidebar
+    const beschikbaarColumnPx = 0; // (was 100px) right BESCHIKBAAR column removed
     const padding = 80;
-    return Math.max(400, viewportW - appSidebar - sidebarPx - padding);
+    return Math.max(400, viewportW - appSidebar - sidebarPx - beschikbaarColumnPx - padding);
   }, [viewportW, sidebarCollapsed]);
 
   // For "maand": each week = 5 days × cellW. Min 4, max 12 weeks.
@@ -846,7 +854,11 @@ export default function Overzicht() {
         }
       }
       flush();
-      return segs;
+      // Defensive: only return segments fully within the visible slot range,
+      // so a "phantom" pill can never bleed in/out at the grid edges.
+      return segs.filter(
+        (s) => s.startSlot >= 0 && s.endSlot < slots.length && s.endSlot >= s.startSlot,
+      );
     },
     [monteurSlotProjects, monteurSlotDubbel, slots.length],
   );
@@ -870,7 +882,9 @@ export default function Overzicht() {
         }
       }
       if (cur) segs.push(cur);
-      return segs;
+      return segs.filter(
+        (s) => s.startSlot >= 0 && s.endSlot < slots.length && s.endSlot >= s.startSlot,
+      );
     },
     [projectSlotsFilled, slots.length],
   );
@@ -1260,33 +1274,7 @@ export default function Overzicht() {
           >
             {renderHeader()}
           </div>
-          {/* Sticky right "Beschikbaar" header cell */}
-          <div
-            style={{
-              width: 100,
-              flexShrink: 0,
-              height: HEADER_H,
-              backgroundColor: "rgba(10, 26, 48, 0.97)",
-              borderLeft: "1px solid rgba(255,255,255,0.08)",
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "center",
-              paddingBottom: 6,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                color: "rgba(255,255,255,0.3)",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-              }}
-            >
-              Beschikbaar
-            </span>
-          </div>
+          {/* Right "Beschikbaar" header column removed — vrije dagen badge is now shown under monteur naam in the left sidebar. */}
         </div>
 
         {/* ====== Scrollable body (vertical) ====== */}
@@ -1381,7 +1369,12 @@ export default function Overzicht() {
                 }}
               >
                 {schakelMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
+                  <MonteurSidebarRow
+                    key={m.id}
+                    monteur={m}
+                    collapsed={sidebarCollapsed}
+                    vrijeDagen={monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5}
+                  />
                 ))}
               </div>
 
@@ -1423,7 +1416,12 @@ export default function Overzicht() {
                 }}
               >
                 {montageMonteurs.map((m) => (
-                  <MonteurSidebarRow key={m.id} monteur={m} collapsed={sidebarCollapsed} />
+                  <MonteurSidebarRow
+                    key={m.id}
+                    monteur={m}
+                    collapsed={sidebarCollapsed}
+                    vrijeDagen={monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5}
+                  />
                 ))}
               </div>
 
@@ -1552,11 +1550,21 @@ export default function Overzicht() {
                     <div
                       onClick={() => navigateToProject(p.id)}
                       title={`${p.case_nummer ?? "—"}${p.station_naam ? ` — ${p.station_naam}` : ""}`}
-                      className="group relative flex cursor-pointer items-center gap-1.5 px-2 hover:bg-white/[0.03]"
+                      className="group relative flex cursor-pointer items-center gap-1.5 pr-2 hover:bg-white/[0.03]"
                       style={{
                         height: ROW_H_PROJECT,
+                        paddingLeft: 12,
                         borderRight: "1px solid rgba(255,255,255,0.08)",
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        borderLeft: (() => {
+                          switch (p.status) {
+                            case "gepland": return "3px solid #feb300";
+                            case "in_uitvoering": return "3px solid #3fff8b";
+                            case "afgerond": return "3px solid rgba(255,255,255,0.2)";
+                            case "concept": return "3px dashed rgba(255,255,255,0.2)";
+                            default: return "3px solid rgba(255,255,255,0.1)";
+                          }
+                        })(),
                       }}
                     >
                       {sidebarCollapsed ? (
@@ -1960,127 +1968,7 @@ export default function Overzicht() {
             </div>
           </div>
 
-          {/* ====== Sticky right "Beschikbaar" column (medewerkers only) ====== */}
-          <div
-            style={{
-              width: 100,
-              flexShrink: 0,
-              borderLeft: "1px solid rgba(255,255,255,0.08)",
-              backgroundColor: "rgba(10, 26, 48, 0.97)",
-            }}
-          >
-            {/* Medewerkers section header spacer (32px) */}
-            <div
-              style={{
-                height: 32,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.02)",
-              }}
-            />
-            <div
-              style={{
-                maxHeight: medewerkersOpen ? 4000 : 0,
-                opacity: medewerkersOpen ? 1 : 0,
-                overflow: "hidden",
-                transition: "max-height 0.2s ease, opacity 0.15s ease",
-              }}
-            >
-              {schakelMonteurs.length > 0 && (
-                <div
-                  style={{
-                    height: 28,
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  maxHeight: schakelOpen ? 4000 : 0,
-                  opacity: schakelOpen ? 1 : 0,
-                  overflow: "hidden",
-                  transition: "max-height 0.2s ease, opacity 0.15s ease",
-                }}
-              >
-                {schakelMonteurs.map((m) => (
-                  <BeschikbaarCell
-                    key={m.id}
-                    vrijeDagen={
-                      monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5
-                    }
-                  />
-                ))}
-              </div>
-              {montageMonteurs.length > 0 && (
-                <div
-                  style={{
-                    height: 28,
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  maxHeight: montageOpen ? 4000 : 0,
-                  opacity: montageOpen ? 1 : 0,
-                  overflow: "hidden",
-                  transition: "max-height 0.2s ease, opacity 0.15s ease",
-                }}
-              >
-                {montageMonteurs.map((m) => (
-                  <BeschikbaarCell
-                    key={m.id}
-                    vrijeDagen={
-                      monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5
-                    }
-                  />
-                ))}
-              </div>
-              {monteurs.length === 0 && <div style={{ height: 60 }} />}
-            </div>
-            {/* Separator + projecten section: leeg, alleen hoogtes om uit te lijnen */}
-            <div
-              style={{
-                height: 8,
-                borderTop: "2px solid rgba(255,255,255,0.06)",
-                marginTop: 4,
-              }}
-            />
-            <div
-              style={{
-                height: 32,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-              }}
-            />
-            <div
-              style={{
-                maxHeight: projectenOpen ? 99999 : 0,
-                opacity: projectenOpen ? 1 : 0,
-                overflow: "hidden",
-                transition: "max-height 0.25s ease, opacity 0.15s ease",
-              }}
-            >
-              {visibleProjecten.length === 0 && <div style={{ height: 60 }} />}
-              {visibleProjecten.map((p) => {
-                const expanded = expandedProjects.has(p.id);
-                const acts = activiteitenByProject.get(p.id) ?? [];
-                const totalH =
-                  ROW_H_PROJECT +
-                  (expanded ? acts.length * ROW_H_ACTIVITEIT : 0);
-                return (
-                  <div
-                    key={p.id}
-                    style={{
-                      height: totalH,
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
+          {/* ====== Right "Beschikbaar" column removed — vrije dagen badge now lives under monteur naam in the left sidebar. ====== */}
         </div>
         </div>
       </div>
@@ -2091,68 +1979,44 @@ export default function Overzicht() {
 
 // ============== Sub-components ==============
 
-function BeschikbaarCell({ vrijeDagen }: { vrijeDagen: number }) {
-  let badgeStyle: React.CSSProperties;
-  let label: string;
-  if (vrijeDagen <= 0) {
-    label = "Vol";
-    badgeStyle = {
-      background: "rgba(254,179,0,0.2)",
-      color: "#feb300",
-      border: "1px solid rgba(254,179,0,0.3)",
-    };
-  } else if (vrijeDagen <= 3) {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
-      background: "rgba(254,179,0,0.15)",
-      color: "#feb300",
-      border: "1px solid rgba(254,179,0,0.25)",
-    };
-  } else {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
-      background: "rgba(63,255,139,0.12)",
-      color: "#3fff8b",
-      border: "1px solid rgba(63,255,139,0.2)",
-    };
-  }
-  return (
-    <div
-      style={{
-        height: ROW_H_MONTEUR,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
-      }}
-    >
-      <span
-        style={{
-          ...badgeStyle,
-          fontSize: 10,
-          fontWeight: 700,
-          fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-          padding: "3px 8px",
-          borderRadius: 999,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
+// (BeschikbaarCell removed — vrije dagen badge is now rendered inside MonteurSidebarRow.)
+
 
 function MonteurSidebarRow({
   monteur,
   collapsed = false,
+  vrijeDagen,
 }: {
   monteur: Monteur;
   collapsed?: boolean;
+  vrijeDagen?: number;
 }) {
   const isSchakel = monteur.type === "schakelmonteur";
   const ms = monteur.aanwijzing_ms;
   const msStyle = msBadgeStyle(ms);
+
+  // Vrije dagen badge style
+  const vd = vrijeDagen ?? -1;
+  const vdStyle: React.CSSProperties =
+    vd === 0
+      ? {
+          background: "rgba(254,179,0,0.2)",
+          color: "#feb300",
+          border: "1px solid rgba(254,179,0,0.3)",
+        }
+      : vd > 0 && vd <= 3
+        ? {
+            background: "rgba(254,179,0,0.15)",
+            color: "#feb300",
+            border: "1px solid rgba(254,179,0,0.25)",
+          }
+        : {
+            background: "rgba(63,255,139,0.12)",
+            color: "#3fff8b",
+            border: "1px solid rgba(63,255,139,0.2)",
+          };
+  const vdLabel = vd === 0 ? "Vol" : `${vd}d vrij`;
+
   return (
     <div
       className="flex items-center gap-2"
@@ -2186,13 +2050,33 @@ function MonteurSidebarRow({
       </div>
       {!collapsed && (
         <>
-          <span
-            className="truncate text-[13px] font-semibold text-foreground"
-            style={{ maxWidth: 160 }}
-            title={monteur.naam}
-          >
-            {monteur.naam}
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+            <span
+              className="truncate text-[13px] font-semibold text-foreground"
+              style={{ maxWidth: 160, lineHeight: 1.15 }}
+              title={monteur.naam}
+            >
+              {monteur.naam}
+            </span>
+            {vd >= 0 && (
+              <span
+                style={{
+                  ...vdStyle,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                  padding: "1px 7px",
+                  borderRadius: 999,
+                  display: "inline-block",
+                  marginTop: 2,
+                  whiteSpace: "nowrap",
+                  alignSelf: "flex-start",
+                }}
+              >
+                {vdLabel}
+              </span>
+            )}
+          </div>
           {ms && msStyle && (
             <span
               className="ml-auto shrink-0"
