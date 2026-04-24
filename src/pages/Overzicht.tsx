@@ -606,14 +606,23 @@ export default function Overzicht() {
     return m;
   }, [activiteiten]);
 
-  // Visible projects = projects with at least one project_week in visible range
+  // Visible projects = projects with planning data anywhere (filled cellen),
+  // OR projects with project_weken in the visible range (being planned).
+  // This ensures projects don't disappear when scrolling outside their week range.
   const visibleProjecten = useMemo(() => {
-    const ids = new Set<string>();
-    for (const w of weken) {
-      if (w.project_id && visibleWeekNrSet.has(w.week_nr)) ids.add(w.project_id);
+    const projectsWithCellen = new Set<string>();
+    for (const c of cellen) {
+      if (!c.activiteit_id || !c.kleur_code) continue;
+      const act = activiteitById.get(c.activiteit_id);
+      if (act?.project_id) projectsWithCellen.add(act.project_id);
     }
-    return projecten.filter((p) => ids.has(p.id));
-  }, [projecten, weken, visibleWeekNrSet]);
+    for (const w of weken) {
+      if (w.project_id && visibleWeekNrSet.has(w.week_nr)) {
+        projectsWithCellen.add(w.project_id);
+      }
+    }
+    return projecten.filter((p) => projectsWithCellen.has(p.id));
+  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet]);
 
   const schakelMonteurs = useMemo(
     () => monteurs.filter((m) => m.type === "schakelmonteur"),
