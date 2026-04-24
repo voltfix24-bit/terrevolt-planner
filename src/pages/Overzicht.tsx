@@ -882,7 +882,9 @@ export default function Overzicht() {
         }
       }
       if (cur) segs.push(cur);
-      return segs;
+      return segs.filter(
+        (s) => s.startSlot >= 0 && s.endSlot < slots.length && s.endSlot >= s.startSlot,
+      );
     },
     [projectSlotsFilled, slots.length],
   );
