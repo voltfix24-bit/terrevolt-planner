@@ -138,6 +138,7 @@ const Instellingen = () => {
 
   const [dataOpen, setDataOpen] = useState(false);
   const [koppelRunning, setKoppelRunning] = useState(false);
+  const [feestdagenRunning, setFeestdagenRunning] = useState(false);
 
   const autoRanRef = useRef(false);
 
