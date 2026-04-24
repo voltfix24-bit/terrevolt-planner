@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  CalendarDays,
   Check,
   ChevronDown,
   ChevronUp,
@@ -138,6 +139,7 @@ const Instellingen = () => {
 
   const [dataOpen, setDataOpen] = useState(false);
   const [koppelRunning, setKoppelRunning] = useState(false);
+  const [feestdagenRunning, setFeestdagenRunning] = useState(false);
 
   const autoRanRef = useRef(false);
 
@@ -196,6 +198,54 @@ const Instellingen = () => {
     else toast.error("Koppelen mislukt");
     await load();
     setKoppelRunning(false);
+  };
+
+  const handleSeedFeestdagen = async () => {
+    setFeestdagenRunning(true);
+    const feestdagen = [
+      { datum: "2025-01-01", naam: "Nieuwjaarsdag", jaar: 2025 },
+      { datum: "2025-04-18", naam: "Goede Vrijdag", jaar: 2025 },
+      { datum: "2025-04-20", naam: "Eerste Paasdag", jaar: 2025 },
+      { datum: "2025-04-21", naam: "Tweede Paasdag", jaar: 2025 },
+      { datum: "2025-04-26", naam: "Koningsdag", jaar: 2025 },
+      { datum: "2025-05-05", naam: "Bevrijdingsdag", jaar: 2025 },
+      { datum: "2025-05-29", naam: "Hemelvaartsdag", jaar: 2025 },
+      { datum: "2025-06-08", naam: "Eerste Pinksterdag", jaar: 2025 },
+      { datum: "2025-06-09", naam: "Tweede Pinksterdag", jaar: 2025 },
+      { datum: "2025-12-25", naam: "Eerste Kerstdag", jaar: 2025 },
+      { datum: "2025-12-26", naam: "Tweede Kerstdag", jaar: 2025 },
+      { datum: "2026-01-01", naam: "Nieuwjaarsdag", jaar: 2026 },
+      { datum: "2026-04-03", naam: "Goede Vrijdag", jaar: 2026 },
+      { datum: "2026-04-05", naam: "Eerste Paasdag", jaar: 2026 },
+      { datum: "2026-04-06", naam: "Tweede Paasdag", jaar: 2026 },
+      { datum: "2026-04-27", naam: "Koningsdag", jaar: 2026 },
+      { datum: "2026-05-05", naam: "Bevrijdingsdag", jaar: 2026 },
+      { datum: "2026-05-14", naam: "Hemelvaartsdag", jaar: 2026 },
+      { datum: "2026-05-24", naam: "Eerste Pinksterdag", jaar: 2026 },
+      { datum: "2026-05-25", naam: "Tweede Pinksterdag", jaar: 2026 },
+      { datum: "2026-12-25", naam: "Eerste Kerstdag", jaar: 2026 },
+      { datum: "2026-12-26", naam: "Tweede Kerstdag", jaar: 2026 },
+      { datum: "2027-01-01", naam: "Nieuwjaarsdag", jaar: 2027 },
+      { datum: "2027-03-26", naam: "Goede Vrijdag", jaar: 2027 },
+      { datum: "2027-03-28", naam: "Eerste Paasdag", jaar: 2027 },
+      { datum: "2027-03-29", naam: "Tweede Paasdag", jaar: 2027 },
+      { datum: "2027-04-27", naam: "Koningsdag", jaar: 2027 },
+      { datum: "2027-05-05", naam: "Bevrijdingsdag", jaar: 2027 },
+      { datum: "2027-05-06", naam: "Hemelvaartsdag", jaar: 2027 },
+      { datum: "2027-05-16", naam: "Eerste Pinksterdag", jaar: 2027 },
+      { datum: "2027-05-17", naam: "Tweede Pinksterdag", jaar: 2027 },
+      { datum: "2027-12-25", naam: "Eerste Kerstdag", jaar: 2027 },
+      { datum: "2027-12-26", naam: "Tweede Kerstdag", jaar: 2027 },
+    ];
+    const { error } = await supabase
+      .from("feestdagen")
+      .upsert(feestdagen, { onConflict: "datum" });
+    if (error) {
+      toast.error("Seeden mislukt: " + error.message);
+    } else {
+      toast.success(`${feestdagen.length} feestdagen toegevoegd ✓`);
+    }
+    setFeestdagenRunning(false);
   };
 
   // ---------- mount ----------
@@ -467,25 +517,48 @@ const Instellingen = () => {
         </button>
 
         {dataOpen && (
-          <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
-                  Templates koppelen (eenmalig)
-                </h3>
-                <p className="text-xs text-muted-foreground max-w-md">
-                  Koppelt de standaard activiteiten aan de ingebouwde templates.
-                  Alleen nodig als de templates leeg zijn.
-                </p>
+          <div className="mt-5 space-y-3">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
+                    Templates koppelen (eenmalig)
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-md">
+                    Koppelt de standaard activiteiten aan de ingebouwde templates.
+                    Alleen nodig als de templates leeg zijn.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleKoppelClick}
+                  disabled={koppelRunning}
+                  className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
+                >
+                  <Link2 className="h-4 w-4 mr-1.5" />
+                  {koppelRunning ? "Bezig…" : "Templates koppelen"}
+                </Button>
               </div>
-              <Button
-                onClick={handleKoppelClick}
-                disabled={koppelRunning}
-                className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
-              >
-                <Link2 className="h-4 w-4 mr-1.5" />
-                {koppelRunning ? "Bezig…" : "Templates koppelen"}
-              </Button>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
+                    Feestdagen seeden (eenmalig)
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-md">
+                    Voegt Nederlandse feestdagen toe voor 2025, 2026 en 2027.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleSeedFeestdagen}
+                  disabled={feestdagenRunning}
+                  className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
+                >
+                  <CalendarDays className="h-4 w-4 mr-1.5" />
+                  {feestdagenRunning ? "Bezig…" : "Feestdagen seeden"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
