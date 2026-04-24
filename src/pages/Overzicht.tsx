@@ -969,26 +969,39 @@ export default function Overzicht() {
           {slots.map((s) => {
             const isCurrent = s.isCurrentGroup;
             const isLastGroup = s.isLastInGroup;
+            const isFeest = s.isFeestdag;
+            const bg = isFeest
+              ? "rgba(167,139,250,0.18)"
+              : s.isToday
+                ? BG_TODAY
+                : isCurrent
+                  ? BG_CURRENT_GROUP
+                  : undefined;
+            const labelColor = isFeest ? "#c4b5fd" : undefined;
             return (
               <div
                 key={s.index}
+                title={isFeest ? s.feestdagNaam : undefined}
                 className="flex flex-col items-center justify-center"
                 style={{
                   width: cellW,
                   borderRight: isLastGroup ? BORDER_GROUP_RIGHT : BORDER_CELL_RIGHT,
                   borderBottom: BORDER_CELL_BOTTOM,
-                  background: s.isToday
-                    ? BG_TODAY
-                    : isCurrent
-                      ? BG_CURRENT_GROUP
-                      : undefined,
+                  borderTop: isFeest ? "2px solid rgba(167,139,250,0.6)" : undefined,
+                  background: bg,
                 }}
               >
-                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider"
+                  style={{ color: labelColor ?? "hsl(var(--muted-foreground))" }}
+                >
                   {s.primaryLabel}
                 </span>
                 {s.secondaryLabel && (
-                  <span className="text-[9px] text-muted-foreground/70 tabular-nums">
+                  <span
+                    className="text-[9px] tabular-nums"
+                    style={{ color: labelColor ?? "hsl(var(--muted-foreground) / 0.7)" }}
+                  >
                     {s.secondaryLabel}
                   </span>
                 )}
