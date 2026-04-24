@@ -202,6 +202,9 @@ const Instellingen = () => {
 
   const handleSeedFeestdagen = async () => {
     setFeestdagenRunning(true);
+    // Bevrijdingsdag (5 mei) is alleen een officiële vrije dag
+    // in lustrumjaren (deelbaar door 5): 2025, 2030, 2035...
+    // Niet in 2026, 2027, 2028, 2029.
     const feestdagen = [
       { datum: "2025-01-01", naam: "Nieuwjaarsdag", jaar: 2025 },
       { datum: "2025-04-18", naam: "Goede Vrijdag", jaar: 2025 },
@@ -219,7 +222,6 @@ const Instellingen = () => {
       { datum: "2026-04-05", naam: "Eerste Paasdag", jaar: 2026 },
       { datum: "2026-04-06", naam: "Tweede Paasdag", jaar: 2026 },
       { datum: "2026-04-27", naam: "Koningsdag", jaar: 2026 },
-      { datum: "2026-05-05", naam: "Bevrijdingsdag", jaar: 2026 },
       { datum: "2026-05-14", naam: "Hemelvaartsdag", jaar: 2026 },
       { datum: "2026-05-24", naam: "Eerste Pinksterdag", jaar: 2026 },
       { datum: "2026-05-25", naam: "Tweede Pinksterdag", jaar: 2026 },
@@ -230,20 +232,31 @@ const Instellingen = () => {
       { datum: "2027-03-28", naam: "Eerste Paasdag", jaar: 2027 },
       { datum: "2027-03-29", naam: "Tweede Paasdag", jaar: 2027 },
       { datum: "2027-04-27", naam: "Koningsdag", jaar: 2027 },
-      { datum: "2027-05-05", naam: "Bevrijdingsdag", jaar: 2027 },
       { datum: "2027-05-06", naam: "Hemelvaartsdag", jaar: 2027 },
       { datum: "2027-05-16", naam: "Eerste Pinksterdag", jaar: 2027 },
       { datum: "2027-05-17", naam: "Tweede Pinksterdag", jaar: 2027 },
       { datum: "2027-12-25", naam: "Eerste Kerstdag", jaar: 2027 },
       { datum: "2027-12-26", naam: "Tweede Kerstdag", jaar: 2027 },
     ];
+
+    const lustrumCheck = async () => {
+      const nonLustrumYears = [2026, 2027, 2028, 2029, 2031, 2032, 2033, 2034];
+      await supabase
+        .from("feestdagen")
+        .delete()
+        .eq("naam", "Bevrijdingsdag")
+        .in("jaar", nonLustrumYears);
+    };
+
+    await lustrumCheck();
+
     const { error } = await supabase
       .from("feestdagen")
       .upsert(feestdagen, { onConflict: "datum" });
     if (error) {
       toast.error("Seeden mislukt: " + error.message);
     } else {
-      toast.success(`${feestdagen.length} feestdagen toegevoegd ✓`);
+      toast.success("Feestdagen geseed ✓ — Bevrijdingsdag alleen in lustrumjaren");
     }
     setFeestdagenRunning(false);
   };
