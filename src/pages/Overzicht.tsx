@@ -854,7 +854,11 @@ export default function Overzicht() {
         }
       }
       flush();
-      return segs;
+      // Defensive: only return segments fully within the visible slot range,
+      // so a "phantom" pill can never bleed in/out at the grid edges.
+      return segs.filter(
+        (s) => s.startSlot >= 0 && s.endSlot < slots.length && s.endSlot >= s.startSlot,
+      );
     },
     [monteurSlotProjects, monteurSlotDubbel, slots.length],
   );
