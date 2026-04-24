@@ -394,7 +394,7 @@ export default function Overzicht() {
       }
     }
     return out;
-  }, [scale, startWeek, jaar, currentISO, weeksToShow]);
+  }, [scale, startWeek, jaar, currentISO, weeksToShow, feestdagMap]);
 
   // (cellW for jaar uses viewport-derived width; declared below)
 
