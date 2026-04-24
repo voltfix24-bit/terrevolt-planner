@@ -517,25 +517,48 @@ const Instellingen = () => {
         </button>
 
         {dataOpen && (
-          <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
-                  Templates koppelen (eenmalig)
-                </h3>
-                <p className="text-xs text-muted-foreground max-w-md">
-                  Koppelt de standaard activiteiten aan de ingebouwde templates.
-                  Alleen nodig als de templates leeg zijn.
-                </p>
+          <div className="mt-5 space-y-3">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
+                    Templates koppelen (eenmalig)
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-md">
+                    Koppelt de standaard activiteiten aan de ingebouwde templates.
+                    Alleen nodig als de templates leeg zijn.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleKoppelClick}
+                  disabled={koppelRunning}
+                  className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
+                >
+                  <Link2 className="h-4 w-4 mr-1.5" />
+                  {koppelRunning ? "Bezig…" : "Templates koppelen"}
+                </Button>
               </div>
-              <Button
-                onClick={handleKoppelClick}
-                disabled={koppelRunning}
-                className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
-              >
-                <Link2 className="h-4 w-4 mr-1.5" />
-                {koppelRunning ? "Bezig…" : "Templates koppelen"}
-              </Button>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
+                    Feestdagen seeden (eenmalig)
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-md">
+                    Voegt Nederlandse feestdagen toe voor 2025, 2026 en 2027.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleSeedFeestdagen}
+                  disabled={feestdagenRunning}
+                  className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
+                >
+                  <CalendarDays className="h-4 w-4 mr-1.5" />
+                  {feestdagenRunning ? "Bezig…" : "Feestdagen seeden"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
