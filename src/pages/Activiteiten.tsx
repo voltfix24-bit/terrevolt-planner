@@ -16,14 +16,20 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Copy, GripVertical, Pencil, Plus, Trash2, Users, X, Zap } from "lucide-react";
+import {
+  Copy,
+  GripVertical,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Wrench,
+  X,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +43,7 @@ import {
 
 type CapType = "schakel" | "montage" | "geen";
 type Aanwijzing = "VOP" | "VP" | "AVP";
+type FilterType = "alle" | CapType;
 
 interface ActiviteitType {
   id: string;
@@ -68,22 +75,49 @@ const PLANNING_COLORS: { code: string; hex: string }[] = [
   { code: "c12", hex: "#78716c" },
 ];
 
-const capStyle = (c: CapType | null): React.CSSProperties => {
-  if (c === "schakel") return { backgroundColor: "#feb300", color: "#0a1a30" };
-  if (c === "montage") return { backgroundColor: "#378add", color: "#0a1a30" };
-  return { backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" };
-};
+const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
+  { value: "alle", label: "Alle" },
+  { value: "montage", label: "Montage" },
+  { value: "schakel", label: "Schakel" },
+  { value: "geen", label: "Geen" },
+];
 
 const capLabel = (c: CapType | null) =>
   c === "schakel" ? "Schakel" : c === "montage" ? "Montage" : "Geen";
 
+const capAccent = (c: CapType | null): string => {
+  if (c === "montage") return "#378add";
+  if (c === "schakel") return "#feb300";
+  return "rgba(255,255,255,0.2)";
+};
+
+const capIconBg = (c: CapType | null): { bg: string; color: string } => {
+  if (c === "montage") return { bg: "rgba(55,138,221,0.12)", color: "#378add" };
+  if (c === "schakel") return { bg: "rgba(254,179,0,0.12)", color: "#feb300" };
+  return { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" };
+};
+
+const capBadgeStyle = (c: CapType | null): React.CSSProperties => {
+  if (c === "montage")
+    return { background: "rgba(55,138,221,0.15)", color: "#378add" };
+  if (c === "schakel")
+    return { background: "rgba(254,179,0,0.15)", color: "#feb300" };
+  return {
+    background: "rgba(255,255,255,0.06)",
+    color: "rgba(255,255,255,0.55)",
+  };
+};
+
 const Activiteiten = () => {
   const [items, setItems] = useState<ActiviteitType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<ActiviteitType | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ActiviteitType | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [filter, setFilter] = useState<FilterType>("alle");
+  const [search, setSearch] = useState("");
 
   // form state
   const [naam, setNaam] = useState("");
@@ -121,6 +155,20 @@ const Activiteiten = () => {
     [items]
   );
 
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return items
+      .filter((a) => {
+        if (filter !== "alle") {
+          const cap = a.capaciteit_type ?? "geen";
+          if (cap !== filter) return false;
+        }
+        if (q && !a.naam.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => (a.positie ?? 0) - (b.positie ?? 0));
+  }, [items, filter, search]);
+
   const openNew = () => {
     setEditing(null);
     setNaam("");
@@ -130,7 +178,7 @@ const Activiteiten = () => {
     setMinLs(null);
     setMinMs(null);
     setKleur("c3");
-    setModalOpen(true);
+    setDrawerOpen(true);
   };
 
   const openEdit = (a: ActiviteitType) => {
@@ -144,7 +192,7 @@ const Activiteiten = () => {
     setMinLs(a.min_aanwijzing_ls);
     setMinMs(a.min_aanwijzing_ms);
     setKleur(a.kleur_default ?? "c3");
-    setModalOpen(true);
+    setDrawerOpen(true);
   };
 
   const handleSave = async () => {
@@ -169,7 +217,9 @@ const Activiteiten = () => {
 
     if (editing) {
       const prev = items;
-      setItems(items.map((i) => (i.id === editing.id ? { ...i, ...payload } : i)));
+      setItems(
+        items.map((i) => (i.id === editing.id ? { ...i, ...payload } : i))
+      );
       const { error } = await supabase
         .from("activiteit_types")
         .update(payload)
@@ -179,7 +229,7 @@ const Activiteiten = () => {
         toast.error("Opslaan mislukt");
       } else {
         toast.success("Activiteit opgeslagen");
-        setModalOpen(false);
+        setDrawerOpen(false);
       }
     } else {
       const { data, error } = await supabase
@@ -196,7 +246,7 @@ const Activiteiten = () => {
           )
         );
         toast.success("Activiteit opgeslagen");
-        setModalOpen(false);
+        setDrawerOpen(false);
       }
     }
     setSaving(false);
@@ -204,14 +254,15 @@ const Activiteiten = () => {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    // Soft check: warn if in use by project_activiteiten
     const { count } = await supabase
       .from("project_activiteiten")
       .select("id", { count: "exact", head: true })
       .eq("activiteit_type_id", deleteTarget.id);
     if ((count ?? 0) > 0) {
       toast.error(
-        `Activiteit is in gebruik door ${count} projectactiviteit${count === 1 ? "" : "en"}`
+        `Activiteit is in gebruik door ${count} projectactiviteit${
+          count === 1 ? "" : "en"
+        }`
       );
       setDeleteTarget(null);
       return;
@@ -269,9 +320,11 @@ const Activiteiten = () => {
     const prev = items;
     setItems(reordered);
 
-    // Batch update positions in parallel
     const updates = reordered.map((it) =>
-      supabase.from("activiteit_types").update({ positie: it.positie }).eq("id", it.id)
+      supabase
+        .from("activiteit_types")
+        .update({ positie: it.positie })
+        .eq("id", it.id)
     );
     const results = await Promise.all(updates);
     if (results.some((r) => r.error)) {
@@ -282,40 +335,168 @@ const Activiteiten = () => {
 
   return (
     <div>
-      <div className="mb-8 flex items-end justify-between gap-4">
-        <PageHeader
-          title="Activiteiten"
-          description="Configureer activiteiten en hun capaciteitsvereisten"
-        />
-        <Button
-          onClick={openNew}
-          className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+      {/* Page header */}
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1
+          style={{
+            fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+            fontWeight: 800,
+            fontSize: 28,
+            color: "#ffffff",
+            letterSpacing: "-0.01em",
+          }}
         >
-          <Plus className="mr-1.5 h-4 w-4" strokeWidth={2.5} /> Activiteit toevoegen
-        </Button>
+          Activiteiten
+        </h1>
+        <button
+          type="button"
+          onClick={openNew}
+          className="flex items-center gap-2 rounded-lg transition-colors hover:brightness-110"
+          style={{
+            background: "#3fff8b",
+            color: "#030e20",
+            fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+            fontWeight: 700,
+            padding: "10px 20px",
+            fontSize: 14,
+          }}
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.5} />
+          Activiteit toevoegen
+        </button>
+      </div>
+
+      {/* Filter + search bar */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {FILTER_OPTIONS.map((opt) => {
+            const active = filter === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFilter(opt.value)}
+                className="rounded-lg transition-colors"
+                style={{
+                  padding: "8px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                  background: active ? "#3fff8b" : "rgba(255,255,255,0.05)",
+                  color: active ? "#030e20" : "rgba(255,255,255,0.55)",
+                  border: active
+                    ? "1px solid #3fff8b"
+                    : "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="relative w-full sm:w-72">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ width: 16, height: 16, color: "rgba(255,255,255,0.4)" }}
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Zoek op naam..."
+            className="w-full transition-colors focus:outline-none"
+            style={{
+              background: "rgba(10,26,48,0.6)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 8,
+              padding: "10px 16px 10px 40px",
+              color: "#ffffff",
+              fontSize: 13,
+              fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "#3fff8b")}
+            onBlur={(e) =>
+              (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")
+            }
+          />
+        </div>
       </div>
 
       {loading ? (
-        <div className="surface-card px-6 py-16 text-center text-sm text-muted-foreground">
+        <div
+          className="px-6 py-16 text-center text-sm"
+          style={{
+            background: "rgba(10,26,48,0.6)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            color: "rgba(255,255,255,0.5)",
+          }}
+        >
           Laden…
         </div>
       ) : items.length === 0 ? (
-        <div className="surface-card flex flex-col items-center justify-center px-6 py-20 text-center">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div
+          className="flex flex-col items-center justify-center px-6 py-20 text-center"
+          style={{
+            background: "rgba(10,26,48,0.6)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+          }}
+        >
+          <div
+            className="mb-5 flex h-16 w-16 items-center justify-center rounded-full"
+            style={{
+              background: "rgba(63,255,139,0.1)",
+              color: "#3fff8b",
+            }}
+          >
             <Plus className="h-7 w-7" strokeWidth={2} />
           </div>
-          <h3 className="font-display text-lg font-bold text-foreground">
+          <h3
+            style={{
+              fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              fontWeight: 700,
+              fontSize: 18,
+              color: "#ffffff",
+            }}
+          >
             Nog geen activiteiten geconfigureerd
           </h3>
-          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+          <p
+            className="mt-1.5 max-w-sm text-sm"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+          >
             Voeg activiteiten toe om ze in projecten te kunnen plannen
           </p>
-          <Button
+          <button
+            type="button"
             onClick={openNew}
-            className="mt-6 font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+            className="mt-6 flex items-center gap-2 rounded-lg transition-colors hover:brightness-110"
+            style={{
+              background: "#3fff8b",
+              color: "#030e20",
+              fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              fontWeight: 700,
+              padding: "10px 20px",
+              fontSize: 14,
+            }}
           >
-            <Plus className="mr-1.5 h-4 w-4" strokeWidth={2.5} /> Activiteit toevoegen
-          </Button>
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            Activiteit toevoegen
+          </button>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div
+          className="px-6 py-12 text-center text-sm"
+          style={{
+            background: "rgba(10,26,48,0.6)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            color: "rgba(255,255,255,0.5)",
+          }}
+        >
+          Geen activiteiten gevonden voor deze filter.
         </div>
       ) : (
         <DndContext
@@ -324,12 +505,12 @@ const Activiteiten = () => {
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={items.map((i) => i.id)}
+            items={filteredItems.map((i) => i.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-2.5">
-              {items.map((a) => (
-                <ActiviteitRow
+            <div>
+              {filteredItems.map((a) => (
+                <ActiviteitCard
                   key={a.id}
                   a={a}
                   onEdit={() => openEdit(a)}
@@ -342,191 +523,270 @@ const Activiteiten = () => {
         </DndContext>
       )}
 
-      {/* Add/Edit modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent
-          className="max-w-lg gap-0 border-0 p-0 [&>button]:hidden"
-          style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "12px",
-            backdropFilter: "blur(18px)",
-          }}
-        >
-          <div className="flex items-start justify-between px-6 pt-6">
-            <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
-              {editing ? "Activiteit wijzigen" : "Activiteit toevoegen"}
-            </h2>
-            <button
-              onClick={() => setModalOpen(false)}
-              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+      {/* Side drawer for add/edit */}
+      {drawerOpen && (
+        <>
+          <div
+            onClick={() => setDrawerOpen(false)}
+            className="fixed inset-0"
+            style={{
+              background: "rgba(0,0,0,0.5)",
+              backdropFilter: "blur(2px)",
+              WebkitBackdropFilter: "blur(2px)",
+              zIndex: 40,
+              animation: "fadeIn 0.2s ease",
+            }}
+          />
+          <div
+            className="fixed right-0 top-0 flex flex-col"
+            style={{
+              width: 440,
+              maxWidth: "100vw",
+              height: "100vh",
+              background: "rgba(8, 18, 38, 0.97)",
+              borderLeft: "1px solid rgba(255,255,255,0.1)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              zIndex: 50,
+              animation: "slideInRight 0.25s ease",
+            }}
+          >
+            <style>{`
+              @keyframes slideInRight {
+                from { transform: translateX(100%); }
+                to { transform: translateX(0); }
+              }
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+            `}</style>
+            {/* Drawer header */}
+            <div
+              className="flex items-center gap-3"
+              style={{
+                padding: "24px 32px",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+              }}
             >
-              <X className="h-3.5 w-3.5" /> Annuleren
-            </button>
-          </div>
+              <div
+                style={{
+                  width: 3,
+                  height: 24,
+                  background: "#3fff8b",
+                  borderRadius: 2,
+                }}
+              />
+              <h2
+                style={{
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                  fontWeight: 700,
+                  fontSize: 20,
+                  color: "#ffffff",
+                  flex: 1,
+                }}
+              >
+                {editing ? "Activiteit wijzigen" : "Activiteit toevoegen"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="rounded-md p-1.5 transition-colors hover:bg-white/[0.06]"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+                aria-label="Sluiten"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-          <div className="space-y-5 px-6 py-6 max-h-[70vh] overflow-y-auto">
-            {/* Naam */}
-            <div className="space-y-2">
-              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Naam
-              </Label>
-              <Input
+            {/* Drawer content */}
+            <div
+              className="flex-1 overflow-y-auto"
+              style={{ padding: 32 }}
+            >
+              {/* Section 1: Naam */}
+              <DrawerLabel>Naam van de activiteit</DrawerLabel>
+              <input
+                type="text"
                 value={naam}
                 onChange={(e) => setNaam(e.target.value)}
                 placeholder="bijv. Schakelen/Montage MS"
-                className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+                className="w-full transition-colors focus:outline-none"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "none",
+                  borderBottom: "1px solid rgba(255,255,255,0.15)",
+                  padding: "12px 4px",
+                  color: "#ffffff",
+                  fontSize: 15,
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                }}
+                onFocus={(e) =>
+                  (e.currentTarget.style.borderBottom = "1px solid #3fff8b")
+                }
+                onBlur={(e) =>
+                  (e.currentTarget.style.borderBottom =
+                    "1px solid rgba(255,255,255,0.15)")
+                }
               />
-            </div>
 
-            {/* Capaciteit type */}
-            <div className="space-y-2">
-              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Capaciteit type
-              </Label>
-              <div className="flex gap-2">
-                {(["geen", "montage", "schakel"] as CapType[]).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCapType(c)}
-                    className={[
-                      "flex-1 rounded-md px-4 py-2.5 text-sm font-display font-semibold transition-all",
-                      capType === c
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
-                    ].join(" ")}
-                  >
-                    {capLabel(c)}
-                  </button>
-                ))}
+              {/* Section 2: Capaciteit type */}
+              <div style={{ marginTop: 28 }}>
+                <DrawerLabel>Capaciteit type</DrawerLabel>
+                <div className="flex gap-2">
+                  {(["geen", "montage", "schakel"] as CapType[]).map((c) => {
+                    const active = capType === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCapType(c)}
+                        className="flex-1 transition-colors"
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          fontFamily:
+                            "Manrope, ui-sans-serif, system-ui, sans-serif",
+                          background: active
+                            ? "rgba(63,255,139,0.15)"
+                            : "rgba(255,255,255,0.04)",
+                          border: active
+                            ? "1px solid #3fff8b"
+                            : "1px solid rgba(255,255,255,0.1)",
+                          color: active ? "#3fff8b" : "rgba(255,255,255,0.6)",
+                        }}
+                      >
+                        {capLabel(c)}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Conditional capaciteit fields */}
-            {capType !== "geen" && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Minimaal aantal personen totaal
-                    </Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={minPersonenTotaal}
-                      onChange={(e) => {
-                        const v = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
-                        setMinPersonenTotaal(v);
-                        if (minPersonenGekwalificeerd > v) {
-                          setMinPersonenGekwalificeerd(v);
-                        }
-                      }}
-                      className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      Inclusief assistenten (VOP)
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Waarvan minimaal met aanwijzing
-                    </Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={minPersonenTotaal}
-                      value={minPersonenGekwalificeerd}
-                      onChange={(e) =>
-                        setMinPersonenGekwalificeerd(
-                          Math.max(
-                            1,
-                            Math.min(minPersonenTotaal, parseInt(e.target.value) || 1)
+              {capType !== "geen" && (
+                <>
+                  {/* Section 3: Personen */}
+                  <div style={{ marginTop: 28 }}>
+                    <DrawerLabel>Minimaal aantal personen</DrawerLabel>
+                    <div className="grid grid-cols-2 gap-3">
+                      <PersonInput
+                        label="Totaal"
+                        value={minPersonenTotaal}
+                        min={1}
+                        max={10}
+                        onChange={(v) => {
+                          setMinPersonenTotaal(v);
+                          if (minPersonenGekwalificeerd > v)
+                            setMinPersonenGekwalificeerd(v);
+                        }}
+                      />
+                      <PersonInput
+                        label="Waarvan minimaal"
+                        value={minPersonenGekwalificeerd}
+                        min={1}
+                        max={minPersonenTotaal}
+                        onChange={(v) =>
+                          setMinPersonenGekwalificeerd(
+                            Math.max(1, Math.min(minPersonenTotaal, v))
                           )
-                        )
-                      }
-                      className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 4: Kwalificaties */}
+                  <div style={{ marginTop: 28 }}>
+                    <DrawerLabel>Kwalificatie selectie</DrawerLabel>
+                    <KwalRow
+                      label="Laagspanning (LS)"
+                      value={minLs}
+                      onChange={(v) => setMinLs(v)}
                     />
-                    <p className="text-[11px] text-muted-foreground">
-                      Deze personen moeten de minimale aanwijzing hebben of hoger
-                    </p>
+                    <div style={{ height: 12 }} />
+                    <KwalRow
+                      label="Middenspanning (MS)"
+                      value={minMs}
+                      onChange={(v) => setMinMs(v)}
+                    />
                   </div>
-                </div>
+                </>
+              )}
 
-                <div className="space-y-2">
-                  <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Minimale aanwijzing laagspanning (verantwoordelijke)
-                  </Label>
-                  <div className="flex gap-2">
-                    {AANWIJZINGEN.map((a) => (
-                      <PillButton
-                        key={a}
-                        active={minLs === a}
-                        onClick={() => setMinLs(minLs === a ? null : a)}
-                      >
-                        {a}
-                      </PillButton>
-                    ))}
-                  </div>
+              {/* Section 5: Kleur */}
+              <div style={{ marginTop: 28 }}>
+                <DrawerLabel>Standaard kleurcode</DrawerLabel>
+                <div className="flex flex-wrap" style={{ gap: 10 }}>
+                  {PLANNING_COLORS.map((c) => {
+                    const selected = kleur === c.code;
+                    return (
+                      <button
+                        key={c.code}
+                        type="button"
+                        onClick={() => setKleur(c.code)}
+                        aria-label={c.code}
+                        className="transition-transform hover:scale-110"
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: c.hex,
+                          boxShadow: selected
+                            ? "0 0 0 2px rgba(8,18,38,0.97), 0 0 0 4px #ffffff"
+                            : "none",
+                        }}
+                      />
+                    );
+                  })}
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Minimale aanwijzing middenspanning (verantwoordelijke)
-                  </Label>
-                  <div className="flex gap-2">
-                    {AANWIJZINGEN.map((a) => (
-                      <PillButton
-                        key={a}
-                        active={minMs === a}
-                        onClick={() => setMinMs(minMs === a ? null : a)}
-                      >
-                        {a}
-                      </PillButton>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Kleur */}
-            <div className="space-y-2">
-              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Standaard kleur
-              </Label>
-              <div className="grid grid-cols-6 gap-2.5">
-                {PLANNING_COLORS.map((c) => (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => setKleur(c.code)}
-                    aria-label={c.code}
-                    className={[
-                      "relative h-9 w-9 rounded-full transition-transform hover:scale-110",
-                      kleur === c.code
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-[#0a1a30]"
-                        : "",
-                    ].join(" ")}
-                    style={{ backgroundColor: c.hex }}
-                  />
-                ))}
               </div>
             </div>
-          </div>
 
-          <div className="px-6 pb-6">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+            {/* Drawer footer */}
+            <div
+              className="flex items-center gap-3"
+              style={{
+                padding: "20px 32px",
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+              }}
             >
-              {saving ? "Bezig met opslaan…" : "Opslaan"}
-            </Button>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="rounded-lg transition-colors hover:bg-white/[0.06]"
+                style={{
+                  padding: "10px 16px",
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(255,255,255,0.7)",
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                Annuleren
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg transition-colors hover:brightness-110 disabled:opacity-50"
+                style={{
+                  padding: "10px 16px",
+                  background: "#3fff8b",
+                  color: "#030e20",
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                {saving ? "Bezig met opslaan…" : "Opslaan"}
+              </button>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
 
       {/* Delete confirm */}
       <AlertDialog
@@ -567,30 +827,128 @@ const Activiteiten = () => {
   );
 };
 
-const PillButton = ({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={[
-      "rounded-md px-3.5 py-1.5 text-xs font-display font-semibold tracking-wide transition-all",
-      active
-        ? "bg-primary text-primary-foreground"
-        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
-    ].join(" ")}
+// ============== Drawer subcomponents ==============
+
+const DrawerLabel = ({ children }: { children: React.ReactNode }) => (
+  <div
+    style={{
+      fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: "0.12em",
+      textTransform: "uppercase",
+      color: "rgba(255,255,255,0.4)",
+      marginBottom: 10,
+    }}
   >
     {children}
-  </button>
+  </div>
 );
 
-const ActiviteitRow = ({
+const PersonInput = ({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) => (
+  <div>
+    <div
+      style={{
+        fontSize: 11,
+        color: "rgba(255,255,255,0.5)",
+        marginBottom: 6,
+        fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+      }}
+    >
+      {label}
+    </div>
+    <input
+      type="number"
+      min={min}
+      max={max}
+      value={value}
+      onChange={(e) => onChange(Math.max(min, parseInt(e.target.value) || min))}
+      className="w-full text-center transition-colors focus:outline-none"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "10px 8px",
+        color: "#3fff8b",
+        fontWeight: 700,
+        fontSize: 18,
+        fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+      }}
+      onFocus={(e) => (e.currentTarget.style.borderColor = "#3fff8b")}
+      onBlur={(e) =>
+        (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")
+      }
+    />
+  </div>
+);
+
+const KwalRow = ({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: Aanwijzing | null;
+  onChange: (v: Aanwijzing | null) => void;
+}) => (
+  <div>
+    <div
+      style={{
+        fontSize: 11,
+        color: "rgba(255,255,255,0.5)",
+        marginBottom: 6,
+        fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+      }}
+    >
+      {label}
+    </div>
+    <div className="flex gap-2">
+      {AANWIJZINGEN.map((a) => {
+        const active = value === a;
+        return (
+          <button
+            key={a}
+            type="button"
+            onClick={() => onChange(active ? null : a)}
+            className="flex-1 transition-colors"
+            style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              background: active
+                ? "rgba(63,255,139,0.15)"
+                : "rgba(255,255,255,0.04)",
+              border: active
+                ? "1px solid #3fff8b"
+                : "1px solid rgba(255,255,255,0.1)",
+              color: active ? "#3fff8b" : "rgba(255,255,255,0.6)",
+            }}
+          >
+            {a}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+// ============== Card ==============
+
+const ActiviteitCard = ({
   a,
   onEdit,
   onDuplicate,
@@ -611,98 +969,233 @@ const ActiviteitRow = ({
     zIndex: isDragging ? 10 : "auto",
   };
 
-  const showAanwijzing =
-    a.capaciteit_type === "schakel" || a.capaciteit_type === "montage";
-
-  const colorHex = PLANNING_COLORS.find((c) => c.code === a.kleur_default)?.hex;
+  const cap = a.capaciteit_type;
+  const hasCap = cap === "schakel" || cap === "montage";
+  const accent = capAccent(cap);
+  const iconStyle = capIconBg(cap);
+  const Icon =
+    cap === "montage" ? Wrench : cap === "schakel" ? Zap : Package;
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className="surface-card flex items-center gap-4 px-4 py-3.5"
+      style={{
+        ...style,
+        background: "rgba(10,26,48,0.6)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 12,
+        padding: "16px 20px",
+        marginBottom: 8,
+        position: "relative",
+        transition: "border-color 0.15s",
+      }}
+      className="group flex items-center gap-4"
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.borderColor = "rgba(63,255,139,0.25)")
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")
+      }
     >
-      {/* Drag handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="cursor-grab touch-none rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground active:cursor-grabbing"
-        aria-label="Versleep"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {/* Left accent bar */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 8,
+          bottom: 8,
+          width: 3,
+          borderRadius: "0 3px 3px 0",
+          background: accent,
+        }}
+      />
 
-      {/* Color dot */}
-      {colorHex && (
+      {/* Icon container */}
+      <div
+        className="flex shrink-0 items-center justify-center"
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 10,
+          background: iconStyle.bg,
+          color: iconStyle.color,
+        }}
+      >
+        <Icon style={{ width: 20, height: 20 }} strokeWidth={2.2} />
+      </div>
+
+      {/* Main content */}
+      <div className="min-w-0 flex-1">
         <div
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: colorHex }}
-        />
+          style={{
+            fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+            fontWeight: 700,
+            fontSize: 15,
+            color: "#ffffff",
+            lineHeight: 1.3,
+          }}
+          className="truncate"
+        >
+          {a.naam}
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              padding: "2px 8px",
+              borderRadius: 4,
+              letterSpacing: "0.05em",
+              fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              ...capBadgeStyle(cap),
+            }}
+          >
+            {capLabel(cap)}
+          </span>
+
+          {hasCap && (
+            <span
+              style={{
+                fontSize: 12,
+                color: "rgba(255,255,255,0.5)",
+                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              }}
+            >
+              min. {a.min_personen_totaal ?? a.min_personen ?? 1} man
+            </span>
+          )}
+
+          {hasCap && a.min_aanwijzing_ls && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                padding: "2px 8px",
+                borderRadius: 4,
+                letterSpacing: "0.05em",
+                background: "rgba(63,255,139,0.15)",
+                color: "#3fff8b",
+                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              }}
+            >
+              LS: {a.min_aanwijzing_ls}+
+            </span>
+          )}
+          {hasCap && a.min_aanwijzing_ms && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                padding: "2px 8px",
+                borderRadius: 4,
+                letterSpacing: "0.05em",
+                background: "rgba(63,255,139,0.15)",
+                color: "#3fff8b",
+                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              }}
+            >
+              MS: {a.min_aanwijzing_ms}+
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Right side info (kwalificaties) — hidden on small */}
+      {hasCap && (
+        <div className="hidden lg:flex flex-col items-end" style={{ gap: 4 }}>
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.35)",
+              fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+            }}
+          >
+            Kwalificaties
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: "3px 8px",
+                borderRadius: 6,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.7)",
+                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+              }}
+            >
+              {a.min_personen_totaal ?? a.min_personen ?? 1} man
+            </span>
+            {(a.min_aanwijzing_ms || a.min_aanwijzing_ls) && (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "3px 8px",
+                  borderRadius: 6,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  color: "rgba(255,255,255,0.7)",
+                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                }}
+              >
+                {a.min_aanwijzing_ms
+                  ? `MS ${a.min_aanwijzing_ms}+`
+                  : `LS ${a.min_aanwijzing_ls}+`}
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Naam */}
-      <div className="min-w-[180px] flex-shrink-0">
-        <div className="font-display font-bold text-foreground">{a.naam}</div>
-      </div>
-
-      {/* Pills */}
-      <div className="flex flex-1 flex-wrap items-center gap-2">
-        <span
-          className="inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs font-display font-semibold"
-          style={capStyle(a.capaciteit_type)}
-        >
-          {a.capaciteit_type === "schakel" ? (
-            <Zap className="h-3 w-3" strokeWidth={2.5} />
-          ) : a.capaciteit_type === "montage" ? (
-            <Users className="h-3 w-3" strokeWidth={2.5} />
-          ) : null}
-          {capLabel(a.capaciteit_type)}
-        </span>
-
-        {showAanwijzing && (
-          <span className="inline-flex items-center rounded-md bg-white/[0.06] px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-            min. {a.min_personen_totaal ?? a.min_personen ?? 1} man (
-            {a.min_personen_gekwalificeerd ?? a.min_personen ?? 1} gekwal.)
-          </span>
-        )}
-
-        {showAanwijzing && a.min_aanwijzing_ls && (
-          <span
-            className="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-display font-bold tracking-wide"
-            style={{ backgroundColor: "rgba(63,255,139,0.15)", color: "#3fff8b" }}
-          >
-            LS: {a.min_aanwijzing_ls}+
-          </span>
-        )}
-        {showAanwijzing && a.min_aanwijzing_ms && (
-          <span
-            className="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-display font-bold tracking-wide"
-            style={{ backgroundColor: "rgba(63,255,139,0.15)", color: "#3fff8b" }}
-          >
-            MS: {a.min_aanwijzing_ms}+
-          </span>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1">
+      {/* Action buttons - show on hover */}
+      <div
+        className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ flexShrink: 0 }}
+      >
         <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab touch-none rounded-md p-2 transition-colors hover:bg-white/[0.06] active:cursor-grabbing"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+          aria-label="Versleep"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
           onClick={onEdit}
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+          className="rounded-md p-2 transition-colors hover:bg-white/[0.06] hover:text-white"
+          style={{ color: "rgba(255,255,255,0.4)" }}
           aria-label="Wijzigen"
         >
           <Pencil className="h-4 w-4" />
         </button>
         <button
+          type="button"
           onClick={onDuplicate}
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+          className="rounded-md p-2 transition-colors hover:bg-white/[0.06] hover:text-white"
+          style={{ color: "rgba(255,255,255,0.4)" }}
           aria-label="Dupliceren"
         >
           <Copy className="h-4 w-4" />
         </button>
         <button
+          type="button"
           onClick={onDelete}
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+          className="rounded-md p-2 transition-colors hover:bg-destructive/15"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.color = "rgba(255,255,255,0.4)")
+          }
           aria-label="Verwijderen"
         >
           <Trash2 className="h-4 w-4" />
