@@ -266,6 +266,13 @@ export default function Overzicht() {
     });
   }, []);
 
+  // Reset horizontal scroll to 0 when the visible week range changes,
+  // so the first slot is never clipped (header and body stay aligned).
+  useEffect(() => {
+    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = 0;
+    if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = 0;
+  }, [startWeek, jaar, scale]);
+
   const currentISO = useMemo(() => getCurrentISOWeek(), []);
 
   // Track viewport width so the grid can fill available horizontal space.
