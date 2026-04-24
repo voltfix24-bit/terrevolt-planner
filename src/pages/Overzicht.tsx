@@ -1963,57 +1963,8 @@ export default function Overzicht() {
 
 // ============== Sub-components ==============
 
-function BeschikbaarCell({ vrijeDagen }: { vrijeDagen: number }) {
-  let badgeStyle: React.CSSProperties;
-  let label: string;
-  if (vrijeDagen <= 0) {
-    label = "Vol";
-    badgeStyle = {
-      background: "rgba(254,179,0,0.2)",
-      color: "#feb300",
-      border: "1px solid rgba(254,179,0,0.3)",
-    };
-  } else if (vrijeDagen <= 3) {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
-      background: "rgba(254,179,0,0.15)",
-      color: "#feb300",
-      border: "1px solid rgba(254,179,0,0.25)",
-    };
-  } else {
-    label = `${vrijeDagen}d vrij`;
-    badgeStyle = {
-      background: "rgba(63,255,139,0.12)",
-      color: "#3fff8b",
-      border: "1px solid rgba(63,255,139,0.2)",
-    };
-  }
-  return (
-    <div
-      style={{
-        height: ROW_H_MONTEUR,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
-      }}
-    >
-      <span
-        style={{
-          ...badgeStyle,
-          fontSize: 10,
-          fontWeight: 700,
-          fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-          padding: "3px 8px",
-          borderRadius: 999,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
+// (BeschikbaarCell removed — vrije dagen badge is now rendered inside MonteurSidebarRow.)
+
 
 function MonteurSidebarRow({
   monteur,
