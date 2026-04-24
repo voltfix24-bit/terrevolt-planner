@@ -711,29 +711,33 @@ export default function Overzicht() {
   }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot]);
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
+  // Excludes feestdagen consistently (both in possible and planned).
   const teamCapPct = useMemo(() => {
     if (monteurs.length === 0) return 0;
 
-    // Build the list of working days (MA-VR) in the visible period
-    const dates: Date[] = [];
+    // Build the list of working days (MA-VR, excl. feestdagen) in the visible period
+    const dates: string[] = [];
     if (scale === "maand" || scale === "kwartaal") {
       for (const wnr of visibleWeekNrSet) {
         const monday = getMondayOfWeek(wnr, jaar);
         for (let d = 0; d < 5; d++) {
           const date = new Date(monday);
           date.setDate(monday.getDate() + d);
-          dates.push(date);
+          const dk = dateKey(date);
+          if (!feestdagMap.has(dk)) dates.push(dk);
         }
       }
     } else {
-      // jaar: alle werkdagen van het jaar
       const wkCount = weeksInYear(jaar);
       for (let week = 1; week <= wkCount; week++) {
         const monday = getMondayOfWeek(week, jaar);
         for (let d = 0; d < 5; d++) {
           const date = new Date(monday);
           date.setDate(monday.getDate() + d);
-          if (date.getFullYear() === jaar) dates.push(date);
+          if (date.getFullYear() === jaar) {
+            const dk = dateKey(date);
+            if (!feestdagMap.has(dk)) dates.push(dk);
+          }
         }
       }
     }
@@ -741,7 +745,7 @@ export default function Overzicht() {
     const totalPossible = monteurs.length * dates.length;
     if (totalPossible === 0) return 0;
 
-    // Unieke monteur+datum combinaties die ingepland zijn
+    // Unieke monteur+datum combinaties die ingepland zijn (skip feestdagen)
     const planned = new Set<string>();
     for (const cel of cellen) {
       if (!cel.week_id) continue;
@@ -750,13 +754,14 @@ export default function Overzicht() {
       const monday = getMondayOfWeek(week.week_nr, jaar);
       const date = new Date(monday);
       date.setDate(monday.getDate() + cel.dag_index);
-      const dateStr = date.toISOString().split("T")[0];
+      const dk = dateKey(date);
+      if (feestdagMap.has(dk)) continue;
       const mids = monteurIdsByCel.get(cel.id) ?? [];
-      for (const mid of mids) planned.add(`${mid}-${dateStr}`);
+      for (const mid of mids) planned.add(`${mid}-${dk}`);
     }
 
     return Math.round((planned.size / totalPossible) * 100);
-  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById]);
+  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById, feestdagMap]);
 
   // Vrije dagen per monteur in zichtbare periode
   // (werkdagen exclusief feestdagen − dagen met inplanning op niet-feestdagen)
