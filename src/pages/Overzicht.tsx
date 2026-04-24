@@ -302,6 +302,8 @@ export default function Overzicht() {
           const date = new Date(monday);
           date.setDate(monday.getDate() + d);
           const isToday = isCurrentWeek && d === todayDow && todayDow <= 4;
+          const dStr = dateKey(date);
+          const fNaam = feestdagMap.get(dStr);
           out.push({
             index: out.length,
             pairs: [{ wnr, dag: d }],
@@ -312,6 +314,8 @@ export default function Overzicht() {
             isLastInGroup: d === DAYS_PER_WEEK - 1,
             isCurrentGroup: isCurrentWeek,
             isToday,
+            isFeestdag: !!fNaam,
+            feestdagNaam: fNaam,
           });
         }
       }
