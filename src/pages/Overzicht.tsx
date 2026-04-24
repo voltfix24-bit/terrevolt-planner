@@ -231,6 +231,7 @@ export default function Overzicht() {
   const [cellen, setCellen] = useState<Cel[]>([]);
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
   const [celMonteurs, setCelMonteurs] = useState<CelMonteur[]>([]);
+  const [feestdagen, setFeestdagen] = useState<{ datum: string; naam: string }[]>([]);
 
   const [medewerkersOpen, setMedewerkersOpen] = useState(true);
   const [schakelOpen, setSchakelOpen] = useState(true);
