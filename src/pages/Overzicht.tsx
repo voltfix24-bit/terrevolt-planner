@@ -18,7 +18,7 @@ import {
 // ============== Constants ==============
 const SIDEBAR_W = 260;
 const SIDEBAR_W_COLLAPSED = 48;
-const ROW_H_MONTEUR = 44;
+const ROW_H_MONTEUR = 52;
 const ROW_H_PROJECT = 44;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
