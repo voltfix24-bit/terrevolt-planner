@@ -290,8 +290,9 @@ export default function Overzicht() {
   const availableGridWidth = useMemo(() => {
     const sidebarPx = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
     const appSidebar = 220; // left nav sidebar
+    const beschikbaarColumnPx = 0; // (was 100px) right BESCHIKBAAR column removed
     const padding = 80;
-    return Math.max(400, viewportW - appSidebar - sidebarPx - padding);
+    return Math.max(400, viewportW - appSidebar - sidebarPx - beschikbaarColumnPx - padding);
   }, [viewportW, sidebarCollapsed]);
 
   // For "maand": each week = 5 days × cellW. Min 4, max 12 weeks.
