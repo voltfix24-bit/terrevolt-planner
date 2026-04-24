@@ -1177,6 +1177,24 @@ export default function Overzicht() {
           >
             <ChevronsRight className="h-4 w-4" />
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              const iso = getCurrentISOWeek();
+              setJaar(iso.year);
+              setStartWeek(iso.week);
+            }}
+            className="flex h-7 items-center justify-center rounded px-3 text-xs font-semibold transition-colors"
+            style={{
+              background: "rgba(63,255,139,0.12)",
+              color: "#3fff8b",
+              border: "1px solid rgba(63,255,139,0.2)",
+              marginLeft: 8,
+            }}
+            title="Ga naar huidige week"
+          >
+            Vandaag
+          </button>
         </div>
         <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] p-0.5">
           {SCALE_OPTIONS.map((opt) => (
