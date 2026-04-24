@@ -288,6 +288,13 @@ export default function Overzicht() {
     return Math.max(4, Math.min(16, Math.floor(available / weekPx)));
   }, [scale, viewportW]);
 
+  // Feestdagen lookup (datum YYYY-MM-DD → naam)
+  const feestdagMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of feestdagen) m.set(f.datum, f.naam);
+    return m;
+  }, [feestdagen]);
+
   // ====== Build slots based on scale ======
   const slots = useMemo<Slot[]>(() => {
     const out: Slot[] = [];
