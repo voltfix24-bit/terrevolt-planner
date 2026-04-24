@@ -459,6 +459,36 @@ export default function Overzicht() {
     return () => { cancelled = true; };
   }, [jaar]);
 
+  // Re-fetch all data when the window/tab regains focus, so changes made
+  // on other pages (e.g. Plannen) are immediately reflected here.
+  useEffect(() => {
+    const onFocus = () => {
+      let cancelled = false;
+      (async () => {
+        const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
+          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
+          supabase.from("project_weken").select("id, project_id, week_nr, positie"),
+          supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
+          supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
+          supabase.from("monteurs").select("id, naam, type, aanwijzing_ms, aanwijzing_ls").eq("actief", true).order("type", { ascending: false }).order("naam", { ascending: true }),
+          supabase.from("cel_monteurs").select("cel_id, monteur_id"),
+          supabase.from("feestdagen").select("datum, naam").in("jaar", [jaar - 1, jaar, jaar + 1]),
+        ]);
+        if (cancelled) return;
+        setProjecten((pRes.data ?? []) as Project[]);
+        setWeken((wRes.data ?? []) as Week[]);
+        setActiviteiten((aRes.data ?? []) as Activiteit[]);
+        setCellen((cRes.data ?? []) as Cel[]);
+        setMonteurs((mRes.data ?? []) as Monteur[]);
+        setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
+        setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
+      })();
+      return () => { cancelled = true; };
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [jaar]);
+
   // Maps
   const projectById = useMemo(() => {
     const m = new Map<string, Project>();
@@ -576,14 +606,23 @@ export default function Overzicht() {
     return m;
   }, [activiteiten]);
 
-  // Visible projects = projects with at least one project_week in visible range
+  // Visible projects = projects with planning data anywhere (filled cellen),
+  // OR projects with project_weken in the visible range (being planned).
+  // This ensures projects don't disappear when scrolling outside their week range.
   const visibleProjecten = useMemo(() => {
-    const ids = new Set<string>();
-    for (const w of weken) {
-      if (w.project_id && visibleWeekNrSet.has(w.week_nr)) ids.add(w.project_id);
+    const projectsWithCellen = new Set<string>();
+    for (const c of cellen) {
+      if (!c.activiteit_id || !c.kleur_code) continue;
+      const act = activiteitById.get(c.activiteit_id);
+      if (act?.project_id) projectsWithCellen.add(act.project_id);
     }
-    return projecten.filter((p) => ids.has(p.id));
-  }, [projecten, weken, visibleWeekNrSet]);
+    for (const w of weken) {
+      if (w.project_id && visibleWeekNrSet.has(w.week_nr)) {
+        projectsWithCellen.add(w.project_id);
+      }
+    }
+    return projecten.filter((p) => projectsWithCellen.has(p.id));
+  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet]);
 
   const schakelMonteurs = useMemo(
     () => monteurs.filter((m) => m.type === "schakelmonteur"),
@@ -672,29 +711,33 @@ export default function Overzicht() {
   }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot]);
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
+  // Excludes feestdagen consistently (both in possible and planned).
   const teamCapPct = useMemo(() => {
     if (monteurs.length === 0) return 0;
 
-    // Build the list of working days (MA-VR) in the visible period
-    const dates: Date[] = [];
+    // Build the list of working days (MA-VR, excl. feestdagen) in the visible period
+    const dates: string[] = [];
     if (scale === "maand" || scale === "kwartaal") {
       for (const wnr of visibleWeekNrSet) {
         const monday = getMondayOfWeek(wnr, jaar);
         for (let d = 0; d < 5; d++) {
           const date = new Date(monday);
           date.setDate(monday.getDate() + d);
-          dates.push(date);
+          const dk = dateKey(date);
+          if (!feestdagMap.has(dk)) dates.push(dk);
         }
       }
     } else {
-      // jaar: alle werkdagen van het jaar
       const wkCount = weeksInYear(jaar);
       for (let week = 1; week <= wkCount; week++) {
         const monday = getMondayOfWeek(week, jaar);
         for (let d = 0; d < 5; d++) {
           const date = new Date(monday);
           date.setDate(monday.getDate() + d);
-          if (date.getFullYear() === jaar) dates.push(date);
+          if (date.getFullYear() === jaar) {
+            const dk = dateKey(date);
+            if (!feestdagMap.has(dk)) dates.push(dk);
+          }
         }
       }
     }
@@ -702,7 +745,7 @@ export default function Overzicht() {
     const totalPossible = monteurs.length * dates.length;
     if (totalPossible === 0) return 0;
 
-    // Unieke monteur+datum combinaties die ingepland zijn
+    // Unieke monteur+datum combinaties die ingepland zijn (skip feestdagen)
     const planned = new Set<string>();
     for (const cel of cellen) {
       if (!cel.week_id) continue;
@@ -711,13 +754,14 @@ export default function Overzicht() {
       const monday = getMondayOfWeek(week.week_nr, jaar);
       const date = new Date(monday);
       date.setDate(monday.getDate() + cel.dag_index);
-      const dateStr = date.toISOString().split("T")[0];
+      const dk = dateKey(date);
+      if (feestdagMap.has(dk)) continue;
       const mids = monteurIdsByCel.get(cel.id) ?? [];
-      for (const mid of mids) planned.add(`${mid}-${dateStr}`);
+      for (const mid of mids) planned.add(`${mid}-${dk}`);
     }
 
     return Math.round((planned.size / totalPossible) * 100);
-  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById]);
+  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById, feestdagMap]);
 
   // Vrije dagen per monteur in zichtbare periode
   // (werkdagen exclusief feestdagen − dagen met inplanning op niet-feestdagen)
@@ -1133,6 +1177,24 @@ export default function Overzicht() {
           >
             <ChevronsRight className="h-4 w-4" />
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              const iso = getCurrentISOWeek();
+              setJaar(iso.year);
+              setStartWeek(iso.week);
+            }}
+            className="flex h-7 items-center justify-center rounded px-3 text-xs font-semibold transition-colors"
+            style={{
+              background: "rgba(63,255,139,0.12)",
+              color: "#3fff8b",
+              border: "1px solid rgba(63,255,139,0.2)",
+              marginLeft: 8,
+            }}
+            title="Ga naar huidige week"
+          >
+            Vandaag
+          </button>
         </div>
         <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] p-0.5">
           {SCALE_OPTIONS.map((opt) => (
@@ -1391,37 +1453,74 @@ export default function Overzicht() {
             />
 
             {/* Projecten section header */}
-            <button
-              type="button"
-              onClick={() => setProjectenOpen((o) => !o)}
-              className="flex w-full items-center gap-2 hover:bg-white/[0.05]"
-              style={{
-                height: 32,
-                paddingLeft: 12,
-                paddingTop: 4,
-                borderRight: "1px solid rgba(255,255,255,0.08)",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-              }}
-            >
-              <ChevronRight
-                className="h-3 w-3 text-muted-foreground"
-                style={{
-                  transform: projectenOpen ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s ease",
-                }}
-              />
-              {!sidebarCollapsed && (
-                <>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Projecten
-                  </span>
-                  <span className="ml-auto pr-3 text-[10px] font-semibold text-muted-foreground tabular-nums">
-                    {visibleProjecten.length}
-                  </span>
-                </>
-              )}
-            </button>
+            {(() => {
+              const allExpanded =
+                visibleProjecten.length > 0 &&
+                visibleProjecten.every((p) => expandedProjects.has(p.id));
+              const toggleAllProjects = () => {
+                if (allExpanded) {
+                  setExpandedProjects(new Set());
+                } else {
+                  setExpandedProjects(new Set(visibleProjecten.map((p) => p.id)));
+                }
+              };
+              return (
+                <div
+                  className="flex w-full items-center gap-2"
+                  style={{
+                    height: 32,
+                    paddingLeft: 12,
+                    paddingTop: 4,
+                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    background: "rgba(255,255,255,0.03)",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setProjectenOpen((o) => !o)}
+                    className="flex flex-1 items-center gap-2 hover:bg-white/[0.05]"
+                    style={{ height: "100%", marginLeft: -12, paddingLeft: 12 }}
+                  >
+                    <ChevronRight
+                      className="h-3 w-3 text-muted-foreground"
+                      style={{
+                        transform: projectenOpen ? "rotate(90deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s ease",
+                      }}
+                    />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Projecten
+                        </span>
+                        <span className="ml-auto text-[10px] font-semibold text-muted-foreground tabular-nums">
+                          {visibleProjecten.length}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                  {!sidebarCollapsed && visibleProjecten.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={toggleAllProjects}
+                      className="text-[10px] font-semibold transition-colors hover:text-foreground"
+                      style={{
+                        color: "rgba(255,255,255,0.4)",
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        background: "rgba(255,255,255,0.03)",
+                        marginRight: 12,
+                      }}
+                      title={allExpanded ? "Alles inklappen" : "Alles uitklappen"}
+                    >
+                      {allExpanded ? "Inklappen" : "Uitklappen"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             <div
               style={{
