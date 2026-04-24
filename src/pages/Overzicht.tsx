@@ -131,6 +131,13 @@ function dayKey(week_nr: number, dag_index: number): string {
   return `${week_nr}-${dag_index}`;
 }
 
+function dateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function getCurrentISOWeek(): { week: number; year: number } {
   const now = new Date();
   const target = new Date(
