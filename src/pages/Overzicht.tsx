@@ -2318,6 +2318,7 @@ function ActiviteitCellsRow({
   totalGridWidth: number;
   isLast: boolean;
   onClick: () => void;
+  opacity?: number;
 }) {
   return (
     <div
@@ -2330,6 +2331,7 @@ function ActiviteitCellsRow({
           ? "2px solid rgba(255,255,255,0.06)"
           : "1px solid rgba(255,255,255,0.03)",
         background: "rgba(255,255,255,0.015)",
+        opacity: arguments[0]?.opacity ?? 1,
       }}
     >
       {slots.map((s) => {
