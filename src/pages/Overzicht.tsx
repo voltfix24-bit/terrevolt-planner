@@ -1698,14 +1698,17 @@ export default function Overzicht() {
                           </div>
                         );
                       })}
-                    {/* Visual separator between expanded projects (matches grid side) */}
-                    {!sidebarCollapsed && expanded && acts.length > 0 && (
+                    {/* Visual separator between expanded projects — sidebar side.
+                        Always rendered when expanded so heights stay aligned with the
+                        grid side, including sidebarCollapsed and acts.length === 0. */}
+                    {expanded && (
                       <div
+                        aria-hidden
                         style={{
-                          height: 6,
+                          height: 8,
+                          width: "100%",
+                          boxSizing: "border-box",
                           background: "rgba(255,255,255,0.02)",
-                          borderTop: "1px solid rgba(255,255,255,0.04)",
-                          borderBottom: "1px solid rgba(255,255,255,0.04)",
                           borderRight: "1px solid rgba(255,255,255,0.08)",
                         }}
                       />
@@ -1985,15 +1988,16 @@ export default function Overzicht() {
                           />
                         );
                       })}
-                    {/* Visual separator between expanded projects */}
-                    {expanded && acts.length > 0 && (
+                    {/* Visual separator between expanded projects — grid side.
+                        Always rendered when expanded so heights match the sidebar. */}
+                    {expanded && (
                       <div
+                        aria-hidden
                         style={{
                           width: totalGridWidth,
-                          height: 6,
+                          height: 8,
+                          boxSizing: "border-box",
                           background: "rgba(255,255,255,0.02)",
-                          borderTop: "1px solid rgba(255,255,255,0.04)",
-                          borderBottom: "1px solid rgba(255,255,255,0.04)",
                         }}
                       />
                     )}
