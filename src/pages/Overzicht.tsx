@@ -1560,9 +1560,9 @@ export default function Overzicht() {
                           switch (p.status) {
                             case "gepland": return "3px solid #feb300";
                             case "in_uitvoering": return "3px solid #3fff8b";
-                            case "afgerond": return "3px solid rgba(255,255,255,0.2)";
-                            case "concept": return "3px dashed rgba(255,255,255,0.2)";
-                            default: return "3px solid rgba(255,255,255,0.1)";
+                            case "afgerond": return "3px solid rgba(255,255,255,0.3)";
+                            case "concept":
+                            default: return "3px dashed rgba(255,255,255,0.2)";
                           }
                         })(),
                       }}
@@ -1628,11 +1628,12 @@ export default function Overzicht() {
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                maxWidth: 190,
+                                maxWidth: sidebarCollapsed ? 0 : sidebarW - 90,
+                                display: "block",
                               }}
                               title={p.station_naam ?? ""}
                             >
-                              {p.station_naam ?? ""}
+                              {p.station_naam ?? "—"}
                             </p>
                           </div>
                           <span
@@ -1697,6 +1698,18 @@ export default function Overzicht() {
                           </div>
                         );
                       })}
+                    {/* Visual separator between expanded projects (matches grid side) */}
+                    {!sidebarCollapsed && expanded && acts.length > 0 && (
+                      <div
+                        style={{
+                          height: 6,
+                          background: "rgba(255,255,255,0.02)",
+                          borderTop: "1px solid rgba(255,255,255,0.04)",
+                          borderBottom: "1px solid rgba(255,255,255,0.04)",
+                          borderRight: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -1945,23 +1958,45 @@ export default function Overzicht() {
                         ))}
                     </div>
 
-                    {/* Activiteit cell rows */}
+                    {/* Activiteit cell rows — only for THIS project's activiteiten */}
                     {expanded &&
-                      acts.map((a) => (
-                        <ActiviteitCellsRow
-                          key={a.id}
-                          activiteit={a}
-                          dayCelMap={activiteitDayCel.get(a.id)}
-                          monteurIdsByCel={monteurIdsByCel}
-                          monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
-                          dayConflictMonteurs={dayConflictMonteurs}
-                          slots={slots}
-                          cellW={cellW}
-                          totalGridWidth={totalGridWidth}
-                          isLast={a === acts[acts.length - 1]}
-                          onClick={() => navigateToProject(p.id)}
-                        />
-                      ))}
+                      acts.map((a) => {
+                        const dayMap = activiteitDayCel.get(a.id);
+                        const hasData = !!dayMap && slots.some((sl) => {
+                          for (const p2 of sl.pairs) {
+                            if (dayMap.has(dayKey(p2.wnr, p2.dag))) return true;
+                          }
+                          return false;
+                        });
+                        return (
+                          <ActiviteitCellsRow
+                            key={a.id}
+                            activiteit={a}
+                            dayCelMap={dayMap}
+                            monteurIdsByCel={monteurIdsByCel}
+                            monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
+                            dayConflictMonteurs={dayConflictMonteurs}
+                            slots={slots}
+                            cellW={cellW}
+                            totalGridWidth={totalGridWidth}
+                            isLast={a === acts[acts.length - 1]}
+                            onClick={() => navigateToProject(p.id)}
+                            opacity={hasData ? 1 : 0.35}
+                          />
+                        );
+                      })}
+                    {/* Visual separator between expanded projects */}
+                    {expanded && acts.length > 0 && (
+                      <div
+                        style={{
+                          width: totalGridWidth,
+                          height: 6,
+                          background: "rgba(255,255,255,0.02)",
+                          borderTop: "1px solid rgba(255,255,255,0.04)",
+                          borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -2285,6 +2320,7 @@ function ActiviteitCellsRow({
   totalGridWidth,
   isLast: isLastRow,
   onClick,
+  opacity = 1,
 }: {
   activiteit: Activiteit;
   dayCelMap: Map<string, Cel> | undefined;
@@ -2296,6 +2332,7 @@ function ActiviteitCellsRow({
   totalGridWidth: number;
   isLast: boolean;
   onClick: () => void;
+  opacity?: number;
 }) {
   return (
     <div
@@ -2308,6 +2345,7 @@ function ActiviteitCellsRow({
           ? "2px solid rgba(255,255,255,0.06)"
           : "1px solid rgba(255,255,255,0.03)",
         background: "rgba(255,255,255,0.015)",
+        opacity,
       }}
     >
       {slots.map((s) => {
