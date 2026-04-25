@@ -1628,11 +1628,12 @@ export default function Overzicht() {
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                maxWidth: 190,
+                                maxWidth: sidebarCollapsed ? 0 : sidebarW - 90,
+                                display: "block",
                               }}
                               title={p.station_naam ?? ""}
                             >
-                              {p.station_naam ?? ""}
+                              {p.station_naam ?? "—"}
                             </p>
                           </div>
                           <span
