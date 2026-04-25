@@ -1945,23 +1945,45 @@ export default function Overzicht() {
                         ))}
                     </div>
 
-                    {/* Activiteit cell rows */}
+                    {/* Activiteit cell rows — only for THIS project's activiteiten */}
                     {expanded &&
-                      acts.map((a) => (
-                        <ActiviteitCellsRow
-                          key={a.id}
-                          activiteit={a}
-                          dayCelMap={activiteitDayCel.get(a.id)}
-                          monteurIdsByCel={monteurIdsByCel}
-                          monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
-                          dayConflictMonteurs={dayConflictMonteurs}
-                          slots={slots}
-                          cellW={cellW}
-                          totalGridWidth={totalGridWidth}
-                          isLast={a === acts[acts.length - 1]}
-                          onClick={() => navigateToProject(p.id)}
-                        />
-                      ))}
+                      acts.map((a) => {
+                        const dayMap = activiteitDayCel.get(a.id);
+                        const hasData = !!dayMap && slots.some((sl) => {
+                          for (const p2 of sl.pairs) {
+                            if (dayMap.has(dayKey(p2.wnr, p2.dag))) return true;
+                          }
+                          return false;
+                        });
+                        return (
+                          <ActiviteitCellsRow
+                            key={a.id}
+                            activiteit={a}
+                            dayCelMap={dayMap}
+                            monteurIdsByCel={monteurIdsByCel}
+                            monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
+                            dayConflictMonteurs={dayConflictMonteurs}
+                            slots={slots}
+                            cellW={cellW}
+                            totalGridWidth={totalGridWidth}
+                            isLast={a === acts[acts.length - 1]}
+                            onClick={() => navigateToProject(p.id)}
+                            opacity={hasData ? 1 : 0.35}
+                          />
+                        );
+                      })}
+                    {/* Visual separator between expanded projects */}
+                    {expanded && acts.length > 0 && (
+                      <div
+                        style={{
+                          width: totalGridWidth,
+                          height: 6,
+                          background: "rgba(255,255,255,0.02)",
+                          borderTop: "1px solid rgba(255,255,255,0.04)",
+                          borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
