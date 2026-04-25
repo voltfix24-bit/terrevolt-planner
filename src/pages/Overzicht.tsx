@@ -1560,9 +1560,9 @@ export default function Overzicht() {
                           switch (p.status) {
                             case "gepland": return "3px solid #feb300";
                             case "in_uitvoering": return "3px solid #3fff8b";
-                            case "afgerond": return "3px solid rgba(255,255,255,0.2)";
-                            case "concept": return "3px dashed rgba(255,255,255,0.2)";
-                            default: return "3px solid rgba(255,255,255,0.1)";
+                            case "afgerond": return "3px solid rgba(255,255,255,0.3)";
+                            case "concept":
+                            default: return "3px dashed rgba(255,255,255,0.2)";
                           }
                         })(),
                       }}
