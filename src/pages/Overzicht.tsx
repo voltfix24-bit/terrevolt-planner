@@ -1988,15 +1988,16 @@ export default function Overzicht() {
                           />
                         );
                       })}
-                    {/* Visual separator between expanded projects */}
-                    {expanded && acts.length > 0 && (
+                    {/* Visual separator between expanded projects — grid side.
+                        Always rendered when expanded so heights match the sidebar. */}
+                    {expanded && (
                       <div
+                        aria-hidden
                         style={{
                           width: totalGridWidth,
-                          height: 6,
+                          height: 8,
+                          boxSizing: "border-box",
                           background: "rgba(255,255,255,0.02)",
-                          borderTop: "1px solid rgba(255,255,255,0.04)",
-                          borderBottom: "1px solid rgba(255,255,255,0.04)",
                         }}
                       />
                     )}
