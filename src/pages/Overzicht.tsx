@@ -1698,6 +1698,18 @@ export default function Overzicht() {
                           </div>
                         );
                       })}
+                    {/* Visual separator between expanded projects (matches grid side) */}
+                    {!sidebarCollapsed && expanded && acts.length > 0 && (
+                      <div
+                        style={{
+                          height: 6,
+                          background: "rgba(255,255,255,0.02)",
+                          borderTop: "1px solid rgba(255,255,255,0.04)",
+                          borderBottom: "1px solid rgba(255,255,255,0.04)",
+                          borderRight: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
