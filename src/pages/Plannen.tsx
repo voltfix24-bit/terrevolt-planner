@@ -89,6 +89,7 @@ interface Project {
   jaar: number | null;
   wv_naam: string | null;
   tijdelijke_situatie: string | null;
+  template_id: string | null;
 }
 
 interface Week {
@@ -247,9 +248,52 @@ const Plannen = () => {
     setProject(projRes.data as Project);
     const weekRows = (wRes.data ?? []) as Week[];
     setWeken(weekRows);
-    setActiviteiten((aRes.data ?? []) as Activiteit[]);
+    let actRows = (aRes.data ?? []) as Activiteit[];
     setMonteurs((mRes.data ?? []) as Monteur[]);
-    setActiviteitTypes((atRes.data ?? []) as ActiviteitTypeOption[]);
+    const atRows = (atRes.data ?? []) as ActiviteitTypeOption[];
+    setActiviteitTypes(atRows);
+
+    // Auto-seed project_activiteiten vanuit template wanneer leeg
+    const proj = projRes.data as Project;
+    if (actRows.length === 0 && proj?.template_id) {
+      const { data: tplRow } = await supabase
+        .from("project_templates")
+        .select("activiteit_type_ids")
+        .eq("id", proj.template_id)
+        .maybeSingle();
+      const typeIds: string[] = (tplRow?.activiteit_type_ids ?? []) as string[];
+      if (typeIds.length > 0) {
+        const inserts = typeIds
+          .map((tid, i) => {
+            const t = atRows.find((x) => x.id === tid);
+            if (!t) return null;
+            return {
+              project_id: projectId,
+              activiteit_type_id: t.id,
+              naam: t.naam,
+              capaciteit_type: t.capaciteit_type,
+              min_personen: t.min_personen ?? 1,
+              min_personen_totaal: t.min_personen_totaal ?? t.min_personen ?? 1,
+              min_personen_gekwalificeerd: t.min_personen_gekwalificeerd ?? t.min_personen ?? 1,
+              min_aanwijzing_ls: t.min_aanwijzing_ls,
+              min_aanwijzing_ms: t.min_aanwijzing_ms,
+              positie: i,
+            };
+          })
+          .filter(Boolean);
+        if (inserts.length > 0) {
+          const { data: inserted } = await supabase
+            .from("project_activiteiten")
+            .insert(inserts as never)
+            .select();
+          if (inserted) {
+            actRows = inserted as Activiteit[];
+            toast.success("Activiteiten geladen vanuit template");
+          }
+        }
+      }
+    }
+    setActiviteiten(actRows);
 
     // load cells for these weeks
     if (weekRows.length > 0) {
