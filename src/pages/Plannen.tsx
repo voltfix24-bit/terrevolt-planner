@@ -61,7 +61,7 @@ import {
   initialen,
   wrapWeek,
 } from "@/lib/planning-types";
-import { checkCelVoldoet, type Aanwijzing } from "@/lib/aanwijzing";
+import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
