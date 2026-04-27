@@ -38,30 +38,33 @@ type ProjectRow = Record<string, unknown> & { id: string };
 // =====================================================
 // UI primitives
 // =====================================================
-const STATE_STYLES: Record<SectionState, { dot: string; label: string; ring: string }> = {
+const STATE_STYLES: Record<SectionState, { dot: string; label: string; ring: string; accent: string }> = {
   empty: {
     dot: "bg-muted-foreground/40",
     label: "Niet gestart",
     ring: "border-white/10",
+    accent: "bg-muted-foreground/40",
   },
   partial: {
     dot: "bg-amber-400",
-    label: "Deels ingevuld",
-    ring: "border-amber-400/40",
+    label: "Deels",
+    ring: "border-amber-400/30",
+    accent: "bg-amber-400",
   },
   complete: {
     dot: "bg-emerald-400",
     label: "Compleet",
-    ring: "border-emerald-400/40",
+    ring: "border-emerald-400/30",
+    accent: "bg-emerald-400",
   },
 };
 
 const StateIcon: React.FC<{ state: SectionState; className?: string }> = ({ state, className }) => {
   if (state === "complete")
-    return <CheckCircle2 className={`h-4 w-4 text-emerald-400 ${className ?? ""}`} />;
+    return <CheckCircle2 className={`h-3.5 w-3.5 text-emerald-400 ${className ?? ""}`} />;
   if (state === "partial")
-    return <AlertCircle className={`h-4 w-4 text-amber-400 ${className ?? ""}`} />;
-  return <Circle className={`h-4 w-4 text-muted-foreground/50 ${className ?? ""}`} />;
+    return <AlertCircle className={`h-3.5 w-3.5 text-amber-400 ${className ?? ""}`} />;
+  return <Circle className={`h-3.5 w-3.5 text-muted-foreground/50 ${className ?? ""}`} />;
 };
 
 const Section: React.FC<{
@@ -74,62 +77,88 @@ const Section: React.FC<{
 }> = ({ id, title, subtitle, state, issues, children }) => {
   const s = STATE_STYLES[state];
   return (
-    <section id={id} className={`surface-card scroll-mt-24 rounded-lg border ${s.ring} p-6`}>
-      <div className="mb-5 border-b border-white/10 pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <StateIcon state={state} />
-            <h2 className="font-display text-lg font-bold text-foreground">{title}</h2>
-          </div>
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-            {s.label}
-          </span>
+    <section
+      id={id}
+      className={`surface-card scroll-mt-24 relative overflow-hidden rounded-lg border ${s.ring} px-5 py-4`}
+    >
+      {/* left accent bar */}
+      <div className={`absolute left-0 top-0 h-full w-[3px] ${s.accent} opacity-70`} />
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <StateIcon state={state} />
+          <h2 className="font-display text-base font-bold tracking-tight text-foreground">
+            {title}
+          </h2>
+          {subtitle && (
+            <span className="hidden text-[11px] text-muted-foreground md:inline">
+              · {subtitle}
+            </span>
+          )}
         </div>
-        {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
-        {issues && issues.length > 0 && (
-          <ul className="mt-3 space-y-1 rounded-md border border-amber-400/20 bg-amber-400/[0.04] p-2.5">
-            {issues.map((iss) => (
-              <li key={iss} className="flex items-start gap-1.5 text-[11px] text-amber-200/90">
-                <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
-                <span>{iss}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <span className="flex items-center gap-1.5 text-[10px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+          {s.label}
+        </span>
       </div>
-      <div className="space-y-5">{children}</div>
+      {issues && issues.length > 0 && (
+        <ul className="mb-3 space-y-0.5 rounded-md border border-amber-400/20 bg-amber-400/[0.04] px-2.5 py-1.5">
+          {issues.map((iss) => (
+            <li key={iss} className="flex items-start gap-1.5 text-[11px] leading-snug text-amber-200/90">
+              <AlertCircle className="mt-[2px] h-3 w-3 shrink-0" />
+              <span>{iss}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="space-y-2.5">{children}</div>
     </section>
   );
 };
 
-const SubBlock: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div className="rounded-md border border-white/5 bg-white/[0.02] p-4">
-    <div className="mb-3 font-display text-xs font-semibold uppercase tracking-wider text-primary">
-      {title}
+const SubBlock: React.FC<{ title: string; children: React.ReactNode; dense?: boolean }> = ({
+  title,
+  children,
+  dense,
+}) => (
+  <div className="rounded-md border border-white/5 bg-white/[0.015] px-3.5 py-2.5">
+    <div className="mb-2 flex items-center gap-1.5">
+      <span className="h-1 w-1 rounded-full bg-primary/60" />
+      <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary/90">
+        {title}
+      </div>
     </div>
-    <div className="space-y-3">{children}</div>
+    <div className={dense ? "space-y-2" : "space-y-2.5"}>{children}</div>
   </div>
 );
 
-const Field: React.FC<{ label: string; children: React.ReactNode; className?: string }> = ({
-  label,
-  children,
-  className,
-}) => (
-  <div className={className}>
-    <Label className="mb-1.5 block text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground">
-      {label}
-    </Label>
-    {children}
-  </div>
-);
+const Field: React.FC<{
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+  inline?: boolean;
+}> = ({ label, children, className, inline }) =>
+  inline ? (
+    <div className={`flex items-center justify-between gap-3 ${className ?? ""}`}>
+      <Label className="text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
+      <div className="flex-shrink-0">{children}</div>
+    </div>
+  ) : (
+    <div className={className}>
+      <Label className="mb-1 block text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+    </div>
+  );
 
 interface OptionPickerProps {
   value: string | null | undefined;
   onChange: (v: string | null) => void;
   options: { value: string; label: string }[];
   allowDeselect?: boolean;
+  size?: "sm" | "md";
 }
 
 const OptionPicker: React.FC<OptionPickerProps> = ({
@@ -137,28 +166,33 @@ const OptionPicker: React.FC<OptionPickerProps> = ({
   onChange,
   options,
   allowDeselect = true,
-}) => (
-  <div className="flex flex-wrap gap-1.5">
-    {options.map((o) => {
-      const active = value === o.value;
-      return (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(active && allowDeselect ? null : o.value)}
-          className={[
-            "rounded-md border px-3 py-1.5 text-xs font-display font-semibold transition-all",
-            active
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-white/10 bg-white/[0.04] text-muted-foreground hover:border-white/20 hover:text-foreground",
-          ].join(" ")}
-        >
-          {o.label}
-        </button>
-      );
-    })}
-  </div>
-);
+  size = "md",
+}) => {
+  const sz = size === "sm" ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs";
+  return (
+    <div className="inline-flex flex-wrap gap-1">
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(active && allowDeselect ? null : o.value)}
+            className={[
+              "rounded-md border font-display font-semibold transition-all duration-100",
+              sz,
+              active
+                ? "border-primary bg-primary text-primary-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_-2px_hsl(var(--primary)/0.4)]"
+                : "border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:border-white/20 hover:bg-white/[0.06] hover:text-foreground",
+            ].join(" ")}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 const YESNO = [
   { value: "ja", label: "Ja" },
@@ -541,65 +575,57 @@ const ProjectDetail = () => {
   if (defLsSit) summaryChips.push({ label: "LS definitief", value: defLsSit });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* ============================================ */}
-      {/* COMPACT HEADER + SUMMARY                     */}
+      {/* COMPACT HEADER + LIVE SUMMARY                */}
       {/* ============================================ */}
-      <div className="surface-card rounded-lg p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
+      <div className="surface-card rounded-lg px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-2.5">
             <button
               onClick={() => navigate("/projecten")}
-              className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
               title="Terug"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-display text-xl font-bold text-foreground">
+                <h1 className="truncate font-display text-lg font-bold tracking-tight text-foreground">
                   {(get<string>("station_naam") as string) || "Nieuwe case"}
                 </h1>
-                <span className="rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
                   {(get<string>("status") as string) || "concept"}
                 </span>
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="truncate text-[11px] text-muted-foreground">
                 {(get<string>("case_nummer") as string) || "Geen casenummer"}
                 {opdrachtgeverNaam && <> · {opdrachtgeverNaam}</>}
                 {perceelNaam && <> · {perceelNaam}</>}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {saving ? (
-              <>
-                <Save className="h-3.5 w-3.5 animate-pulse" /> Opslaan…
-              </>
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" /> Automatisch opgeslagen
-              </>
-            )}
+          <div className="flex items-center gap-3">
+            <div className="hidden min-w-[160px] items-center gap-2 md:flex">
+              <Progress value={overallProgress} className="h-1" />
+              <span className="font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                {overallProgress}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse" : ""}`} />
+              {saving ? "Opslaan…" : "Opgeslagen"}
+            </div>
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="mt-4">
-          <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>Intake voortgang</span>
-            <span className="font-mono font-semibold text-foreground">{overallProgress}%</span>
-          </div>
-          <Progress value={overallProgress} className="h-1.5" />
-        </div>
-
-        {/* Summary chips */}
+        {/* Live summary chips */}
         {summaryChips.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1">
             {summaryChips.map((c) => (
               <span
                 key={c.label}
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px]"
+                className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.025] px-1.5 py-0.5 text-[10.5px]"
               >
                 <span className="font-display font-semibold uppercase tracking-wider text-muted-foreground">
                   {c.label}
@@ -614,22 +640,22 @@ const ProjectDetail = () => {
       {/* ============================================ */}
       {/* STICKY SECTION NAV                           */}
       {/* ============================================ */}
-      <div className="sticky top-0 z-30 -mx-1 px-1 py-2 backdrop-blur-md">
-        <div className="surface-card flex flex-wrap items-center gap-1 rounded-lg border border-white/10 p-1.5">
+      <div className="sticky top-0 z-30 -mx-1 px-1 py-1.5">
+        <div className="surface-card flex flex-wrap items-center gap-1 rounded-lg border border-white/10 p-1 shadow-lg backdrop-blur-md">
           {sections.map((s) => {
             const c = completeness[s.key];
             return (
               <button
                 key={s.id}
                 onClick={() => scrollToSection(s.id)}
-                className={`group flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-display font-semibold transition-all ${STATE_STYLES[c.state].ring} bg-white/[0.02] hover:bg-white/[0.06]`}
+                className={`group flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-display font-semibold transition-all ${STATE_STYLES[c.state].ring} bg-white/[0.02] hover:bg-white/[0.07]`}
               >
                 <StateIcon state={c.state} />
                 <span className="text-foreground">{s.label}</span>
-                <span className="text-[10px] font-normal text-muted-foreground">
+                <span className="text-[10px] font-normal tabular-nums text-muted-foreground">
                   {c.score}/{c.total}
                 </span>
-                <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+                <ChevronRight className="h-3 w-3 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
               </button>
             );
           })}
@@ -646,7 +672,7 @@ const ProjectDetail = () => {
         state={completeness.A.state}
         issues={completeness.A.issues}
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label="Case nummer">
             <Input
               value={(get<string>("case_nummer") as string) || ""}
@@ -793,7 +819,7 @@ const ProjectDetail = () => {
               ]}
             />
           </Field>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="Aantal MS-richtingen / velden">
               <Input
                 type="number"
@@ -816,12 +842,13 @@ const ProjectDetail = () => {
           </div>
         </SubBlock>
 
-        <SubBlock title="B2. Trafo huidig">
-          <Field label="Trafo aanwezig?">
+        <SubBlock title="B2. Trafo huidig" dense>
+          <Field label="Trafo aanwezig?" inline>
             <OptionPicker
               value={huidigTrafo}
               onChange={(v) => setField("huidig_trafo_aanwezig", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {huidigTrafo === "ja" && (
@@ -835,16 +862,17 @@ const ProjectDetail = () => {
           )}
         </SubBlock>
 
-        <SubBlock title="B3. LS huidig">
-          <Field label="LS-rek aanwezig?">
+        <SubBlock title="B3. LS huidig" dense>
+          <Field label="LS-rek aanwezig?" inline>
             <OptionPicker
               value={huidigLs}
               onChange={(v) => setField("huidig_lsrek_aanwezig", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {huidigLs === "ja" && (
-            <Field label="Type LS-rek">
+            <Field label="Type LS-rek" inline>
               <OptionPicker
                 value={get<string>("huidig_lsrek_type")}
                 onChange={(v) => setField("huidig_lsrek_type", v)}
@@ -852,20 +880,22 @@ const ProjectDetail = () => {
                   { value: "open", label: "Open" },
                   { value: "gesloten", label: "Gesloten" },
                 ]}
+                size="sm"
               />
             </Field>
           )}
         </SubBlock>
 
-        <SubBlock title="B4. OV huidig">
-          <Field label="Flex OV kast aanwezig?">
+        <SubBlock title="B4. OV huidig" dense>
+          <Field label="Flex OV kast aanwezig?" inline>
             <OptionPicker
               value={get<string>("huidig_flex_ov_aanwezig")}
               onChange={(v) => setField("huidig_flex_ov_aanwezig", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
-          <Field label="OV kWh-meter aanwezig?">
+          <Field label="OV kWh-meter" inline>
             <OptionPicker
               value={get<string>("huidig_ov_kwh_meter")}
               onChange={(v) => setField("huidig_ov_kwh_meter", v)}
@@ -874,6 +904,7 @@ const ProjectDetail = () => {
                 { value: "1_fase", label: "1-fase" },
                 { value: "3_fase", label: "3-fase" },
               ]}
+              size="sm"
             />
           </Field>
         </SubBlock>
@@ -1016,8 +1047,8 @@ const ProjectDetail = () => {
           )}
         </SubBlock>
 
-        <SubBlock title="B7. Herbruikbaarheid huidig">
-          <Field label="Kunnen bestaande kabels later opnieuw aangesloten worden?">
+        <SubBlock title="B7. Herbruikbaarheid huidig" dense>
+          <Field label="Bestaande kabels herbruikbaar?" inline>
             <OptionPicker
               value={get<string>("huidig_kabels_herbruikbaar")}
               onChange={(v) => setField("huidig_kabels_herbruikbaar", v)}
@@ -1025,8 +1056,9 @@ const ProjectDetail = () => {
                 { value: "ja", label: "Ja" },
                 { value: "nee", label: "Nee" },
                 { value: "deels", label: "Deels" },
-                { value: "onbekend", label: "Onbekend" },
+                { value: "onbekend", label: "?" },
               ]}
+              size="sm"
             />
           </Field>
         </SubBlock>
@@ -1069,7 +1101,7 @@ const ProjectDetail = () => {
         {tijdSit === "provisorium" && (
           <>
             <SubBlock title="C3a. MS tijdelijk">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Field label="Aantal MS-eindsluitingen">
                   <Input
                     type="number"
@@ -1108,7 +1140,7 @@ const ProjectDetail = () => {
             </SubBlock>
 
             <SubBlock title="C3b. LS tijdelijk">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Field label="Aantal LS-eindsluitingen">
                   <Input
                     type="number"
@@ -1160,11 +1192,12 @@ const ProjectDetail = () => {
         issues={completeness.D.issues}
       >
         <SubBlock title="D1. MS / RMU definitief">
-          <Field label="Wordt RMU vervangen?">
+          <Field label="RMU vervangen?" inline>
             <OptionPicker
               value={defRmuVerv}
               onChange={(v) => setField("def_rmu_vervangen", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {defRmuVerv === "ja" && (
@@ -1172,10 +1205,11 @@ const ProjectDetail = () => {
               <Input
                 value={(get<string>("def_rmu_merk_configuratie") as string) || ""}
                 onChange={(e) => setField("def_rmu_merk_configuratie", e.target.value)}
+                placeholder="Bv. ABB SafeRing 4-veld"
               />
             </Field>
           )}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <Field label="Ombouw naar iMS?">
               <OptionPicker
                 value={get<string>("def_ombouw_ims")}
@@ -1205,16 +1239,17 @@ const ProjectDetail = () => {
           </div>
         </SubBlock>
 
-        <SubBlock title="D2. Trafo definitief">
-          <Field label="Wordt de trafo vervangen?">
+        <SubBlock title="D2. Trafo definitief" dense>
+          <Field label="Trafo vervangen?" inline>
             <OptionPicker
               value={defTrafoVerv}
               onChange={(v) => setField("def_trafo_vervangen", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {defTrafoVerv === "ja" && (
-            <Field label="Gewenst definitief trafotype / vermogen">
+            <Field label="Gewenst trafotype / vermogen">
               <Input
                 value={(get<string>("def_trafo_type") as string) || ""}
                 onChange={(e) => setField("def_trafo_type", e.target.value)}
@@ -1222,11 +1257,12 @@ const ProjectDetail = () => {
               />
             </Field>
           )}
-          <Field label="Wordt de trafo gedraaid?">
+          <Field label="Trafo gedraaid?" inline>
             <OptionPicker
               value={get<string>("def_trafo_gedraaid")}
               onChange={(v) => setField("def_trafo_gedraaid", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
         </SubBlock>
@@ -1237,11 +1273,11 @@ const ProjectDetail = () => {
               value={defLsSit}
               onChange={(v) => setField("def_ls_situatie", v)}
               options={[
-                { value: "behouden", label: "Bestaand LS-rek behouden" },
-                { value: "herschikken", label: "Bestaand LS-rek herschikken" },
+                { value: "behouden", label: "Bestaand behouden" },
+                { value: "herschikken", label: "Herschikken" },
                 { value: "uitbreidingsrek", label: "Uitbreidingsrek" },
-                { value: "nieuw_le630", label: "Nieuw LS-rek ≤630 kVA" },
-                { value: "nieuw_gt630_le1000", label: "Nieuw LS-rek >630 ≤1000 kVA" },
+                { value: "nieuw_le630", label: "Nieuw ≤630 kVA" },
+                { value: "nieuw_gt630_le1000", label: "Nieuw >630 ≤1000 kVA" },
               ]}
             />
           </Field>
@@ -1259,25 +1295,27 @@ const ProjectDetail = () => {
               />
             </Field>
           )}
-          <Field label="Zekeringen wisselen?">
+          <Field label="Zekeringen wisselen?" inline>
             <OptionPicker
               value={get<string>("def_zekeringen_wisselen")}
               onChange={(v) => setField("def_zekeringen_wisselen", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
         </SubBlock>
 
-        <SubBlock title="D4. GGI definitief">
-          <Field label="Verlichting / WCD / schakelaar nieuw aanbrengen?">
+        <SubBlock title="D4. GGI definitief" dense>
+          <Field label="Verlichting / WCD / schakelaar nieuw?" inline>
             <OptionPicker
               value={defGgi}
               onChange={(v) => setField("def_ggi_nieuw", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {defGgi === "ja" && (
-            <Field label="Hoeveel?">
+            <Field label="Hoeveel?" inline>
               <OptionPicker
                 value={(get<number>("def_ggi_aantal") as number)?.toString() ?? null}
                 onChange={(v) => setField("def_ggi_aantal", v ? Number(v) : null)}
@@ -1285,65 +1323,70 @@ const ProjectDetail = () => {
                   { value: "1", label: "1" },
                   { value: "2", label: "2" },
                 ]}
+                size="sm"
               />
             </Field>
           )}
         </SubBlock>
 
-        <SubBlock title="D5. Vereffeningsleiding / aarding definitief">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Field label="Vereffeningsleiding vernieuwen?">
-              <OptionPicker
-                value={get<string>("def_vereffening_vernieuwen")}
-                onChange={(v) => setField("def_vereffening_vernieuwen", v)}
-                options={YESNO}
-              />
-            </Field>
-            <Field label="Aardelektrode nodig?">
-              <OptionPicker
-                value={get<string>("def_aardelektrode")}
-                onChange={(v) => setField("def_aardelektrode", v)}
-                options={YESNO}
-              />
-            </Field>
-            <Field label="Aardmeting uitvoeren?">
-              <OptionPicker
-                value={get<string>("def_aardmeting")}
-                onChange={(v) => setField("def_aardmeting", v)}
-                options={YESNO}
-              />
-            </Field>
-          </div>
+        <SubBlock title="D5. Vereffening / aarding definitief" dense>
+          <Field label="Vereffeningsleiding vernieuwen?" inline>
+            <OptionPicker
+              value={get<string>("def_vereffening_vernieuwen")}
+              onChange={(v) => setField("def_vereffening_vernieuwen", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          <Field label="Aardelektrode nodig?" inline>
+            <OptionPicker
+              value={get<string>("def_aardelektrode")}
+              onChange={(v) => setField("def_aardelektrode", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          <Field label="Aardmeting uitvoeren?" inline>
+            <OptionPicker
+              value={get<string>("def_aardmeting")}
+              onChange={(v) => setField("def_aardmeting", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
         </SubBlock>
 
-        <SubBlock title="D6. OV definitief">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Nieuwe Flex OV?">
-              <OptionPicker
-                value={get<string>("def_flex_ov_nieuw")}
-                onChange={(v) => setField("def_flex_ov_nieuw", v)}
-                options={YESNO}
-              />
-            </Field>
-            <Field label="Nieuwe OV kWh-meter?">
-              <OptionPicker
-                value={get<string>("def_ov_kwh_meter_nieuw")}
-                onChange={(v) => setField("def_ov_kwh_meter_nieuw", v)}
-                options={YESNO}
-              />
-            </Field>
-          </div>
+        <SubBlock title="D6. OV definitief" dense>
+          <Field label="Nieuwe Flex OV?" inline>
+            <OptionPicker
+              value={get<string>("def_flex_ov_nieuw")}
+              onChange={(v) => setField("def_flex_ov_nieuw", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          <Field label="Nieuwe OV kWh-meter?" inline>
+            <OptionPicker
+              value={get<string>("def_ov_kwh_meter_nieuw")}
+              onChange={(v) => setField("def_ov_kwh_meter_nieuw", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
         </SubBlock>
 
-        <SubBlock title="D7. Opleverdossier">
-          <OptionPicker
-            value={get<string>("def_opleverdossier")}
-            onChange={(v) => setField("def_opleverdossier", v)}
-            options={[
-              { value: "inclusief_civiel", label: "Inclusief civiel" },
-              { value: "exclusief_civiel", label: "Exclusief civiel" },
-            ]}
-          />
+        <SubBlock title="D7. Opleverdossier" dense>
+          <Field label="Scope opleverdossier" inline>
+            <OptionPicker
+              value={get<string>("def_opleverdossier")}
+              onChange={(v) => setField("def_opleverdossier", v)}
+              options={[
+                { value: "inclusief_civiel", label: "Incl. civiel" },
+                { value: "exclusief_civiel", label: "Excl. civiel" },
+              ]}
+              size="sm"
+            />
+          </Field>
         </SubBlock>
       </Section>
 
