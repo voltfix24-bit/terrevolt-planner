@@ -57,6 +57,30 @@ const NL_MONTHS_LONG = [
   "Juli", "Augustus", "September", "Oktober", "November", "December",
 ];
 
+
+// Compact date-range formatter for the project card subtitle.
+// Examples: "12 mei → 20 mei", "12 mei → 3 jun '25", "vanaf 12 mei", "tot 20 mei".
+function formatDateRangeShort(from: string | null, to: string | null): string {
+  const parse = (s: string | null): Date | null => {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const fmt = (d: Date, withYear: boolean) =>
+    `${d.getDate()} ${NL_MONTHS[d.getMonth()].toLowerCase()}${withYear ? ` '${String(d.getFullYear()).slice(2)}` : ""}`;
+  const a = parse(from);
+  const b = parse(to);
+  if (!a && !b) return "";
+  if (a && !b) return `vanaf ${fmt(a, false)}`;
+  if (!a && b) return `tot ${fmt(b, false)}`;
+  const sameYear = a!.getFullYear() === b!.getFullYear();
+  const currentYear = new Date().getFullYear();
+  const showYearA = !sameYear;
+  const showYearB = !sameYear || a!.getFullYear() !== currentYear;
+  return `${fmt(a!, showYearA)} → ${fmt(b!, showYearB)}`;
+}
+
+
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
 interface Project {
@@ -66,6 +90,8 @@ interface Project {
   status: Status | null;
   jaar: number | null;
   created_at: string | null;
+  gsu_datum: string | null;
+  geu_datum: string | null;
 }
 
 interface Week {
@@ -447,7 +473,7 @@ export default function Overzicht() {
     let cancelled = false;
     (async () => {
       const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
+        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum").order("created_at", { ascending: true }),
         supabase.from("project_weken").select("id, project_id, week_nr, positie"),
         supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
         supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -474,7 +500,7 @@ export default function Overzicht() {
       let cancelled = false;
       (async () => {
         const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
+          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum").order("created_at", { ascending: true }),
           supabase.from("project_weken").select("id, project_id, week_nr, positie"),
           supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
           supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -1675,6 +1701,24 @@ export default function Overzicht() {
                             >
                               {p.station_naam ?? "—"}
                             </p>
+                            {(p.gsu_datum || p.geu_datum) && (
+                              <p
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 500,
+                                  color: "rgba(255,255,255,0.45)",
+                                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  marginTop: 1,
+                                  letterSpacing: "0.02em",
+                                }}
+                                title={`Uitvoering: ${p.gsu_datum ?? "?"} → ${p.geu_datum ?? "?"}`}
+                              >
+                                {formatDateRangeShort(p.gsu_datum, p.geu_datum)}
+                              </p>
+                            )}
                           </div>
                           <span
                             className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
