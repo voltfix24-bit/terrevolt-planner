@@ -1022,10 +1022,16 @@ const ProjectDetail = () => {
                     onChange={(e) => setField("case_nummer", e.target.value)}
                   />
                 </Field>
-                <Field label="Case naam / stationsnaam">
+                <Field label="Stationsnaam">
                   <Input
                     value={(get<string>("station_naam") as string) || ""}
                     onChange={(e) => setField("station_naam", e.target.value)}
+                  />
+                </Field>
+                <Field label="Behuizingsnummer">
+                  <Input
+                    value={(get<string>("behuizing_nummer") as string) || ""}
+                    onChange={(e) => setField("behuizing_nummer", e.target.value)}
                   />
                 </Field>
                 <Field label="Opdrachtgever">
