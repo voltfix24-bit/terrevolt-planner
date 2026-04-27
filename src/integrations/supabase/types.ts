@@ -181,6 +181,48 @@ export type Database = {
         }
         Relationships: []
       }
+      opdrachtgevers: {
+        Row: {
+          created_at: string | null
+          id: string
+          naam: string
+          positie: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          naam: string
+          positie?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          naam?: string
+          positie?: number | null
+        }
+        Relationships: []
+      }
+      percelen: {
+        Row: {
+          created_at: string | null
+          id: string
+          naam: string
+          positie: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          naam: string
+          positie?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          naam?: string
+          positie?: number | null
+        }
+        Relationships: []
+      }
       planning_cellen: {
         Row: {
           activiteit_id: string | null
@@ -283,6 +325,60 @@ export type Database = {
           },
         ]
       }
+      project_ls_kabels: {
+        Row: {
+          created_at: string | null
+          diameter: string | null
+          id: string
+          positie: number
+          project_id: string
+          soort: string
+        }
+        Insert: {
+          created_at?: string | null
+          diameter?: string | null
+          id?: string
+          positie?: number
+          project_id: string
+          soort?: string
+        }
+        Update: {
+          created_at?: string | null
+          diameter?: string | null
+          id?: string
+          positie?: number
+          project_id?: string
+          soort?: string
+        }
+        Relationships: []
+      }
+      project_ms_kabels: {
+        Row: {
+          created_at: string | null
+          diameter: string | null
+          id: string
+          positie: number
+          project_id: string
+          soort: string
+        }
+        Insert: {
+          created_at?: string | null
+          diameter?: string | null
+          id?: string
+          positie?: number
+          project_id: string
+          soort?: string
+        }
+        Update: {
+          created_at?: string | null
+          diameter?: string | null
+          id?: string
+          positie?: number
+          project_id?: string
+          soort?: string
+        }
+        Relationships: []
+      }
       project_templates: {
         Row: {
           activiteit_type_ids: string[] | null
@@ -345,77 +441,191 @@ export type Database = {
       projecten: {
         Row: {
           case_nummer: string | null
-          case_type: string | null
           created_at: string | null
+          def_aantal_ms_richtingen: number | null
+          def_aardelektrode: string | null
+          def_aardmeting: string | null
+          def_flex_ov_nieuw: string | null
+          def_ggi_aantal: number | null
+          def_ggi_nieuw: string | null
+          def_ls_aantal_stroken_herschikken: number | null
+          def_ls_situatie: string | null
+          def_ombouw_ims: string | null
+          def_opleverdossier: string | null
+          def_ov_kwh_meter_nieuw: string | null
+          def_rmu_merk_configuratie: string | null
+          def_rmu_vervangen: string | null
+          def_trafo_gedraaid: string | null
+          def_trafo_type: string | null
+          def_trafo_vervangen: string | null
+          def_vereffening_vernieuwen: string | null
+          def_vermogensveld: string | null
+          def_zekeringen_wisselen: string | null
           gemeente: string | null
           gsu_geu: string | null
+          huidig_flex_ov_aanwezig: string | null
+          huidig_kabels_herbruikbaar: string | null
+          huidig_ls_kabels_aantal: number | null
+          huidig_ls_kabels_aanwezig: string | null
+          huidig_ls_kabels_type: string | null
+          huidig_lsrek_aanwezig: string | null
+          huidig_lsrek_type: string | null
+          huidig_ms_kabels_aantal: number | null
+          huidig_ms_kabels_aanwezig: string | null
+          huidig_ms_kabels_type: string | null
+          huidig_ov_kwh_meter: string | null
+          huidig_rmu_aantal_richtingen: number | null
+          huidig_rmu_type: string | null
+          huidig_trafo_aanwezig: string | null
+          huidig_trafo_type: string | null
+          huidig_vermogensveld: string | null
           id: string
           jaar: number | null
-          ls_rek_vervangen: string | null
-          ms_type: string | null
+          locatie: string | null
           notities: string | null
+          nsa_luik_aanwezig: string | null
+          opdrachtgever_id: string | null
+          perceel_id: string | null
           postcode: string | null
+          prov_ls_eindsluitingen_aantal: number | null
+          prov_ls_moffen_aantal: number | null
+          prov_ms_eindsluitingen_aantal: number | null
+          prov_ms_eindsluitingen_type: string | null
+          prov_ms_moffen_aantal: number | null
+          prov_tijdelijke_lskast: string | null
           stad: string | null
           station_naam: string | null
           status: string | null
           straat: string | null
           template_id: string | null
-          trafo_kva: string | null
+          tijdelijke_situatie: string | null
           updated_at: string | null
-          werkplan_lsh: boolean | null
-          werkplan_lsr: boolean | null
-          werkplan_msh: boolean | null
-          werkplan_msr: boolean | null
           wv_naam: string | null
         }
         Insert: {
           case_nummer?: string | null
-          case_type?: string | null
           created_at?: string | null
+          def_aantal_ms_richtingen?: number | null
+          def_aardelektrode?: string | null
+          def_aardmeting?: string | null
+          def_flex_ov_nieuw?: string | null
+          def_ggi_aantal?: number | null
+          def_ggi_nieuw?: string | null
+          def_ls_aantal_stroken_herschikken?: number | null
+          def_ls_situatie?: string | null
+          def_ombouw_ims?: string | null
+          def_opleverdossier?: string | null
+          def_ov_kwh_meter_nieuw?: string | null
+          def_rmu_merk_configuratie?: string | null
+          def_rmu_vervangen?: string | null
+          def_trafo_gedraaid?: string | null
+          def_trafo_type?: string | null
+          def_trafo_vervangen?: string | null
+          def_vereffening_vernieuwen?: string | null
+          def_vermogensveld?: string | null
+          def_zekeringen_wisselen?: string | null
           gemeente?: string | null
           gsu_geu?: string | null
+          huidig_flex_ov_aanwezig?: string | null
+          huidig_kabels_herbruikbaar?: string | null
+          huidig_ls_kabels_aantal?: number | null
+          huidig_ls_kabels_aanwezig?: string | null
+          huidig_ls_kabels_type?: string | null
+          huidig_lsrek_aanwezig?: string | null
+          huidig_lsrek_type?: string | null
+          huidig_ms_kabels_aantal?: number | null
+          huidig_ms_kabels_aanwezig?: string | null
+          huidig_ms_kabels_type?: string | null
+          huidig_ov_kwh_meter?: string | null
+          huidig_rmu_aantal_richtingen?: number | null
+          huidig_rmu_type?: string | null
+          huidig_trafo_aanwezig?: string | null
+          huidig_trafo_type?: string | null
+          huidig_vermogensveld?: string | null
           id?: string
           jaar?: number | null
-          ls_rek_vervangen?: string | null
-          ms_type?: string | null
+          locatie?: string | null
           notities?: string | null
+          nsa_luik_aanwezig?: string | null
+          opdrachtgever_id?: string | null
+          perceel_id?: string | null
           postcode?: string | null
+          prov_ls_eindsluitingen_aantal?: number | null
+          prov_ls_moffen_aantal?: number | null
+          prov_ms_eindsluitingen_aantal?: number | null
+          prov_ms_eindsluitingen_type?: string | null
+          prov_ms_moffen_aantal?: number | null
+          prov_tijdelijke_lskast?: string | null
           stad?: string | null
           station_naam?: string | null
           status?: string | null
           straat?: string | null
           template_id?: string | null
-          trafo_kva?: string | null
+          tijdelijke_situatie?: string | null
           updated_at?: string | null
-          werkplan_lsh?: boolean | null
-          werkplan_lsr?: boolean | null
-          werkplan_msh?: boolean | null
-          werkplan_msr?: boolean | null
           wv_naam?: string | null
         }
         Update: {
           case_nummer?: string | null
-          case_type?: string | null
           created_at?: string | null
+          def_aantal_ms_richtingen?: number | null
+          def_aardelektrode?: string | null
+          def_aardmeting?: string | null
+          def_flex_ov_nieuw?: string | null
+          def_ggi_aantal?: number | null
+          def_ggi_nieuw?: string | null
+          def_ls_aantal_stroken_herschikken?: number | null
+          def_ls_situatie?: string | null
+          def_ombouw_ims?: string | null
+          def_opleverdossier?: string | null
+          def_ov_kwh_meter_nieuw?: string | null
+          def_rmu_merk_configuratie?: string | null
+          def_rmu_vervangen?: string | null
+          def_trafo_gedraaid?: string | null
+          def_trafo_type?: string | null
+          def_trafo_vervangen?: string | null
+          def_vereffening_vernieuwen?: string | null
+          def_vermogensveld?: string | null
+          def_zekeringen_wisselen?: string | null
           gemeente?: string | null
           gsu_geu?: string | null
+          huidig_flex_ov_aanwezig?: string | null
+          huidig_kabels_herbruikbaar?: string | null
+          huidig_ls_kabels_aantal?: number | null
+          huidig_ls_kabels_aanwezig?: string | null
+          huidig_ls_kabels_type?: string | null
+          huidig_lsrek_aanwezig?: string | null
+          huidig_lsrek_type?: string | null
+          huidig_ms_kabels_aantal?: number | null
+          huidig_ms_kabels_aanwezig?: string | null
+          huidig_ms_kabels_type?: string | null
+          huidig_ov_kwh_meter?: string | null
+          huidig_rmu_aantal_richtingen?: number | null
+          huidig_rmu_type?: string | null
+          huidig_trafo_aanwezig?: string | null
+          huidig_trafo_type?: string | null
+          huidig_vermogensveld?: string | null
           id?: string
           jaar?: number | null
-          ls_rek_vervangen?: string | null
-          ms_type?: string | null
+          locatie?: string | null
           notities?: string | null
+          nsa_luik_aanwezig?: string | null
+          opdrachtgever_id?: string | null
+          perceel_id?: string | null
           postcode?: string | null
+          prov_ls_eindsluitingen_aantal?: number | null
+          prov_ls_moffen_aantal?: number | null
+          prov_ms_eindsluitingen_aantal?: number | null
+          prov_ms_eindsluitingen_type?: string | null
+          prov_ms_moffen_aantal?: number | null
+          prov_tijdelijke_lskast?: string | null
           stad?: string | null
           station_naam?: string | null
           status?: string | null
           straat?: string | null
           template_id?: string | null
-          trafo_kva?: string | null
+          tijdelijke_situatie?: string | null
           updated_at?: string | null
-          werkplan_lsh?: boolean | null
-          werkplan_lsr?: boolean | null
-          werkplan_msh?: boolean | null
-          werkplan_msr?: boolean | null
           wv_naam?: string | null
         }
         Relationships: [
