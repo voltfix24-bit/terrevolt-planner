@@ -1192,11 +1192,12 @@ const ProjectDetail = () => {
         issues={completeness.D.issues}
       >
         <SubBlock title="D1. MS / RMU definitief">
-          <Field label="Wordt RMU vervangen?">
+          <Field label="RMU vervangen?" inline>
             <OptionPicker
               value={defRmuVerv}
               onChange={(v) => setField("def_rmu_vervangen", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {defRmuVerv === "ja" && (
@@ -1204,6 +1205,7 @@ const ProjectDetail = () => {
               <Input
                 value={(get<string>("def_rmu_merk_configuratie") as string) || ""}
                 onChange={(e) => setField("def_rmu_merk_configuratie", e.target.value)}
+                placeholder="Bv. ABB SafeRing 4-veld"
               />
             </Field>
           )}
