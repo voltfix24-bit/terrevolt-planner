@@ -90,6 +90,40 @@ interface Project {
   wv_naam: string | null;
   tijdelijke_situatie: string | null;
   template_id: string | null;
+  gsu_datum: string | null;
+  geu_datum: string | null;
+}
+
+/* --- ISO week helpers for auto-seeding planning weeks --- */
+function isoWeekParts(d: Date): { year: number; week: number } {
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return { year: date.getUTCFullYear(), week };
+}
+
+function enumerateISOWeeks(startISO: string, endISO: string): { week_nr: number; year: number }[] {
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return [];
+  const dow = start.getUTCDay() || 7;
+  const monday = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+  monday.setUTCDate(monday.getUTCDate() - dow + 1);
+  const out: { week_nr: number; year: number }[] = [];
+  const seen = new Set<string>();
+  const cursor = new Date(monday);
+  for (let i = 0; i < 60 && cursor.getTime() <= end.getTime() + 6 * 86400000; i++) {
+    const { year, week } = isoWeekParts(cursor);
+    const key = `${year}-${week}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push({ week_nr: week, year });
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 7);
+  }
+  return out;
 }
 
 interface Week {
@@ -295,9 +329,45 @@ const Plannen = () => {
     }
     setActiviteiten(actRows);
 
+    // Auto-seed project_weken wanneer er geen weken bestaan.
+    // Nieuwe projecten hebben standaard nog geen weken — zonder dit kan er
+    // niets ingepland worden (geen kolommen in de grid). Genereert ISO-weken
+    // op basis van GSU/GEU; valt terug op de huidige ISO-week als die ontbreken.
+    let effectiveWeeks: Week[] = weekRows;
+    if (effectiveWeeks.length === 0) {
+      const gsu = proj?.gsu_datum ?? null;
+      const geu = proj?.geu_datum ?? null;
+      let candidates: { week_nr: number; year: number }[] = [];
+      let usedFallback = false;
+      if (gsu && geu) candidates = enumerateISOWeeks(gsu, geu);
+      if (candidates.length === 0) {
+        candidates = [{ week_nr: CURRENT_WEEK, year: CURRENT_YEAR }];
+        usedFallback = true;
+      }
+      const inserts = candidates.map((c, i) => ({
+        project_id: projectId,
+        week_nr: c.week_nr,
+        positie: i,
+        opmerking: "",
+      }));
+      const { data: insertedWeeks, error: weekErr } = await supabase
+        .from("project_weken")
+        .insert(inserts)
+        .select();
+      if (!weekErr && insertedWeeks) {
+        effectiveWeeks = insertedWeeks as Week[];
+        setWeken(effectiveWeeks);
+        if (usedFallback) {
+          toast.info("Startweek aangemaakt zodat dit project direct ingepland kan worden");
+        } else {
+          toast.success("Planningweken automatisch aangemaakt op basis van uitvoeringsperiode");
+        }
+      }
+    }
+
     // load cells for these weeks
-    if (weekRows.length > 0) {
-      const weekIds = weekRows.map((w) => w.id);
+    if (effectiveWeeks.length > 0) {
+      const weekIds = effectiveWeeks.map((w) => w.id);
       const { data: celRows } = await supabase
         .from("planning_cellen")
         .select("*")
