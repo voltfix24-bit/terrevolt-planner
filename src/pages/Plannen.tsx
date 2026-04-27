@@ -85,10 +85,10 @@ interface Project {
   id: string;
   case_nummer: string | null;
   station_naam: string | null;
-  case_type: string | null;
   status: string | null;
   jaar: number | null;
   wv_naam: string | null;
+  tijdelijke_situatie: string | null;
 }
 
 interface Week {
