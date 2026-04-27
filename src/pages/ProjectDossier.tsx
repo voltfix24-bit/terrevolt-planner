@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import DossierPrint from "@/components/DossierPrint";
 import { printDossierInPopup } from "@/lib/print-dossier";
+import { intakeLabel } from "@/lib/dossier-labels";
 
 // =====================================================
 // Types
@@ -391,17 +392,31 @@ const ProjectDossier = () => {
   const samenvatting = useMemo(() => {
     if (!project) return "";
     const stadje = (get<string>("stad") as string) || "";
-    const huidigType = (get<string>("huidig_rmu_type") as string) || "bestaande RMU";
+    const huidigRmu = intakeLabel("huidig_rmu_type", get("huidig_rmu_type"));
+    const huidigDeel =
+      huidigRmu && huidigRmu !== "—" ? `bestaande ${huidigRmu}` : "bestaande RMU";
     const tij = tijdelijkeLabel(tijdelijk);
     const defRmu = (get<string>("def_rmu_merk_configuratie") as string) || "nieuwe definitieve RMU";
     const defTrafo = (get<string>("def_trafo_type") as string) || "definitieve trafo";
+    const lsSit = intakeLabel("def_ls_situatie", get("def_ls_situatie"));
     const tijDeel =
       tij === "Geen" || tij === "—"
-        ? "Geen aparte tijdelijke voorziening — in/uit dezelfde dag."
+        ? "Geen aparte tijdelijke voorziening — werk binnen één onderbreking."
         : tij === "NSA"
-          ? "Tijdens de werkzaamheden wordt een NSA-unit ingezet om continuïteit van levering te waarborgen."
+          ? "Tijdens de werkzaamheden wordt een NSA-unit ingezet zodat de levering doorloopt."
           : "Een provisorium wordt opgebouwd om tijdens de ombouw door te kunnen schakelen.";
-    return `Huidige situatie: ${huidigType}${stadje ? ` te ${stadje}` : ""}. ${tijDeel} Doel: opleveren met ${defRmu} en ${defTrafo}, conform definitief tekeningenpakket.`;
+    const lsDeel =
+      lsSit && lsSit !== "—" && lsSit.toLowerCase() !== "behouden"
+        ? ` LS-rek: ${lsSit}.`
+        : "";
+    const risico: string[] = [];
+    if ((get<string>("asbest_benodigd") ?? "").toLowerCase() === "ja") risico.push("asbest");
+    if ((get<string>("bouwkundig_benodigd") ?? "").toLowerCase() === "ja")
+      risico.push("bouwkundig");
+    const risicoDeel = risico.length
+      ? ` Let op: ${risico.join(" + ")}-werk parallel ingepland.`
+      : "";
+    return `Huidige situatie: ${huidigDeel}${stadje ? ` te ${stadje}` : ""}. ${tijDeel} Doel: opleveren met ${defRmu} en ${defTrafo}.${lsDeel}${risicoDeel}`;
   }, [project, tijdelijk]);
 
   if (loading || !project) {
@@ -592,7 +607,7 @@ const ProjectDossier = () => {
           },
           {
             label: "RMU type",
-            value: valOr(get("huidig_rmu_type")),
+            value: intakeLabel("huidig_rmu_type", get("huidig_rmu_type")),
             icon: PlugZap,
           },
           {
@@ -602,7 +617,7 @@ const ProjectDossier = () => {
           },
           {
             label: "Scope",
-            value: (get<string>("def_opleverdossier") as string) || "—",
+            value: intakeLabel("def_opleverdossier", get("def_opleverdossier")),
             icon: ClipboardList,
           },
         ].map((item) => (
@@ -650,8 +665,10 @@ const ProjectDossier = () => {
               <KV label="GEU" value={fmtDate(get("geu_datum"))} mono />
               <KV label="Status" value={statusInfo.label} />
               <KV label="Behuizing" value={valOr(get("behuizing_nummer"))} />
-              <KV label="GSU / GEU label" value={valOr(get("gsu_geu"))} />
-              <KV label="Locatie" value={valOr(get("locatie"))} />
+              {get<string>("locatie") && <KV label="Locatie" value={valOr(get("locatie"))} />}
+              {get<string>("gsu_geu") && (
+                <KV label="GSU / GEU label" value={valOr(get("gsu_geu"))} />
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-2.5 md:grid-cols-2">
@@ -683,7 +700,7 @@ const ProjectDossier = () => {
           <Card title="Huidige Situatie" icon={Activity}>
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
               <SubBlock title="MS / RMU" icon={PlugZap}>
-                <KV label="Type" value={valOr(get("huidig_rmu_type"))} strong />
+                <KV label="Type" value={intakeLabel("huidig_rmu_type", get("huidig_rmu_type"))} strong />
                 <KV
                   label="Aantal richtingen"
                   value={valOr(get("huidig_rmu_aantal_richtingen"))}
@@ -697,16 +714,16 @@ const ProjectDossier = () => {
               </SubBlock>
               <SubBlock title="LS-Rek / OV" icon={Zap}>
                 <KV label="LS-rek aanwezig" value={yesNoLabel(get("huidig_lsrek_aanwezig"))} />
-                <KV label="Type" value={valOr(get("huidig_lsrek_type"))} />
+                <KV label="Type" value={intakeLabel("huidig_lsrek_type", get("huidig_lsrek_type"))} />
                 <KV label="Flex OV" value={yesNoLabel(get("huidig_flex_ov_aanwezig"))} />
-                <KV label="OV kWh meter" value={yesNoLabel(get("huidig_ov_kwh_meter"))} />
+                <KV label="OV kWh meter" value={intakeLabel("huidig_ov_kwh_meter", get("huidig_ov_kwh_meter"))} />
               </SubBlock>
             </div>
 
             <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2">
               <SubBlock title="MS Kabels" icon={Cable}>
                 <KV label="Aanwezig" value={yesNoLabel(get("huidig_ms_kabels_aanwezig"))} />
-                <KV label="Type" value={valOr(get("huidig_ms_kabels_type"))} />
+                <KV label="Type" value={intakeLabel("huidig_ms_kabels_type", get("huidig_ms_kabels_type"))} />
                 <KV label="Aantal" value={valOr(get("huidig_ms_kabels_aantal"))} mono />
                 <KV
                   label="Diameters"
@@ -720,7 +737,7 @@ const ProjectDossier = () => {
               </SubBlock>
               <SubBlock title="LS Kabels" icon={Cable}>
                 <KV label="Aanwezig" value={yesNoLabel(get("huidig_ls_kabels_aanwezig"))} />
-                <KV label="Type" value={valOr(get("huidig_ls_kabels_type"))} />
+                <KV label="Type" value={intakeLabel("huidig_ls_kabels_type", get("huidig_ls_kabels_type"))} />
                 <KV label="Aantal" value={valOr(get("huidig_ls_kabels_aantal"))} mono />
                 <KV
                   label="Diameters"
