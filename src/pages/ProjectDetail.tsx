@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Circle, AlertCircle, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import {
 // Types
 // =====================================================
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
+type SectionState = "empty" | "partial" | "complete";
 
 interface Lookup {
   id: string;
@@ -34,21 +36,72 @@ interface Kabel {
 type ProjectRow = Record<string, unknown> & { id: string };
 
 // =====================================================
-// Helpers — small UI primitives
+// UI primitives
 // =====================================================
-const Section: React.FC<{ title: string; subtitle?: string; children: React.ReactNode }> = ({
-  title,
-  subtitle,
-  children,
-}) => (
-  <section className="surface-card rounded-lg p-6">
-    <div className="mb-5 border-b border-white/10 pb-3">
-      <h2 className="font-display text-lg font-bold text-foreground">{title}</h2>
-      {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
-    </div>
-    <div className="space-y-5">{children}</div>
-  </section>
-);
+const STATE_STYLES: Record<SectionState, { dot: string; label: string; ring: string }> = {
+  empty: {
+    dot: "bg-muted-foreground/40",
+    label: "Niet gestart",
+    ring: "border-white/10",
+  },
+  partial: {
+    dot: "bg-amber-400",
+    label: "Deels ingevuld",
+    ring: "border-amber-400/40",
+  },
+  complete: {
+    dot: "bg-emerald-400",
+    label: "Compleet",
+    ring: "border-emerald-400/40",
+  },
+};
+
+const StateIcon: React.FC<{ state: SectionState; className?: string }> = ({ state, className }) => {
+  if (state === "complete")
+    return <CheckCircle2 className={`h-4 w-4 text-emerald-400 ${className ?? ""}`} />;
+  if (state === "partial")
+    return <AlertCircle className={`h-4 w-4 text-amber-400 ${className ?? ""}`} />;
+  return <Circle className={`h-4 w-4 text-muted-foreground/50 ${className ?? ""}`} />;
+};
+
+const Section: React.FC<{
+  id: string;
+  title: string;
+  subtitle?: string;
+  state: SectionState;
+  issues?: string[];
+  children: React.ReactNode;
+}> = ({ id, title, subtitle, state, issues, children }) => {
+  const s = STATE_STYLES[state];
+  return (
+    <section id={id} className={`surface-card scroll-mt-24 rounded-lg border ${s.ring} p-6`}>
+      <div className="mb-5 border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <StateIcon state={state} />
+            <h2 className="font-display text-lg font-bold text-foreground">{title}</h2>
+          </div>
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+            {s.label}
+          </span>
+        </div>
+        {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
+        {issues && issues.length > 0 && (
+          <ul className="mt-3 space-y-1 rounded-md border border-amber-400/20 bg-amber-400/[0.04] p-2.5">
+            {issues.map((iss) => (
+              <li key={iss} className="flex items-start gap-1.5 text-[11px] text-amber-200/90">
+                <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                <span>{iss}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="space-y-5">{children}</div>
+    </section>
+  );
+};
 
 const SubBlock: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="rounded-md border border-white/5 bg-white/[0.02] p-4">
@@ -175,7 +228,6 @@ const ProjectDetail = () => {
     load();
   }, [load]);
 
-  // ---------- Field setter with debounced autosave ----------
   const setField = (key: string, value: unknown) => {
     setProject((prev) => (prev ? { ...prev, [key]: value } : prev));
     if (dirtyTimer.current) clearTimeout(dirtyTimer.current);
@@ -197,13 +249,11 @@ const ProjectDetail = () => {
 
   const get = <T,>(key: string): T | null => (project ? ((project[key] as T) ?? null) : null);
 
-  // ---------- Sync helpers for repeatable kabels ----------
   const syncKabels = async (
     table: "project_ms_kabels" | "project_ls_kabels",
     rows: Kabel[],
   ) => {
     if (!id) return;
-    // Wipe & re-insert (simpler than diff for small lists)
     await supabase.from(table).delete().eq("project_id", id).eq("soort", "huidig");
     if (rows.length > 0) {
       await supabase.from(table).insert(
@@ -217,7 +267,6 @@ const ProjectDetail = () => {
     }
   };
 
-  // When aantal-veld verandert, lijst aanpassen
   const ensureKabelCount = (
     list: Kabel[],
     setList: (rows: Kabel[]) => void,
@@ -234,6 +283,213 @@ const ProjectDetail = () => {
     }
     setList(next);
     return next;
+  };
+
+  // =====================================================
+  // Completeness analysis
+  // =====================================================
+  const completeness = useMemo(() => {
+    if (!project) {
+      return {
+        A: { state: "empty" as SectionState, issues: [] as string[], score: 0, total: 1 },
+        B: { state: "empty" as SectionState, issues: [] as string[], score: 0, total: 1 },
+        C: { state: "empty" as SectionState, issues: [] as string[], score: 0, total: 1 },
+        D: { state: "empty" as SectionState, issues: [] as string[], score: 0, total: 1 },
+      };
+    }
+
+    const filled = (v: unknown) => v !== null && v !== undefined && v !== "" && !(typeof v === "number" && Number.isNaN(v));
+    const g = (k: string) => project[k];
+
+    // ---- Deel A ----
+    const aRequired = ["case_nummer", "station_naam", "opdrachtgever_id", "perceel_id"];
+    const aOptional = ["gsu_geu", "wv_naam", "straat", "postcode", "stad", "gemeente"];
+    const aFilled = aRequired.filter((k) => filled(g(k))).length;
+    const aOpt = aOptional.filter((k) => filled(g(k))).length;
+    const aIssues: string[] = [];
+    if (!filled(g("case_nummer"))) aIssues.push("Case nummer ontbreekt");
+    if (!filled(g("station_naam"))) aIssues.push("Stationsnaam ontbreekt");
+    if (!filled(g("opdrachtgever_id"))) aIssues.push("Opdrachtgever niet gekozen");
+    if (!filled(g("perceel_id"))) aIssues.push("Perceel niet gekozen");
+    const aScore = aFilled + Math.min(aOpt, 4);
+    const aTotal = aRequired.length + 4;
+    const aState: SectionState =
+      aFilled === 0 && aOpt === 0 ? "empty" : aFilled === aRequired.length ? "complete" : "partial";
+
+    // ---- Deel B ----
+    const bIssues: string[] = [];
+    let bScore = 0;
+    let bTotal = 0;
+    const touchedB =
+      filled(g("huidig_rmu_type")) ||
+      filled(g("huidig_trafo_aanwezig")) ||
+      filled(g("huidig_lsrek_aanwezig")) ||
+      filled(g("huidig_ms_kabels_aanwezig")) ||
+      filled(g("huidig_ls_kabels_aanwezig")) ||
+      filled(g("huidig_flex_ov_aanwezig"));
+
+    bTotal += 1;
+    if (filled(g("huidig_rmu_type"))) bScore += 1;
+    else bIssues.push("Huidige RMU/MS-installatie niet gekozen");
+
+    bTotal += 1;
+    if (filled(g("huidig_rmu_aantal_richtingen"))) bScore += 1;
+
+    bTotal += 1;
+    if (filled(g("huidig_trafo_aanwezig"))) {
+      bScore += 1;
+      if (g("huidig_trafo_aanwezig") === "ja" && !filled(g("huidig_trafo_type")))
+        bIssues.push("Trafo aanwezig maar geen type ingevuld");
+    }
+
+    bTotal += 1;
+    if (filled(g("huidig_lsrek_aanwezig"))) {
+      bScore += 1;
+      if (g("huidig_lsrek_aanwezig") === "ja" && !filled(g("huidig_lsrek_type")))
+        bIssues.push("LS-rek aanwezig maar type niet gekozen");
+    }
+
+    bTotal += 1;
+    if (filled(g("huidig_ms_kabels_aanwezig"))) {
+      bScore += 1;
+      if (g("huidig_ms_kabels_aanwezig") === "ja") {
+        if (!filled(g("huidig_ms_kabels_type")))
+          bIssues.push("MS-kabels aanwezig maar type niet gekozen");
+        if (!filled(g("huidig_ms_kabels_aantal")))
+          bIssues.push("MS-kabels aanwezig maar aantal niet ingevuld");
+        if (msKabels.length > 0 && msKabels.some((k) => !k.diameter))
+          bIssues.push("MS-kabel diameter(s) ontbreken");
+      }
+    }
+
+    bTotal += 1;
+    if (filled(g("huidig_ls_kabels_aanwezig"))) {
+      bScore += 1;
+      if (g("huidig_ls_kabels_aanwezig") === "ja") {
+        if (!filled(g("huidig_ls_kabels_type")))
+          bIssues.push("LS-kabels aanwezig maar type niet gekozen");
+        if (!filled(g("huidig_ls_kabels_aantal")))
+          bIssues.push("LS-kabels aanwezig maar aantal niet ingevuld");
+        if (lsKabels.length > 0 && lsKabels.some((k) => !k.diameter))
+          bIssues.push("LS-kabel diameter(s) ontbreken");
+      }
+    }
+
+    const bState: SectionState = !touchedB
+      ? "empty"
+      : bIssues.length === 0 && bScore >= bTotal - 1
+        ? "complete"
+        : "partial";
+
+    // ---- Deel C ----
+    const cIssues: string[] = [];
+    let cScore = 0;
+    let cTotal = 1;
+    const tijd = g("tijdelijke_situatie");
+    if (filled(tijd)) cScore += 1;
+
+    if (tijd === "nsa") {
+      cTotal += 1;
+      if (filled(g("nsa_luik_aanwezig"))) cScore += 1;
+      else cIssues.push("NSA gekozen — geef aan of er een NSA-luik is");
+    }
+    if (tijd === "provisorium") {
+      const provFields = [
+        "prov_ms_eindsluitingen_aantal",
+        "prov_ms_eindsluitingen_type",
+        "prov_ms_moffen_aantal",
+        "prov_ls_eindsluitingen_aantal",
+        "prov_ls_moffen_aantal",
+        "prov_tijdelijke_lskast",
+      ];
+      cTotal += provFields.length;
+      provFields.forEach((f) => {
+        if (filled(g(f))) cScore += 1;
+      });
+      if (!filled(g("prov_ms_eindsluitingen_aantal")))
+        cIssues.push("Provisorium: aantal MS-eindsluitingen ontbreekt");
+      if (!filled(g("prov_ms_eindsluitingen_type")))
+        cIssues.push("Provisorium: type MS-eindsluitingen ontbreekt");
+      if (!filled(g("prov_ls_eindsluitingen_aantal")))
+        cIssues.push("Provisorium: aantal LS-eindsluitingen ontbreekt");
+      if (!filled(g("prov_tijdelijke_lskast")))
+        cIssues.push("Provisorium: tijdelijke LS-kast keuze ontbreekt");
+    }
+
+    const cState: SectionState = !filled(tijd)
+      ? "empty"
+      : cIssues.length === 0 && cScore >= cTotal
+        ? "complete"
+        : "partial";
+
+    // ---- Deel D ----
+    const dIssues: string[] = [];
+    let dScore = 0;
+    let dTotal = 0;
+
+    const dKeys = [
+      "def_rmu_vervangen",
+      "def_ombouw_ims",
+      "def_aantal_ms_richtingen",
+      "def_vermogensveld",
+      "def_trafo_vervangen",
+      "def_trafo_gedraaid",
+      "def_ls_situatie",
+      "def_zekeringen_wisselen",
+      "def_ggi_nieuw",
+      "def_vereffening_vernieuwen",
+      "def_aardelektrode",
+      "def_aardmeting",
+      "def_flex_ov_nieuw",
+      "def_ov_kwh_meter_nieuw",
+      "def_opleverdossier",
+    ];
+    dTotal = dKeys.length;
+    dKeys.forEach((k) => {
+      if (filled(g(k))) dScore += 1;
+    });
+
+    if (g("def_rmu_vervangen") === "ja" && !filled(g("def_rmu_merk_configuratie")))
+      dIssues.push("RMU wordt vervangen — geef gewenste merk/configuratie op");
+    if (g("def_trafo_vervangen") === "ja" && !filled(g("def_trafo_type")))
+      dIssues.push("Trafo wordt vervangen — geef gewenst trafotype op");
+    if (g("def_ls_situatie") === "herschikken" && !filled(g("def_ls_aantal_stroken_herschikken")))
+      dIssues.push("LS-rek herschikken gekozen — vul aantal stroken in");
+    if (g("def_ggi_nieuw") === "ja" && !filled(g("def_ggi_aantal")))
+      dIssues.push("GGI nieuw gekozen — geef aantal op");
+
+    const touchedD = dScore > 0;
+    const dState: SectionState = !touchedD
+      ? "empty"
+      : dIssues.length === 0 && dScore >= dTotal - 2
+        ? "complete"
+        : "partial";
+
+    return {
+      A: { state: aState, issues: aIssues, score: aScore, total: aTotal },
+      B: { state: bState, issues: bIssues, score: bScore, total: bTotal },
+      C: { state: cState, issues: cIssues, score: cScore, total: cTotal },
+      D: { state: dState, issues: dIssues, score: dScore, total: dTotal },
+    };
+  }, [project, msKabels, lsKabels]);
+
+  const overallProgress = useMemo(() => {
+    const total = completeness.A.total + completeness.B.total + completeness.C.total + completeness.D.total;
+    const score = completeness.A.score + completeness.B.score + completeness.C.score + completeness.D.score;
+    return total === 0 ? 0 : Math.round((score / total) * 100);
+  }, [completeness]);
+
+  const opdrachtgeverNaam = useMemo(
+    () => opdrachtgevers.find((o) => o.id === get<string>("opdrachtgever_id"))?.naam,
+    [opdrachtgevers, project],
+  );
+  const perceelNaam = useMemo(
+    () => percelen.find((p) => p.id === get<string>("perceel_id"))?.naam,
+    [percelen, project],
+  );
+
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // =====================================================
@@ -257,44 +513,139 @@ const ProjectDetail = () => {
   const defLsSit = get<string>("def_ls_situatie");
   const defGgi = get<string>("def_ggi_nieuw");
 
+  const sections = [
+    { id: "deel-a", key: "A" as const, label: "A · Project" },
+    { id: "deel-b", key: "B" as const, label: "B · Huidig" },
+    { id: "deel-c", key: "C" as const, label: "C · Tijdelijk" },
+    { id: "deel-d", key: "D" as const, label: "D · Definitief" },
+  ];
+
+  // Summary chips
+  const summaryChips: { label: string; value: string }[] = [];
+  if (get<string>("huidig_rmu_type"))
+    summaryChips.push({ label: "Huidig MS", value: String(get<string>("huidig_rmu_type")) });
+  if (get<string>("huidig_trafo_type"))
+    summaryChips.push({ label: "Huidige trafo", value: String(get<string>("huidig_trafo_type")) });
+  if (tijdSit)
+    summaryChips.push({ label: "Tijdelijk", value: tijdSit });
+  if (defRmuVerv === "ja")
+    summaryChips.push({
+      label: "Nieuwe RMU",
+      value: String(get<string>("def_rmu_merk_configuratie") || "ja"),
+    });
+  if (defTrafoVerv === "ja")
+    summaryChips.push({
+      label: "Nieuwe trafo",
+      value: String(get<string>("def_trafo_type") || "ja"),
+    });
+  if (defLsSit) summaryChips.push({ label: "LS definitief", value: defLsSit });
+
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <button
-            onClick={() => navigate("/projecten")}
-            className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
-            title="Terug"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">
-              {(get<string>("station_naam") as string) || "Nieuwe case"}
-            </h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {(get<string>("case_nummer") as string) || "Geen casenummer"} · Project intake
-            </p>
+      {/* ============================================ */}
+      {/* COMPACT HEADER + SUMMARY                     */}
+      {/* ============================================ */}
+      <div className="surface-card rounded-lg p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <button
+              onClick={() => navigate("/projecten")}
+              className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              title="Terug"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-display text-xl font-bold text-foreground">
+                  {(get<string>("station_naam") as string) || "Nieuwe case"}
+                </h1>
+                <span className="rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {(get<string>("status") as string) || "concept"}
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {(get<string>("case_nummer") as string) || "Geen casenummer"}
+                {opdrachtgeverNaam && <> · {opdrachtgeverNaam}</>}
+                {perceelNaam && <> · {perceelNaam}</>}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {saving ? (
+              <>
+                <Save className="h-3.5 w-3.5 animate-pulse" /> Opslaan…
+              </>
+            ) : (
+              <>
+                <Save className="h-3.5 w-3.5" /> Automatisch opgeslagen
+              </>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {saving ? (
-            <>
-              <Save className="h-3.5 w-3.5 animate-pulse" /> Opslaan…
-            </>
-          ) : (
-            <>
-              <Save className="h-3.5 w-3.5" /> Automatisch opgeslagen
-            </>
-          )}
+
+        {/* Progress */}
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>Intake voortgang</span>
+            <span className="font-mono font-semibold text-foreground">{overallProgress}%</span>
+          </div>
+          <Progress value={overallProgress} className="h-1.5" />
+        </div>
+
+        {/* Summary chips */}
+        {summaryChips.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {summaryChips.map((c) => (
+              <span
+                key={c.label}
+                className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px]"
+              >
+                <span className="font-display font-semibold uppercase tracking-wider text-muted-foreground">
+                  {c.label}
+                </span>
+                <span className="text-foreground">{c.value}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ============================================ */}
+      {/* STICKY SECTION NAV                           */}
+      {/* ============================================ */}
+      <div className="sticky top-0 z-30 -mx-1 px-1 py-2 backdrop-blur-md">
+        <div className="surface-card flex flex-wrap items-center gap-1 rounded-lg border border-white/10 p-1.5">
+          {sections.map((s) => {
+            const c = completeness[s.key];
+            return (
+              <button
+                key={s.id}
+                onClick={() => scrollToSection(s.id)}
+                className={`group flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-display font-semibold transition-all ${STATE_STYLES[c.state].ring} bg-white/[0.02] hover:bg-white/[0.06]`}
+              >
+                <StateIcon state={c.state} />
+                <span className="text-foreground">{s.label}</span>
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  {c.score}/{c.total}
+                </span>
+                <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ============================================ */}
       {/* DEEL A — PROJECTGEGEVENS                     */}
       {/* ============================================ */}
-      <Section title="Deel A — Projectgegevens" subtitle="Basisinformatie van het project">
+      <Section
+        id="deel-a"
+        title="Deel A — Projectgegevens"
+        subtitle="Basisinformatie van het project"
+        state={completeness.A.state}
+        issues={completeness.A.issues}
+      >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Case nummer">
             <Input
@@ -418,7 +769,13 @@ const ProjectDetail = () => {
       {/* ============================================ */}
       {/* DEEL B — HUIDIGE SITUATIE                    */}
       {/* ============================================ */}
-      <Section title="Deel B — Huidige situatie" subtitle="Wat is er nu aanwezig op het station">
+      <Section
+        id="deel-b"
+        title="Deel B — Huidige situatie"
+        subtitle="Wat is er nu aanwezig op het station"
+        state={completeness.B.state}
+        issues={completeness.B.issues}
+      >
         <SubBlock title="B1. MS / RMU huidig">
           <Field label="Huidige RMU / MS-installatie">
             <OptionPicker
@@ -679,8 +1036,11 @@ const ProjectDetail = () => {
       {/* DEEL C — TIJDELIJKE SITUATIE                 */}
       {/* ============================================ */}
       <Section
+        id="deel-c"
         title="Deel C — Tijdelijke situatie"
         subtitle="Hoe wordt het project tijdens uitvoering opgevangen"
+        state={completeness.C.state}
+        issues={completeness.C.issues}
       >
         <SubBlock title="C1. Tijdelijke situatie tijdens uitvoering">
           <OptionPicker
@@ -793,8 +1153,11 @@ const ProjectDetail = () => {
       {/* DEEL D — DEFINITIEVE SITUATIE                */}
       {/* ============================================ */}
       <Section
+        id="deel-d"
         title="Deel D — Gewenste definitieve situatie"
         subtitle="Hoe ziet het station eruit na renovatie"
+        state={completeness.D.state}
+        issues={completeness.D.issues}
       >
         <SubBlock title="D1. MS / RMU definitief">
           <Field label="Wordt RMU vervangen?">
