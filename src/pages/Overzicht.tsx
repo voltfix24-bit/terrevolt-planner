@@ -66,6 +66,8 @@ interface Project {
   status: Status | null;
   jaar: number | null;
   created_at: string | null;
+  gsu_datum: string | null;
+  geu_datum: string | null;
 }
 
 interface Week {
