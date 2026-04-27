@@ -86,7 +86,7 @@ const Section: React.FC<{
   return (
     <section
       id={id}
-      className={`surface-card scroll-mt-24 relative overflow-hidden rounded-lg border ${s.ring} px-5 py-4`}
+      className={`surface-card scroll-mt-24 relative overflow-hidden rounded-lg border ${s.ring} px-4 py-3.5`}
     >
       {/* left accent bar */}
       <div className={`absolute left-0 top-0 h-full w-[3px] ${s.accent} opacity-70`} />
