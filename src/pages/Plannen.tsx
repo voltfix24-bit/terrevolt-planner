@@ -2219,16 +2219,69 @@ const CelModal = ({
           {/* Monteurs */}
           {isCap && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Monteurs
-                </Label>
-                <span className="text-[11px] font-display font-semibold text-muted-foreground">
-                  min. {activiteit.min_personen_totaal ?? 1} man ·{" "}
-                  {activiteit.min_personen_gekwalificeerd ?? 1} gekwal.
-                  {vereistAanwijzing ? ` ${vereistAanwijzing}+` : ""}
-                </span>
-              </div>
+              {(() => {
+                const tplTotaal =
+                  template?.min_personen_totaal ?? template?.min_personen ?? null;
+                const tplGek =
+                  template?.min_personen_gekwalificeerd ?? template?.min_personen ?? null;
+                const tplLs = template?.min_aanwijzing_ls ?? null;
+                const tplMs = template?.min_aanwijzing_ms ?? null;
+                const projTotaal =
+                  activiteit.min_personen_totaal ?? activiteit.min_personen ?? null;
+                const projGek =
+                  activiteit.min_personen_gekwalificeerd ?? activiteit.min_personen ?? null;
+                const afwijkt =
+                  !!template &&
+                  (tplTotaal !== projTotaal ||
+                    tplGek !== projGek ||
+                    tplLs !== activiteit.min_aanwijzing_ls ||
+                    tplMs !== activiteit.min_aanwijzing_ms);
+                return (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Monteurs
+                      </Label>
+                      <span className="text-[11px] font-display font-semibold text-muted-foreground">
+                        min. {activiteit.min_personen_totaal ?? 1} man ·{" "}
+                        {activiteit.min_personen_gekwalificeerd ?? 1} gekwal.
+                        {vereistAanwijzing ? ` ${vereistAanwijzing}+` : ""}
+                      </span>
+                    </div>
+                    {afwijkt && (
+                      <div
+                        className="flex items-start justify-between gap-3 rounded-md px-3 py-2"
+                        style={{
+                          background: "rgba(255,176,32,0.08)",
+                          border: "1px solid rgba(255,176,32,0.25)",
+                        }}
+                      >
+                        <div className="text-[11px] leading-snug text-foreground/90">
+                          <div className="font-display font-semibold text-[#ffb020]">
+                            Wijkt af van template
+                          </div>
+                          <div className="text-muted-foreground">
+                            Template: min. {tplTotaal ?? 1} man · {tplGek ?? 1} gekwal.
+                            {tplLs ? ` · LS ${tplLs}+` : ""}
+                            {tplMs ? ` · MS ${tplMs}+` : ""}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={onSyncFromTemplate}
+                          className="shrink-0 rounded-md px-2.5 py-1 text-[11px] font-display font-bold transition-colors"
+                          style={{
+                            background: "#3fff8b",
+                            color: "#030e20",
+                          }}
+                        >
+                          Sync vanuit template
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               <div className="space-y-1.5">
                 {assigned.length === 0 && (
