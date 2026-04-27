@@ -1640,6 +1640,26 @@ const ProjectDetail = () => {
               />
             </SubBlock>
 
+            <SubBlock title="C1b. Gekoppelde template">
+              <TemplatePicker
+                value={get<string>("template_id") ?? null}
+                templates={templates}
+                tijdelijk={tijdSit ?? null}
+                onChange={(tid) => {
+                  setField("template_id", tid);
+                  const t = templates.find((x) => x.id === tid);
+                  if (t) toast.success(`Template gekozen: ${t.naam}`);
+                }}
+                onLoadAll={async () => {
+                  const { data } = await supabase
+                    .from("project_templates")
+                    .select("id, naam, type")
+                    .order("naam");
+                  if (data) setTemplates(data as { id: string; naam: string; type: string }[]);
+                }}
+              />
+            </SubBlock>
+
             {tijdSit === "nsa" && (
               <SubBlock title="C2. NSA">
                 <Field label="Is er al een NSA-luik?">
