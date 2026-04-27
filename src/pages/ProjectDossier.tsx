@@ -971,6 +971,20 @@ const ProjectDossier = () => {
           <span>Confidential</span>
         </div>
       </div>
+
+      {/* Print-only export layout (hidden on screen, visible on print/PDF) */}
+      <DossierPrint
+        project={project}
+        opdrachtgeverNaam={opdrachtgeverNaam}
+        perceelNaam={perceelNaam}
+        msKabels={msKabels}
+        lsKabels={lsKabels}
+        tekeningen={tekeningen}
+        criticals={criticals}
+        samenvatting={samenvatting}
+        periodeLabel={periodeLabel}
+        periodeDuur={periodeDuur}
+      />
     </div>
   );
 };
