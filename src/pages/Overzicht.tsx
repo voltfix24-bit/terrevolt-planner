@@ -1008,7 +1008,7 @@ export default function Overzicht() {
     }
 
     return (
-      <div style={{ width: totalGridWidth }}>
+      <div style={{ width: totalGridWidth + cellW }}>
         {/* Group row */}
         <div className="flex" style={{ height: 28 }}>
           {groups.map((g) => {
