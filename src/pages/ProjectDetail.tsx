@@ -384,6 +384,7 @@ const ProjectDetail = () => {
   const [msKabels, setMsKabels] = useState<Kabel[]>([]);
   const [lsKabels, setLsKabels] = useState<Kabel[]>([]);
   const [activeSection, setActiveSection] = useState<string>("deel-a");
+  const [templates, setTemplates] = useState<{ id: string; naam: string; type: string }[]>([]);
 
   const dirtyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -412,7 +413,7 @@ const ProjectDetail = () => {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [pRes, oRes, peRes, msRes, lsRes] = await Promise.all([
+    const [pRes, oRes, peRes, msRes, lsRes, tRes] = await Promise.all([
       supabase.from("projecten").select("*").eq("id", id).maybeSingle(),
       supabase.from("opdrachtgevers").select("id, naam").order("positie"),
       supabase.from("percelen").select("id, naam").order("positie"),
@@ -428,6 +429,7 @@ const ProjectDetail = () => {
         .eq("project_id", id)
         .eq("soort", "huidig")
         .order("positie"),
+      supabase.from("project_templates").select("id, naam, type"),
     ]);
     if (pRes.error || !pRes.data) {
       toast.error("Project niet gevonden");
@@ -437,6 +439,7 @@ const ProjectDetail = () => {
     setProject(pRes.data as ProjectRow);
     setOpdrachtgevers((oRes.data ?? []) as Lookup[]);
     setPercelen((peRes.data ?? []) as Lookup[]);
+    setTemplates((tRes.data ?? []) as { id: string; naam: string; type: string }[]);
     setMsKabels(
       ((msRes.data ?? []) as { id: string; diameter: string | null; positie: number }[]).map(
         (k) => ({ id: k.id, diameter: k.diameter ?? "", positie: k.positie }),
@@ -474,6 +477,27 @@ const ProjectDetail = () => {
   };
 
   const get = <T,>(key: string): T | null => (project ? ((project[key] as T) ?? null) : null);
+
+  // Auto-koppel template op basis van tijdelijke_situatie wanneer er nog geen template gekozen is.
+  // - "nsa"         -> template type "nsa"  (NSA-case)
+  // - "provisorium" -> template type "provisorium"
+  // - "geen"        -> template type "compact" (Compactstation)
+  // Activiteiten worden hier NIET aangeraakt; alleen project.template_id wordt gezet.
+  useEffect(() => {
+    if (!project || templates.length === 0) return;
+    if (project.template_id) return;
+    const tijd = (project.tijdelijke_situatie as string | null) ?? null;
+    if (!tijd) return;
+    const wantType =
+      tijd === "nsa" ? "nsa" : tijd === "provisorium" ? "provisorium" : tijd === "geen" ? "compact" : null;
+    if (!wantType) return;
+    const match = templates.find((t) => (t.type || "").toLowerCase() === wantType);
+    if (!match) return;
+    setProject((prev) => (prev ? { ...prev, template_id: match.id } : prev));
+    void persist({ template_id: match.id });
+    toast.success(`Template gekoppeld: ${match.naam}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.tijdelijke_situatie, templates]);
 
   const syncKabels = async (
     table: "project_ms_kabels" | "project_ls_kabels",
