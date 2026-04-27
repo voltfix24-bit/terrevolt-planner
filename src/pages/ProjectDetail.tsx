@@ -1036,8 +1036,14 @@ const ProjectDetail = () => {
             start={get<string>("gsu_datum")}
             end={get<string>("geu_datum")}
             onChange={(s, e) => {
-              setField("gsu_datum", s);
-              setField("geu_datum", e);
+              // Belangrijk: GSU + GEU samen opslaan in één persist-call.
+              // setField debouncet en clear()t het vorige timeout, dus twee opeenvolgende
+              // setField-calls zouden alleen het laatste veld persisteren (GSU verdwijnt).
+              setProject((prev) => (prev ? { ...prev, gsu_datum: s, geu_datum: e } : prev));
+              if (dirtyTimer.current) clearTimeout(dirtyTimer.current);
+              dirtyTimer.current = setTimeout(() => {
+                void persist({ gsu_datum: s, geu_datum: e });
+              }, 600);
             }}
             compact
           />
