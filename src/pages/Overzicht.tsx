@@ -1230,6 +1230,46 @@ export default function Overzicht() {
       </div>
 
       {/* Main grid container — sticky header + scrollable body */}
+      <div style={{ position: "relative" }}>
+        {/* Floating week scroll buttons */}
+        <button
+          type="button"
+          onClick={() => shiftWeek(-1)}
+          title="Eén week terug"
+          aria-label="Eén week terug"
+          className="group absolute top-1/2 -translate-y-1/2 z-40 flex items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
+          style={{
+            left: -16,
+            width: 36,
+            height: 36,
+            borderColor: "rgba(255,255,255,0.12)",
+            background: "rgba(10,26,48,0.92)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            color: "rgba(255,255,255,0.85)",
+          }}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => shiftWeek(1)}
+          title="Eén week vooruit"
+          aria-label="Eén week vooruit"
+          className="group absolute top-1/2 -translate-y-1/2 z-40 flex items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
+          style={{
+            right: -16,
+            width: 36,
+            height: 36,
+            borderColor: "rgba(255,255,255,0.12)",
+            background: "rgba(10,26,48,0.92)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            color: "rgba(255,255,255,0.85)",
+          }}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
       <div
         id="overzicht-grid-root"
         className="rounded-lg border"
