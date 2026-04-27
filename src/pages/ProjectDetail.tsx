@@ -1278,6 +1278,28 @@ const ProjectDetail = () => {
             </SubBlock>
           </>
         )}
+
+        {(tijdSit === "provisorium" || tijdSit === "nsa") && (
+          <SubBlock title="C4. Werktekeningen tijdelijke situatie">
+            <Field label="Zijn er werktekeningen voor de tijdelijke situatie?" inline>
+              <OptionPicker
+                value={get<string>("tijd_tekeningen_aanwezig")}
+                onChange={(v) => setField("tijd_tekeningen_aanwezig", v)}
+                options={YESNO}
+                size="sm"
+              />
+            </Field>
+            {get<string>("tijd_tekeningen_aanwezig") === "ja" && (
+              <div className="mt-3">
+                <ProjectTekeningen
+                  projectId={projectId!}
+                  soort="tijdelijk"
+                  emptyHint="PDF, DWG, DXF of afbeeldingen — meerdere bestanden tegelijk mogelijk"
+                />
+              </div>
+            )}
+          </SubBlock>
+        )}
       </Section>
 
       {/* ============================================ */}
