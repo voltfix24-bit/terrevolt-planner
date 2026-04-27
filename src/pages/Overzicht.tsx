@@ -55,7 +55,29 @@ const NL_MONTHS = [
 const NL_MONTHS_LONG = [
   "Januari", "Februari", "Maart", "April", "Mei", "Juni",
   "Juli", "Augustus", "September", "Oktober", "November", "December",
-];
+
+// Compact date-range formatter for the project card subtitle.
+// Examples: "12 mei → 20 mei", "12 mei → 3 jun '25", "vanaf 12 mei", "tot 20 mei".
+function formatDateRangeShort(from: string | null, to: string | null): string {
+  const parse = (s: string | null): Date | null => {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const fmt = (d: Date, withYear: boolean) =>
+    `${d.getDate()} ${NL_MONTHS[d.getMonth()].toLowerCase()}${withYear ? ` '${String(d.getFullYear()).slice(2)}` : ""}`;
+  const a = parse(from);
+  const b = parse(to);
+  if (!a && !b) return "";
+  if (a && !b) return `vanaf ${fmt(a, false)}`;
+  if (!a && b) return `tot ${fmt(b, false)}`;
+  const sameYear = a!.getFullYear() === b!.getFullYear();
+  const currentYear = new Date().getFullYear();
+  const showYearA = !sameYear;
+  const showYearB = !sameYear || a!.getFullYear() !== currentYear;
+  return `${fmt(a!, showYearA)} → ${fmt(b!, showYearB)}`;
+}
+
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
