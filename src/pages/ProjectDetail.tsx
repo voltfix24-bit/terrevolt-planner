@@ -206,6 +206,80 @@ const YESNO = [
 ];
 
 // =====================================================
+// Execution date range picker (GSU → GEU)
+// =====================================================
+const parseDate = (v: string | null | undefined): Date | undefined => {
+  if (!v) return undefined;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+};
+const toIso = (d: Date | undefined): string | null => (d ? format(d, "yyyy-MM-dd") : null);
+
+const ExecutionRangePicker: React.FC<{
+  start: string | null;
+  end: string | null;
+  onChange: (start: string | null, end: string | null) => void;
+}> = ({ start, end, onChange }) => {
+  const from = parseDate(start);
+  const to = parseDate(end);
+  const range: DateRange | undefined = from || to ? { from, to } : undefined;
+  const hasBoth = !!from && !!to;
+  const days = hasBoth ? differenceInCalendarDays(to!, from!) + 1 : 0;
+
+  const labelText = hasBoth
+    ? `${format(from!, "d MMM yyyy", { locale: nl })} → ${format(to!, "d MMM yyyy", { locale: nl })}`
+    : from
+      ? `Vanaf ${format(from, "d MMM yyyy", { locale: nl })}`
+      : "Selecteer uitvoeringsperiode";
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "h-9 justify-start gap-2 border-white/10 bg-white/[0.03] px-3 text-left font-normal hover:bg-white/[0.07]",
+              !hasBoth && "text-muted-foreground",
+            )}
+          >
+            <CalendarRange className="h-4 w-4 text-primary" />
+            <span className="text-xs">{labelText}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="range"
+            selected={range}
+            onSelect={(r) => onChange(toIso(r?.from), toIso(r?.to))}
+            numberOfMonths={2}
+            weekStartsOn={1}
+            locale={nl}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+        </PopoverContent>
+      </Popover>
+      {hasBoth && (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/[0.08] px-2 py-0.5 text-[11px] font-display font-semibold text-primary">
+          {days} {days === 1 ? "dag" : "dagen"}
+        </span>
+      )}
+      {(from || to) && (
+        <button
+          type="button"
+          onClick={() => onChange(null, null)}
+          className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          wissen
+        </button>
+      )}
+    </div>
+  );
+};
+
+// =====================================================
 // Page
 // =====================================================
 const ProjectDetail = () => {
