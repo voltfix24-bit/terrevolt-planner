@@ -454,8 +454,25 @@ const ProjectDossier = () => {
             variant="outline"
             size="sm"
             onClick={() => {
-              toast.info("Printvenster geopend");
-              window.print();
+              try {
+                printDossierInPopup(
+                  {
+                    project,
+                    opdrachtgeverNaam,
+                    perceelNaam,
+                    msKabels,
+                    lsKabels,
+                    tekeningen,
+                    criticals,
+                    samenvatting,
+                    periodeLabel,
+                    periodeDuur,
+                  },
+                  `Dossier ${(get<string>("case_nummer") as string) || ""}`,
+                );
+              } catch (e) {
+                toast.error("Sta popups toe om te printen");
+              }
             }}
             className="h-8 gap-1.5 border-white/10 bg-white/[0.03] text-[12px] hover:bg-white/[0.06]"
           >
@@ -464,8 +481,26 @@ const ProjectDossier = () => {
           <Button
             size="sm"
             onClick={() => {
-              toast.info("Kies 'Opslaan als PDF' in het printvenster");
-              window.print();
+              try {
+                printDossierInPopup(
+                  {
+                    project,
+                    opdrachtgeverNaam,
+                    perceelNaam,
+                    msKabels,
+                    lsKabels,
+                    tekeningen,
+                    criticals,
+                    samenvatting,
+                    periodeLabel,
+                    periodeDuur,
+                  },
+                  `Dossier ${(get<string>("case_nummer") as string) || ""}`,
+                );
+                toast.info("Kies 'Opslaan als PDF' in het printvenster");
+              } catch (e) {
+                toast.error("Sta popups toe om te downloaden");
+              }
             }}
             className="h-8 gap-1.5 bg-primary text-[12px] font-semibold text-primary-foreground hover:bg-primary/90"
           >
