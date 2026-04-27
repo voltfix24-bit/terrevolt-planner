@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProjectTekeningen } from "@/components/ProjectTekeningen";
 
 // =====================================================
 // Types
