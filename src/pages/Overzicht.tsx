@@ -1723,7 +1723,7 @@ export default function Overzicht() {
           <div
             ref={bodyScrollRef}
             className="overzicht-scroll"
-            style={{ flex: 1, overflowX: "auto" }}
+            style={{ flex: 1, overflowX: "auto", paddingRight: cellW }}
             onScroll={(e) => syncScroll("body", e.currentTarget.scrollLeft)}
           >
 
