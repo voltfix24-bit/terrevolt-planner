@@ -561,6 +561,39 @@ const ProjectDetail = () => {
 
   const get = <T,>(key: string): T | null => (project ? ((project[key] as T) ?? null) : null);
 
+  // Manual override flag — kept in sessionStorage per project.
+  // Wanneer de gebruiker handmatig een template kiest, blokkeert dit auto-herberekening
+  // bij het wijzigen van de tijdelijke situatie.
+  const manualKey = id ? `tv:tpl-manual:${id}` : "";
+  const isManualTemplate = (): boolean =>
+    !!manualKey && sessionStorage.getItem(manualKey) === "1";
+  const setManualTemplate = (manual: boolean) => {
+    if (!manualKey) return;
+    if (manual) sessionStorage.setItem(manualKey, "1");
+    else sessionStorage.removeItem(manualKey);
+  };
+
+  // Handler voor wijzigen van tijdelijke situatie:
+  // - bewaart de nieuwe waarde
+  // - reset template_id zodat de auto-koppel-effect een nieuwe match zoekt,
+  //   tenzij de gebruiker handmatig een template heeft gekozen.
+  const handleTijdelijkeSituatieChange = (v: string) => {
+    const prevTijd = (project?.tijdelijke_situatie as string | null) ?? null;
+    if (prevTijd === v) {
+      setField("tijdelijke_situatie", v);
+      return;
+    }
+    if (isManualTemplate()) {
+      // Handmatig gekozen template behouden
+      setField("tijdelijke_situatie", v);
+      return;
+    }
+    // Auto-modus: clear template zodat auto-koppel hem opnieuw bepaalt
+    setProject((prev) => (prev ? { ...prev, tijdelijke_situatie: v, template_id: null } : prev));
+    if (dirtyTimer.current) clearTimeout(dirtyTimer.current);
+    void persist({ tijdelijke_situatie: v, template_id: null });
+  };
+
   // Auto-koppel template op basis van tijdelijke_situatie wanneer er nog geen template gekozen is.
   // - "nsa"         -> template type "nsa"  (NSA-case)
   // - "provisorium" -> template type "provisorium"
@@ -1714,7 +1747,7 @@ const ProjectDetail = () => {
             <SubBlock title="C1. Tijdelijke situatie tijdens uitvoering">
               <ChoiceCardGroup
                 value={tijdSit}
-                onChange={(v) => setField("tijdelijke_situatie", v)}
+                onChange={(v) => handleTijdelijkeSituatieChange(v)}
                 options={[
                   { value: "geen", label: "Geen", description: "Geen tijdelijke voorziening nodig." },
                   { value: "nsa", label: "NSA", description: "Niet-spanningsloos aansluiten via NSA-luik." },
@@ -1729,9 +1762,12 @@ const ProjectDetail = () => {
                 templates={templates}
                 tijdelijk={tijdSit ?? null}
                 onChange={(tid) => {
+                  setManualTemplate(true);
                   setField("template_id", tid);
                   const t = templates.find((x) => x.id === tid);
-                  if (t) toast.success(`Template gekozen: ${t.naam}`);
+                  if (t) toast.success(`Template handmatig gekozen: ${t.naam}`, {
+                    description: "Auto-herberekening bij wijzigen van tijdelijke situatie is uitgeschakeld.",
+                  });
                 }}
                 onLoadAll={async () => {
                   const { data } = await supabase
