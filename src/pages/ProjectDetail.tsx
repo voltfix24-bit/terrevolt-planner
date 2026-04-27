@@ -342,8 +342,8 @@ const ProjectDetail = () => {
     const g = (k: string) => project[k];
 
     // ---- Deel A ----
-    const aRequired = ["case_nummer", "station_naam", "opdrachtgever_id", "perceel_id"];
-    const aOptional = ["gsu_geu", "wv_naam", "straat", "postcode", "stad", "gemeente"];
+    const aRequired = ["case_nummer", "station_naam", "opdrachtgever_id", "perceel_id", "gsu_datum", "geu_datum"];
+    const aOptional = ["wv_naam", "straat", "postcode", "stad"];
     const aFilled = aRequired.filter((k) => filled(g(k))).length;
     const aOpt = aOptional.filter((k) => filled(g(k))).length;
     const aIssues: string[] = [];
@@ -351,6 +351,8 @@ const ProjectDetail = () => {
     if (!filled(g("station_naam"))) aIssues.push("Stationsnaam ontbreekt");
     if (!filled(g("opdrachtgever_id"))) aIssues.push("Opdrachtgever niet gekozen");
     if (!filled(g("perceel_id"))) aIssues.push("Perceel niet gekozen");
+    if (!filled(g("gsu_datum")) || !filled(g("geu_datum")))
+      aIssues.push("Uitvoeringsperiode (GSU/GEU) ontbreekt");
     const aScore = aFilled + Math.min(aOpt, 4);
     const aTotal = aRequired.length + 4;
     const aState: SectionState =
