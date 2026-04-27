@@ -638,12 +638,19 @@ const ProjectDetail = () => {
 
   // Summary chips
   const summaryChips: { label: string; value: string }[] = [];
+  const gsuD = parseDate(get<string>("gsu_datum"));
+  const geuD = parseDate(get<string>("geu_datum"));
+  if (gsuD && geuD) {
+    summaryChips.push({
+      label: "Uitvoering",
+      value: `${format(gsuD, "d MMM", { locale: nl })} → ${format(geuD, "d MMM yyyy", { locale: nl })}`,
+    });
+  }
   if (get<string>("huidig_rmu_type"))
     summaryChips.push({ label: "Huidig MS", value: String(get<string>("huidig_rmu_type")) });
   if (get<string>("huidig_trafo_type"))
     summaryChips.push({ label: "Huidige trafo", value: String(get<string>("huidig_trafo_type")) });
-  if (tijdSit)
-    summaryChips.push({ label: "Tijdelijk", value: tijdSit });
+  if (tijdSit) summaryChips.push({ label: "Tijdelijk", value: tijdSit });
   if (defRmuVerv === "ja")
     summaryChips.push({
       label: "Nieuwe RMU",
