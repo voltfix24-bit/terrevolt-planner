@@ -714,9 +714,9 @@ const ProjectDossier = () => {
               </SubBlock>
               <SubBlock title="LS-Rek / OV" icon={Zap}>
                 <KV label="LS-rek aanwezig" value={yesNoLabel(get("huidig_lsrek_aanwezig"))} />
-                <KV label="Type" value={valOr(get("huidig_lsrek_type"))} />
+                <KV label="Type" value={intakeLabel("huidig_lsrek_type", get("huidig_lsrek_type"))} />
                 <KV label="Flex OV" value={yesNoLabel(get("huidig_flex_ov_aanwezig"))} />
-                <KV label="OV kWh meter" value={yesNoLabel(get("huidig_ov_kwh_meter"))} />
+                <KV label="OV kWh meter" value={intakeLabel("huidig_ov_kwh_meter", get("huidig_ov_kwh_meter"))} />
               </SubBlock>
             </div>
 
