@@ -1245,16 +1245,17 @@ const ProjectDetail = () => {
           </div>
         </SubBlock>
 
-        <SubBlock title="D2. Trafo definitief">
-          <Field label="Wordt de trafo vervangen?">
+        <SubBlock title="D2. Trafo definitief" dense>
+          <Field label="Trafo vervangen?" inline>
             <OptionPicker
               value={defTrafoVerv}
               onChange={(v) => setField("def_trafo_vervangen", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {defTrafoVerv === "ja" && (
-            <Field label="Gewenst definitief trafotype / vermogen">
+            <Field label="Gewenst trafotype / vermogen">
               <Input
                 value={(get<string>("def_trafo_type") as string) || ""}
                 onChange={(e) => setField("def_trafo_type", e.target.value)}
@@ -1262,11 +1263,12 @@ const ProjectDetail = () => {
               />
             </Field>
           )}
-          <Field label="Wordt de trafo gedraaid?">
+          <Field label="Trafo gedraaid?" inline>
             <OptionPicker
               value={get<string>("def_trafo_gedraaid")}
               onChange={(v) => setField("def_trafo_gedraaid", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
         </SubBlock>
@@ -1277,11 +1279,11 @@ const ProjectDetail = () => {
               value={defLsSit}
               onChange={(v) => setField("def_ls_situatie", v)}
               options={[
-                { value: "behouden", label: "Bestaand LS-rek behouden" },
-                { value: "herschikken", label: "Bestaand LS-rek herschikken" },
+                { value: "behouden", label: "Bestaand behouden" },
+                { value: "herschikken", label: "Herschikken" },
                 { value: "uitbreidingsrek", label: "Uitbreidingsrek" },
-                { value: "nieuw_le630", label: "Nieuw LS-rek ≤630 kVA" },
-                { value: "nieuw_gt630_le1000", label: "Nieuw LS-rek >630 ≤1000 kVA" },
+                { value: "nieuw_le630", label: "Nieuw ≤630 kVA" },
+                { value: "nieuw_gt630_le1000", label: "Nieuw >630 ≤1000 kVA" },
               ]}
             />
           </Field>
@@ -1299,25 +1301,27 @@ const ProjectDetail = () => {
               />
             </Field>
           )}
-          <Field label="Zekeringen wisselen?">
+          <Field label="Zekeringen wisselen?" inline>
             <OptionPicker
               value={get<string>("def_zekeringen_wisselen")}
               onChange={(v) => setField("def_zekeringen_wisselen", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
         </SubBlock>
 
-        <SubBlock title="D4. GGI definitief">
-          <Field label="Verlichting / WCD / schakelaar nieuw aanbrengen?">
+        <SubBlock title="D4. GGI definitief" dense>
+          <Field label="Verlichting / WCD / schakelaar nieuw?" inline>
             <OptionPicker
               value={defGgi}
               onChange={(v) => setField("def_ggi_nieuw", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {defGgi === "ja" && (
-            <Field label="Hoeveel?">
+            <Field label="Hoeveel?" inline>
               <OptionPicker
                 value={(get<number>("def_ggi_aantal") as number)?.toString() ?? null}
                 onChange={(v) => setField("def_ggi_aantal", v ? Number(v) : null)}
@@ -1325,65 +1329,70 @@ const ProjectDetail = () => {
                   { value: "1", label: "1" },
                   { value: "2", label: "2" },
                 ]}
+                size="sm"
               />
             </Field>
           )}
         </SubBlock>
 
-        <SubBlock title="D5. Vereffeningsleiding / aarding definitief">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <Field label="Vereffeningsleiding vernieuwen?">
-              <OptionPicker
-                value={get<string>("def_vereffening_vernieuwen")}
-                onChange={(v) => setField("def_vereffening_vernieuwen", v)}
-                options={YESNO}
-              />
-            </Field>
-            <Field label="Aardelektrode nodig?">
-              <OptionPicker
-                value={get<string>("def_aardelektrode")}
-                onChange={(v) => setField("def_aardelektrode", v)}
-                options={YESNO}
-              />
-            </Field>
-            <Field label="Aardmeting uitvoeren?">
-              <OptionPicker
-                value={get<string>("def_aardmeting")}
-                onChange={(v) => setField("def_aardmeting", v)}
-                options={YESNO}
-              />
-            </Field>
-          </div>
+        <SubBlock title="D5. Vereffening / aarding definitief" dense>
+          <Field label="Vereffeningsleiding vernieuwen?" inline>
+            <OptionPicker
+              value={get<string>("def_vereffening_vernieuwen")}
+              onChange={(v) => setField("def_vereffening_vernieuwen", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          <Field label="Aardelektrode nodig?" inline>
+            <OptionPicker
+              value={get<string>("def_aardelektrode")}
+              onChange={(v) => setField("def_aardelektrode", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          <Field label="Aardmeting uitvoeren?" inline>
+            <OptionPicker
+              value={get<string>("def_aardmeting")}
+              onChange={(v) => setField("def_aardmeting", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
         </SubBlock>
 
-        <SubBlock title="D6. OV definitief">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Field label="Nieuwe Flex OV?">
-              <OptionPicker
-                value={get<string>("def_flex_ov_nieuw")}
-                onChange={(v) => setField("def_flex_ov_nieuw", v)}
-                options={YESNO}
-              />
-            </Field>
-            <Field label="Nieuwe OV kWh-meter?">
-              <OptionPicker
-                value={get<string>("def_ov_kwh_meter_nieuw")}
-                onChange={(v) => setField("def_ov_kwh_meter_nieuw", v)}
-                options={YESNO}
-              />
-            </Field>
-          </div>
+        <SubBlock title="D6. OV definitief" dense>
+          <Field label="Nieuwe Flex OV?" inline>
+            <OptionPicker
+              value={get<string>("def_flex_ov_nieuw")}
+              onChange={(v) => setField("def_flex_ov_nieuw", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          <Field label="Nieuwe OV kWh-meter?" inline>
+            <OptionPicker
+              value={get<string>("def_ov_kwh_meter_nieuw")}
+              onChange={(v) => setField("def_ov_kwh_meter_nieuw", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
         </SubBlock>
 
-        <SubBlock title="D7. Opleverdossier">
-          <OptionPicker
-            value={get<string>("def_opleverdossier")}
-            onChange={(v) => setField("def_opleverdossier", v)}
-            options={[
-              { value: "inclusief_civiel", label: "Inclusief civiel" },
-              { value: "exclusief_civiel", label: "Exclusief civiel" },
-            ]}
-          />
+        <SubBlock title="D7. Opleverdossier" dense>
+          <Field label="Scope opleverdossier" inline>
+            <OptionPicker
+              value={get<string>("def_opleverdossier")}
+              onChange={(v) => setField("def_opleverdossier", v)}
+              options={[
+                { value: "inclusief_civiel", label: "Incl. civiel" },
+                { value: "exclusief_civiel", label: "Excl. civiel" },
+              ]}
+              size="sm"
+            />
+          </Field>
         </SubBlock>
       </Section>
 
