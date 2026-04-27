@@ -239,6 +239,9 @@ const Plannen = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const skipHistoryRef = useRef(false);
+  // Voorkomt dat dezelfde projectId tijdens één sessie meerdere keren tegelijk
+  // weken gaat seeden (StrictMode dubbele mount, snelle navigatie, refetch).
+  const seedingProjectsRef = useRef<Set<string>>(new Set());
   const pushHistory = useCallback((entry: HistoryEntry) => {
     if (skipHistoryRef.current) return;
     setHistory((prev) => [...prev.slice(-29), entry]);
