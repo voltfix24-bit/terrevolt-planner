@@ -1509,6 +1509,26 @@ const ProjectDetail = () => {
             />
           </Field>
         </SubBlock>
+
+        <SubBlock title="D8. Werktekeningen definitieve situatie">
+          <Field label="Zijn er werktekeningen voor de definitieve situatie?" inline>
+            <OptionPicker
+              value={get<string>("def_tekeningen_aanwezig")}
+              onChange={(v) => setField("def_tekeningen_aanwezig", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          {get<string>("def_tekeningen_aanwezig") === "ja" && (
+            <div className="mt-3">
+              <ProjectTekeningen
+                projectId={id!}
+                soort="definitief"
+                emptyHint="PDF, DWG, DXF of afbeeldingen — meerdere bestanden tegelijk mogelijk"
+              />
+            </div>
+          )}
+        </SubBlock>
       </Section>
 
       <div className="flex justify-end pt-2">
