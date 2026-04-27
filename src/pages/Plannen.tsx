@@ -2100,10 +2100,12 @@ interface CelModalProps {
   monteurs: Monteur[];
   monteurIdsAssigned: string[];
   monteurById: Map<string, Monteur>;
+  template: ActiviteitTypeOption | null;
   onColorChange: (c: string) => void;
   onNotitieChange: (n: string) => void;
   onAddMonteur: (id: string) => void;
   onRemoveMonteur: (id: string) => void;
+  onSyncFromTemplate: () => void;
 }
 
 const CelModal = ({
@@ -2115,10 +2117,12 @@ const CelModal = ({
   monteurs,
   monteurIdsAssigned,
   monteurById,
+  template,
   onColorChange,
   onNotitieChange,
   onAddMonteur,
   onRemoveMonteur,
+  onSyncFromTemplate,
 }: CelModalProps) => {
   const [notitie, setNotitie] = useState(cel.notitie ?? "");
   useEffect(() => {
