@@ -680,7 +680,7 @@ const ProjectDetail = () => {
         state={completeness.A.state}
         issues={completeness.A.issues}
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label="Case nummer">
             <Input
               value={(get<string>("case_nummer") as string) || ""}
@@ -827,7 +827,7 @@ const ProjectDetail = () => {
               ]}
             />
           </Field>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="Aantal MS-richtingen / velden">
               <Input
                 type="number"
@@ -1103,7 +1103,7 @@ const ProjectDetail = () => {
         {tijdSit === "provisorium" && (
           <>
             <SubBlock title="C3a. MS tijdelijk">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Field label="Aantal MS-eindsluitingen">
                   <Input
                     type="number"
@@ -1142,7 +1142,7 @@ const ProjectDetail = () => {
             </SubBlock>
 
             <SubBlock title="C3b. LS tijdelijk">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Field label="Aantal LS-eindsluitingen">
                   <Input
                     type="number"
@@ -1209,7 +1209,7 @@ const ProjectDetail = () => {
               />
             </Field>
           )}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <Field label="Ombouw naar iMS?">
               <OptionPicker
                 value={get<string>("def_ombouw_ims")}
@@ -1325,7 +1325,7 @@ const ProjectDetail = () => {
         </SubBlock>
 
         <SubBlock title="D5. Vereffeningsleiding / aarding definitief">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <Field label="Vereffeningsleiding vernieuwen?">
               <OptionPicker
                 value={get<string>("def_vereffening_vernieuwen")}
@@ -1351,7 +1351,7 @@ const ProjectDetail = () => {
         </SubBlock>
 
         <SubBlock title="D6. OV definitief">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="Nieuwe Flex OV?">
               <OptionPicker
                 value={get<string>("def_flex_ov_nieuw")}
