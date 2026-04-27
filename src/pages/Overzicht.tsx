@@ -1722,6 +1722,7 @@ export default function Overzicht() {
                               >
                                 {formatDateRangeShort(p.gsu_datum, p.geu_datum)}
                               </p>
+                            )}
                             {(p.bouwkundig_benodigd === "ja" || p.asbest_benodigd === "ja") && (
                               <div
                                 style={{
