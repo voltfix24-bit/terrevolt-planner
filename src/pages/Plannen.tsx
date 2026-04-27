@@ -329,9 +329,45 @@ const Plannen = () => {
     }
     setActiviteiten(actRows);
 
+    // Auto-seed project_weken wanneer er geen weken bestaan.
+    // Nieuwe projecten hebben standaard nog geen weken — zonder dit kan er
+    // niets ingepland worden (geen kolommen in de grid). Genereert ISO-weken
+    // op basis van GSU/GEU; valt terug op de huidige ISO-week als die ontbreken.
+    let effectiveWeeks: Week[] = weekRows;
+    if (effectiveWeeks.length === 0) {
+      const gsu = proj?.gsu_datum ?? null;
+      const geu = proj?.geu_datum ?? null;
+      let candidates: { week_nr: number; year: number }[] = [];
+      let usedFallback = false;
+      if (gsu && geu) candidates = enumerateISOWeeks(gsu, geu);
+      if (candidates.length === 0) {
+        candidates = [{ week_nr: CURRENT_WEEK, year: CURRENT_YEAR }];
+        usedFallback = true;
+      }
+      const inserts = candidates.map((c, i) => ({
+        project_id: projectId,
+        week_nr: c.week_nr,
+        positie: i,
+        opmerking: "",
+      }));
+      const { data: insertedWeeks, error: weekErr } = await supabase
+        .from("project_weken")
+        .insert(inserts)
+        .select();
+      if (!weekErr && insertedWeeks) {
+        effectiveWeeks = insertedWeeks as Week[];
+        setWeken(effectiveWeeks);
+        if (usedFallback) {
+          toast.info("Startweek aangemaakt zodat dit project direct ingepland kan worden");
+        } else {
+          toast.success("Planningweken automatisch aangemaakt op basis van uitvoeringsperiode");
+        }
+      }
+    }
+
     // load cells for these weeks
-    if (weekRows.length > 0) {
-      const weekIds = weekRows.map((w) => w.id);
+    if (effectiveWeeks.length > 0) {
+      const weekIds = effectiveWeeks.map((w) => w.id);
       const { data: celRows } = await supabase
         .from("planning_cellen")
         .select("*")
