@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProjectTekeningen } from "@/components/ProjectTekeningen";
 
 // =====================================================
 // Types
@@ -1277,6 +1278,28 @@ const ProjectDetail = () => {
             </SubBlock>
           </>
         )}
+
+        {(tijdSit === "provisorium" || tijdSit === "nsa") && (
+          <SubBlock title="C4. Werktekeningen tijdelijke situatie">
+            <Field label="Zijn er werktekeningen voor de tijdelijke situatie?" inline>
+              <OptionPicker
+                value={get<string>("tijd_tekeningen_aanwezig")}
+                onChange={(v) => setField("tijd_tekeningen_aanwezig", v)}
+                options={YESNO}
+                size="sm"
+              />
+            </Field>
+            {get<string>("tijd_tekeningen_aanwezig") === "ja" && (
+              <div className="mt-3">
+                <ProjectTekeningen
+                  projectId={id!}
+                  soort="tijdelijk"
+                  emptyHint="PDF, DWG, DXF of afbeeldingen — meerdere bestanden tegelijk mogelijk"
+                />
+              </div>
+            )}
+          </SubBlock>
+        )}
       </Section>
 
       {/* ============================================ */}
@@ -1485,6 +1508,26 @@ const ProjectDetail = () => {
               size="sm"
             />
           </Field>
+        </SubBlock>
+
+        <SubBlock title="D8. Werktekeningen definitieve situatie">
+          <Field label="Zijn er werktekeningen voor de definitieve situatie?" inline>
+            <OptionPicker
+              value={get<string>("def_tekeningen_aanwezig")}
+              onChange={(v) => setField("def_tekeningen_aanwezig", v)}
+              options={YESNO}
+              size="sm"
+            />
+          </Field>
+          {get<string>("def_tekeningen_aanwezig") === "ja" && (
+            <div className="mt-3">
+              <ProjectTekeningen
+                projectId={id!}
+                soort="definitief"
+                emptyHint="PDF, DWG, DXF of afbeeldingen — meerdere bestanden tegelijk mogelijk"
+              />
+            </div>
+          )}
         </SubBlock>
       </Section>
 
