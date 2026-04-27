@@ -1235,6 +1235,26 @@ const Plannen = () => {
               {project.tijdelijke_situatie}
             </span>
           )}
+          {(project.gsu_datum || project.geu_datum) && (() => {
+            const fmt = (d: string | null) => {
+              if (!d) return "—";
+              const dt = new Date(d);
+              if (isNaN(dt.getTime())) return "—";
+              return dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "2-digit" });
+            };
+            return (
+              <span
+                className="inline-flex items-center gap-1.5 text-[11px] font-display font-medium text-muted-foreground/80"
+                title="GSU – GEU"
+              >
+                <span className="opacity-60">GSU</span>
+                <span className="text-foreground/80">{fmt(project.gsu_datum)}</span>
+                <span className="opacity-40">→</span>
+                <span className="opacity-60">GEU</span>
+                <span className="text-foreground/80">{fmt(project.geu_datum)}</span>
+              </span>
+            );
+          })()}
           {project.status && (
             <span
               className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-display font-semibold"
