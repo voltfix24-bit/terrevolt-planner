@@ -294,8 +294,30 @@ const ProjectDetail = () => {
   const [percelen, setPercelen] = useState<Lookup[]>([]);
   const [msKabels, setMsKabels] = useState<Kabel[]>([]);
   const [lsKabels, setLsKabels] = useState<Kabel[]>([]);
+  const [activeSection, setActiveSection] = useState<string>("deel-a");
 
   const dirtyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track active section via IntersectionObserver
+  useEffect(() => {
+    if (loading) return;
+    const ids = ["deel-a", "deel-b", "deel-c", "deel-d"];
+    const els = ids
+      .map((i) => document.getElementById(i))
+      .filter((e): e is HTMLElement => !!e);
+    if (els.length === 0) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActiveSection(visible[0].target.id);
+      },
+      { rootMargin: "-120px 0px -55% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [loading]);
 
   // ---------- Load ----------
   const load = useCallback(async () => {
