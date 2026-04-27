@@ -1030,9 +1030,9 @@ const Plannen = () => {
           <div className="font-display text-sm font-semibold text-foreground">
             {project.station_naam || ""}
           </div>
-          {project.case_type && (
+          {project.tijdelijke_situatie && project.tijdelijke_situatie !== "geen" && (
             <span className="inline-flex items-center rounded-md border border-white/15 px-2 py-0.5 text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
-              {project.case_type}
+              {project.tijdelijke_situatie}
             </span>
           )}
           {project.status && (
