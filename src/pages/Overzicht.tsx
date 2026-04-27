@@ -2051,6 +2051,7 @@ export default function Overzicht() {
         </div>
         </div>
       </div>
+      </div>
 
     </div>
   );
