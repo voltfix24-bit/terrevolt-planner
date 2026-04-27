@@ -1677,6 +1677,24 @@ export default function Overzicht() {
                             >
                               {p.station_naam ?? "—"}
                             </p>
+                            {(p.gsu_datum || p.geu_datum) && (
+                              <p
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 500,
+                                  color: "rgba(255,255,255,0.45)",
+                                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  marginTop: 1,
+                                  letterSpacing: "0.02em",
+                                }}
+                                title={`Uitvoering: ${p.gsu_datum ?? "?"} → ${p.geu_datum ?? "?"}`}
+                              >
+                                {formatDateRangeShort(p.gsu_datum, p.geu_datum)}
+                              </p>
+                            )}
                           </div>
                           <span
                             className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
