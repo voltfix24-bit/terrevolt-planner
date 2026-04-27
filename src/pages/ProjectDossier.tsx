@@ -737,7 +737,7 @@ const ProjectDossier = () => {
               </SubBlock>
               <SubBlock title="LS Kabels" icon={Cable}>
                 <KV label="Aanwezig" value={yesNoLabel(get("huidig_ls_kabels_aanwezig"))} />
-                <KV label="Type" value={valOr(get("huidig_ls_kabels_type"))} />
+                <KV label="Type" value={intakeLabel("huidig_ls_kabels_type", get("huidig_ls_kabels_type"))} />
                 <KV label="Aantal" value={valOr(get("huidig_ls_kabels_aantal"))} mono />
                 <KV
                   label="Diameters"
