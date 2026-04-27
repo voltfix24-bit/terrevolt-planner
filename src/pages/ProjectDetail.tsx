@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, CheckCircle2, Circle, AlertCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Circle, AlertCircle, ChevronRight, CalendarRange } from "lucide-react";
+import { format, differenceInCalendarDays } from "date-fns";
+import { nl } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
