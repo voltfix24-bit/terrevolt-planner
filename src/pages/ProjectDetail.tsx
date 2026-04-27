@@ -384,6 +384,7 @@ const ProjectDetail = () => {
   const [msKabels, setMsKabels] = useState<Kabel[]>([]);
   const [lsKabels, setLsKabels] = useState<Kabel[]>([]);
   const [activeSection, setActiveSection] = useState<string>("deel-a");
+  const [templates, setTemplates] = useState<{ id: string; naam: string; type: string }[]>([]);
 
   const dirtyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
