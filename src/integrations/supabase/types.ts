@@ -462,6 +462,8 @@ export type Database = {
           def_vermogensveld: string | null
           def_zekeringen_wisselen: string | null
           gemeente: string | null
+          geu_datum: string | null
+          gsu_datum: string | null
           gsu_geu: string | null
           huidig_flex_ov_aanwezig: string | null
           huidig_kabels_herbruikbaar: string | null
@@ -525,6 +527,8 @@ export type Database = {
           def_vermogensveld?: string | null
           def_zekeringen_wisselen?: string | null
           gemeente?: string | null
+          geu_datum?: string | null
+          gsu_datum?: string | null
           gsu_geu?: string | null
           huidig_flex_ov_aanwezig?: string | null
           huidig_kabels_herbruikbaar?: string | null
@@ -588,6 +592,8 @@ export type Database = {
           def_vermogensveld?: string | null
           def_zekeringen_wisselen?: string | null
           gemeente?: string | null
+          geu_datum?: string | null
+          gsu_datum?: string | null
           gsu_geu?: string | null
           huidig_flex_ov_aanwezig?: string | null
           huidig_kabels_herbruikbaar?: string | null
