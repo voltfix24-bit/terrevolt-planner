@@ -577,6 +577,32 @@ const Instellingen = () => {
         )}
       </section>
 
+      {/* Lookup beheer voor project intake */}
+      <section className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-6">
+        <div className="mb-4">
+          <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
+            Project intake — beheer
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Beheer de selecteerbare opties voor opdrachtgever en perceel in de project intake.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <LookupBeheer
+            table="opdrachtgevers"
+            title="Opdrachtgevers"
+            description="Bv. Stedin, Liander, Enexis"
+            placeholder="Naam opdrachtgever"
+          />
+          <LookupBeheer
+            table="percelen"
+            title="Percelen"
+            description="Bv. Perceel 1, Perceel Noord, …"
+            placeholder="Naam perceel"
+          />
+        </div>
+      </section>
+
       {/* Add/Edit modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent
