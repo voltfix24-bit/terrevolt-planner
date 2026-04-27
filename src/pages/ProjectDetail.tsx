@@ -127,7 +127,7 @@ const SubBlock: React.FC<{ title: string; children: React.ReactNode; dense?: boo
   children,
   dense,
 }) => (
-  <div className="rounded-md border border-white/5 bg-white/[0.015] px-3.5 py-2.5">
+  <div className="rounded-md border border-white/5 bg-white/[0.015] px-3 py-2">
     <div className="mb-2 flex items-center gap-1.5">
       <span className="h-1 w-1 rounded-full bg-primary/60" />
       <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary/90">
