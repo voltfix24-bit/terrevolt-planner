@@ -725,10 +725,14 @@ const ProjectDetail = () => {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="GSU / GEU">
-            <Input
-              value={(get<string>("gsu_geu") as string) || ""}
-              onChange={(e) => setField("gsu_geu", e.target.value)}
+          <Field label="Uitvoeringsperiode (GSU → GEU)" className="md:col-span-2">
+            <ExecutionRangePicker
+              start={get<string>("gsu_datum")}
+              end={get<string>("geu_datum")}
+              onChange={(s, e) => {
+                setField("gsu_datum", s);
+                setField("geu_datum", e);
+              }}
             />
           </Field>
           <Field label="WV / uitvoerder">
