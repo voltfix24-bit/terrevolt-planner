@@ -953,26 +953,14 @@ const ProjectCard = ({
         )}
         {p.ls_rek_vervangen && (
           <span
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-display font-semibold uppercase tracking-wider"
-            style={
-              p.ls_rek_vervangen === "ja"
-                ? {
-                    background: "rgba(255,176,32,0.12)",
-                    color: "#ffb020",
-                    border: "1px solid rgba(255,176,32,0.3)",
-                  }
-                : {
-                    background: "rgba(255,255,255,0.04)",
-                    color: "rgba(255,255,255,0.7)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                  }
-            }
+            className="inline-flex items-center gap-1.5"
             title={
               p.ls_rek_vervangen === "ja"
                 ? "LS-rek wordt vervangen"
                 : "LS-rek wordt gehandhaafd"
             }
           >
+            <Wrench className="h-3.5 w-3.5" />
             LS-rek: {p.ls_rek_vervangen === "ja" ? "vervangen" : "handhaven"}
           </span>
         )}
