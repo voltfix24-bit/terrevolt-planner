@@ -495,7 +495,9 @@ const ProjectDetail = () => {
     if (!match) return;
     setProject((prev) => (prev ? { ...prev, template_id: match.id } : prev));
     void persist({ template_id: match.id });
-    toast.success(`Template gekoppeld: ${match.naam}`);
+    toast.success(`Template automatisch gekoppeld: ${match.naam}`, {
+      description: `Op basis van tijdelijke situatie "${tijd}". Activiteiten worden klaargezet bij het openen van Plannen.`,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.tijdelijke_situatie, templates]);
 
