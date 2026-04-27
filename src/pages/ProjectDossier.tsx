@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import DossierPrint from "@/components/DossierPrint";
+import { printDossierInPopup } from "@/lib/print-dossier";
 
 // =====================================================
 // Types
