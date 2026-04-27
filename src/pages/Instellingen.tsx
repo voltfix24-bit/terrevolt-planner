@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { LookupBeheer } from "@/components/LookupBeheer";
 
 // ---------- types ----------
 type TemplateType = "NSA" | "provisorium" | "compact" | "custom";
