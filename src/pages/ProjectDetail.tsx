@@ -892,6 +892,13 @@ const ProjectDetail = () => {
               {saving ? "Opslaan…" : "Autosave aan"}
             </div>
             <button
+              onClick={() => navigate(`/projecten/${id}/dossier`)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-display font-semibold text-foreground/85 transition-colors hover:bg-white/[0.07]"
+              title="Open project dossier"
+            >
+              <FileText className="h-3.5 w-3.5" /> Dossier
+            </button>
+            <button
               onClick={() => navigate(`/plannen?project=${id}`)}
               className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11.5px] font-display font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               title="Open planning voor deze case"

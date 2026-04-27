@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   ChevronRight,
+  FileText,
   MapPin,
   Plus,
   Search,
@@ -346,6 +347,16 @@ const Projecten = () => {
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/projecten/${p.id}/dossier`);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-display font-semibold text-foreground/85 transition-colors hover:bg-white/[0.07]"
+                      title="Open dossier"
+                    >
+                      <FileText className="h-3.5 w-3.5" /> Dossier
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
