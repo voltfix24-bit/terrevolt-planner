@@ -850,12 +850,13 @@ const ProjectDetail = () => {
           </div>
         </SubBlock>
 
-        <SubBlock title="B2. Trafo huidig">
-          <Field label="Trafo aanwezig?">
+        <SubBlock title="B2. Trafo huidig" dense>
+          <Field label="Trafo aanwezig?" inline>
             <OptionPicker
               value={huidigTrafo}
               onChange={(v) => setField("huidig_trafo_aanwezig", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {huidigTrafo === "ja" && (
@@ -869,16 +870,17 @@ const ProjectDetail = () => {
           )}
         </SubBlock>
 
-        <SubBlock title="B3. LS huidig">
-          <Field label="LS-rek aanwezig?">
+        <SubBlock title="B3. LS huidig" dense>
+          <Field label="LS-rek aanwezig?" inline>
             <OptionPicker
               value={huidigLs}
               onChange={(v) => setField("huidig_lsrek_aanwezig", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
           {huidigLs === "ja" && (
-            <Field label="Type LS-rek">
+            <Field label="Type LS-rek" inline>
               <OptionPicker
                 value={get<string>("huidig_lsrek_type")}
                 onChange={(v) => setField("huidig_lsrek_type", v)}
@@ -886,20 +888,22 @@ const ProjectDetail = () => {
                   { value: "open", label: "Open" },
                   { value: "gesloten", label: "Gesloten" },
                 ]}
+                size="sm"
               />
             </Field>
           )}
         </SubBlock>
 
-        <SubBlock title="B4. OV huidig">
-          <Field label="Flex OV kast aanwezig?">
+        <SubBlock title="B4. OV huidig" dense>
+          <Field label="Flex OV kast aanwezig?" inline>
             <OptionPicker
               value={get<string>("huidig_flex_ov_aanwezig")}
               onChange={(v) => setField("huidig_flex_ov_aanwezig", v)}
               options={YESNO}
+              size="sm"
             />
           </Field>
-          <Field label="OV kWh-meter aanwezig?">
+          <Field label="OV kWh-meter" inline>
             <OptionPicker
               value={get<string>("huidig_ov_kwh_meter")}
               onChange={(v) => setField("huidig_ov_kwh_meter", v)}
@@ -908,6 +912,7 @@ const ProjectDetail = () => {
                 { value: "1_fase", label: "1-fase" },
                 { value: "3_fase", label: "3-fase" },
               ]}
+              size="sm"
             />
           </Field>
         </SubBlock>
