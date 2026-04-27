@@ -61,7 +61,7 @@ import {
   initialen,
   wrapWeek,
 } from "@/lib/planning-types";
-import { checkCelVoldoet, type Aanwijzing } from "@/lib/aanwijzing";
+import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -1820,6 +1820,7 @@ const CellBox = memo(function CellBox({
 
   let voldoet = true;
   let warningReason: string | null = null;
+  let warningDetails: string | null = null;
   if (cel && isCap) {
     const monteursForCheck = monteurIds
       .map((id) => monteurById.get(id))
@@ -1828,11 +1829,13 @@ const CellBox = memo(function CellBox({
         aanwijzing_ls: m.aanwijzing_ls as Aanwijzing,
         aanwijzing_ms: m.aanwijzing_ms as Aanwijzing,
       }));
+    const minTotaal = activiteit.min_personen_totaal ?? activiteit.min_personen ?? 1;
+    const minGek =
+      activiteit.min_personen_gekwalificeerd ?? activiteit.min_personen ?? 1;
     const res = checkCelVoldoet({
       monteurs: monteursForCheck,
-      min_personen_totaal: activiteit.min_personen_totaal ?? activiteit.min_personen ?? 1,
-      min_personen_gekwalificeerd:
-        activiteit.min_personen_gekwalificeerd ?? activiteit.min_personen ?? 1,
+      min_personen_totaal: minTotaal,
+      min_personen_gekwalificeerd: minGek,
       min_aanwijzing_ls: activiteit.min_aanwijzing_ls,
       min_aanwijzing_ms: activiteit.min_aanwijzing_ms,
       discipline:
@@ -1844,6 +1847,42 @@ const CellBox = memo(function CellBox({
     });
     voldoet = res.voldoet;
     warningReason = res.reden;
+
+    if (!voldoet) {
+      // Bouw uitgebreide uitleg: alle eisen + huidige stand per regel
+      const aantal = monteursForCheck.length;
+      const lines: string[] = [];
+      lines.push(`⚠ Cel voldoet niet aan de eisen`);
+      lines.push("");
+      lines.push(`Vereist:`);
+      lines.push(`• Min. ${minTotaal} ${minTotaal === 1 ? "persoon" : "personen"} totaal`);
+      if (activiteit.min_aanwijzing_ls) {
+        lines.push(
+          `• Min. ${minGek} met LS ${activiteit.min_aanwijzing_ls} of hoger`
+        );
+      }
+      if (activiteit.min_aanwijzing_ms) {
+        lines.push(
+          `• Min. ${minGek} met MS ${activiteit.min_aanwijzing_ms} of hoger`
+        );
+      }
+      lines.push("");
+      lines.push(`Huidige stand:`);
+      lines.push(`• ${aantal} ${aantal === 1 ? "persoon" : "personen"} ingepland`);
+      if (activiteit.min_aanwijzing_ls) {
+        const okLs = monteursForCheck.filter((m) =>
+          voldoetAanwijzing(m.aanwijzing_ls, activiteit.min_aanwijzing_ls as Aanwijzing)
+        ).length;
+        lines.push(`• ${okLs} met LS ${activiteit.min_aanwijzing_ls}+`);
+      }
+      if (activiteit.min_aanwijzing_ms) {
+        const okMs = monteursForCheck.filter((m) =>
+          voldoetAanwijzing(m.aanwijzing_ms, activiteit.min_aanwijzing_ms as Aanwijzing)
+        ).length;
+        lines.push(`• ${okMs} met MS ${activiteit.min_aanwijzing_ms}+`);
+      }
+      warningDetails = lines.join("\n");
+    }
   }
 
   const assignedMonteurs = monteurIds
@@ -1855,7 +1894,9 @@ const CellBox = memo(function CellBox({
   const namen = assignedMonteurs.map((m) => m.naam).join(", ");
   const kleurNaam = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.naam : null;
   let hoverTitle: string | undefined;
-  if (warningReason) {
+  if (warningDetails) {
+    hoverTitle = namen ? `${warningDetails}\n\nIngepland: ${namen}` : warningDetails;
+  } else if (warningReason) {
     hoverTitle = warningReason;
   } else if (kleurNaam && namen) {
     hoverTitle = `${kleurNaam} — ${namen}`;
