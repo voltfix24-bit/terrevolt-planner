@@ -92,6 +92,10 @@ interface Project {
   created_at: string | null;
   gsu_datum: string | null;
   geu_datum: string | null;
+  bouwkundig_benodigd: string | null;
+  bouwkundig_dagen: number | null;
+  asbest_benodigd: string | null;
+  asbest_dagen: number | null;
 }
 
 interface Week {
@@ -473,7 +477,7 @@ export default function Overzicht() {
     let cancelled = false;
     (async () => {
       const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum").order("created_at", { ascending: true }),
+        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen").order("created_at", { ascending: true }),
         supabase.from("project_weken").select("id, project_id, week_nr, positie"),
         supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
         supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -500,7 +504,7 @@ export default function Overzicht() {
       let cancelled = false;
       (async () => {
         const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum").order("created_at", { ascending: true }),
+          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen").order("created_at", { ascending: true }),
           supabase.from("project_weken").select("id, project_id, week_nr, positie"),
           supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
           supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -1718,6 +1722,56 @@ export default function Overzicht() {
                               >
                                 {formatDateRangeShort(p.gsu_datum, p.geu_datum)}
                               </p>
+                            )}
+                            {(p.bouwkundig_benodigd === "ja" || p.asbest_benodigd === "ja") && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: 4,
+                                  marginTop: 3,
+                                  flexWrap: "nowrap",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {p.bouwkundig_benodigd === "ja" && (
+                                  <span
+                                    title={`Bouwkundige werkzaamheden${p.bouwkundig_dagen ? ` — ${p.bouwkundig_dagen}d` : ""}`}
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      letterSpacing: "0.04em",
+                                      padding: "1px 5px",
+                                      borderRadius: 3,
+                                      background: "rgba(254,179,0,0.10)",
+                                      color: "rgba(254,179,0,0.85)",
+                                      border: "1px solid rgba(254,179,0,0.25)",
+                                      whiteSpace: "nowrap",
+                                      fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                    }}
+                                  >
+                                    BK{p.bouwkundig_dagen ? ` ${p.bouwkundig_dagen}d` : ""}
+                                  </span>
+                                )}
+                                {p.asbest_benodigd === "ja" && (
+                                  <span
+                                    title={`Asbestsanering${p.asbest_dagen ? ` — ${p.asbest_dagen}d` : ""}`}
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      letterSpacing: "0.04em",
+                                      padding: "1px 5px",
+                                      borderRadius: 3,
+                                      background: "rgba(255,90,90,0.10)",
+                                      color: "rgba(255,140,140,0.9)",
+                                      border: "1px solid rgba(255,90,90,0.25)",
+                                      whiteSpace: "nowrap",
+                                      fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                    }}
+                                  >
+                                    AS{p.asbest_dagen ? ` ${p.asbest_dagen}d` : ""}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
                           <span
