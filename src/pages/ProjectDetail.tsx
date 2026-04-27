@@ -483,6 +483,30 @@ const ProjectDetail = () => {
   // - "provisorium" -> template type "provisorium"
   // - "geen"        -> template type "compact" (Compactstation)
   // Activiteiten worden hier NIET aangeraakt; alleen project.template_id wordt gezet.
+  // Laad alleen de relevante template op basis van de gekozen tijdelijke_situatie.
+  // Voorkomt onnodig ophalen van alle templates bij elke pageload.
+  useEffect(() => {
+    const tijd = (project?.tijdelijke_situatie as string | null) ?? null;
+    if (!tijd) return;
+    const wantType =
+      tijd === "nsa" ? "nsa" : tijd === "provisorium" ? "provisorium" : tijd === "geen" ? "compact" : null;
+    if (!wantType) return;
+    if (templates.some((t) => (t.type || "").toLowerCase() === wantType)) return;
+    void (async () => {
+      const { data } = await supabase
+        .from("project_templates")
+        .select("id, naam, type")
+        .ilike("type", wantType);
+      if (data && data.length > 0) {
+        setTemplates((prev) => {
+          const ids = new Set(prev.map((p) => p.id));
+          return [...prev, ...(data as { id: string; naam: string; type: string }[]).filter((d) => !ids.has(d.id))];
+        });
+      }
+    })();
+  }, [project?.tijdelijke_situatie, templates]);
+
+  // Auto-koppel template op basis van tijdelijke_situatie wanneer er nog geen template gekozen is.
   useEffect(() => {
     if (!project || templates.length === 0) return;
     if (project.template_id) return;
