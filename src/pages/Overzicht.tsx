@@ -55,6 +55,8 @@ const NL_MONTHS = [
 const NL_MONTHS_LONG = [
   "Januari", "Februari", "Maart", "April", "Mei", "Juni",
   "Juli", "Augustus", "September", "Oktober", "November", "December",
+];
+
 
 // Compact date-range formatter for the project card subtitle.
 // Examples: "12 mei → 20 mei", "12 mei → 3 jun '25", "vanaf 12 mei", "tot 20 mei".
