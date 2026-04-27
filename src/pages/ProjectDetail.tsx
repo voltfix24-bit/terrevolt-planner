@@ -982,145 +982,163 @@ const ProjectDetail = () => {
           </Field>
         </SubBlock>
 
-        <SubBlock title="B5. MS-kabels huidig">
-          <Field label="Bestaande MS-kabels?">
-            <OptionPicker
-              value={huidigMsKabels}
-              onChange={(v) => {
-                setField("huidig_ms_kabels_aanwezig", v);
-                if (v !== "ja") {
-                  setMsKabels([]);
-                  void syncKabels("project_ms_kabels", []);
-                  setField("huidig_ms_kabels_aantal", null);
-                  setField("huidig_ms_kabels_type", null);
-                }
-              }}
-              options={YESNO}
-            />
-          </Field>
-          {huidigMsKabels === "ja" && (
-            <>
-              <Field label="Type bestaande MS-kabels">
-                <OptionPicker
-                  value={get<string>("huidig_ms_kabels_type")}
-                  onChange={(v) => setField("huidig_ms_kabels_type", v)}
-                  options={[
-                    { value: "gplk", label: "GPLK" },
-                    { value: "kunststof", label: "Kunststof" },
-                    { value: "gemengd", label: "Gemengd" },
-                  ]}
-                />
-              </Field>
-              <Field label="Aantal MS-kabelrichtingen / sets">
-                <Input
-                  type="number"
-                  min={0}
-                  value={(get<number>("huidig_ms_kabels_aantal") as number) ?? ""}
-                  onChange={(e) => {
-                    const n = e.target.value ? Number(e.target.value) : 0;
-                    setField("huidig_ms_kabels_aantal", n || null);
-                    const next = ensureKabelCount(msKabels, setMsKabels, n);
-                    void syncKabels("project_ms_kabels", next);
-                  }}
-                />
-              </Field>
-              {msKabels.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground">
-                    Diameters per MS-kabel
-                  </Label>
-                  {msKabels.map((k, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-12 shrink-0 text-xs text-muted-foreground">#{i + 1}</span>
-                      <Input
-                        value={k.diameter}
-                        placeholder="Bv. 3x95 Al"
-                        onChange={(e) => {
-                          const next = msKabels.map((row, idx) =>
-                            idx === i ? { ...row, diameter: e.target.value } : row,
-                          );
-                          setMsKabels(next);
-                        }}
-                        onBlur={() => void syncKabels("project_ms_kabels", msKabels)}
-                      />
-                    </div>
-                  ))}
+        <SubBlock title="B5. Kabels huidig">
+          {/* MS-kabels group */}
+          <div className="rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2.5">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-foreground/80">
+                MS-kabels
+              </span>
+              <OptionPicker
+                value={huidigMsKabels}
+                onChange={(v) => {
+                  setField("huidig_ms_kabels_aanwezig", v);
+                  if (v !== "ja") {
+                    setMsKabels([]);
+                    void syncKabels("project_ms_kabels", []);
+                    setField("huidig_ms_kabels_aantal", null);
+                    setField("huidig_ms_kabels_type", null);
+                  }
+                }}
+                options={YESNO}
+                size="sm"
+              />
+            </div>
+            {huidigMsKabels === "ja" && (
+              <div className="space-y-2.5">
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                  <Field label="Type">
+                    <OptionPicker
+                      value={get<string>("huidig_ms_kabels_type")}
+                      onChange={(v) => setField("huidig_ms_kabels_type", v)}
+                      options={[
+                        { value: "gplk", label: "GPLK" },
+                        { value: "kunststof", label: "Kunststof" },
+                        { value: "gemengd", label: "Gemengd" },
+                      ]}
+                      size="sm"
+                    />
+                  </Field>
+                  <Field label="Aantal richtingen / sets">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={(get<number>("huidig_ms_kabels_aantal") as number) ?? ""}
+                      onChange={(e) => {
+                        const n = e.target.value ? Number(e.target.value) : 0;
+                        setField("huidig_ms_kabels_aantal", n || null);
+                        const next = ensureKabelCount(msKabels, setMsKabels, n);
+                        void syncKabels("project_ms_kabels", next);
+                      }}
+                    />
+                  </Field>
                 </div>
-              )}
-            </>
-          )}
+                {msKabels.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+                      Diameter per MS-kabel
+                    </Label>
+                    {msKabels.map((k, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-8 shrink-0 text-xs text-muted-foreground">#{i + 1}</span>
+                        <Input
+                          value={k.diameter}
+                          placeholder="Bv. 3x95 Al"
+                          onChange={(e) => {
+                            const next = msKabels.map((row, idx) =>
+                              idx === i ? { ...row, diameter: e.target.value } : row,
+                            );
+                            setMsKabels(next);
+                          }}
+                          onBlur={() => void syncKabels("project_ms_kabels", msKabels)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* LS-kabels group */}
+          <div className="rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2.5">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-foreground/80">
+                LS-kabels
+              </span>
+              <OptionPicker
+                value={huidigLsKabels}
+                onChange={(v) => {
+                  setField("huidig_ls_kabels_aanwezig", v);
+                  if (v !== "ja") {
+                    setLsKabels([]);
+                    void syncKabels("project_ls_kabels", []);
+                    setField("huidig_ls_kabels_aantal", null);
+                    setField("huidig_ls_kabels_type", null);
+                  }
+                }}
+                options={YESNO}
+                size="sm"
+              />
+            </div>
+            {huidigLsKabels === "ja" && (
+              <div className="space-y-2.5">
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                  <Field label="Type">
+                    <OptionPicker
+                      value={get<string>("huidig_ls_kabels_type")}
+                      onChange={(v) => setField("huidig_ls_kabels_type", v)}
+                      options={[
+                        { value: "gplk", label: "GPLK" },
+                        { value: "kunststof", label: "Kunststof" },
+                        { value: "gemengd", label: "Gemengd" },
+                      ]}
+                      size="sm"
+                    />
+                  </Field>
+                  <Field label="Aantal kabels / groepen">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={(get<number>("huidig_ls_kabels_aantal") as number) ?? ""}
+                      onChange={(e) => {
+                        const n = e.target.value ? Number(e.target.value) : 0;
+                        setField("huidig_ls_kabels_aantal", n || null);
+                        const next = ensureKabelCount(lsKabels, setLsKabels, n);
+                        void syncKabels("project_ls_kabels", next);
+                      }}
+                    />
+                  </Field>
+                </div>
+                {lsKabels.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+                      Diameter per LS-kabel
+                    </Label>
+                    {lsKabels.map((k, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-8 shrink-0 text-xs text-muted-foreground">#{i + 1}</span>
+                        <Input
+                          value={k.diameter}
+                          placeholder="Bv. 4x150 Al"
+                          onChange={(e) => {
+                            const next = lsKabels.map((row, idx) =>
+                              idx === i ? { ...row, diameter: e.target.value } : row,
+                            );
+                            setLsKabels(next);
+                          }}
+                          onBlur={() => void syncKabels("project_ls_kabels", lsKabels)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </SubBlock>
 
-        <SubBlock title="B6. LS-kabels huidig">
-          <Field label="Bestaande LS-kabels?">
-            <OptionPicker
-              value={huidigLsKabels}
-              onChange={(v) => {
-                setField("huidig_ls_kabels_aanwezig", v);
-                if (v !== "ja") {
-                  setLsKabels([]);
-                  void syncKabels("project_ls_kabels", []);
-                  setField("huidig_ls_kabels_aantal", null);
-                  setField("huidig_ls_kabels_type", null);
-                }
-              }}
-              options={YESNO}
-            />
-          </Field>
-          {huidigLsKabels === "ja" && (
-            <>
-              <Field label="Type bestaande LS-kabels">
-                <OptionPicker
-                  value={get<string>("huidig_ls_kabels_type")}
-                  onChange={(v) => setField("huidig_ls_kabels_type", v)}
-                  options={[
-                    { value: "gplk", label: "GPLK" },
-                    { value: "kunststof", label: "Kunststof" },
-                    { value: "gemengd", label: "Gemengd" },
-                  ]}
-                />
-              </Field>
-              <Field label="Aantal bestaande LS-kabels / groepen">
-                <Input
-                  type="number"
-                  min={0}
-                  value={(get<number>("huidig_ls_kabels_aantal") as number) ?? ""}
-                  onChange={(e) => {
-                    const n = e.target.value ? Number(e.target.value) : 0;
-                    setField("huidig_ls_kabels_aantal", n || null);
-                    const next = ensureKabelCount(lsKabels, setLsKabels, n);
-                    void syncKabels("project_ls_kabels", next);
-                  }}
-                />
-              </Field>
-              {lsKabels.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground">
-                    Diameters per LS-kabel
-                  </Label>
-                  {lsKabels.map((k, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="w-12 shrink-0 text-xs text-muted-foreground">#{i + 1}</span>
-                      <Input
-                        value={k.diameter}
-                        placeholder="Bv. 4x150 Al"
-                        onChange={(e) => {
-                          const next = lsKabels.map((row, idx) =>
-                            idx === i ? { ...row, diameter: e.target.value } : row,
-                          );
-                          setLsKabels(next);
-                        }}
-                        onBlur={() => void syncKabels("project_ls_kabels", lsKabels)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </SubBlock>
-
-        <SubBlock title="B7. Herbruikbaarheid huidig" dense>
+        <SubBlock title="B6. Herbruikbaarheid huidig" dense>
           <Field label="Bestaande kabels herbruikbaar?" inline>
             <OptionPicker
               value={get<string>("huidig_kabels_herbruikbaar")}
