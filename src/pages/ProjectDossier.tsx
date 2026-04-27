@@ -723,7 +723,7 @@ const ProjectDossier = () => {
             <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2">
               <SubBlock title="MS Kabels" icon={Cable}>
                 <KV label="Aanwezig" value={yesNoLabel(get("huidig_ms_kabels_aanwezig"))} />
-                <KV label="Type" value={valOr(get("huidig_ms_kabels_type"))} />
+                <KV label="Type" value={intakeLabel("huidig_ms_kabels_type", get("huidig_ms_kabels_type"))} />
                 <KV label="Aantal" value={valOr(get("huidig_ms_kabels_aantal"))} mono />
                 <KV
                   label="Diameters"
