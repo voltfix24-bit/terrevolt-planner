@@ -1428,7 +1428,17 @@ const ProjectDetail = () => {
                       <Field label="Type">
                         <OptionPicker
                           value={get<string>("huidig_ls_kabels_type")}
-                          onChange={(v) => setField("huidig_ls_kabels_type", v)}
+                          onChange={(v) => {
+                            setField("huidig_ls_kabels_type", v);
+                            // Bij keuze kunststof: vul lege diameters met standaard 4x150 Al
+                            if (v === "kunststof" && lsKabels.length > 0) {
+                              const next = lsKabels.map((row) =>
+                                row.diameter ? row : { ...row, diameter: "4x150 Al" },
+                              );
+                              setLsKabels(next);
+                              void syncKabels("project_ls_kabels", next);
+                            }
+                          }}
                           options={[
                             { value: "gplk", label: "GPLK" },
                             { value: "kunststof", label: "Kunststof" },
@@ -1445,7 +1455,9 @@ const ProjectDetail = () => {
                           onChange={(e) => {
                             const n = e.target.value ? Number(e.target.value) : 0;
                             setField("huidig_ls_kabels_aantal", n || null);
-                            const next = ensureKabelCount(lsKabels, setLsKabels, n);
+                            const lsType = get<string>("huidig_ls_kabels_type");
+                            const def = lsType === "kunststof" ? "4x150 Al" : "";
+                            const next = ensureKabelCount(lsKabels, setLsKabels, n, def);
                             void syncKabels("project_ls_kabels", next);
                           }}
                         />
@@ -1456,22 +1468,67 @@ const ProjectDetail = () => {
                         <Label className="text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
                           Diameter per LS-kabel
                         </Label>
-                        {lsKabels.map((k, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="w-8 shrink-0 text-xs text-muted-foreground">#{i + 1}</span>
-                            <Input
-                              value={k.diameter}
-                              placeholder="Bv. 4x150 Al"
-                              onChange={(e) => {
-                                const next = lsKabels.map((row, idx) =>
-                                  idx === i ? { ...row, diameter: e.target.value } : row,
-                                );
-                                setLsKabels(next);
-                              }}
-                              onBlur={() => void syncKabels("project_ls_kabels", lsKabels)}
-                            />
-                          </div>
-                        ))}
+                        {lsKabels.map((k, i) => {
+                          const lsType = get<string>("huidig_ls_kabels_type");
+                          const presets =
+                            lsType === "gplk"
+                              ? LS_DIAMETER_OPTIONS_GPLK
+                              : lsType === "kunststof"
+                                ? LS_DIAMETER_OPTIONS_KUNSTSTOF
+                                : Array.from(
+                                    new Set([
+                                      ...LS_DIAMETER_OPTIONS_KUNSTSTOF,
+                                      ...LS_DIAMETER_OPTIONS_GPLK,
+                                    ]),
+                                  );
+                          const isCustom = !!k.diameter && !presets.includes(k.diameter);
+                          return (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="w-8 shrink-0 text-xs text-muted-foreground">
+                                #{i + 1}
+                              </span>
+                              <Select
+                                value={isCustom ? "__custom__" : k.diameter || ""}
+                                onValueChange={(val) => {
+                                  const newDiameter = val === "__custom__" ? "" : val;
+                                  const next = lsKabels.map((row, idx) =>
+                                    idx === i ? { ...row, diameter: newDiameter } : row,
+                                  );
+                                  setLsKabels(next);
+                                  void syncKabels("project_ls_kabels", next);
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[160px] text-xs">
+                                  <SelectValue placeholder="Kies diameter" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {presets.map((opt) => (
+                                    <SelectItem key={opt} value={opt} className="text-xs">
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="__custom__" className="text-xs">
+                                    Anders…
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {isCustom && (
+                                <Input
+                                  className="h-8 text-xs"
+                                  value={k.diameter}
+                                  placeholder="Bv. 3x95 Al"
+                                  onChange={(e) => {
+                                    const next = lsKabels.map((row, idx) =>
+                                      idx === i ? { ...row, diameter: e.target.value } : row,
+                                    );
+                                    setLsKabels(next);
+                                  }}
+                                  onBlur={() => void syncKabels("project_ls_kabels", lsKabels)}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
