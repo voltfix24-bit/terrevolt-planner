@@ -491,6 +491,12 @@ export type Database = {
       }
       projecten: {
         Row: {
+          asbest_benodigd: string | null
+          asbest_dagen: number | null
+          asbest_uitvoerder: string | null
+          bouwkundig_aannemer: string | null
+          bouwkundig_benodigd: string | null
+          bouwkundig_dagen: number | null
           case_nummer: string | null
           created_at: string | null
           def_aantal_ms_richtingen: number | null
@@ -558,6 +564,12 @@ export type Database = {
           wv_naam: string | null
         }
         Insert: {
+          asbest_benodigd?: string | null
+          asbest_dagen?: number | null
+          asbest_uitvoerder?: string | null
+          bouwkundig_aannemer?: string | null
+          bouwkundig_benodigd?: string | null
+          bouwkundig_dagen?: number | null
           case_nummer?: string | null
           created_at?: string | null
           def_aantal_ms_richtingen?: number | null
@@ -625,6 +637,12 @@ export type Database = {
           wv_naam?: string | null
         }
         Update: {
+          asbest_benodigd?: string | null
+          asbest_dagen?: number | null
+          asbest_uitvoerder?: string | null
+          bouwkundig_aannemer?: string | null
+          bouwkundig_benodigd?: string | null
+          bouwkundig_dagen?: number | null
           case_nummer?: string | null
           created_at?: string | null
           def_aantal_ms_richtingen?: number | null
