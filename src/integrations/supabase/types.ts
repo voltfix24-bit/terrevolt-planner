@@ -506,6 +506,7 @@ export type Database = {
           def_ov_kwh_meter_nieuw: string | null
           def_rmu_merk_configuratie: string | null
           def_rmu_vervangen: string | null
+          def_tekeningen_aanwezig: string | null
           def_trafo_gedraaid: string | null
           def_trafo_type: string | null
           def_trafo_vervangen: string | null
@@ -551,6 +552,7 @@ export type Database = {
           status: string | null
           straat: string | null
           template_id: string | null
+          tijd_tekeningen_aanwezig: string | null
           tijdelijke_situatie: string | null
           updated_at: string | null
           wv_naam: string | null
@@ -571,6 +573,7 @@ export type Database = {
           def_ov_kwh_meter_nieuw?: string | null
           def_rmu_merk_configuratie?: string | null
           def_rmu_vervangen?: string | null
+          def_tekeningen_aanwezig?: string | null
           def_trafo_gedraaid?: string | null
           def_trafo_type?: string | null
           def_trafo_vervangen?: string | null
@@ -616,6 +619,7 @@ export type Database = {
           status?: string | null
           straat?: string | null
           template_id?: string | null
+          tijd_tekeningen_aanwezig?: string | null
           tijdelijke_situatie?: string | null
           updated_at?: string | null
           wv_naam?: string | null
@@ -636,6 +640,7 @@ export type Database = {
           def_ov_kwh_meter_nieuw?: string | null
           def_rmu_merk_configuratie?: string | null
           def_rmu_vervangen?: string | null
+          def_tekeningen_aanwezig?: string | null
           def_trafo_gedraaid?: string | null
           def_trafo_type?: string | null
           def_trafo_vervangen?: string | null
@@ -681,6 +686,7 @@ export type Database = {
           status?: string | null
           straat?: string | null
           template_id?: string | null
+          tijd_tekeningen_aanwezig?: string | null
           tijdelijke_situatie?: string | null
           updated_at?: string | null
           wv_naam?: string | null
