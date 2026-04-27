@@ -1762,9 +1762,12 @@ const ProjectDetail = () => {
                 templates={templates}
                 tijdelijk={tijdSit ?? null}
                 onChange={(tid) => {
+                  setManualTemplate(true);
                   setField("template_id", tid);
                   const t = templates.find((x) => x.id === tid);
-                  if (t) toast.success(`Template gekozen: ${t.naam}`);
+                  if (t) toast.success(`Template handmatig gekozen: ${t.naam}`, {
+                    description: "Auto-herberekening bij wijzigen van tijdelijke situatie is uitgeschakeld.",
+                  });
                 }}
                 onLoadAll={async () => {
                   const { data } = await supabase
