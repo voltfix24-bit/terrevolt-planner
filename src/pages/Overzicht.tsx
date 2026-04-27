@@ -449,7 +449,7 @@ export default function Overzicht() {
     let cancelled = false;
     (async () => {
       const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
+        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum").order("created_at", { ascending: true }),
         supabase.from("project_weken").select("id, project_id, week_nr, positie"),
         supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
         supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
@@ -476,7 +476,7 @@ export default function Overzicht() {
       let cancelled = false;
       (async () => {
         const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at").order("created_at", { ascending: true }),
+          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum").order("created_at", { ascending: true }),
           supabase.from("project_weken").select("id, project_id, week_nr, positie"),
           supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
           supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
