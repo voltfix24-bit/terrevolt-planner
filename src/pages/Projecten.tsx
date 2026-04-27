@@ -729,33 +729,6 @@ const Projecten = () => {
               </Field>
             )}
 
-            {/* Werkplan toggles */}
-            <Field label="Werkplan vereist">
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { k: "MSH", v: werkplanMsh, set: setWerkplanMsh },
-                  { k: "LSH", v: werkplanLsh, set: setWerkplanLsh },
-                  { k: "MSR", v: werkplanMsr, set: setWerkplanMsr },
-                  { k: "LSR", v: werkplanLsr, set: setWerkplanLsr },
-                ].map((w) => (
-                  <button
-                    key={w.k}
-                    type="button"
-                    onClick={() => w.set(!w.v)}
-                    className={[
-                      "flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-display font-semibold transition-all",
-                      w.v
-                        ? "bg-primary/15 text-primary ring-1 ring-primary/40"
-                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
-                    ].join(" ")}
-                  >
-                    {w.v && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                    {w.k}
-                  </button>
-                ))}
-              </div>
-            </Field>
-
             {/* Notities */}
             <Field label="Notities">
               <Textarea
