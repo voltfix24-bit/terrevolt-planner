@@ -92,6 +92,10 @@ interface Project {
   created_at: string | null;
   gsu_datum: string | null;
   geu_datum: string | null;
+  bouwkundig_benodigd: string | null;
+  bouwkundig_dagen: number | null;
+  asbest_benodigd: string | null;
+  asbest_dagen: number | null;
 }
 
 interface Week {
