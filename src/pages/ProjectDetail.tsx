@@ -1747,7 +1747,7 @@ const ProjectDetail = () => {
             <SubBlock title="C1. Tijdelijke situatie tijdens uitvoering">
               <ChoiceCardGroup
                 value={tijdSit}
-                onChange={(v) => setField("tijdelijke_situatie", v)}
+                onChange={(v) => handleTijdelijkeSituatieChange(v)}
                 options={[
                   { value: "geen", label: "Geen", description: "Geen tijdelijke voorziening nodig." },
                   { value: "nsa", label: "NSA", description: "Niet-spanningsloos aansluiten via NSA-luik." },
