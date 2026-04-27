@@ -665,8 +665,10 @@ const ProjectDossier = () => {
               <KV label="GEU" value={fmtDate(get("geu_datum"))} mono />
               <KV label="Status" value={statusInfo.label} />
               <KV label="Behuizing" value={valOr(get("behuizing_nummer"))} />
-              <KV label="GSU / GEU label" value={valOr(get("gsu_geu"))} />
-              <KV label="Locatie" value={valOr(get("locatie"))} />
+              {get<string>("locatie") && <KV label="Locatie" value={valOr(get("locatie"))} />}
+              {get<string>("gsu_geu") && (
+                <KV label="GSU / GEU label" value={valOr(get("gsu_geu"))} />
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-2.5 md:grid-cols-2">
