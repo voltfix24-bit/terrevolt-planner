@@ -497,19 +497,31 @@ const ProjectDetail = () => {
     list: Kabel[],
     setList: (rows: Kabel[]) => void,
     target: number,
+    defaultDiameter = "",
   ) => {
     const safe = Math.max(0, Math.min(50, Math.floor(target)));
     if (safe === list.length) return list;
     let next: Kabel[];
     if (safe > list.length) {
       next = [...list];
-      for (let i = list.length; i < safe; i++) next.push({ diameter: "", positie: i });
+      for (let i = list.length; i < safe; i++)
+        next.push({ diameter: defaultDiameter, positie: i });
     } else {
       next = list.slice(0, safe);
     }
     setList(next);
     return next;
   };
+
+  // LS-kabel diameter opties (kunststof)
+  const LS_DIAMETER_OPTIONS_KUNSTSTOF = [
+    "4x150 Al",
+    "4x95 Al",
+    "4x50 Al",
+    "4x25 Al",
+    "4x16 Cu",
+  ];
+  const LS_DIAMETER_OPTIONS_GPLK = ["4x95 Cu", "4x50 Cu", "4x35 Cu", "4x25 Cu", "4x16 Cu"];
 
   // =====================================================
   // Completeness analysis
