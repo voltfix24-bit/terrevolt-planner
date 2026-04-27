@@ -575,65 +575,57 @@ const ProjectDetail = () => {
   if (defLsSit) summaryChips.push({ label: "LS definitief", value: defLsSit });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* ============================================ */}
-      {/* COMPACT HEADER + SUMMARY                     */}
+      {/* COMPACT HEADER + LIVE SUMMARY                */}
       {/* ============================================ */}
-      <div className="surface-card rounded-lg p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
+      <div className="surface-card rounded-lg px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-2.5">
             <button
               onClick={() => navigate("/projecten")}
-              className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
               title="Terug"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-display text-xl font-bold text-foreground">
+                <h1 className="truncate font-display text-lg font-bold tracking-tight text-foreground">
                   {(get<string>("station_naam") as string) || "Nieuwe case"}
                 </h1>
-                <span className="rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
                   {(get<string>("status") as string) || "concept"}
                 </span>
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="truncate text-[11px] text-muted-foreground">
                 {(get<string>("case_nummer") as string) || "Geen casenummer"}
                 {opdrachtgeverNaam && <> · {opdrachtgeverNaam}</>}
                 {perceelNaam && <> · {perceelNaam}</>}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {saving ? (
-              <>
-                <Save className="h-3.5 w-3.5 animate-pulse" /> Opslaan…
-              </>
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" /> Automatisch opgeslagen
-              </>
-            )}
+          <div className="flex items-center gap-3">
+            <div className="hidden min-w-[160px] items-center gap-2 md:flex">
+              <Progress value={overallProgress} className="h-1" />
+              <span className="font-mono text-[11px] font-semibold tabular-nums text-foreground">
+                {overallProgress}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse" : ""}`} />
+              {saving ? "Opslaan…" : "Opgeslagen"}
+            </div>
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="mt-4">
-          <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>Intake voortgang</span>
-            <span className="font-mono font-semibold text-foreground">{overallProgress}%</span>
-          </div>
-          <Progress value={overallProgress} className="h-1.5" />
-        </div>
-
-        {/* Summary chips */}
+        {/* Live summary chips */}
         {summaryChips.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1">
             {summaryChips.map((c) => (
               <span
                 key={c.label}
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px]"
+                className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.025] px-1.5 py-0.5 text-[10.5px]"
               >
                 <span className="font-display font-semibold uppercase tracking-wider text-muted-foreground">
                   {c.label}
@@ -648,22 +640,22 @@ const ProjectDetail = () => {
       {/* ============================================ */}
       {/* STICKY SECTION NAV                           */}
       {/* ============================================ */}
-      <div className="sticky top-0 z-30 -mx-1 px-1 py-2 backdrop-blur-md">
-        <div className="surface-card flex flex-wrap items-center gap-1 rounded-lg border border-white/10 p-1.5">
+      <div className="sticky top-0 z-30 -mx-1 px-1 py-1.5">
+        <div className="surface-card flex flex-wrap items-center gap-1 rounded-lg border border-white/10 p-1 shadow-lg backdrop-blur-md">
           {sections.map((s) => {
             const c = completeness[s.key];
             return (
               <button
                 key={s.id}
                 onClick={() => scrollToSection(s.id)}
-                className={`group flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-display font-semibold transition-all ${STATE_STYLES[c.state].ring} bg-white/[0.02] hover:bg-white/[0.06]`}
+                className={`group flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-display font-semibold transition-all ${STATE_STYLES[c.state].ring} bg-white/[0.02] hover:bg-white/[0.07]`}
               >
                 <StateIcon state={c.state} />
                 <span className="text-foreground">{s.label}</span>
-                <span className="text-[10px] font-normal text-muted-foreground">
+                <span className="text-[10px] font-normal tabular-nums text-muted-foreground">
                   {c.score}/{c.total}
                 </span>
-                <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+                <ChevronRight className="h-3 w-3 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
               </button>
             );
           })}
