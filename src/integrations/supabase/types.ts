@@ -494,6 +494,7 @@ export type Database = {
           asbest_benodigd: string | null
           asbest_dagen: number | null
           asbest_uitvoerder: string | null
+          behuizing_nummer: string | null
           bouwkundig_aannemer: string | null
           bouwkundig_benodigd: string | null
           bouwkundig_dagen: number | null
@@ -567,6 +568,7 @@ export type Database = {
           asbest_benodigd?: string | null
           asbest_dagen?: number | null
           asbest_uitvoerder?: string | null
+          behuizing_nummer?: string | null
           bouwkundig_aannemer?: string | null
           bouwkundig_benodigd?: string | null
           bouwkundig_dagen?: number | null
@@ -640,6 +642,7 @@ export type Database = {
           asbest_benodigd?: string | null
           asbest_dagen?: number | null
           asbest_uitvoerder?: string | null
+          behuizing_nummer?: string | null
           bouwkundig_aannemer?: string | null
           bouwkundig_benodigd?: string | null
           bouwkundig_dagen?: number | null

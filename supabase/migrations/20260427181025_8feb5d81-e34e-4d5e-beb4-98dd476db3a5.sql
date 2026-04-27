@@ -1,0 +1,1 @@
+ALTER TABLE public.projecten ADD COLUMN IF NOT EXISTS behuizing_nummer TEXT;
