@@ -607,7 +607,7 @@ const ProjectDossier = () => {
           },
           {
             label: "RMU type",
-            value: valOr(get("huidig_rmu_type")),
+            value: intakeLabel("huidig_rmu_type", get("huidig_rmu_type")),
             icon: PlugZap,
           },
           {
@@ -617,7 +617,7 @@ const ProjectDossier = () => {
           },
           {
             label: "Scope",
-            value: (get<string>("def_opleverdossier") as string) || "—",
+            value: intakeLabel("def_opleverdossier", get("def_opleverdossier")),
             icon: ClipboardList,
           },
         ].map((item) => (
