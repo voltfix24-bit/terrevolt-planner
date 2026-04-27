@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/AppLayout";
 import Projecten from "./pages/Projecten";
+import ProjectDetail from "./pages/ProjectDetail";
 import Plannen from "./pages/Plannen";
 import Activiteiten from "./pages/Activiteiten";
 import Capaciteit from "./pages/Capaciteit";
