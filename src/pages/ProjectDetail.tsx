@@ -652,11 +652,11 @@ const ProjectDetail = () => {
   const defLsSit = get<string>("def_ls_situatie");
   const defGgi = get<string>("def_ggi_nieuw");
 
-  const sections = [
-    { id: "deel-a", key: "A" as const, label: "A · Project" },
-    { id: "deel-b", key: "B" as const, label: "B · Huidig" },
-    { id: "deel-c", key: "C" as const, label: "C · Tijdelijk" },
-    { id: "deel-d", key: "D" as const, label: "D · Definitief" },
+  const sections: { id: string; key: "A" | "B" | "C" | "D"; n: string; short: string; full: string }[] = [
+    { id: "deel-a", key: "A", n: "A", short: "Project", full: "Projectgegevens" },
+    { id: "deel-b", key: "B", n: "B", short: "Huidig", full: "Huidige situatie" },
+    { id: "deel-c", key: "C", n: "C", short: "Tijdelijk", full: "Tijdelijke situatie" },
+    { id: "deel-d", key: "D", n: "D", short: "Definitief", full: "Definitieve situatie" },
   ];
 
   // Summary chips
