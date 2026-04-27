@@ -299,7 +299,7 @@ export default function Overzicht() {
   const weeksToShow = useMemo(() => {
     if (scale !== "maand") return 5;
     const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand;
-    return Math.max(4, Math.min(12, Math.ceil(availableGridWidth / weekPx)));
+    return Math.max(4, Math.min(12, Math.floor(availableGridWidth / weekPx) - 1));
   }, [scale, availableGridWidth]);
 
   // For "kwartaal": each slot = cellW. Min 8, max 26 weeks.
@@ -1008,7 +1008,7 @@ export default function Overzicht() {
     }
 
     return (
-      <div style={{ width: totalGridWidth }}>
+      <div style={{ width: totalGridWidth + cellW }}>
         {/* Group row */}
         <div className="flex" style={{ height: 28 }}>
           {groups.map((g) => {
@@ -1282,7 +1282,7 @@ export default function Overzicht() {
           style={{
             flex: 1,
             overflowY: "auto",
-            overflowX: "hidden",
+            overflowX: "auto",
             minHeight: 0,
           }}
           className="overzicht-scroll"
@@ -1723,7 +1723,7 @@ export default function Overzicht() {
           <div
             ref={bodyScrollRef}
             className="overzicht-scroll"
-            style={{ flex: 1, overflowX: "auto" }}
+            style={{ flex: 1, overflowX: "auto", paddingRight: cellW }}
             onScroll={(e) => syncScroll("body", e.currentTarget.scrollLeft)}
           >
 
