@@ -1469,10 +1469,18 @@ const Plannen = () => {
           monteurs={monteurs}
           monteurIdsAssigned={celMonteurs.get(openCel.cel.id) ?? []}
           monteurById={monteurById}
+          template={
+            openCel.activiteit.activiteit_type_id
+              ? activiteitTypes.find(
+                  (t) => t.id === openCel.activiteit!.activiteit_type_id
+                ) ?? null
+              : null
+          }
           onColorChange={(c) => updateCellColor(openCel.cel, c)}
           onNotitieChange={(n) => updateCellNotitie(openCel.cel, n)}
           onAddMonteur={(id) => addMonteurToCell(openCel.cel, id)}
           onRemoveMonteur={(id) => removeMonteurFromCell(openCel.cel, id)}
+          onSyncFromTemplate={() => syncActiviteitFromTemplate(openCel.activiteit!.id)}
         />
       )}
 
