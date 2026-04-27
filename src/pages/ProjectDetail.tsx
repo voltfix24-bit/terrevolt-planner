@@ -413,7 +413,7 @@ const ProjectDetail = () => {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [pRes, oRes, peRes, msRes, lsRes] = await Promise.all([
+    const [pRes, oRes, peRes, msRes, lsRes, tRes] = await Promise.all([
       supabase.from("projecten").select("*").eq("id", id).maybeSingle(),
       supabase.from("opdrachtgevers").select("id, naam").order("positie"),
       supabase.from("percelen").select("id, naam").order("positie"),
@@ -429,6 +429,7 @@ const ProjectDetail = () => {
         .eq("project_id", id)
         .eq("soort", "huidig")
         .order("positie"),
+      supabase.from("project_templates").select("id, naam, type"),
     ]);
     if (pRes.error || !pRes.data) {
       toast.error("Project niet gevonden");
@@ -438,6 +439,7 @@ const ProjectDetail = () => {
     setProject(pRes.data as ProjectRow);
     setOpdrachtgevers((oRes.data ?? []) as Lookup[]);
     setPercelen((peRes.data ?? []) as Lookup[]);
+    setTemplates((tRes.data ?? []) as { id: string; naam: string; type: string }[]);
     setMsKabels(
       ((msRes.data ?? []) as { id: string; diameter: string | null; positie: number }[]).map(
         (k) => ({ id: k.id, diameter: k.diameter ?? "", positie: k.positie }),
