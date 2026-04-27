@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import DossierPrint from "@/components/DossierPrint";
 import { printDossierInPopup } from "@/lib/print-dossier";
+import { intakeLabel } from "@/lib/dossier-labels";
 
 // =====================================================
 // Types
