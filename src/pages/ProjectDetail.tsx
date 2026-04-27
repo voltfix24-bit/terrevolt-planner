@@ -762,115 +762,184 @@ const ProjectDetail = () => {
         state={completeness.A.state}
         issues={completeness.A.issues}
       >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Field label="Case nummer">
-            <Input
-              value={(get<string>("case_nummer") as string) || ""}
-              onChange={(e) => setField("case_nummer", e.target.value)}
-            />
-          </Field>
-          <Field label="Case naam / stationsnaam">
-            <Input
-              value={(get<string>("station_naam") as string) || ""}
-              onChange={(e) => setField("station_naam", e.target.value)}
-            />
-          </Field>
-          <Field label="Opdrachtgever">
-            <Select
-              value={(get<string>("opdrachtgever_id") as string) || ""}
-              onValueChange={(v) => setField("opdrachtgever_id", v || null)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer opdrachtgever" />
-              </SelectTrigger>
-              <SelectContent>
-                {opdrachtgevers.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.naam}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Perceel">
-            <Select
-              value={(get<string>("perceel_id") as string) || ""}
-              onValueChange={(v) => setField("perceel_id", v || null)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer perceel" />
-              </SelectTrigger>
-              <SelectContent>
-                {percelen.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.naam}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Uitvoeringsperiode (GSU → GEU)" className="md:col-span-2">
-            <ExecutionRangePicker
-              start={get<string>("gsu_datum")}
-              end={get<string>("geu_datum")}
-              onChange={(s, e) => {
-                setField("gsu_datum", s);
-                setField("geu_datum", e);
-              }}
-            />
-          </Field>
-          <Field label="WV / uitvoerder">
-            <Input
-              value={(get<string>("wv_naam") as string) || ""}
-              onChange={(e) => setField("wv_naam", e.target.value)}
-            />
-          </Field>
-          <Field label="Locatie" className="md:col-span-2">
-            <Input
-              value={(get<string>("locatie") as string) || ""}
-              onChange={(e) => setField("locatie", e.target.value)}
-              placeholder="Bv. installatieruimte, kelder, …"
-            />
-          </Field>
-          <Field label="Straat">
-            <Input
-              value={(get<string>("straat") as string) || ""}
-              onChange={(e) => setField("straat", e.target.value)}
-            />
-          </Field>
-          <Field label="Postcode">
-            <Input
-              value={(get<string>("postcode") as string) || ""}
-              onChange={(e) => setField("postcode", e.target.value)}
-            />
-          </Field>
-          <Field label="Stad">
-            <Input
-              value={(get<string>("stad") as string) || ""}
-              onChange={(e) => setField("stad", e.target.value)}
-            />
-          </Field>
-          <Field label="Status">
-            <OptionPicker
-              value={(get<string>("status") as Status) || "concept"}
-              onChange={(v) => setField("status", v || "concept")}
-              allowDeselect={false}
-              options={[
-                { value: "concept", label: "Concept" },
-                { value: "gepland", label: "Gepland" },
-                { value: "in_uitvoering", label: "In uitvoering" },
-                { value: "afgerond", label: "Afgerond" },
-              ]}
-            />
-          </Field>
-          <Field label="Notities" className="md:col-span-2">
-            <Textarea
-              value={(get<string>("notities") as string) || ""}
-              onChange={(e) => setField("notities", e.target.value)}
-              rows={3}
-            />
-          </Field>
-        </div>
+        <SubBlock title="A1. Basisgegevens">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Field label="Case nummer">
+              <Input
+                value={(get<string>("case_nummer") as string) || ""}
+                onChange={(e) => setField("case_nummer", e.target.value)}
+              />
+            </Field>
+            <Field label="Case naam / stationsnaam">
+              <Input
+                value={(get<string>("station_naam") as string) || ""}
+                onChange={(e) => setField("station_naam", e.target.value)}
+              />
+            </Field>
+            <Field label="Opdrachtgever">
+              <Select
+                value={(get<string>("opdrachtgever_id") as string) || ""}
+                onValueChange={(v) => setField("opdrachtgever_id", v || null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecteer opdrachtgever" />
+                </SelectTrigger>
+                <SelectContent>
+                  {opdrachtgevers.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.naam}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Perceel">
+              <Select
+                value={(get<string>("perceel_id") as string) || ""}
+                onValueChange={(v) => setField("perceel_id", v || null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecteer perceel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {percelen.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.naam}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Uitvoeringsperiode (GSU → GEU)" className="md:col-span-2">
+              <ExecutionRangePicker
+                start={get<string>("gsu_datum")}
+                end={get<string>("geu_datum")}
+                onChange={(s, e) => {
+                  setField("gsu_datum", s);
+                  setField("geu_datum", e);
+                }}
+              />
+            </Field>
+            <Field label="WV / uitvoerder">
+              <Input
+                value={(get<string>("wv_naam") as string) || ""}
+                onChange={(e) => setField("wv_naam", e.target.value)}
+              />
+            </Field>
+            <Field label="Straat">
+              <Input
+                value={(get<string>("straat") as string) || ""}
+                onChange={(e) => setField("straat", e.target.value)}
+              />
+            </Field>
+            <Field label="Postcode">
+              <Input
+                value={(get<string>("postcode") as string) || ""}
+                onChange={(e) => setField("postcode", e.target.value)}
+              />
+            </Field>
+            <Field label="Stad">
+              <Input
+                value={(get<string>("stad") as string) || ""}
+                onChange={(e) => setField("stad", e.target.value)}
+              />
+            </Field>
+            <Field label="Status">
+              <OptionPicker
+                value={(get<string>("status") as Status) || "concept"}
+                onChange={(v) => setField("status", v || "concept")}
+                allowDeselect={false}
+                options={[
+                  { value: "concept", label: "Concept" },
+                  { value: "gepland", label: "Gepland" },
+                  { value: "in_uitvoering", label: "In uitvoering" },
+                  { value: "afgerond", label: "Afgerond" },
+                ]}
+              />
+            </Field>
+            <Field label="Notities" className="md:col-span-2">
+              <Textarea
+                value={(get<string>("notities") as string) || ""}
+                onChange={(e) => setField("notities", e.target.value)}
+                rows={3}
+              />
+            </Field>
+          </div>
+        </SubBlock>
+
+        <SubBlock title="A2. Projectrandvoorwaarden">
+          <div className="space-y-4">
+            <div>
+              <Field label="Bouwkundige werkzaamheden benodigd?" inline>
+                <OptionPicker
+                  value={get<string>("bouwkundig_benodigd")}
+                  onChange={(v) => setField("bouwkundig_benodigd", v)}
+                  options={YESNO}
+                  size="sm"
+                />
+              </Field>
+              {get<string>("bouwkundig_benodigd") === "ja" && (
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <Field label="Bouwkundige aannemer">
+                    <Input
+                      value={(get<string>("bouwkundig_aannemer") as string) || ""}
+                      onChange={(e) => setField("bouwkundig_aannemer", e.target.value)}
+                      placeholder="Naam aannemer"
+                    />
+                  </Field>
+                  <Field label="Gewenst aantal dagen">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={(get<number>("bouwkundig_dagen") as number) ?? ""}
+                      onChange={(e) =>
+                        setField(
+                          "bouwkundig_dagen",
+                          e.target.value ? Number(e.target.value) : null,
+                        )
+                      }
+                    />
+                  </Field>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Field label="Asbestsanering benodigd?" inline>
+                <OptionPicker
+                  value={get<string>("asbest_benodigd")}
+                  onChange={(v) => setField("asbest_benodigd", v)}
+                  options={YESNO}
+                  size="sm"
+                />
+              </Field>
+              {get<string>("asbest_benodigd") === "ja" && (
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <Field label="Uitvoerder asbestsanering">
+                    <Input
+                      value={(get<string>("asbest_uitvoerder") as string) || ""}
+                      onChange={(e) => setField("asbest_uitvoerder", e.target.value)}
+                      placeholder="Naam uitvoerder"
+                    />
+                  </Field>
+                  <Field label="Gewenst aantal dagen">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={(get<number>("asbest_dagen") as number) ?? ""}
+                      onChange={(e) =>
+                        setField(
+                          "asbest_dagen",
+                          e.target.value ? Number(e.target.value) : null,
+                        )
+                      }
+                    />
+                  </Field>
+                </div>
+              )}
+            </div>
+          </div>
+        </SubBlock>
       </Section>
 
       {/* ============================================ */}
