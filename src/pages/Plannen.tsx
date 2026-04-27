@@ -89,6 +89,7 @@ interface Project {
   jaar: number | null;
   wv_naam: string | null;
   tijdelijke_situatie: string | null;
+  template_id: string | null;
 }
 
 interface Week {
