@@ -86,7 +86,7 @@ const Section: React.FC<{
   return (
     <section
       id={id}
-      className={`surface-card scroll-mt-24 relative overflow-hidden rounded-lg border ${s.ring} px-5 py-4`}
+      className={`surface-card scroll-mt-24 relative overflow-hidden rounded-lg border ${s.ring} px-4 py-3.5`}
     >
       {/* left accent bar */}
       <div className={`absolute left-0 top-0 h-full w-[3px] ${s.accent} opacity-70`} />
@@ -127,7 +127,7 @@ const SubBlock: React.FC<{ title: string; children: React.ReactNode; dense?: boo
   children,
   dense,
 }) => (
-  <div className="rounded-md border border-white/5 bg-white/[0.015] px-3.5 py-2.5">
+  <div className="rounded-md border border-white/5 bg-white/[0.015] px-3 py-2">
     <div className="mb-2 flex items-center gap-1.5">
       <span className="h-1 w-1 rounded-full bg-primary/60" />
       <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary/90">
@@ -294,8 +294,30 @@ const ProjectDetail = () => {
   const [percelen, setPercelen] = useState<Lookup[]>([]);
   const [msKabels, setMsKabels] = useState<Kabel[]>([]);
   const [lsKabels, setLsKabels] = useState<Kabel[]>([]);
+  const [activeSection, setActiveSection] = useState<string>("deel-a");
 
   const dirtyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track active section via IntersectionObserver
+  useEffect(() => {
+    if (loading) return;
+    const ids = ["deel-a", "deel-b", "deel-c", "deel-d"];
+    const els = ids
+      .map((i) => document.getElementById(i))
+      .filter((e): e is HTMLElement => !!e);
+    if (els.length === 0) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActiveSection(visible[0].target.id);
+      },
+      { rootMargin: "-120px 0px -55% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [loading]);
 
   // ---------- Load ----------
   const load = useCallback(async () => {
@@ -630,11 +652,11 @@ const ProjectDetail = () => {
   const defLsSit = get<string>("def_ls_situatie");
   const defGgi = get<string>("def_ggi_nieuw");
 
-  const sections = [
-    { id: "deel-a", key: "A" as const, label: "A · Project" },
-    { id: "deel-b", key: "B" as const, label: "B · Huidig" },
-    { id: "deel-c", key: "C" as const, label: "C · Tijdelijk" },
-    { id: "deel-d", key: "D" as const, label: "D · Definitief" },
+  const sections: { id: string; key: "A" | "B" | "C" | "D"; n: string; short: string; full: string }[] = [
+    { id: "deel-a", key: "A", n: "A", short: "Project", full: "Projectgegevens" },
+    { id: "deel-b", key: "B", n: "B", short: "Huidig", full: "Huidige situatie" },
+    { id: "deel-c", key: "C", n: "C", short: "Tijdelijk", full: "Tijdelijke situatie" },
+    { id: "deel-d", key: "D", n: "D", short: "Definitief", full: "Definitieve situatie" },
   ];
 
   // Summary chips
@@ -728,27 +750,79 @@ const ProjectDetail = () => {
       </div>
 
       {/* ============================================ */}
-      {/* STICKY SECTION NAV                           */}
+      {/* HORIZONTAL STEPPER NAV                       */}
       {/* ============================================ */}
       <div className="sticky top-0 z-30 -mx-1 px-1 py-1.5">
-        <div className="surface-card flex flex-wrap items-center gap-1 rounded-lg border border-white/10 p-1 shadow-lg backdrop-blur-md">
-          {sections.map((s) => {
-            const c = completeness[s.key];
-            return (
-              <button
-                key={s.id}
-                onClick={() => scrollToSection(s.id)}
-                className={`group flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-display font-semibold transition-all ${STATE_STYLES[c.state].ring} bg-white/[0.02] hover:bg-white/[0.07]`}
-              >
-                <StateIcon state={c.state} />
-                <span className="text-foreground">{s.label}</span>
-                <span className="text-[10px] font-normal tabular-nums text-muted-foreground">
-                  {c.score}/{c.total}
-                </span>
-                <ChevronRight className="h-3 w-3 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
-              </button>
-            );
-          })}
+        <div className="surface-card rounded-lg border border-white/10 px-2 py-2 shadow-lg backdrop-blur-md">
+          <div className="flex items-stretch gap-0">
+            {sections.map((s, idx) => {
+              const c = completeness[s.key];
+              const isActive = activeSection === s.id;
+              const isComplete = c.state === "complete";
+              const pct = c.total === 0 ? 0 : Math.round((c.score / c.total) * 100);
+              return (
+                <div key={s.id} className="flex flex-1 items-center">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection(s.id)}
+                    aria-current={isActive ? "step" : undefined}
+                    className={cn(
+                      "group relative flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-all",
+                      isActive
+                        ? "bg-primary/[0.08] ring-1 ring-primary/40"
+                        : "hover:bg-white/[0.04]",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10.5px] font-display font-bold transition-colors",
+                        isComplete
+                          ? "border-emerald-400/40 bg-emerald-400/15 text-emerald-300"
+                          : isActive
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : c.state === "partial"
+                              ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
+                              : "border-white/10 bg-white/[0.03] text-muted-foreground",
+                      )}
+                    >
+                      {isComplete ? <CheckCircle2 className="h-3.5 w-3.5" /> : s.n}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={cn(
+                          "block truncate font-display text-[11.5px] font-semibold leading-tight",
+                          isActive ? "text-foreground" : "text-foreground/85",
+                        )}
+                      >
+                        {s.full}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-1.5">
+                        <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                          <span
+                            className={cn(
+                              "block h-full rounded-full transition-all",
+                              isComplete
+                                ? "bg-emerald-400/80"
+                                : c.state === "partial"
+                                  ? "bg-amber-400/70"
+                                  : "bg-muted-foreground/40",
+                            )}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </span>
+                        <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground">
+                          {c.score}/{c.total}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                  {idx < sections.length - 1 && (
+                    <div className="mx-1 hidden h-px w-4 shrink-0 bg-white/[0.08] md:block" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
