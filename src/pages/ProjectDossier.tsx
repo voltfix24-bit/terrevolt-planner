@@ -25,6 +25,7 @@ import {
   PlugZap,
   CheckCircle2,
   Circle,
+  Printer,
 } from "lucide-react";
 import { format, parseISO, isValid, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -32,6 +33,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import DossierPrint from "@/components/DossierPrint";
 
 // =====================================================
 // Types
@@ -448,8 +450,22 @@ const ProjectDossier = () => {
             <Pencil className="h-3.5 w-3.5" /> Bewerk intake
           </Button>
           <Button
+            variant="outline"
             size="sm"
-            onClick={() => toast.info("PDF export volgt — layout is export-ready")}
+            onClick={() => {
+              toast.info("Printvenster geopend");
+              window.print();
+            }}
+            className="h-8 gap-1.5 border-white/10 bg-white/[0.03] text-[12px] hover:bg-white/[0.06]"
+          >
+            <Printer className="h-3.5 w-3.5" /> Print
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              toast.info("Kies 'Opslaan als PDF' in het printvenster");
+              window.print();
+            }}
             className="h-8 gap-1.5 bg-primary text-[12px] font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Download className="h-3.5 w-3.5" /> Download PDF
@@ -955,6 +971,20 @@ const ProjectDossier = () => {
           <span>Confidential</span>
         </div>
       </div>
+
+      {/* Print-only export layout (hidden on screen, visible on print/PDF) */}
+      <DossierPrint
+        project={project}
+        opdrachtgeverNaam={opdrachtgeverNaam}
+        perceelNaam={perceelNaam}
+        msKabels={msKabels}
+        lsKabels={lsKabels}
+        tekeningen={tekeningen}
+        criticals={criticals}
+        samenvatting={samenvatting}
+        periodeLabel={periodeLabel}
+        periodeDuur={periodeDuur}
+      />
     </div>
   );
 };
