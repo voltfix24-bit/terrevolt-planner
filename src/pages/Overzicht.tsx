@@ -1722,6 +1722,55 @@ export default function Overzicht() {
                               >
                                 {formatDateRangeShort(p.gsu_datum, p.geu_datum)}
                               </p>
+                            {(p.bouwkundig_benodigd === "ja" || p.asbest_benodigd === "ja") && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: 4,
+                                  marginTop: 3,
+                                  flexWrap: "nowrap",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {p.bouwkundig_benodigd === "ja" && (
+                                  <span
+                                    title={`Bouwkundige werkzaamheden${p.bouwkundig_dagen ? ` — ${p.bouwkundig_dagen}d` : ""}`}
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      letterSpacing: "0.04em",
+                                      padding: "1px 5px",
+                                      borderRadius: 3,
+                                      background: "rgba(254,179,0,0.10)",
+                                      color: "rgba(254,179,0,0.85)",
+                                      border: "1px solid rgba(254,179,0,0.25)",
+                                      whiteSpace: "nowrap",
+                                      fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                    }}
+                                  >
+                                    BK{p.bouwkundig_dagen ? ` ${p.bouwkundig_dagen}d` : ""}
+                                  </span>
+                                )}
+                                {p.asbest_benodigd === "ja" && (
+                                  <span
+                                    title={`Asbestsanering${p.asbest_dagen ? ` — ${p.asbest_dagen}d` : ""}`}
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: 700,
+                                      letterSpacing: "0.04em",
+                                      padding: "1px 5px",
+                                      borderRadius: 3,
+                                      background: "rgba(255,90,90,0.10)",
+                                      color: "rgba(255,140,140,0.9)",
+                                      border: "1px solid rgba(255,90,90,0.25)",
+                                      whiteSpace: "nowrap",
+                                      fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                    }}
+                                  >
+                                    AS{p.asbest_dagen ? ` ${p.asbest_dagen}d` : ""}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
                           <span
