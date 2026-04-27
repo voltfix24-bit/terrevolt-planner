@@ -392,17 +392,31 @@ const ProjectDossier = () => {
   const samenvatting = useMemo(() => {
     if (!project) return "";
     const stadje = (get<string>("stad") as string) || "";
-    const huidigType = (get<string>("huidig_rmu_type") as string) || "bestaande RMU";
+    const huidigRmu = intakeLabel("huidig_rmu_type", get("huidig_rmu_type"));
+    const huidigDeel =
+      huidigRmu && huidigRmu !== "—" ? `bestaande ${huidigRmu}` : "bestaande RMU";
     const tij = tijdelijkeLabel(tijdelijk);
     const defRmu = (get<string>("def_rmu_merk_configuratie") as string) || "nieuwe definitieve RMU";
     const defTrafo = (get<string>("def_trafo_type") as string) || "definitieve trafo";
+    const lsSit = intakeLabel("def_ls_situatie", get("def_ls_situatie"));
     const tijDeel =
       tij === "Geen" || tij === "—"
-        ? "Geen aparte tijdelijke voorziening — in/uit dezelfde dag."
+        ? "Geen aparte tijdelijke voorziening — werk binnen één onderbreking."
         : tij === "NSA"
-          ? "Tijdens de werkzaamheden wordt een NSA-unit ingezet om continuïteit van levering te waarborgen."
+          ? "Tijdens de werkzaamheden wordt een NSA-unit ingezet zodat de levering doorloopt."
           : "Een provisorium wordt opgebouwd om tijdens de ombouw door te kunnen schakelen.";
-    return `Huidige situatie: ${huidigType}${stadje ? ` te ${stadje}` : ""}. ${tijDeel} Doel: opleveren met ${defRmu} en ${defTrafo}, conform definitief tekeningenpakket.`;
+    const lsDeel =
+      lsSit && lsSit !== "—" && lsSit.toLowerCase() !== "behouden"
+        ? ` LS-rek: ${lsSit}.`
+        : "";
+    const risico: string[] = [];
+    if ((get<string>("asbest_benodigd") ?? "").toLowerCase() === "ja") risico.push("asbest");
+    if ((get<string>("bouwkundig_benodigd") ?? "").toLowerCase() === "ja")
+      risico.push("bouwkundig");
+    const risicoDeel = risico.length
+      ? ` Let op: ${risico.join(" + ")}-werk parallel ingepland.`
+      : "";
+    return `Huidige situatie: ${huidigDeel}${stadje ? ` te ${stadje}` : ""}. ${tijDeel} Doel: opleveren met ${defRmu} en ${defTrafo}.${lsDeel}${risicoDeel}`;
   }, [project, tijdelijk]);
 
   if (loading || !project) {
