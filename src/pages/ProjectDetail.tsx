@@ -1055,8 +1055,8 @@ const ProjectDetail = () => {
           )}
         </SubBlock>
 
-        <SubBlock title="B7. Herbruikbaarheid huidig">
-          <Field label="Kunnen bestaande kabels later opnieuw aangesloten worden?">
+        <SubBlock title="B7. Herbruikbaarheid huidig" dense>
+          <Field label="Bestaande kabels herbruikbaar?" inline>
             <OptionPicker
               value={get<string>("huidig_kabels_herbruikbaar")}
               onChange={(v) => setField("huidig_kabels_herbruikbaar", v)}
@@ -1064,8 +1064,9 @@ const ProjectDetail = () => {
                 { value: "ja", label: "Ja" },
                 { value: "nee", label: "Nee" },
                 { value: "deels", label: "Deels" },
-                { value: "onbekend", label: "Onbekend" },
+                { value: "onbekend", label: "?" },
               ]}
+              size="sm"
             />
           </Field>
         </SubBlock>
