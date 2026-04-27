@@ -370,6 +370,89 @@ const ExecutionRangePicker: React.FC<{
 };
 
 // =====================================================
+// Template picker — handmatige overschrijving van auto-koppeling
+// =====================================================
+const TemplatePicker: React.FC<{
+  value: string | null;
+  templates: { id: string; naam: string; type: string }[];
+  tijdelijk: string | null;
+  onChange: (id: string) => void;
+  onLoadAll: () => Promise<void>;
+}> = ({ value, templates, tijdelijk, onChange, onLoadAll }) => {
+  const [showAll, setShowAll] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const wantType =
+    tijdelijk === "nsa"
+      ? "nsa"
+      : tijdelijk === "provisorium"
+        ? "provisorium"
+        : tijdelijk === "geen"
+          ? "compact"
+          : null;
+
+  const filtered = showAll
+    ? templates
+    : templates.filter((t) => !wantType || (t.type || "").toLowerCase() === wantType);
+
+  const current = templates.find((t) => t.id === value);
+  const isAuto = current && wantType && (current.type || "").toLowerCase() === wantType;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Select
+          value={value ?? ""}
+          onValueChange={(v) => onChange(v)}
+        >
+          <SelectTrigger className="h-8 flex-1 border-white/10 bg-white/[0.03] text-[12.5px]">
+            <SelectValue placeholder="Kies template…" />
+          </SelectTrigger>
+          <SelectContent>
+            {filtered.length === 0 && (
+              <div className="px-3 py-2 text-[12px] text-muted-foreground">
+                Geen templates beschikbaar.
+              </div>
+            )}
+            {filtered.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                <span className="font-display text-[12.5px]">{t.naam}</span>
+                <span className="ml-2 text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                  {t.type}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button
+          type="button"
+          onClick={async () => {
+            if (showAll) {
+              setShowAll(false);
+              return;
+            }
+            setLoading(true);
+            await onLoadAll();
+            setLoading(false);
+            setShowAll(true);
+          }}
+          className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/[0.07] hover:text-foreground"
+        >
+          {loading ? "Laden…" : showAll ? "Filter op situatie" : "Toon alle"}
+        </button>
+      </div>
+      <p className="text-[10.5px] text-muted-foreground">
+        {current
+          ? isAuto
+            ? `Automatisch gekoppeld op basis van tijdelijke situatie (${current.type}). Kies een andere template om te overschrijven.`
+            : `Handmatig gekozen: ${current.naam}.`
+          : "Nog geen template gekoppeld — kies handmatig of selecteer een tijdelijke situatie voor auto-koppeling."}
+      </p>
+    </div>
+  );
+};
+
+// =====================================================
 // Page
 // =====================================================
 const ProjectDetail = () => {
