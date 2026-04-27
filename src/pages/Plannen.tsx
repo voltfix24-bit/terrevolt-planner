@@ -333,38 +333,102 @@ const Plannen = () => {
     setActiviteiten(actRows);
 
     // Auto-seed project_weken wanneer er geen weken bestaan.
-    // Nieuwe projecten hebben standaard nog geen weken — zonder dit kan er
-    // niets ingepland worden (geen kolommen in de grid). Genereert ISO-weken
-    // op basis van GSU/GEU; valt terug op de huidige ISO-week als die ontbreken.
+    // Robuust tegen dubbele mounts / snelle reloads:
+    //  1. Per-project guard (seedingProjectsRef) — voorkomt parallelle seeds in dezelfde tab
+    //  2. Re-fetch direct vóór insert om race tegen andere tab/sessie te dichten
+    //  3. Dedupe candidates op week_nr
+    //  4. Insert alleen weken die nog niet bestaan; positie hercomputeren op basis van week_nr
+    //  5. DB unique index (project_id, week_nr) is de laatste vangnet
     let effectiveWeeks: Week[] = weekRows;
-    if (effectiveWeeks.length === 0) {
-      const gsu = proj?.gsu_datum ?? null;
-      const geu = proj?.geu_datum ?? null;
-      let candidates: { week_nr: number; year: number }[] = [];
-      let usedFallback = false;
-      if (gsu && geu) candidates = enumerateISOWeeks(gsu, geu);
-      if (candidates.length === 0) {
-        candidates = [{ week_nr: CURRENT_WEEK, year: CURRENT_YEAR }];
-        usedFallback = true;
-      }
-      const inserts = candidates.map((c, i) => ({
-        project_id: projectId,
-        week_nr: c.week_nr,
-        positie: i,
-        opmerking: "",
-      }));
-      const { data: insertedWeeks, error: weekErr } = await supabase
-        .from("project_weken")
-        .insert(inserts)
-        .select();
-      if (!weekErr && insertedWeeks) {
-        effectiveWeeks = insertedWeeks as Week[];
-        setWeken(effectiveWeeks);
-        if (usedFallback) {
-          toast.info("Startweek aangemaakt zodat dit project direct ingepland kan worden");
+    if (effectiveWeeks.length === 0 && !seedingProjectsRef.current.has(projectId)) {
+      seedingProjectsRef.current.add(projectId);
+      try {
+        // Re-fetch om te checken dat een ander mount/process intussen niet al heeft geseed.
+        const { data: freshWeeks } = await supabase
+          .from("project_weken")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("positie", { ascending: true });
+        const existing = (freshWeeks ?? []) as Week[];
+
+        if (existing.length > 0) {
+          // Iemand anders was sneller; gebruik die.
+          effectiveWeeks = existing;
+          setWeken(effectiveWeeks);
         } else {
-          toast.success("Planningweken automatisch aangemaakt op basis van uitvoeringsperiode");
+          const gsu = proj?.gsu_datum ?? null;
+          const geu = proj?.geu_datum ?? null;
+          let candidates: { week_nr: number; year: number }[] = [];
+          let usedFallback = false;
+          if (gsu && geu) candidates = enumerateISOWeeks(gsu, geu);
+          if (candidates.length === 0) {
+            candidates = [{ week_nr: CURRENT_WEEK, year: CURRENT_YEAR }];
+            usedFallback = true;
+          }
+          // Dedupe op week_nr (ISO weeknummer is uniek binnen het projectjaar)
+          const seenWn = new Set<number>();
+          const dedup = candidates.filter((c) => {
+            if (seenWn.has(c.week_nr)) return false;
+            seenWn.add(c.week_nr);
+            return true;
+          });
+          // Positie volgt chronologische volgorde van de candidates
+          const inserts = dedup.map((c, i) => ({
+            project_id: projectId,
+            week_nr: c.week_nr,
+            positie: i,
+            opmerking: "",
+          }));
+          // Insert; unique index op (project_id, week_nr) zorgt voor DB-niveau dedupe.
+          const { error: weekErr } = await supabase
+            .from("project_weken")
+            .insert(inserts);
+          if (weekErr) {
+            // Eén of meerdere weken bestonden al (race) — niet fataal, opnieuw ophalen.
+            console.warn("[plannen] week-seed insert error, terugvallen op refetch:", weekErr.message);
+          }
+          // Eindstand altijd refetchen — autoriteit is de DB.
+          const { data: afterRows } = await supabase
+            .from("project_weken")
+            .select("*")
+            .eq("project_id", projectId)
+            .order("positie", { ascending: true });
+          let finalWeeks = ((afterRows ?? []) as Week[]).slice();
+
+          // Hercomputeer positie op basis van week_nr om gaten/duplicaten te corrigeren
+          // (ISO-weken stijgend; week 52→1 jaarwissel handhaven we via volgorde van candidates).
+          const wnOrder = new Map<number, number>();
+          dedup.forEach((c, i) => wnOrder.set(c.week_nr, i));
+          finalWeeks.sort((a, b) => {
+            const ai = wnOrder.has(a.week_nr) ? wnOrder.get(a.week_nr)! : 9999 + a.week_nr;
+            const bi = wnOrder.has(b.week_nr) ? wnOrder.get(b.week_nr)! : 9999 + b.week_nr;
+            return ai - bi;
+          });
+          // Push positie-correcties als ze afwijken
+          const positieFixes = finalWeeks
+            .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+            .filter(Boolean) as { id: string; positie: number }[];
+          if (positieFixes.length > 0) {
+            await Promise.all(
+              positieFixes.map((p) =>
+                supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
+              ),
+            );
+            finalWeeks = finalWeeks.map((w, i) => ({ ...w, positie: i }));
+          }
+
+          effectiveWeeks = finalWeeks;
+          setWeken(effectiveWeeks);
+          if (effectiveWeeks.length > 0) {
+            if (usedFallback) {
+              toast.info("Startweek aangemaakt zodat dit project direct ingepland kan worden");
+            } else {
+              toast.success("Planningweken automatisch aangemaakt op basis van uitvoeringsperiode");
+            }
+          }
         }
+      } finally {
+        seedingProjectsRef.current.delete(projectId);
       }
     }
 
