@@ -829,6 +829,13 @@ const ProjectDetail = () => {
               <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse text-primary" : "text-emerald-400/80"}`} />
               {saving ? "Opslaan…" : "Autosave aan"}
             </div>
+            <button
+              onClick={() => navigate(`/plannen?project=${id}`)}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11.5px] font-display font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              title="Open planning voor deze case"
+            >
+              <CalendarRange className="h-3.5 w-3.5" /> Inplannen
+            </button>
           </div>
         </div>
 
