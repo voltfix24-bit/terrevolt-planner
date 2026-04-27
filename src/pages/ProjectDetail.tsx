@@ -429,7 +429,7 @@ const ProjectDetail = () => {
         .eq("project_id", id)
         .eq("soort", "huidig")
         .order("positie"),
-      supabase.from("project_templates").select("id, naam, type"),
+      Promise.resolve({ data: [] as { id: string; naam: string; type: string }[] }),
     ]);
     if (pRes.error || !pRes.data) {
       toast.error("Project niet gevonden");
