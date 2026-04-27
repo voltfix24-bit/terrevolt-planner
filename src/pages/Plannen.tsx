@@ -361,6 +361,25 @@ const Plannen = () => {
           let candidates: { week_nr: number; year: number }[] = [];
           let usedFallback = false;
           if (gsu && geu) candidates = enumerateISOWeeks(gsu, geu);
+          // Fallback 1: één GSU- of GEU-datum bekend → gebruik die week
+          if (candidates.length === 0 && (gsu || geu)) {
+            const ref = new Date((gsu || geu) as string);
+            if (!isNaN(ref.getTime())) {
+              const p = isoWeekParts(ref);
+              candidates = [{ week_nr: p.week, year: p.year }];
+              usedFallback = true;
+            }
+          }
+          // Fallback 2: gebruik projectjaar — huidige week als jaar == nu, anders week 1 van projectjaar
+          if (candidates.length === 0 && proj?.jaar) {
+            if (proj.jaar === CURRENT_YEAR) {
+              candidates = [{ week_nr: CURRENT_WEEK, year: CURRENT_YEAR }];
+            } else {
+              candidates = [{ week_nr: 1, year: proj.jaar }];
+            }
+            usedFallback = true;
+          }
+          // Fallback 3: laatste vangnet → huidige ISO-week
           if (candidates.length === 0) {
             candidates = [{ week_nr: CURRENT_WEEK, year: CURRENT_YEAR }];
             usedFallback = true;
