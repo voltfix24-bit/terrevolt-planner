@@ -1292,7 +1292,7 @@ const ProjectDetail = () => {
             {get<string>("tijd_tekeningen_aanwezig") === "ja" && (
               <div className="mt-3">
                 <ProjectTekeningen
-                  projectId={projectId!}
+                  projectId={id!}
                   soort="tijdelijk"
                   emptyHint="PDF, DWG, DXF of afbeeldingen — meerdere bestanden tegelijk mogelijk"
                 />
