@@ -26,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/overzicht" replace />} />
             <Route path="/overzicht" element={<Overzicht />} />
             <Route path="/projecten" element={<Projecten />} />
+            <Route path="/projecten/:id" element={<ProjectDetail />} />
             <Route path="/plannen" element={<Plannen />} />
             <Route path="/activiteiten" element={<Activiteiten />} />
             <Route path="/capaciteit" element={<Capaciteit />} />
