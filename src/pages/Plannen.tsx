@@ -1894,7 +1894,9 @@ const CellBox = memo(function CellBox({
   const namen = assignedMonteurs.map((m) => m.naam).join(", ");
   const kleurNaam = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.naam : null;
   let hoverTitle: string | undefined;
-  if (warningReason) {
+  if (warningDetails) {
+    hoverTitle = namen ? `${warningDetails}\n\nIngepland: ${namen}` : warningDetails;
+  } else if (warningReason) {
     hoverTitle = warningReason;
   } else if (kleurNaam && namen) {
     hoverTitle = `${kleurNaam} — ${namen}`;
