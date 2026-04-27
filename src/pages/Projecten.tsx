@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   ChevronRight,
+  FileText,
   MapPin,
   Plus,
   Search,
