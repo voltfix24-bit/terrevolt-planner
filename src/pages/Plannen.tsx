@@ -689,6 +689,45 @@ const Plannen = () => {
     }
   }, [loadAll]);
 
+  const syncActiviteitFromTemplate = useCallback(
+    async (activiteitId: string) => {
+      const act = activiteiten.find((a) => a.id === activiteitId);
+      if (!act || !act.activiteit_type_id) {
+        toast.error("Geen template gekoppeld aan deze activiteit");
+        return;
+      }
+      const tpl = activiteitTypes.find((t) => t.id === act.activiteit_type_id);
+      if (!tpl) {
+        toast.error("Template niet gevonden");
+        return;
+      }
+      const updates = {
+        naam: tpl.naam,
+        capaciteit_type: tpl.capaciteit_type,
+        min_personen: tpl.min_personen,
+        min_personen_totaal: tpl.min_personen_totaal ?? tpl.min_personen ?? 1,
+        min_personen_gekwalificeerd:
+          tpl.min_personen_gekwalificeerd ?? tpl.min_personen ?? 1,
+        min_aanwijzing_ls: tpl.min_aanwijzing_ls,
+        min_aanwijzing_ms: tpl.min_aanwijzing_ms,
+      };
+      const { error } = await supabase
+        .from("project_activiteiten")
+        .update(updates)
+        .eq("id", activiteitId);
+      if (error) {
+        toast.error("Synchroniseren mislukt");
+        return;
+      }
+      setActiviteiten((prev) =>
+        prev.map((a) => (a.id === activiteitId ? { ...a, ...updates } : a))
+      );
+      toast.success(`"${tpl.naam}" gesynchroniseerd vanuit template`);
+    },
+    [activiteiten, activiteitTypes]
+  );
+
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
