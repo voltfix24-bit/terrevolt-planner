@@ -299,7 +299,7 @@ export default function Overzicht() {
   const weeksToShow = useMemo(() => {
     if (scale !== "maand") return 5;
     const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand;
-    return Math.max(4, Math.min(12, Math.ceil(availableGridWidth / weekPx)));
+    return Math.max(4, Math.min(12, Math.floor(availableGridWidth / weekPx) - 1));
   }, [scale, availableGridWidth]);
 
   // For "kwartaal": each slot = cellW. Min 8, max 26 weeks.
