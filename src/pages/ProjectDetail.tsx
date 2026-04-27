@@ -478,6 +478,27 @@ const ProjectDetail = () => {
 
   const get = <T,>(key: string): T | null => (project ? ((project[key] as T) ?? null) : null);
 
+  // Auto-koppel template op basis van tijdelijke_situatie wanneer er nog geen template gekozen is.
+  // - "nsa"         -> template type "nsa"  (NSA-case)
+  // - "provisorium" -> template type "provisorium"
+  // - "geen"        -> template type "compact" (Compactstation)
+  // Activiteiten worden hier NIET aangeraakt; alleen project.template_id wordt gezet.
+  useEffect(() => {
+    if (!project || templates.length === 0) return;
+    if (project.template_id) return;
+    const tijd = (project.tijdelijke_situatie as string | null) ?? null;
+    if (!tijd) return;
+    const wantType =
+      tijd === "nsa" ? "nsa" : tijd === "provisorium" ? "provisorium" : tijd === "geen" ? "compact" : null;
+    if (!wantType) return;
+    const match = templates.find((t) => (t.type || "").toLowerCase() === wantType);
+    if (!match) return;
+    setProject((prev) => (prev ? { ...prev, template_id: match.id } : prev));
+    void persist({ template_id: match.id });
+    toast.success(`Template gekoppeld: ${match.naam}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.tijdelijke_situatie, templates]);
+
   const syncKabels = async (
     table: "project_ms_kabels" | "project_ls_kabels",
     rows: Kabel[],
