@@ -345,8 +345,21 @@ const Projecten = () => {
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
-                  <div className="flex items-center gap-1 text-xs font-display font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                    Open intake <ChevronRight className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProjectId(p.id);
+                        navigate(`/plannen?project=${p.id}`);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2.5 py-1 text-[11px] font-display font-semibold text-primary transition-colors hover:bg-primary/25"
+                      title="Inplannen"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" /> Inplannen
+                    </button>
+                    <div className="flex items-center gap-1 text-xs font-display font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                      Open intake <ChevronRight className="h-3.5 w-3.5" />
+                    </div>
                   </div>
                 </div>
               </div>
