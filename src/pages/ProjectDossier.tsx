@@ -700,7 +700,7 @@ const ProjectDossier = () => {
           <Card title="Huidige Situatie" icon={Activity}>
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
               <SubBlock title="MS / RMU" icon={PlugZap}>
-                <KV label="Type" value={valOr(get("huidig_rmu_type"))} strong />
+                <KV label="Type" value={intakeLabel("huidig_rmu_type", get("huidig_rmu_type"))} strong />
                 <KV
                   label="Aantal richtingen"
                   value={valOr(get("huidig_rmu_aantal_richtingen"))}
