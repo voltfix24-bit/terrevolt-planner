@@ -766,12 +766,6 @@ const ProjectDetail = () => {
               onChange={(e) => setField("stad", e.target.value)}
             />
           </Field>
-          <Field label="Gemeente">
-            <Input
-              value={(get<string>("gemeente") as string) || ""}
-              onChange={(e) => setField("gemeente", e.target.value)}
-            />
-          </Field>
           <Field label="Status">
             <OptionPicker
               value={(get<string>("status") as Status) || "concept"}
@@ -783,13 +777,6 @@ const ProjectDetail = () => {
                 { value: "in_uitvoering", label: "In uitvoering" },
                 { value: "afgerond", label: "Afgerond" },
               ]}
-            />
-          </Field>
-          <Field label="Jaar">
-            <Input
-              type="number"
-              value={(get<number>("jaar") as number) || ""}
-              onChange={(e) => setField("jaar", e.target.value ? Number(e.target.value) : null)}
             />
           </Field>
           <Field label="Notities" className="md:col-span-2">
