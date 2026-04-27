@@ -1282,7 +1282,7 @@ export default function Overzicht() {
           style={{
             flex: 1,
             overflowY: "auto",
-            overflowX: "hidden",
+            overflowX: "auto",
             minHeight: 0,
           }}
           className="overzicht-scroll"
