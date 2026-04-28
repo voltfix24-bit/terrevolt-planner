@@ -80,6 +80,15 @@ function formatDateRangeShort(from: string | null, to: string | null): string {
   return `${fmt(a!, showYearA)} → ${fmt(b!, showYearB)}`;
 }
 
+// Short single-date formatter: "12 mei" or "12 mei '25" if not current year.
+function formatDateShort(s: string | null): string {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "—";
+  const currentYear = new Date().getFullYear();
+  const withYear = d.getFullYear() !== currentYear;
+  return `${d.getDate()} ${NL_MONTHS[d.getMonth()].toLowerCase()}${withYear ? ` '${String(d.getFullYear()).slice(2)}` : ""}`;
+}
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
