@@ -19,7 +19,7 @@ import {
 const SIDEBAR_W = 260;
 const SIDEBAR_W_COLLAPSED = 48;
 const ROW_H_MONTEUR = 52;
-const ROW_H_PROJECT = 44;
+const ROW_H_PROJECT = 60;
 const ROW_H_ACTIVITEIT = 36;
 const HEADER_H = 56;
 const DAYS_PER_WEEK = 5;
@@ -80,6 +80,15 @@ function formatDateRangeShort(from: string | null, to: string | null): string {
   return `${fmt(a!, showYearA)} → ${fmt(b!, showYearB)}`;
 }
 
+// Short single-date formatter: "12 mei" or "12 mei '25" if not current year.
+function formatDateShort(s: string | null): string {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "—";
+  const currentYear = new Date().getFullYear();
+  const withYear = d.getFullYear() !== currentYear;
+  return `${d.getDate()} ${NL_MONTHS[d.getMonth()].toLowerCase()}${withYear ? ` '${String(d.getFullYear()).slice(2)}` : ""}`;
+}
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
@@ -1675,64 +1684,93 @@ export default function Overzicht() {
                             />
                           </button>
                           <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
-                            <p
+                            {/* Top row: case nummer chip + status pill */}
+                            <div
                               style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                color: "#3fff8b",
-                                letterSpacing: "0.12em",
-                                textTransform: "uppercase",
-                                marginBottom: 1,
-                                fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-                                whiteSpace: "nowrap",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                marginBottom: 2,
                               }}
                             >
-                              {p.case_nummer ?? "—"}
-                            </p>
+                              {p.case_nummer && (
+                                <span
+                                  style={{
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    letterSpacing: "0.08em",
+                                    padding: "1px 5px",
+                                    borderRadius: 3,
+                                    background: "rgba(63,255,139,0.10)",
+                                    color: "#3fff8b",
+                                    border: "1px solid rgba(63,255,139,0.22)",
+                                    fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                    whiteSpace: "nowrap",
+                                    fontVariantNumeric: "tabular-nums",
+                                  }}
+                                >
+                                  {p.case_nummer}
+                                </span>
+                              )}
+                              <span
+                                className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+                                style={{ background: sc.bg, color: sc.text }}
+                              >
+                                {sc.label}
+                              </span>
+                            </div>
+                            {/* Station naam — primary identifier */}
                             <p
                               style={{
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: 600,
                                 color: "white",
                                 fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                maxWidth: sidebarCollapsed ? 0 : sidebarW - 90,
-                                display: "block",
+                                maxWidth: sidebarW - 60,
+                                lineHeight: 1.2,
                               }}
                               title={p.station_naam ?? ""}
                             >
                               {p.station_naam ?? "—"}
                             </p>
-                            {(p.gsu_datum || p.geu_datum) && (
-                              <p
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 500,
-                                  color: "rgba(255,255,255,0.45)",
-                                  fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  marginTop: 1,
-                                  letterSpacing: "0.02em",
-                                }}
-                                title={`Uitvoering: ${p.gsu_datum ?? "?"} → ${p.geu_datum ?? "?"}`}
-                              >
-                                {formatDateRangeShort(p.gsu_datum, p.geu_datum)}
-                              </p>
-                            )}
-                            {(p.bouwkundig_benodigd === "ja" || p.asbest_benodigd === "ja") && (
+                            {/* GSU / GEU + optional BK/AS badges */}
+                            {(p.gsu_datum || p.geu_datum || p.bouwkundig_benodigd === "ja" || p.asbest_benodigd === "ja") && (
                               <div
                                 style={{
                                   display: "flex",
-                                  gap: 4,
+                                  alignItems: "center",
+                                  gap: 6,
                                   marginTop: 3,
                                   flexWrap: "nowrap",
                                   overflow: "hidden",
                                 }}
                               >
+                                {(p.gsu_datum || p.geu_datum) && (
+                                  <span
+                                    title={`GSU ${p.gsu_datum ?? "?"} → GEU ${p.geu_datum ?? "?"}`}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                      fontSize: 9.5,
+                                      fontWeight: 600,
+                                      color: "rgba(255,255,255,0.55)",
+                                      fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
+                                      whiteSpace: "nowrap",
+                                      letterSpacing: "0.02em",
+                                      fontVariantNumeric: "tabular-nums",
+                                    }}
+                                  >
+                                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}>GSU</span>
+                                    <span>{formatDateShort(p.gsu_datum)}</span>
+                                    <span style={{ color: "rgba(255,255,255,0.25)" }}>→</span>
+                                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}>GEU</span>
+                                    <span>{formatDateShort(p.geu_datum)}</span>
+                                  </span>
+                                )}
                                 {p.bouwkundig_benodigd === "ja" && (
                                   <span
                                     title={`Bouwkundige werkzaamheden${p.bouwkundig_dagen ? ` — ${p.bouwkundig_dagen}d` : ""}`}
@@ -1740,7 +1778,7 @@ export default function Overzicht() {
                                       fontSize: 9,
                                       fontWeight: 700,
                                       letterSpacing: "0.04em",
-                                      padding: "1px 5px",
+                                      padding: "1px 4px",
                                       borderRadius: 3,
                                       background: "rgba(254,179,0,0.10)",
                                       color: "rgba(254,179,0,0.85)",
@@ -1759,7 +1797,7 @@ export default function Overzicht() {
                                       fontSize: 9,
                                       fontWeight: 700,
                                       letterSpacing: "0.04em",
-                                      padding: "1px 5px",
+                                      padding: "1px 4px",
                                       borderRadius: 3,
                                       background: "rgba(255,90,90,0.10)",
                                       color: "rgba(255,140,140,0.9)",
@@ -1774,19 +1812,6 @@ export default function Overzicht() {
                               </div>
                             )}
                           </div>
-                          <span
-                            className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider"
-                            style={{ background: sc.bg, color: sc.text }}
-                          >
-                            {sc.label}
-                          </span>
-                          <ArrowRight
-                            className="h-3 w-3 shrink-0 text-muted-foreground transition-opacity"
-                            style={{
-                              opacity: 0,
-                            }}
-                            aria-hidden
-                          />
                         </>
                       )}
                       {/* Hover arrow indicator (positioned absolutely so it doesn't affect layout) */}
