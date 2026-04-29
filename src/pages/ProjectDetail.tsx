@@ -2141,6 +2141,28 @@ const ProjectDetail = () => {
           </Section>
 
           {/* ============================================ */}
+          {/* CONCEPT-PLANNING (week-onafhankelijk)        */}
+          {/* ============================================ */}
+          <section
+            id="concept-planning"
+            className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-white/10 px-4 py-3.5"
+          >
+            <div className="absolute left-0 top-0 h-full w-[3px] bg-primary/50" />
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                <h2 className="font-display text-base font-bold tracking-tight text-foreground">
+                  Concept-planning
+                </h2>
+                <span className="hidden text-[11px] text-muted-foreground md:inline">
+                  · Fictieve dagen, pas inplannen bij keuze van weeknummer
+                </span>
+              </div>
+            </div>
+            <ProjectConceptPlanning projectId={id!} />
+          </section>
+
+          {/* ============================================ */}
           {/* PROJECT ARCHIEF (placeholder)                */}
           {/* ============================================ */}
           <section
