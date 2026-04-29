@@ -1416,6 +1416,14 @@ const Plannen = () => {
     try {
       const XLSX: any = await loadSheetJS();
       const projectJaar = project.jaar ?? new Date().getFullYear();
+      const expWeken = exportWeekIds.size === 0 ? weken : weken.filter((w) => exportWeekIds.has(w.id));
+      const expActiviteiten = exportActiviteitIds.size === 0
+        ? activiteiten
+        : activiteiten.filter((a) => exportActiviteitIds.has(a.id));
+      if (expWeken.length === 0 || expActiviteiten.length === 0) {
+        toast.error("Selecteer minstens één week en één activiteit");
+        return;
+      }
       const aoa: (string | number)[][] = [];
 
       // Rij 0: project header
