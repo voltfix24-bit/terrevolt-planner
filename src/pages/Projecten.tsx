@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
+  FileText,
   MapPin,
   Plus,
   Search,
