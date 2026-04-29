@@ -568,6 +568,7 @@ const ConceptCelRow: React.FC<{
   cel: ConceptCel;
   activiteiten: ProjectActiviteit[];
   monteurs: Monteur[];
+  ploegen: import("@/lib/ploegen").Ploeg[];
   selected: boolean;
   onSelect: (e: {
     shiftKey: boolean;
@@ -581,6 +582,7 @@ const ConceptCelRow: React.FC<{
   cel,
   activiteiten,
   monteurs,
+  ploegen,
   selected,
   onSelect,
   onChange,
@@ -588,6 +590,13 @@ const ConceptCelRow: React.FC<{
   onToggleMonteur,
 }) => {
   const kleur = cel.kleur_code ? COLOR_MAP[cel.kleur_code] : null;
+  // Voor concept: alle ploegen tonen, klik = voeg ontbrekende leden toe
+  const eligiblePloegen = ploegen
+    .map((p) => {
+      const toAdd = p.monteur_ids.filter((id) => !cel.monteur_ids.includes(id));
+      return { ploeg: p, toAdd };
+    })
+    .filter((x) => x.toAdd.length > 0);
   return (
     <div
       className={`rounded border p-2 space-y-1.5 transition-colors ${
