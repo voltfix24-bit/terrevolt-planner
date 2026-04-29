@@ -1051,7 +1051,7 @@ const Plannen = () => {
         handleUndo();
       }
       if (e.key === "Escape") {
-        setSelectedCelIds((prev) => (prev.size > 0 ? new Set() : prev));
+        setSelectedGroups((prev) => (prev.length > 0 ? [] : prev));
       }
     };
     window.addEventListener("keydown", handler);
