@@ -3815,6 +3815,9 @@ interface CelModalProps {
   monteurIdsAssigned: string[];
   monteurById: Map<string, Monteur>;
   template: ActiviteitTypeOption | null;
+  projectJaar: number;
+  afwezigheid: import("@/lib/monteur-beschikbaarheid").AfwezigheidPeriode[];
+  feestdagenMap: Map<string, string>;
   onColorChange: (c: string) => void;
   onNotitieChange: (n: string) => void;
   onAddMonteur: (id: string) => void;
