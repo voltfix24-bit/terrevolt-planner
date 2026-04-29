@@ -782,9 +782,6 @@ const Plannen = () => {
       const targetWi = weekIndexById.get(targetWeekId);
       if (anchorWi == null || targetWi == null) return;
       const anchorSlot = anchorWi * 5 + a.dag_index;
-      const targetWi = weekIndexById.get(targetWeekId);
-      if (anchorWi == null || targetWi == null) return;
-      const anchorSlot = anchorWi * 5 + anchor.dag_index;
       const targetSlot = targetWi * 5 + targetDagIndex;
       const delta = targetSlot - anchorSlot;
       if (delta === 0) return;
