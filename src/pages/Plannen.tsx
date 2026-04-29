@@ -1843,7 +1843,7 @@ const Plannen = () => {
       console.error(e);
       toast.error("PDF export mislukt");
     }
-  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs]);
+  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs, exportWeekIds, exportActiviteitIds]);
 
   /* ----------------------------- derived ----------------------------- */
   const monteurById = useMemo(() => {
