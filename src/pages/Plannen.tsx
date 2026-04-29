@@ -2704,6 +2704,7 @@ const CellBox = memo(function CellBox({
   ) => void;
   isSelected?: boolean;
   groupColorHex?: string | null;
+  groupIndex?: number | null;
   selectedCelIds: Set<string>;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
