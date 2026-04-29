@@ -280,6 +280,9 @@ const ProjectDossier = () => {
   const [msKabels, setMsKabels] = useState<KabelRow[]>([]);
   const [lsKabels, setLsKabels] = useState<KabelRow[]>([]);
   const [tekeningen, setTekeningen] = useState<TekeningRow[]>([]);
+  const [conceptCellen, setConceptCellen] = useState<ConceptCel[]>([]);
+  const [activiteitenMap, setActiviteitenMap] = useState<Map<string, string>>(new Map());
+  const [monteursMap, setMonteursMap] = useState<Map<string, string>>(new Map());
 
   const load = useCallback(async () => {
     if (!id) return;
