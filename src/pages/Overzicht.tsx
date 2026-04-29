@@ -1213,6 +1213,7 @@ export default function Overzicht() {
             monteurs={monteurs}
             celMonteurs={celMonteurs}
             jaar={jaar}
+            feestdagen={feestdagMap}
           />
           <div
             className="flex items-center gap-2"
