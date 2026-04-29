@@ -653,23 +653,55 @@ export default function Overzicht() {
     return m;
   }, [activiteiten]);
 
-  // Visible projects = projects with planning data anywhere (filled cellen),
-  // OR projects with project_weken in the visible range (being planned).
-  // This ensures projects don't disappear when scrolling outside their week range.
+  // Zichtbare datumrange (op basis van slots) voor GSU/GEU-fallback
+  const visibleDateRange = useMemo(() => {
+    let min: Date | null = null;
+    let max: Date | null = null;
+    for (const s of slots) {
+      for (const p of s.pairs) {
+        const monday = getMondayOfWeek(p.wnr, jaar);
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + p.dag);
+        if (!min || d < min) min = d;
+        if (!max || d > max) max = d;
+      }
+    }
+    return { min, max };
+  }, [slots, jaar]);
+
+  // Visible projects: toon ALLE projecten zodat niets stilletjes verdwijnt.
+  // Volgorde: (1) projecten met geplande cellen of project_weken in zicht,
+  // (2) projecten waarvan GSU/GEU binnen zichtbaar bereik valt,
+  // (3) overige projecten (bv. concept zonder planning) — onderaan.
   const visibleProjecten = useMemo(() => {
-    const projectsWithCellen = new Set<string>();
+    const planned = new Set<string>();
     for (const c of cellen) {
       if (!c.activiteit_id || !c.kleur_code) continue;
       const act = activiteitById.get(c.activiteit_id);
-      if (act?.project_id) projectsWithCellen.add(act.project_id);
+      if (act?.project_id) planned.add(act.project_id);
     }
     for (const w of weken) {
       if (w.project_id && visibleWeekNrSet.has(w.week_nr)) {
-        projectsWithCellen.add(w.project_id);
+        planned.add(w.project_id);
       }
     }
-    return projecten.filter((p) => projectsWithCellen.has(p.id));
-  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet]);
+    const inDateRange = (iso: string | null): boolean => {
+      if (!iso || !visibleDateRange.min || !visibleDateRange.max) return false;
+      const d = new Date(iso);
+      return d >= visibleDateRange.min && d <= visibleDateRange.max;
+    };
+    const tier = (p: Project): number => {
+      if (planned.has(p.id)) return 0;
+      if (inDateRange(p.gsu_datum) || inDateRange(p.geu_datum)) return 1;
+      return 2;
+    };
+    return [...projecten].sort((a, b) => {
+      const ta = tier(a);
+      const tb = tier(b);
+      if (ta !== tb) return ta - tb;
+      return 0;
+    });
+  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet, visibleDateRange]);
 
   const schakelMonteurs = useMemo(
     () => monteurs.filter((m) => m.type === "schakelmonteur"),
