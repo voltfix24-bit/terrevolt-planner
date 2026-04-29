@@ -4030,9 +4030,11 @@ function loadSheetJS(): Promise<any> {
   const w = window as unknown as { XLSX?: any };
   if (w.XLSX) return Promise.resolve(w.XLSX);
   if (sheetJsPromise) return sheetJsPromise;
+  // xlsx-js-style: drop-in vervanger van SheetJS met ondersteuning voor cell styling
+  // (kleuren, borders, fonts) — nodig voor de gekleurde planning-export.
   sheetJsPromise = new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+    s.src = "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js";
     s.onload = () => {
       const xw = window as unknown as { XLSX?: any };
       if (xw.XLSX) resolve(xw.XLSX);
