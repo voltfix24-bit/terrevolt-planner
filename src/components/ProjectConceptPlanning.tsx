@@ -45,6 +45,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
   const [cellen, setCellen] = useState<ConceptCel[]>([]);
   const [activiteiten, setActiviteiten] = useState<ProjectActiviteit[]>([]);
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
+  const [ploegen, setPloegen] = useState<import("@/lib/ploegen").Ploeg[]>([]);
   const [loading, setLoading] = useState(true);
   const [startWeek, setStartWeek] = useState<string>("");
   const [uitrollen, setUitrollen] = useState(false);
