@@ -757,13 +757,10 @@ const Plannen = () => {
   // (1 slot = 1 dag; een week = 5 slots). Alle cellen blijven binnen hun eigen
   // activiteit-rij; de delta wordt bepaald door de bron-cel die de gebruiker sleept
   // en de doel-(week, dag).
-  const moveCellsGroup = useCallback(
-    async (
-      sourceCelIds: string[],
-      anchorCelId: string,
-      targetWeekId: string,
-      targetDagIndex: number
-    ) => {
+  // Kern: verschuif een set cellen met een vaste delta in slots (1 dag = 1 slot, 1 week = 5 slots)
+  const moveCellsByDelta = useCallback(
+    async (sourceCelIds: string[], delta: number) => {
+      if (delta === 0 || sourceCelIds.length === 0) return;
       const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
       const totalSlots = weken.length * 5;
       const slotToWeekDag = (slot: number): { week_id: string; dag_index: number } | null => {
@@ -772,19 +769,6 @@ const Plannen = () => {
         return { week_id: weken[wi].id, dag_index: slot % 5 };
       };
 
-      let anchor: Cel | null = null;
-      cellen.forEach((c) => {
-        if (c.id === anchorCelId) anchor = c;
-      });
-      if (!anchor) return;
-      const a = anchor as Cel;
-      const anchorWi = weekIndexById.get(a.week_id);
-      const targetWi = weekIndexById.get(targetWeekId);
-      if (anchorWi == null || targetWi == null) return;
-      const anchorSlot = anchorWi * 5 + a.dag_index;
-      const targetSlot = targetWi * 5 + targetDagIndex;
-      const delta = targetSlot - anchorSlot;
-      if (delta === 0) return;
 
       // Verzamel alle bron-cellen
       const sources: Cel[] = [];
@@ -876,6 +860,40 @@ const Plannen = () => {
       }
     },
     [cellen, celMonteurs, weken, loadAll]
+  );
+
+  // Wrapper voor drag-and-drop: bepaalt delta op basis van anchor + doel-(week,dag)
+  const moveCellsGroup = useCallback(
+    async (
+      sourceCelIds: string[],
+      anchorCelId: string,
+      targetWeekId: string,
+      targetDagIndex: number
+    ) => {
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      let anchor: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === anchorCelId) anchor = c;
+      });
+      if (!anchor) return;
+      const a = anchor as Cel;
+      const anchorWi = weekIndexById.get(a.week_id);
+      const targetWi = weekIndexById.get(targetWeekId);
+      if (anchorWi == null || targetWi == null) return;
+      const delta = targetWi * 5 + targetDagIndex - (anchorWi * 5 + a.dag_index);
+      await moveCellsByDelta(sourceCelIds, delta);
+    },
+    [cellen, weken, moveCellsByDelta]
+  );
+
+  // Wrapper voor toolbar-knoppen: verschuif alle geselecteerde cellen met N slots
+  const shiftSelection = useCallback(
+    async (deltaSlots: number) => {
+      const ids = Array.from(selectedCelIds);
+      if (ids.length === 0) return;
+      await moveCellsByDelta(ids, deltaSlots);
+    },
+    [selectedCelIds, moveCellsByDelta]
   );
 
   /* ----------------------------- undo / history ----------------------------- */
@@ -1435,8 +1453,38 @@ const Plannen = () => {
             {selectedCelIds.size} cel{selectedCelIds.size === 1 ? "" : "len"} geselecteerd
           </span>
           <span className="text-[11px] text-muted-foreground">
-            Sleep een geselecteerde cel om alle samen te verplaatsen
+            Sleep een geselecteerde cel of gebruik de knoppen om als groep te verschuiven
           </span>
+          <div className="flex items-center gap-1 rounded-md border border-white/15 p-0.5">
+            <button
+              onClick={() => shiftSelection(-5)}
+              title="Verschuif 1 week terug"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              −1 wk
+            </button>
+            <button
+              onClick={() => shiftSelection(-1)}
+              title="Verschuif 1 dag terug"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              −1 dag
+            </button>
+            <button
+              onClick={() => shiftSelection(1)}
+              title="Verschuif 1 dag vooruit"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              +1 dag
+            </button>
+            <button
+              onClick={() => shiftSelection(5)}
+              title="Verschuif 1 week vooruit"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              +1 wk
+            </button>
+          </div>
           <button
             onClick={clearSelection}
             className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.08]"
