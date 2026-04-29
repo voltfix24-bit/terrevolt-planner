@@ -2348,7 +2348,9 @@ const GridRow = memo(function GridRow({
   onMoveCell,
   onMoveCellsGroup,
   selectedCelIds,
+  groupIndexByCelId,
   onToggleSelect,
+  onStartNewGroup,
 }: GridRowProps) {
   return (
     <div
