@@ -2211,17 +2211,152 @@ const Plannen = () => {
                 <ChevronDown className="h-3 w-3 opacity-70" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Download planning</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={exportExcel}>
-                <FileText className="mr-2 h-4 w-4" />
-                Excel (.xlsx)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportPDF}>
-                <Printer className="mr-2 h-4 w-4" />
-                PDF (print-klaar)
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-80 p-0">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+                <span className="text-sm font-semibold">Download planning</span>
+                {(exportWeekIds.size > 0 || exportActiviteitIds.size > 0) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setExportWeekIds(new Set());
+                      setExportActiviteitIds(new Set());
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                  >
+                    Wis filter
+                  </button>
+                )}
+              </div>
+
+              <div className="px-3 py-2 text-[11px] text-muted-foreground border-b border-border/60">
+                {exportWeekIds.size === 0 && exportActiviteitIds.size === 0
+                  ? "Volledige planning wordt gedownload. Selecteer hieronder om te beperken."
+                  : `Selectie: ${exportWeekIds.size === 0 ? "alle weken" : `${exportWeekIds.size} ${exportWeekIds.size === 1 ? "week" : "weken"}`} • ${exportActiviteitIds.size === 0 ? "alle activiteiten" : `${exportActiviteitIds.size} ${exportActiviteitIds.size === 1 ? "activiteit" : "activiteiten"}`}.`}
+              </div>
+
+              {/* Weken */}
+              <div className="px-3 py-2 border-b border-border/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weken</span>
+                  <div className="flex gap-2 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportWeekIds(new Set(weken.map((w) => w.id))); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Alle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportWeekIds(new Set()); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Geen
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-40 overflow-y-auto -mx-1 px-1">
+                  {weken.length === 0 ? (
+                    <div className="text-[11px] text-muted-foreground py-1">Geen weken</div>
+                  ) : (
+                    weken.map((w) => {
+                      const checked = exportWeekIds.size === 0 || exportWeekIds.has(w.id);
+                      return (
+                        <label
+                          key={w.id}
+                          className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setExportWeekIds((prev) => {
+                                // Eerste actie vanuit "alles" → start vanaf volledige set
+                                const base = prev.size === 0 ? new Set(weken.map((x) => x.id)) : new Set(prev);
+                                if (base.has(w.id)) base.delete(w.id);
+                                else base.add(w.id);
+                                // Als alles aan = leeg houden = "alles"
+                                if (base.size === weken.length) return new Set();
+                                return base;
+                              });
+                            }}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          <span>Week {w.week_nr}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Activiteiten */}
+              <div className="px-3 py-2 border-b border-border/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Activiteiten</span>
+                  <div className="flex gap-2 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportActiviteitIds(new Set(activiteiten.map((a) => a.id))); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Alle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportActiviteitIds(new Set()); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Geen
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-40 overflow-y-auto -mx-1 px-1">
+                  {activiteiten.length === 0 ? (
+                    <div className="text-[11px] text-muted-foreground py-1">Geen activiteiten</div>
+                  ) : (
+                    activiteiten.map((a) => {
+                      const checked = exportActiviteitIds.size === 0 || exportActiviteitIds.has(a.id);
+                      return (
+                        <label
+                          key={a.id}
+                          className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setExportActiviteitIds((prev) => {
+                                const base = prev.size === 0 ? new Set(activiteiten.map((x) => x.id)) : new Set(prev);
+                                if (base.has(a.id)) base.delete(a.id);
+                                else base.add(a.id);
+                                if (base.size === activiteiten.length) return new Set();
+                                return base;
+                              });
+                            }}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          <span className="truncate">{a.naam}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="p-1">
+                <DropdownMenuItem onClick={exportExcel}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportPDF}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  PDF (print-klaar)
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
           <button
