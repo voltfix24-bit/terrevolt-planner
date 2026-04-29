@@ -2332,19 +2332,56 @@ const CellBox = memo(function CellBox({
       ? `inset 0 0 0 2px ${highlightColor}, 0 0 12px ${highlightColor}80`
       : undefined;
 
+  // Drag-and-drop: gevulde cel = sleepbron; elke cel binnen dezelfde activiteit = doel.
+  const [isDragOver, setIsDragOver] = useState(false);
+  const draggable = filled && !!cel;
+
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
-      title={hoverTitle}
+      title={
+        draggable
+          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om naar een andere dag te verplaatsen`
+          : hoverTitle
+      }
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (!draggable || !cel) return;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("application/x-plannen-cel", cel.id);
+        e.dataTransfer.setData("application/x-plannen-activiteit", activiteit.id);
+      }}
+      onDragOver={(e) => {
+        const sourceAct = e.dataTransfer.types.includes("application/x-plannen-activiteit");
+        if (!sourceAct) return;
+        // We laten de drop alleen toe binnen dezelfde activiteit-rij. Omdat we tijdens
+        // dragOver de payload niet mogen lezen, accepteren we hier altijd en valideren in onDrop.
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (!isDragOver) setIsDragOver(true);
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const sourceCelId = e.dataTransfer.getData("application/x-plannen-cel");
+        const sourceActId = e.dataTransfer.getData("application/x-plannen-activiteit");
+        if (!sourceCelId || sourceActId !== activiteit.id) return;
+        if (cel && cel.id === sourceCelId) return;
+        onMoveCell(sourceCelId, weekId, dagIndex);
+      }}
       className={[
         "group relative shrink-0 transition-all",
         showHoverPlus ? "hover:bg-white/[0.03]" : "",
+        draggable ? "cursor-grab active:cursor-grabbing" : "",
       ].join(" ")}
       style={{
         width: CELL_W,
         height: CELL_H,
-        backgroundColor: filled
+        backgroundColor: isDragOver
+          ? "rgba(63,255,139,0.18)"
+          : filled
           ? hexToRgba(kleur!, isHighlighted ? 0.55 : 0.35)
           : isCurrentWeek
           ? "rgba(63,255,139,0.02)"
@@ -2355,8 +2392,12 @@ const CellBox = memo(function CellBox({
         borderLeft: filled
           ? `3px solid ${kleur}`
           : "1px solid rgba(255,255,255,0.06)",
-        outline: filled && !voldoet ? "2px solid #feb300" : undefined,
-        outlineOffset: filled && !voldoet ? "-2px" : undefined,
+        outline: isDragOver
+          ? "2px dashed rgba(63,255,139,0.9)"
+          : filled && !voldoet
+          ? "2px solid #feb300"
+          : undefined,
+        outlineOffset: isDragOver || (filled && !voldoet) ? "-2px" : undefined,
         boxShadow: highlightShadow,
         opacity: isDimmed && filled ? 0.35 : 1,
         zIndex: isHighlighted ? 2 : undefined,
