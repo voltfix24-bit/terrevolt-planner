@@ -960,25 +960,36 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {([2, 4, 8] as const).map((n) => {
-              const active = numWeeks === n;
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setNumWeeks(n)}
-                  className={[
-                    "rounded-md px-3 py-1.5 text-xs font-display font-semibold transition-all",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
-                  ].join(" ")}
-                >
-                  {n} weken
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {([2, 4, 8] as const).map((n) => {
+                const active = numWeeks === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNumWeeks(n)}
+                    className={[
+                      "rounded-md px-3 py-1.5 text-xs font-display font-semibold transition-all",
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    {n} weken
+                  </button>
+                );
+              })}
+            </div>
+            <CapaciteitDownloadMenu
+              monteurs={monteurs}
+              visibleWeeks={visibleWeeks}
+              visibleDays={visibleDays}
+              planMap={planMap}
+              projects={projects}
+              startWeek={startWeek}
+              numWeeks={numWeeks}
+            />
           </div>
         </div>
 
