@@ -243,6 +243,29 @@ const Pill: React.FC<{
 };
 
 // =====================================================
+// Generate signed image URLs for tekeningen so the print/PDF
+// popup can embed the actual drawing under the right header.
+// PDFs are skipped (kept as table row only).
+// =====================================================
+async function enrichTekeningenWithPreview(items: TekeningRow[]): Promise<TekeningRow[]> {
+  const enriched = await Promise.all(
+    items.map(async (t) => {
+      const mime = (t.mime_type ?? "").toLowerCase();
+      const isImage =
+        mime.startsWith("image/") ||
+        /\.(png|jpe?g|webp|gif|svg)$/i.test(t.bestandsnaam ?? "");
+      if (!isImage) return t;
+      const { data, error } = await supabase.storage
+        .from("project-tekeningen")
+        .createSignedUrl(t.storage_path, 60 * 30);
+      if (error || !data?.signedUrl) return t;
+      return { ...t, previewUrl: data.signedUrl };
+    }),
+  );
+  return enriched;
+}
+
+// =====================================================
 // Page
 // =====================================================
 const ProjectDossier = () => {
