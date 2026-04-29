@@ -59,6 +59,15 @@ export interface GanttExportInput {
   monteurs: GanttMonteur[];
   cellen: GanttCel[];
   monteurWeergave: GanttMonteurWeergave;
+  /** Map van YYYY-MM-DD → feestdag-naam. Optioneel. */
+  feestdagen?: Map<string, string>;
+}
+
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 const escHtml = (s: string): string =>
