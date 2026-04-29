@@ -479,6 +479,8 @@ const Capaciteit = () => {
         </div>
       )}
 
+      {tab === "ploegen" && <PloegenView monteurs={monteurs} />}
+
       {tab === "tijdlijn" && (
         <TijdlijnView monteurs={monteurs.filter((m) => m.actief)} />
       )}
