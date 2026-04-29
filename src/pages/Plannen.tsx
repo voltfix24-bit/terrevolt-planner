@@ -5,8 +5,6 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
-  Download,
-  FileText,
   GripVertical,
   History,
   Pencil,
