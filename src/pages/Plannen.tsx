@@ -2638,8 +2638,15 @@ const CellBox = memo(function CellBox({
   return (
     <button
       onClick={(e) => {
-        // Ctrl/Cmd of Shift-klik op een gevulde cel = (de)selecteren voor groep-verplaatsen
-        if ((e.ctrlKey || e.metaKey || e.shiftKey) && draggable && cel) {
+        // Shift-klik op gevulde cel = start nieuwe selectiegroep
+        if (e.shiftKey && draggable && cel) {
+          e.preventDefault();
+          e.stopPropagation();
+          onStartNewGroup(cel.id);
+          return;
+        }
+        // Ctrl/Cmd-klik = toggle in actieve groep
+        if ((e.ctrlKey || e.metaKey) && draggable && cel) {
           e.preventDefault();
           e.stopPropagation();
           onToggleSelect(cel.id);
@@ -2650,7 +2657,7 @@ const CellBox = memo(function CellBox({
       onContextMenu={onContextMenu}
       title={
         draggable
-          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om te verplaatsen. Ctrl/Shift-klik om meerdere cellen te selecteren en samen te slepen.`
+          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om te verplaatsen. Ctrl/Cmd-klik = aan actieve groep toevoegen. Shift-klik = nieuwe groep starten.`
           : hoverTitle
       }
       draggable={draggable}
