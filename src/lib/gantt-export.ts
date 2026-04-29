@@ -240,16 +240,17 @@ export function exportGanttPDF(input: GanttExportInput): void {
     });
   }
 
-  // Legend — vereenvoudigd: 3 categorieën
-  const legendItems: Array<{ hex: string; naam: string }> = [
+  // Legend — vereenvoudigd: 3 categorieën + feestdag indicator
+  const legendItems: Array<{ hex: string; naam: string; pattern?: boolean }> = [
     { hex: "#1d4ed8", naam: "Montage" },
     { hex: "#fdcb35", naam: "Schakelen" },
     { hex: "#65a30d", naam: "Diverse" },
+    { hex: "#94a3b8", naam: "Feestdag / vrije dag", pattern: true },
   ];
   const legend = legendItems
     .map(
       (c) =>
-        `<div class="lg-item"><span class="lg-dot" style="background:${c.hex}"></span>${escHtml(c.naam)}</div>`,
+        `<div class="lg-item"><span class="lg-dot${c.pattern ? " lg-dot-feest" : ""}" style="background:${c.hex}"></span>${escHtml(c.naam)}</div>`,
     )
     .join("");
 
