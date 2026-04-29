@@ -2073,6 +2073,7 @@ const GridRow = memo(function GridRow({
   currentWeekTooltip,
   onClick,
   onRightClick,
+  onMoveCell,
 }: GridRowProps) {
   return (
     <div
