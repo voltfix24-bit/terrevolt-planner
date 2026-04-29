@@ -887,6 +887,9 @@ export default function Overzicht() {
   const navigateToProject = (id: string) => {
     navigate(`/plannen?project=${id}`);
   };
+  const navigateToProjectConcept = (id: string) => {
+    navigate(`/projecten/${id}#concept-planning`);
+  };
 
   // ====== Monteur segments (consecutive slots same project) ======
   type MonteurSeg = { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean };
