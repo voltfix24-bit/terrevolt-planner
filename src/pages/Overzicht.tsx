@@ -2003,6 +2003,7 @@ export default function Overzicht() {
                     scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
+                    onConceptClick={navigateToProjectConcept}
                   />
                 ))}
               </div>
