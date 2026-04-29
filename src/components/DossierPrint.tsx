@@ -104,6 +104,9 @@ const DossierPrint: React.FC<DossierPrintProps> = (props) => {
     samenvatting,
     periodeLabel,
     periodeDuur,
+    conceptCellen = [],
+    activiteitenMap,
+    monteursMap,
   } = props;
 
   const get = <T,>(k: string): T | undefined => project?.[k] as T | undefined;
