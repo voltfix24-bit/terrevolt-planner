@@ -2504,19 +2504,37 @@ const CellBox = memo(function CellBox({
 
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => {
+        // Ctrl/Cmd of Shift-klik op een gevulde cel = (de)selecteren voor groep-verplaatsen
+        if ((e.ctrlKey || e.metaKey || e.shiftKey) && draggable && cel) {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleSelect(cel.id);
+          return;
+        }
+        onClick();
+      }}
       onContextMenu={onContextMenu}
       title={
         draggable
-          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om naar een andere dag te verplaatsen`
+          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om te verplaatsen. Ctrl/Shift-klik om meerdere cellen te selecteren en samen te slepen.`
           : hoverTitle
       }
       draggable={draggable}
       onDragStart={(e) => {
         if (!draggable || !cel) return;
         e.dataTransfer.effectAllowed = "move";
+        // Als de gesleepte cel onderdeel is van de selectie, sleep de hele groep mee.
+        // Anders: sleep alleen deze cel (en wis de selectie niet — de gebruiker mag selectie houden).
+        const groupIds = selectedCelIds.has(cel.id)
+          ? Array.from(selectedCelIds)
+          : [cel.id];
         e.dataTransfer.setData("application/x-plannen-cel", cel.id);
         e.dataTransfer.setData("application/x-plannen-activiteit", activiteit.id);
+        e.dataTransfer.setData(
+          "application/x-plannen-cel-group",
+          JSON.stringify(groupIds)
+        );
       }}
       onDragOver={(e) => {
         const sourceAct = e.dataTransfer.types.includes("application/x-plannen-activiteit");
@@ -2533,9 +2551,25 @@ const CellBox = memo(function CellBox({
         setIsDragOver(false);
         const sourceCelId = e.dataTransfer.getData("application/x-plannen-cel");
         const sourceActId = e.dataTransfer.getData("application/x-plannen-activiteit");
+        const groupRaw = e.dataTransfer.getData("application/x-plannen-cel-group");
         if (!sourceCelId || sourceActId !== activiteit.id) return;
         if (cel && cel.id === sourceCelId) return;
-        onMoveCell(sourceCelId, weekId, dagIndex);
+        let groupIds: string[] = [sourceCelId];
+        if (groupRaw) {
+          try {
+            const parsed = JSON.parse(groupRaw);
+            if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
+              groupIds = parsed;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        if (groupIds.length > 1) {
+          onMoveCellsGroup(groupIds, sourceCelId, weekId, dagIndex);
+        } else {
+          onMoveCell(sourceCelId, weekId, dagIndex);
+        }
       }}
       className={[
         "group relative shrink-0 transition-all",
@@ -2548,7 +2582,7 @@ const CellBox = memo(function CellBox({
         backgroundColor: isDragOver
           ? "rgba(63,255,139,0.18)"
           : filled
-          ? hexToRgba(kleur!, isHighlighted ? 0.55 : 0.35)
+          ? hexToRgba(kleur!, isHighlighted || isSelected ? 0.55 : 0.35)
           : isCurrentWeek
           ? "rgba(63,255,139,0.02)"
           : "transparent",
