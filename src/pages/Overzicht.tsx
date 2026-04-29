@@ -2837,6 +2837,7 @@ function GanttPrintMenu({
         monteurs: ganttMonteurs,
         cellen: ganttCellen,
         monteurWeergave,
+        feestdagen,
       });
       setOpen(false);
     } catch (e) {
