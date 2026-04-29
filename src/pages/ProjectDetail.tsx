@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProjectTekeningen } from "@/components/ProjectTekeningen";
+import { ProjectConceptPlanning } from "@/components/ProjectConceptPlanning";
 
 // =====================================================
 // Types
