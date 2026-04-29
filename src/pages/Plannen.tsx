@@ -2566,6 +2566,7 @@ const GridRow = memo(function GridRow({
               onMoveCellsGroup={onMoveCellsGroup}
               isSelected={!!cel && selectedCelIds.has(cel.id)}
               groupColorHex={cel ? (groupIndexByCelId.has(cel.id) ? groupColor(groupIndexByCelId.get(cel.id)!) : null) : null}
+              groupIndex={cel ? groupIndexByCelId.get(cel.id) ?? null : null}
               selectedCelIds={selectedCelIds}
               onToggleSelect={onToggleSelect}
               onStartNewGroup={onStartNewGroup}
@@ -2671,6 +2672,7 @@ const CellBox = memo(function CellBox({
   onMoveCellsGroup,
   isSelected = false,
   groupColorHex = null,
+  groupIndex = null,
   selectedCelIds,
   onToggleSelect,
   onStartNewGroup,
@@ -2702,6 +2704,7 @@ const CellBox = memo(function CellBox({
   ) => void;
   isSelected?: boolean;
   groupColorHex?: string | null;
+  groupIndex?: number | null;
   selectedCelIds: Set<string>;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
@@ -2940,16 +2943,16 @@ const CellBox = memo(function CellBox({
           : inFillRange
           ? "1px dashed rgba(63,255,139,0.85)"
           : isSelected
-          ? `2px dashed ${groupColorHex ?? "#38bdf8"}`
+          ? `3px solid ${groupColorHex ?? "#38bdf8"}`
           : filled && !voldoet
           ? "2px solid #feb300"
           : undefined,
         outlineOffset:
           isDragOver || inFillRange || isSelected || (filled && !voldoet)
-            ? "-2px"
+            ? "-3px"
             : undefined,
         boxShadow: isSelected
-          ? `inset 0 0 0 2px ${groupColorHex ?? "#38bdf8"}, 0 0 10px ${(groupColorHex ?? "#38bdf8")}80${
+          ? `inset 0 0 0 3px ${groupColorHex ?? "#38bdf8"}, inset 0 0 0 6px ${hexToRgba(groupColorHex ?? "#38bdf8", 0.25)}, 0 0 0 1px ${hexToRgba(groupColorHex ?? "#38bdf8", 0.6)}, 0 0 18px ${hexToRgba(groupColorHex ?? "#38bdf8", 0.7)}${
               highlightShadow ? `, ${highlightShadow}` : ""
             }`
           : highlightShadow,
@@ -2992,6 +2995,37 @@ const CellBox = memo(function CellBox({
           style={{ color: "rgba(255,255,255,0.2)" }}
         >
           +
+        </span>
+      )}
+      {isSelected && groupColorHex && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `linear-gradient(135deg, ${hexToRgba(groupColorHex, 0.32)}, ${hexToRgba(groupColorHex, 0.12)})`,
+            mixBlendMode: "screen",
+          }}
+        />
+      )}
+      {isSelected && groupColorHex && groupIndex != null && (
+        <span
+          className="pointer-events-none absolute flex items-center justify-center font-bold"
+          style={{
+            top: -7,
+            left: -7,
+            width: 16,
+            height: 16,
+            borderRadius: "50%",
+            backgroundColor: groupColorHex,
+            color: "#0a1a30",
+            fontSize: 9,
+            border: "1.5px solid rgba(0,0,0,0.55)",
+            boxShadow: `0 0 6px ${hexToRgba(groupColorHex, 0.9)}`,
+            zIndex: 6,
+            lineHeight: 1,
+          }}
+        >
+          {groupIndex + 1}
         </span>
       )}
       {!voldoet && cel && (
