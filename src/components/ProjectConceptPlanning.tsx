@@ -687,6 +687,24 @@ const ConceptCelRow: React.FC<{
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
+      {eligiblePloegen.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 pl-7">
+          <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">
+            Ploeg:
+          </span>
+          {eligiblePloegen.map(({ ploeg, toAdd }) => (
+            <button
+              key={ploeg.id}
+              type="button"
+              onClick={() => toAdd.forEach((id) => onToggleMonteur(id))}
+              className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] text-foreground transition-colors hover:bg-primary/20"
+              title={`Voeg ploeg "${ploeg.naam}" toe (${toAdd.length} monteur${toAdd.length === 1 ? "" : "s"})`}
+            >
+              + {ploeg.naam} ({toAdd.length})
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap gap-1 pl-7">
         {monteurs.map((m) => {
           const active = cel.monteur_ids.includes(m.id);
