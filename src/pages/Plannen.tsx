@@ -2937,13 +2937,17 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
         outline: isDragOver
           ? "2px dashed rgba(63,255,139,0.9)"
+          : inFillRange
+          ? "1px dashed rgba(63,255,139,0.85)"
           : isSelected
           ? `2px dashed ${groupColorHex ?? "#38bdf8"}`
           : filled && !voldoet
           ? "2px solid #feb300"
           : undefined,
         outlineOffset:
-          isDragOver || isSelected || (filled && !voldoet) ? "-2px" : undefined,
+          isDragOver || inFillRange || isSelected || (filled && !voldoet)
+            ? "-2px"
+            : undefined,
         boxShadow: isSelected
           ? `inset 0 0 0 2px ${groupColorHex ?? "#38bdf8"}, 0 0 10px ${(groupColorHex ?? "#38bdf8")}80${
               highlightShadow ? `, ${highlightShadow}` : ""
