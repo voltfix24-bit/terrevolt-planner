@@ -239,18 +239,59 @@ const Plannen = () => {
   // null => geen highlight actief.
   const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
 
-  // Multi-select voor groep-verplaatsen via drag-and-drop.
-  // Houdt de id's bij van planning_cellen die de gebruiker met Ctrl/Cmd of Shift heeft aangeklikt.
-  const [selectedCelIds, setSelectedCelIds] = useState<Set<string>>(new Set());
-  const clearSelection = useCallback(() => setSelectedCelIds(new Set()), []);
+  // Multi-select voor groep-verplaatsen. Meerdere onafhankelijke groepen mogelijk:
+  // - Ctrl/Cmd-klik op gevulde cel  -> toggle in de actieve (laatste) groep
+  // - Shift-klik op gevulde cel     -> sluit huidige groep af en start een nieuwe groep
+  // Drag-and-drop verplaatst alle groepen tegelijk met dezelfde delta;
+  // toolbar-knoppen werken per groep apart zodat groepen onafhankelijk kunnen verschuiven.
+  const [selectedGroups, setSelectedGroups] = useState<string[][]>([]);
+  const clearSelection = useCallback(() => setSelectedGroups([]), []);
+
+  // Set met alle geselecteerde cel-ids over alle groepen heen — handig voor lookups
+  const selectedCelIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const g of selectedGroups) for (const id of g) s.add(id);
+    return s;
+  }, [selectedGroups]);
+
+  // Map: cel-id -> groep-index (0-based). Voor kleur/ring per cel.
+  const groupIndexByCelId = useMemo(() => {
+    const m = new Map<string, number>();
+    selectedGroups.forEach((g, i) => g.forEach((id) => m.set(id, i)));
+    return m;
+  }, [selectedGroups]);
+
+  // Voeg toe aan actieve groep (Ctrl/Cmd-klik). Verwijdert uit andere groepen indien nodig.
+  // Als de cel al in de actieve groep zit -> verwijderen. Als geen groep bestaat -> nieuwe.
   const toggleCellSelection = useCallback((celId: string) => {
-    setSelectedCelIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(celId)) next.delete(celId);
-      else next.add(celId);
-      return next;
+    setSelectedGroups((prev) => {
+      if (prev.length === 0) return [[celId]];
+      // Verwijder uit alle bestaande groepen om dubbele te voorkomen
+      const cleaned = prev.map((g) => g.filter((id) => id !== celId));
+      const wasInActive = prev[prev.length - 1].includes(celId);
+      if (wasInActive) {
+        // Toggle off
+        return cleaned.filter((g) => g.length > 0);
+      }
+      // Voeg toe aan actieve (laatste) groep
+      const next = cleaned.map((g, i) => (i === cleaned.length - 1 ? [...g, celId] : g));
+      return next.filter((g) => g.length > 0);
     });
   }, []);
+
+  // Shift-klik: start nieuwe groep met deze cel (verwijdert hem uit andere groepen).
+  const startNewGroupWithCell = useCallback((celId: string) => {
+    setSelectedGroups((prev) => {
+      const cleaned = prev.map((g) => g.filter((id) => id !== celId)).filter((g) => g.length > 0);
+      return [...cleaned, [celId]];
+    });
+  }, []);
+
+  // Verwijder één groep
+  const removeGroup = useCallback((idx: number) => {
+    setSelectedGroups((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
 
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
