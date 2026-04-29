@@ -2594,13 +2594,20 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
         outline: isDragOver
           ? "2px dashed rgba(63,255,139,0.9)"
+          : isSelected
+          ? "2px dashed #38bdf8"
           : filled && !voldoet
           ? "2px solid #feb300"
           : undefined,
-        outlineOffset: isDragOver || (filled && !voldoet) ? "-2px" : undefined,
-        boxShadow: highlightShadow,
+        outlineOffset:
+          isDragOver || isSelected || (filled && !voldoet) ? "-2px" : undefined,
+        boxShadow: isSelected
+          ? `inset 0 0 0 2px #38bdf8, 0 0 10px rgba(56,189,248,0.5)${
+              highlightShadow ? `, ${highlightShadow}` : ""
+            }`
+          : highlightShadow,
         opacity: isDimmed && filled ? 0.35 : 1,
-        zIndex: isHighlighted ? 2 : undefined,
+        zIndex: isHighlighted || isSelected ? 2 : undefined,
       }}
     >
       {showAvatars && (
