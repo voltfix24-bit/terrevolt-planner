@@ -2830,6 +2830,9 @@ const Plannen = () => {
                 ) ?? null
               : null
           }
+          projectJaar={project?.jaar ?? new Date().getFullYear()}
+          afwezigheid={afwezigheid}
+          feestdagenMap={feestdagenMap}
           onColorChange={(c) => updateCellColor(openCel.cel, c)}
           onNotitieChange={(n) => updateCellNotitie(openCel.cel, n)}
           onAddMonteur={(id) => addMonteurToCell(openCel.cel, id)}
