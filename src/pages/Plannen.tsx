@@ -2633,6 +2633,67 @@ const GridRow = memo(function GridRow({
   );
 });
 
+const GroupNameEditor = ({
+  naam,
+  color,
+  onSave,
+}: {
+  naam: string;
+  color: string;
+  onSave: (v: string) => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(naam);
+  useEffect(() => {
+    if (!editing) setVal(naam);
+  }, [naam, editing]);
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={() => {
+          onSave(val);
+          setEditing(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            onSave(val);
+            setEditing(false);
+          } else if (e.key === "Escape") {
+            setVal(naam);
+            setEditing(false);
+          }
+          e.stopPropagation();
+        }}
+        maxLength={40}
+        className="h-6 w-32 rounded border bg-transparent px-1.5 font-display text-xs font-semibold focus:outline-none"
+        style={{ color, borderColor: color }}
+      />
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span
+        className="font-display text-xs font-semibold"
+        style={{ color }}
+        title="Klik op het potlood om te hernoemen"
+      >
+        {naam}
+      </span>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        title="Hernoem groep"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+      >
+        <Pencil className="h-3 w-3" />
+      </button>
+    </span>
+  );
+};
+
 const MonteurAvatar = ({
   naam,
   type,
