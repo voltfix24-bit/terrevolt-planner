@@ -60,7 +60,7 @@ export interface DossierPrintProps {
   periodeDuur: number | null;
   conceptCellen?: DossierConceptCel[];
   activiteitenMap?: Map<string, string>;
-  monteursMap?: Map<string, string>;
+  monteursMap?: Map<string, { naam: string; type: string }>;
 }
 
 // =====================================================
