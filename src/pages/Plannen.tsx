@@ -1478,9 +1478,12 @@ const Plannen = () => {
       });
       aoa.push(opmRow);
 
-      // Ingeplande monteurs sectie
+      // Ingeplande monteurs sectie — alleen voor de geselecteerde scope
+      const expWeekIdSet = new Set(expWeken.map((w) => w.id));
+      const expActIdSet = new Set(expActiviteiten.map((a) => a.id));
       const ingeplandeIds = new Set<string>();
       for (const cel of cellen.values()) {
+        if (!expWeekIdSet.has(cel.week_id) || !expActIdSet.has(cel.activiteit_id)) continue;
         const ids = celMonteurs.get(cel.id);
         if (!ids) continue;
         for (const id of ids) ingeplandeIds.add(id);
