@@ -3758,7 +3758,7 @@ const aanwijzingPillStyle = (a: Aanwijzing): React.CSSProperties => {
 const rankAanwijzing = (a: Aanwijzing | null): number =>
   a === "AVP" ? 3 : a === "VP" ? 2 : a === "VOP" ? 1 : 0;
 
-
+export default Plannen;
 
 /* ----------------------------- History Panel ----------------------------- */
 
