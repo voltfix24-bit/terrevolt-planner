@@ -327,6 +327,30 @@ export function exportGanttPDF(input: GanttExportInput): void {
     background: #f8fafc;
   }
 
+  /* Feestdag / vrije dag — diagonale grijze streep over hele kolom */
+  thead th.dag.feestdag-h {
+    background: repeating-linear-gradient(
+      45deg, #e2e8f0, #e2e8f0 3px, #f1f5f9 3px, #f1f5f9 6px
+    );
+  }
+  thead th.dag .dag-feest {
+    font-size: 7px; font-weight: 700; color: #475569;
+    margin-top: 1px; line-height: 1; letter-spacing: 0.02em;
+  }
+  td.cell.feestdag {
+    background-image: repeating-linear-gradient(
+      45deg, rgba(100,116,139,0.18), rgba(100,116,139,0.18) 3px,
+      rgba(148,163,184,0.10) 3px, rgba(148,163,184,0.10) 6px
+    );
+  }
+  /* Wanneer er ook een gevulde activiteit op een feestdag staat: stripes bovenop kleur */
+  td.cell.filled.feestdag {
+    background-image: repeating-linear-gradient(
+      45deg, rgba(0,0,0,0.18), rgba(0,0,0,0.18) 3px,
+      rgba(0,0,0,0) 3px, rgba(0,0,0,0) 6px
+    );
+  }
+
   .legend {
     margin: 12px auto 0 auto;
     width: ${sheetW}px;
@@ -337,6 +361,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   .lg-item { display: inline-flex; align-items: center; gap: 4px; }
   .lg-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.15); display: inline-block; }
+  .lg-dot-feest {
+    background-image: repeating-linear-gradient(
+      45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
+    ) !important;
+  }
 
   .toolbar {
     position: sticky; top: 0; z-index: 10;
