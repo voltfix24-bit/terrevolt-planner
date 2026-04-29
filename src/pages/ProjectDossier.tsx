@@ -468,8 +468,9 @@ const ProjectDossier = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={async () => {
               try {
+                const tekeningenWithPreview = await enrichTekeningenWithPreview(tekeningen);
                 printDossierInPopup(
                   {
                     project,
@@ -477,7 +478,7 @@ const ProjectDossier = () => {
                     perceelNaam,
                     msKabels,
                     lsKabels,
-                    tekeningen,
+                    tekeningen: tekeningenWithPreview,
                     criticals,
                     samenvatting,
                     periodeLabel,
@@ -495,8 +496,9 @@ const ProjectDossier = () => {
           </Button>
           <Button
             size="sm"
-            onClick={() => {
+            onClick={async () => {
               try {
+                const tekeningenWithPreview = await enrichTekeningenWithPreview(tekeningen);
                 printDossierInPopup(
                   {
                     project,
@@ -504,7 +506,7 @@ const ProjectDossier = () => {
                     perceelNaam,
                     msKabels,
                     lsKabels,
-                    tekeningen,
+                    tekeningen: tekeningenWithPreview,
                     criticals,
                     samenvatting,
                     periodeLabel,
