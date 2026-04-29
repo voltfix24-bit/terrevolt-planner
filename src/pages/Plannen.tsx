@@ -1572,6 +1572,8 @@ const Plannen = () => {
             const isSchakel = m.type === "schakelmonteur";
             const avatarBg = isSchakel ? "#feb300" : "#378add";
             const avatarColor = isSchakel ? "#0a1a30" : "#ffffff";
+            const isConcept = project?.status === "concept";
+            const accent = isSchakel ? "254,179,0" : "55,138,221";
             const ms = m.aanwijzing_ms;
             let msStyle: React.CSSProperties | null = null;
             if (ms === "AVP") msStyle = { backgroundColor: "#3fff8b", color: "#0a1a30" };
@@ -1581,15 +1583,21 @@ const Plannen = () => {
             return (
               <div
                 key={m.id}
+                title={isConcept ? `${m.naam} — concept-reservering` : m.naam}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: isConcept
+                    ? `rgba(${accent},0.06)`
+                    : "rgba(255,255,255,0.04)",
+                  border: isConcept
+                    ? `1.5px dashed rgba(${accent},0.7)`
+                    : "1px solid rgba(255,255,255,0.08)",
                   borderRadius: 8,
                   padding: "4px 10px 4px 4px",
                   cursor: "default",
+                  position: "relative",
                 }}
               >
                 <span
@@ -1598,8 +1606,11 @@ const Plannen = () => {
                     width: 24,
                     height: 24,
                     borderRadius: "50%",
-                    background: avatarBg,
-                    color: avatarColor,
+                    background: isConcept ? "transparent" : avatarBg,
+                    color: isConcept ? avatarBg : avatarColor,
+                    border: isConcept
+                      ? `1.5px dashed ${avatarBg}`
+                      : "none",
                     fontSize: 8,
                     fontWeight: 700,
                     display: "inline-flex",
@@ -1612,10 +1623,31 @@ const Plannen = () => {
                 </span>
                 <span
                   className="font-display"
-                  style={{ fontSize: 12, fontWeight: 600, color: "#ffffff" }}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: isConcept ? avatarBg : "#ffffff",
+                  }}
                 >
                   {m.naam}
                 </span>
+                {isConcept && (
+                  <span
+                    className="font-display"
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      padding: "1px 5px",
+                      borderRadius: 3,
+                      border: `1px dashed rgba(${accent},0.6)`,
+                      color: avatarBg,
+                    }}
+                  >
+                    Concept
+                  </span>
+                )}
                 {ms && msStyle && (
                   <span
                     className="font-display"
