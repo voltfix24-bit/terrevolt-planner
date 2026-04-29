@@ -1686,6 +1686,9 @@ const Plannen = () => {
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
                       onMoveCell={moveCell}
+                      onMoveCellsGroup={moveCellsGroup}
+                      selectedCelIds={selectedCelIds}
+                      onToggleSelect={toggleCellSelection}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
