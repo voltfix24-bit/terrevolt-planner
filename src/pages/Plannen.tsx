@@ -931,6 +931,126 @@ const Plannen = () => {
     [cellen, weken, moveCellsByDelta]
   );
 
+  // Excel-style fill handle: kopieer kleur + notitie + monteurs van bron-cel naar
+  // alle dagen tussen bron en doel binnen DEZELFDE activiteit-rij. Bestaande inhoud
+  // op tussenliggende dagen wordt na bevestiging overschreven.
+  const fillCellRange = useCallback(
+    async (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => {
+      let sourceCel: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === sourceCelId) sourceCel = c;
+      });
+      if (!sourceCel) return;
+      const src = sourceCel as Cel;
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      const srcWi = weekIndexById.get(src.week_id);
+      const tgtWi = weekIndexById.get(targetWeekId);
+      if (srcWi == null || tgtWi == null) return;
+      const srcSlot = srcWi * 5 + src.dag_index;
+      const tgtSlot = tgtWi * 5 + targetDagIndex;
+      if (srcSlot === tgtSlot) return;
+
+      const step = tgtSlot > srcSlot ? 1 : -1;
+      const targetSlots: number[] = [];
+      for (let s = srcSlot + step; step > 0 ? s <= tgtSlot : s >= tgtSlot; s += step) {
+        targetSlots.push(s);
+      }
+
+      // Map slot -> {weekId, dagIndex}
+      const slotToCoord = (slot: number): { weekId: string; dagIndex: number } | null => {
+        const wi = Math.floor(slot / 5);
+        const di = slot % 5;
+        const w = weken[wi];
+        if (!w) return null;
+        return { weekId: w.id, dagIndex: di };
+      };
+
+      // Detecteer conflicten (al gevulde doel-cellen, exclusief bron)
+      const conflicts: Cel[] = [];
+      for (const s of targetSlots) {
+        const coord = slotToCoord(s);
+        if (!coord) continue;
+        const existing = cellen.get(cellKey(src.activiteit_id, coord.weekId, coord.dagIndex));
+        if (!existing) continue;
+        const ms = celMonteurs.get(existing.id) ?? [];
+        const heeftInhoud = !!existing.kleur_code || ms.length > 0 || !!existing.notitie;
+        if (heeftInhoud) conflicts.push(existing);
+      }
+      if (conflicts.length > 0) {
+        const ok = window.confirm(
+          `${conflicts.length} doel-${conflicts.length === 1 ? "dag is" : "dagen zijn"} al gevuld. Wil je de bestaande inhoud overschrijven?`
+        );
+        if (!ok) return;
+      }
+
+      // Verwijder conflict-cellen
+      for (const c of conflicts) {
+        await supabase.from("cel_monteurs").delete().eq("cel_id", c.id);
+        await supabase.from("planning_cellen").delete().eq("id", c.id);
+      }
+      setCellen((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) {
+          m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+        }
+        return m;
+      });
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) m.delete(c.id);
+        return m;
+      });
+
+      const srcMonteurs = celMonteurs.get(src.id) ?? [];
+
+      // Maak voor elk doel-slot een nieuwe cel met dezelfde kleur/notitie/monteurs
+      for (const s of targetSlots) {
+        const coord = slotToCoord(s);
+        if (!coord) continue;
+        const { data, error } = await supabase
+          .from("planning_cellen")
+          .insert({
+            activiteit_id: src.activiteit_id,
+            week_id: coord.weekId,
+            dag_index: coord.dagIndex,
+            kleur_code: src.kleur_code,
+            notitie: src.notitie,
+            capaciteit: src.capaciteit,
+          })
+          .select()
+          .single();
+        if (error || !data) {
+          toast.error("Doortrekken mislukt");
+          loadAll();
+          return;
+        }
+        const newCel = data as Cel;
+        updateCellLocal(newCel);
+        if (srcMonteurs.length > 0) {
+          const { error: mErr } = await supabase
+            .from("cel_monteurs")
+            .insert(srcMonteurs.map((mid) => ({ cel_id: newCel.id, monteur_id: mid })));
+          if (!mErr) {
+            setCelMonteurs((prev) => {
+              const m = new Map(prev);
+              m.set(newCel.id, [...srcMonteurs]);
+              return m;
+            });
+          }
+        }
+      }
+    },
+    [cellen, celMonteurs, weken, updateCellLocal, loadAll]
+  );
+
+  // Live preview-state tijdens slepen van fill-handle (gedeeld met cellen voor highlight)
+  const [fillState, setFillState] = useState<{
+    activiteitId: string;
+    sourceCelId: string;
+    sourceSlot: number;
+    currentSlot: number;
+  } | null>(null);
+
   // Wrapper voor toolbar-knoppen: verschuif één specifieke groep met N slots
   const shiftGroup = useCallback(
     async (groupIdx: number, deltaSlots: number) => {
@@ -1835,6 +1955,9 @@ const Plannen = () => {
                       groupIndexByCelId={groupIndexByCelId}
                       onToggleSelect={toggleCellSelection}
                       onStartNewGroup={startNewGroupWithCell}
+                      onFillRange={fillCellRange}
+                      fillState={fillState}
+                      setFillState={setFillState}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
@@ -2358,6 +2481,21 @@ interface GridRowProps {
   groupIndexByCelId: Map<string, number>;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
+  onFillRange: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
+  fillState: {
+    activiteitId: string;
+    sourceCelId: string;
+    sourceSlot: number;
+    currentSlot: number;
+  } | null;
+  setFillState: React.Dispatch<
+    React.SetStateAction<{
+      activiteitId: string;
+      sourceCelId: string;
+      sourceSlot: number;
+      currentSlot: number;
+    } | null>
+  >;
 }
 
 const GridRow = memo(function GridRow({
@@ -2377,7 +2515,11 @@ const GridRow = memo(function GridRow({
   groupIndexByCelId,
   onToggleSelect,
   onStartNewGroup,
+  onFillRange,
+  fillState,
+  setFillState,
 }: GridRowProps) {
+  const isFillRowActive = fillState?.activiteitId === activiteit.id;
   return (
     <div
       className="flex"
@@ -2386,11 +2528,18 @@ const GridRow = memo(function GridRow({
         borderTop: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {weken.map((w) => {
+      {weken.map((w, wi) => {
         const isCurrentWeek = w.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
         return DAG_LABELS.map((_, d) => {
           const cel = cellen.get(cellKey(activiteit.id, w.id, d));
           const monteurIds = cel ? celMonteurs.get(cel.id) ?? [] : [];
+          const slot = wi * 5 + d;
+          let inFillRange = false;
+          if (isFillRowActive && fillState) {
+            const lo = Math.min(fillState.sourceSlot, fillState.currentSlot);
+            const hi = Math.max(fillState.sourceSlot, fillState.currentSlot);
+            inFillRange = slot >= lo && slot <= hi && slot !== fillState.sourceSlot;
+          }
           const isHighlighted =
             highlightedMonteurId !== null &&
             monteurIds.includes(highlightedMonteurId);
@@ -2422,6 +2571,11 @@ const GridRow = memo(function GridRow({
               onStartNewGroup={onStartNewGroup}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
+              activiteitId={activiteit.id}
+              slot={slot}
+              inFillRange={inFillRange}
+              onFillRange={onFillRange}
+              setFillState={setFillState}
             />
           );
         });
@@ -2520,6 +2674,11 @@ const CellBox = memo(function CellBox({
   selectedCelIds,
   onToggleSelect,
   onStartNewGroup,
+  activiteitId,
+  slot,
+  inFillRange = false,
+  onFillRange,
+  setFillState,
 }: {
   cel: Cel | undefined;
   activiteit: Activiteit;
@@ -2546,6 +2705,18 @@ const CellBox = memo(function CellBox({
   selectedCelIds: Set<string>;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
+  activiteitId: string;
+  slot: number;
+  inFillRange?: boolean;
+  onFillRange: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
+  setFillState: React.Dispatch<
+    React.SetStateAction<{
+      activiteitId: string;
+      sourceCelId: string;
+      sourceSlot: number;
+      currentSlot: number;
+    } | null>
+  >;
 }) {
   const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
   const isCap =
@@ -2663,6 +2834,10 @@ const CellBox = memo(function CellBox({
 
   return (
     <button
+      data-cel-slot={slot}
+      data-cel-activiteit={activiteitId}
+      data-cel-week={weekId}
+      data-cel-dag={dagIndex}
       onClick={(e) => {
         // Shift-klik op gevulde cel = start nieuwe selectiegroep
         if (e.shiftKey && draggable && cel) {
@@ -2747,6 +2922,8 @@ const CellBox = memo(function CellBox({
         height: CELL_H,
         backgroundColor: isDragOver
           ? "rgba(63,255,139,0.18)"
+          : inFillRange
+          ? hexToRgba(kleur ?? "#3fff8b", filled ? 0.55 : 0.22)
           : filled
           ? hexToRgba(kleur!, isHighlighted || isSelected ? 0.55 : 0.35)
           : isCurrentWeek
@@ -2760,13 +2937,17 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
         outline: isDragOver
           ? "2px dashed rgba(63,255,139,0.9)"
+          : inFillRange
+          ? "1px dashed rgba(63,255,139,0.85)"
           : isSelected
           ? `2px dashed ${groupColorHex ?? "#38bdf8"}`
           : filled && !voldoet
           ? "2px solid #feb300"
           : undefined,
         outlineOffset:
-          isDragOver || isSelected || (filled && !voldoet) ? "-2px" : undefined,
+          isDragOver || inFillRange || isSelected || (filled && !voldoet)
+            ? "-2px"
+            : undefined,
         boxShadow: isSelected
           ? `inset 0 0 0 2px ${groupColorHex ?? "#38bdf8"}, 0 0 10px ${(groupColorHex ?? "#38bdf8")}80${
               highlightShadow ? `, ${highlightShadow}` : ""
@@ -2825,6 +3006,70 @@ const CellBox = memo(function CellBox({
         >
           !
         </span>
+      )}
+      {draggable && cel && (
+        <span
+          role="presentation"
+          title="Sleep om door te trekken (zoals in Excel)"
+          onMouseDown={(e) => {
+            if (!cel) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const sourceCelId = cel.id;
+            const sourceSlot = slot;
+            const sourceActiviteitId = activiteitId;
+            setFillState({
+              activiteitId: sourceActiviteitId,
+              sourceCelId,
+              sourceSlot,
+              currentSlot: sourceSlot,
+            });
+
+            let lastTarget: { weekId: string; dagIndex: number } | null = null;
+
+            const onMove = (ev: MouseEvent) => {
+              const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+              const cellEl = el?.closest("[data-cel-slot]") as HTMLElement | null;
+              if (!cellEl) return;
+              if (cellEl.dataset.celActiviteit !== sourceActiviteitId) return;
+              const s = Number(cellEl.dataset.celSlot);
+              if (Number.isNaN(s)) return;
+              lastTarget = {
+                weekId: cellEl.dataset.celWeek ?? "",
+                dagIndex: Number(cellEl.dataset.celDag ?? "0"),
+              };
+              setFillState((prev) =>
+                prev && prev.sourceCelId === sourceCelId
+                  ? { ...prev, currentSlot: s }
+                  : prev
+              );
+            };
+
+            const onUp = () => {
+              window.removeEventListener("mousemove", onMove);
+              window.removeEventListener("mouseup", onUp);
+              setFillState(null);
+              if (lastTarget && (lastTarget.weekId !== weekId || lastTarget.dagIndex !== dagIndex)) {
+                onFillRange(sourceCelId, lastTarget.weekId, lastTarget.dagIndex);
+              }
+            };
+
+            window.addEventListener("mousemove", onMove);
+            window.addEventListener("mouseup", onUp);
+          }}
+          className="absolute opacity-0 transition-opacity group-hover:opacity-100"
+          style={{
+            right: -3,
+            bottom: -3,
+            width: 10,
+            height: 10,
+            backgroundColor: "#3fff8b",
+            border: "1.5px solid rgba(0,0,0,0.6)",
+            cursor: "ew-resize",
+            zIndex: 5,
+            borderRadius: 1,
+          }}
+        />
       )}
     </button>
   );
