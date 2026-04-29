@@ -2261,6 +2261,10 @@ const GridRow = memo(function GridRow({
               weekId={w.id}
               dagIndex={d}
               onMoveCell={onMoveCell}
+              onMoveCellsGroup={onMoveCellsGroup}
+              isSelected={!!cel && selectedCelIds.has(cel.id)}
+              selectedCelIds={selectedCelIds}
+              onToggleSelect={onToggleSelect}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
