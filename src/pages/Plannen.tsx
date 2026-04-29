@@ -2528,6 +2528,7 @@ interface GridRowProps {
   ) => void;
   selectedCelIds: Set<string>;
   groupIndexByCelId: Map<string, number>;
+  selectedGroups: string[][];
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
   onFillRange: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
