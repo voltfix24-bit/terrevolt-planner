@@ -13,6 +13,7 @@ import {
   Printer,
   Trash2,
   Undo2,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
