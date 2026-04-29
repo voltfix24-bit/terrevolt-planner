@@ -30,6 +30,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  exportProjectenExcel,
+  exportProjectenPDF,
+  type ProjectExportRow,
+} from "@/lib/overview-exports";
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
