@@ -2716,129 +2716,253 @@ function ActiviteitCellsRow({
 }
 
 
-/* ===================== Overzicht Download Menu ===================== */
+/* ===================== Gantt Print Menu ===================== */
 
-import { useState as useStateDL } from "react";
-import { supabase as sbDL } from "@/integrations/supabase/client";
+interface GanttPrintMenuProps {
+  projecten: Project[];
+  weken: Week[];
+  activiteiten: Activiteit[];
+  cellen: Cel[];
+  monteurs: Monteur[];
+  celMonteurs: CelMonteur[];
+  jaar: number;
+}
 
-function OverzichtDownloadMenu() {
-  const [open, setOpen] = useStateDL(false);
-  const [busy, setBusy] = useStateDL(false);
+function GanttPrintMenu({
+  projecten,
+  weken,
+  activiteiten,
+  cellen,
+  monteurs,
+  celMonteurs,
+  jaar,
+}: GanttPrintMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [monteurWeergave, setMonteurWeergave] = useState<GanttMonteurWeergave>("initialen");
+  // selectie van week-nummers; lege set = alle weken
+  const [selWeeks, setSelWeeks] = useState<Set<number>>(new Set());
 
-  const fetchProjecten = async (): Promise<ProjectExportRow[]> => {
-    const [pRes, oRes] = await Promise.all([
-      sbDL.from("projecten").select("*").order("created_at", { ascending: false }),
-      sbDL.from("opdrachtgevers").select("id, naam"),
-    ]);
-    if (pRes.error) throw pRes.error;
-    const ogMap = new Map<string, string>();
-    ((oRes.data ?? []) as { id: string; naam: string }[]).forEach((o) => ogMap.set(o.id, o.naam));
-    return ((pRes.data ?? []) as any[]).map((p) => ({
-      case_nummer: p.case_nummer, station_naam: p.station_naam, wv_naam: p.wv_naam,
-      status: p.status, jaar: p.jaar,
-      opdrachtgever: p.opdrachtgever_id ? ogMap.get(p.opdrachtgever_id) ?? null : null,
-      straat: p.straat, postcode: p.postcode, stad: p.stad, gemeente: p.gemeente, notities: p.notities,
-    }));
-  };
+  // Unieke week-nummers uit alle projecten, gesorteerd
+  const beschikbareWeken = useMemo(() => {
+    const seen = new Set<number>();
+    weken.forEach((w) => seen.add(w.week_nr));
+    return Array.from(seen).sort((a, b) => a - b);
+  }, [weken]);
 
-  const fetchCapaciteit = async (): Promise<CapaciteitInput> => {
-    const today = new Date();
-    const days: { date: Date; weekNr: number; dayIdx: number }[] = [];
-    const dow = today.getDay() || 7;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - dow + 1);
-    const isoWeek = (d: Date) => {
-      const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const day = t.getUTCDay() || 7;
-      t.setUTCDate(t.getUTCDate() + 4 - day);
-      const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
-      return Math.ceil(((+t - +yearStart) / 86400000 + 1) / 7);
-    };
-    for (let w = 0; w < 8; w++) {
-      for (let d = 0; d < 5; d++) {
-        const date = new Date(monday);
-        date.setDate(monday.getDate() + w * 7 + d);
-        days.push({ date, weekNr: isoWeek(date), dayIdx: d });
-      }
-    }
-    const isoKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const weekNrs = Array.from(new Set(days.map((d) => d.weekNr)));
-    const [mRes, wRes] = await Promise.all([
-      sbDL.from("monteurs").select("id, naam, type, actief").eq("actief", true),
-      sbDL.from("project_weken").select("id, week_nr, project_id").in("week_nr", weekNrs),
-    ]);
-    const monteurs = ((mRes.data ?? []) as any[]).map((m) => ({ id: m.id, naam: m.naam, type: m.type as "schakelmonteur" | "montagemonteur" }));
-    const weken = (wRes.data ?? []) as { id: string; week_nr: number; project_id: string | null }[];
-    const weekById = new Map(weken.map((w) => [w.id, w]));
-    const weekIds = weken.map((w) => w.id);
-    const projectIds = Array.from(new Set(weken.map((w) => w.project_id).filter(Boolean) as string[]));
-    const [cRes, prRes] = await Promise.all([
-      weekIds.length ? sbDL.from("planning_cellen").select("id, week_id, dag_index").in("week_id", weekIds) : Promise.resolve({ data: [] } as any),
-      projectIds.length ? sbDL.from("projecten").select("id, case_nummer").in("id", projectIds) : Promise.resolve({ data: [] } as any),
-    ]);
-    const cellen = ((cRes.data ?? []) as { id: string; week_id: string; dag_index: number }[]);
-    const cellIds = cellen.map((c) => c.id);
-    const cmRes = cellIds.length
-      ? await sbDL.from("cel_monteurs").select("cel_id, monteur_id").in("cel_id", cellIds)
-      : { data: [] } as any;
-    const projMap = new Map<string, string | null>();
-    ((prRes.data ?? []) as { id: string; case_nummer: string | null }[]).forEach((p) => projMap.set(p.id, p.case_nummer));
-    const celById = new Map(cellen.map((c) => [c.id, c]));
-    // weeknr+monday lookup
-    const weekNrToMonday = new Map<number, Date>();
-    days.forEach((d) => { if (!weekNrToMonday.has(d.weekNr)) weekNrToMonday.set(d.weekNr, new Date(d.date.getTime() - d.dayIdx * 86400000)); });
-    const bezetting: Record<string, Record<string, string[]>> = {};
-    ((cmRes.data ?? []) as { cel_id: string; monteur_id: string }[]).forEach((cm) => {
-      const cel = celById.get(cm.cel_id);
-      if (!cel) return;
-      const w = weekById.get(cel.week_id);
-      if (!w || !w.project_id) return;
-      const mon = weekNrToMonday.get(w.week_nr);
-      if (!mon) return;
-      const date = new Date(mon); date.setDate(mon.getDate() + cel.dag_index);
-      const key = isoKey(date);
-      const cn = projMap.get(w.project_id);
-      if (!cn) return;
-      if (!bezetting[cm.monteur_id]) bezetting[cm.monteur_id] = {};
-      if (!bezetting[cm.monteur_id][key]) bezetting[cm.monteur_id][key] = [];
-      if (!bezetting[cm.monteur_id][key].includes(cn)) bezetting[cm.monteur_id][key].push(cn);
+  const toggleWeek = (n: number) =>
+    setSelWeeks((prev) => {
+      const base = prev.size === 0 ? new Set(beschikbareWeken) : new Set(prev);
+      if (base.has(n)) base.delete(n);
+      else base.add(n);
+      if (base.size === beschikbareWeken.length) return new Set();
+      return base;
     });
-    return { titel: `Capaciteit vanaf week ${days[0]?.weekNr ?? ""} — 8 weken`, monteurs, days, bezetting };
-  };
 
-  const run = async (kind: "proj-xlsx" | "proj-pdf" | "totaal-xlsx" | "totaal-pdf") => {
+  const run = () => {
     setBusy(true);
     try {
-      if (kind === "proj-xlsx") await exportProjectenExcel(await fetchProjecten());
-      else if (kind === "proj-pdf") exportProjectenPDF(await fetchProjecten());
-      else {
-        const [proj, cap] = await Promise.all([fetchProjecten(), fetchCapaciteit()]);
-        if (kind === "totaal-xlsx") await exportTotaalExcel(cap, proj);
-        else exportTotaalPDF(cap, proj);
+      const gekozenWeken = selWeeks.size === 0 ? beschikbareWeken : Array.from(selWeeks).sort((a, b) => a - b);
+      if (gekozenWeken.length === 0) {
+        toast.error("Geen weken beschikbaar");
+        return;
       }
+
+      // weken → {week_nr, jaar}; jaar nemen we uit de pagina-state.
+      const ganttWeken = gekozenWeken.map((wnr) => ({ week_nr: wnr, jaar }));
+
+      // weken-tabel → lookup id → week_nr
+      const weekIdToNr = new Map<string, number>();
+      weken.forEach((w) => weekIdToNr.set(w.id, w.week_nr));
+
+      // activiteit_id → project_id (via activiteiten-tabel)
+      const actIdToProj = new Map<string, string>();
+      activiteiten.forEach((a) => {
+        if (a.project_id) actIdToProj.set(a.id, a.project_id);
+      });
+
+      // monteurs per cel
+      const monteursPerCel = new Map<string, string[]>();
+      celMonteurs.forEach((cm) => {
+        if (!cm.cel_id || !cm.monteur_id) return;
+        const arr = monteursPerCel.get(cm.cel_id) ?? [];
+        arr.push(cm.monteur_id);
+        monteursPerCel.set(cm.cel_id, arr);
+      });
+
+      const weekNrSet = new Set(gekozenWeken);
+      const ganttCellen = cellen
+        .map((c) => {
+          const wnr = c.week_id ? weekIdToNr.get(c.week_id) : undefined;
+          const projectId = c.activiteit_id ? actIdToProj.get(c.activiteit_id) : undefined;
+          if (wnr === undefined || projectId === undefined || !c.activiteit_id) return null;
+          if (!weekNrSet.has(wnr)) return null;
+          return {
+            project_id: projectId,
+            activiteit_id: c.activiteit_id,
+            week_nr: wnr,
+            dag_index: c.dag_index,
+            kleur_code: c.kleur_code,
+            monteur_ids: monteursPerCel.get(c.id) ?? [],
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => !!x);
+
+      const ganttProjecten = projecten.map((p) => ({
+        id: p.id,
+        case_nummer: p.case_nummer,
+        station_naam: p.station_naam,
+        wv_naam: null,
+      }));
+
+      const ganttActiviteiten = activiteiten
+        .filter((a) => !!a.project_id)
+        .map((a) => ({
+          id: a.id,
+          project_id: a.project_id as string,
+          naam: a.naam,
+          positie: a.positie,
+        }));
+
+      const ganttMonteurs = monteurs.map((m) => ({ id: m.id, naam: m.naam }));
+
+      exportGanttPDF({
+        titel: `Planning Gantt — ${jaar}`,
+        weken: ganttWeken,
+        projecten: ganttProjecten,
+        activiteiten: ganttActiviteiten,
+        monteurs: ganttMonteurs,
+        cellen: ganttCellen,
+        monteurWeergave,
+      });
       setOpen(false);
-    } catch (e) { console.error(e); toast.error("Download mislukt"); }
-    finally { setBusy(false); }
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Print mislukt");
+    } finally {
+      setBusy(false);
+    }
   };
+
+  const selectieLabel =
+    selWeeks.size === 0
+      ? `alle weken (${beschikbareWeken.length})`
+      : `${selWeeks.size} ${selWeeks.size === 1 ? "week" : "weken"}`;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" disabled={busy} className="flex h-8 items-center gap-1 rounded-md border border-white/15 bg-transparent px-3 text-sm text-foreground hover:bg-white/[0.06] disabled:opacity-50">
-          <Download className="h-4 w-4" />
-          <span className="font-display font-semibold">Download</span>
+        <button
+          type="button"
+          disabled={busy}
+          className="flex h-8 items-center gap-1.5 rounded-md border border-white/15 bg-transparent px-3 text-sm text-foreground hover:bg-white/[0.06] disabled:opacity-50"
+        >
+          <Printer className="h-4 w-4" />
+          <span className="font-display font-semibold">Gantt printen</span>
           <ChevronDown className="h-3 w-3 opacity-70" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-1">
-        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Projecten</div>
-        <button type="button" onClick={() => run("proj-xlsx")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><FileText className="h-4 w-4" /> Projecten — Excel</button>
-        <button type="button" onClick={() => run("proj-pdf")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><Printer className="h-4 w-4" /> Projecten — PDF</button>
-        <div className="my-1 h-px bg-border/60" />
-        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Totaal-overzicht (8 weken)</div>
-        <button type="button" onClick={() => run("totaal-xlsx")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><FileText className="h-4 w-4" /> Totaal — Excel (2 sheets)</button>
-        <button type="button" onClick={() => run("totaal-pdf")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><Printer className="h-4 w-4" /> Totaal — PDF</button>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+          <span className="text-sm font-semibold">Gantt printen</span>
+          {selWeeks.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelWeeks(new Set())}
+              className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+            >
+              Wis filter
+            </button>
+          )}
+        </div>
+
+        <div className="px-3 py-2 text-[11px] text-muted-foreground border-b border-border/60">
+          Selectie: {selectieLabel} · {monteurWeergave === "geen" ? "geen monteurs" : monteurWeergave === "initialen" ? "initialen" : "namen"}.
+        </div>
+
+        {/* Monteur-weergave */}
+        <div className="px-3 py-2 border-b border-border/60">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+            Monteurs in cellen
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {(["geen", "initialen", "namen"] as const).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setMonteurWeergave(opt)}
+                className={[
+                  "rounded-sm px-2 py-1.5 text-xs font-medium border transition-colors",
+                  monteurWeergave === opt
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent text-foreground border-white/15 hover:bg-white/[0.06]",
+                ].join(" ")}
+              >
+                {opt === "geen" ? "Geen" : opt === "initialen" ? "Initialen" : "Namen"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Weken */}
+        <div className="px-3 py-2 border-b border-border/60">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weken</span>
+            <div className="flex gap-2 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setSelWeeks(new Set())}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Alle
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelWeeks(new Set([-1]))}
+                className="text-muted-foreground hover:text-foreground"
+                title="Geen weken (verberg alles)"
+              >
+                Geen
+              </button>
+            </div>
+          </div>
+          <div className="max-h-44 overflow-y-auto -mx-1 px-1">
+            {beschikbareWeken.length === 0 ? (
+              <div className="text-[11px] text-muted-foreground py-1">Geen weken in projecten gevonden</div>
+            ) : (
+              beschikbareWeken.map((wnr) => {
+                const checked = selWeeks.size === 0 || selWeeks.has(wnr);
+                return (
+                  <label
+                    key={wnr}
+                    className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleWeek(wnr)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    <span>Week {wnr}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div className="p-1">
+          <button
+            type="button"
+            onClick={run}
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-2 rounded-sm bg-primary px-2 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            <Printer className="h-4 w-4" /> Open print-preview
+          </button>
+        </div>
       </PopoverContent>
     </Popover>
   );
 }
+
