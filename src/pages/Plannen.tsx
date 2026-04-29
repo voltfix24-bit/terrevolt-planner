@@ -680,6 +680,66 @@ const Plannen = () => {
   }, [pushHistory]);
 
 
+  /* ----------------------------- drag-and-drop verplaatsen ----------------------------- */
+  // Versleep een gevulde cel naar een andere (week_id, dag_index) binnen DEZELFDE activiteit-rij.
+  // De hele inhoud (kleur + notitie + monteurs) verhuist mee, omdat planning_cellen.id behouden blijft.
+  const moveCell = useCallback(
+    async (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => {
+      let sourceCel: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === sourceCelId) sourceCel = c;
+      });
+      if (!sourceCel) return;
+      const src = sourceCel as Cel;
+      if (src.week_id === targetWeekId && src.dag_index === targetDagIndex) return;
+
+      const targetKey = cellKey(src.activiteit_id, targetWeekId, targetDagIndex);
+      const targetCel = cellen.get(targetKey);
+
+      if (targetCel) {
+        const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
+        const heeftInhoud =
+          !!targetCel.kleur_code || targetMonteurs.length > 0 || !!targetCel.notitie;
+        if (heeftInhoud) {
+          const ok = window.confirm(
+            "De doel-dag is al gevuld. Wil je de bestaande inhoud overschrijven?"
+          );
+          if (!ok) return;
+        }
+        await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
+        await supabase.from("planning_cellen").delete().eq("id", targetCel.id);
+        setCelMonteurs((prev) => {
+          const m = new Map(prev);
+          m.delete(targetCel.id);
+          return m;
+        });
+        setCellen((prev) => {
+          const m = new Map(prev);
+          m.delete(targetKey);
+          return m;
+        });
+      }
+
+      const oldKey = cellKey(src.activiteit_id, src.week_id, src.dag_index);
+      const updated: Cel = { ...src, week_id: targetWeekId, dag_index: targetDagIndex };
+      setCellen((prev) => {
+        const m = new Map(prev);
+        m.delete(oldKey);
+        m.set(targetKey, updated);
+        return m;
+      });
+      const { error } = await supabase
+        .from("planning_cellen")
+        .update({ week_id: targetWeekId, dag_index: targetDagIndex })
+        .eq("id", src.id);
+      if (error) {
+        toast.error("Verplaatsen mislukt");
+        loadAll();
+      }
+    },
+    [cellen, celMonteurs, loadAll]
+  );
+
   /* ----------------------------- undo / history ----------------------------- */
   const reverseHistoryEntry = useCallback(
     async (entry: HistoryEntry) => {
@@ -1487,6 +1547,7 @@ const Plannen = () => {
                       currentWeekTooltip={currentWeekTooltip}
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
+                      onMoveCell={moveCell}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
@@ -1999,6 +2060,7 @@ interface GridRowProps {
     week_id: string,
     dag_index: number
   ) => void;
+  onMoveCell: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
 }
 
 const GridRow = memo(function GridRow({
@@ -2012,6 +2074,7 @@ const GridRow = memo(function GridRow({
   currentWeekTooltip,
   onClick,
   onRightClick,
+  onMoveCell,
 }: GridRowProps) {
   return (
     <div
@@ -2046,6 +2109,9 @@ const GridRow = memo(function GridRow({
               highlightColor={highlightColor}
               isDimmed={highlightedMonteurId !== null && !isHighlighted}
               currentWeekTooltip={isCurrentWeek ? currentWeekTooltip : null}
+              weekId={w.id}
+              dagIndex={d}
+              onMoveCell={onMoveCell}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
@@ -2137,6 +2203,9 @@ const CellBox = memo(function CellBox({
   currentWeekTooltip = null,
   onClick,
   onContextMenu,
+  weekId,
+  dagIndex,
+  onMoveCell,
 }: {
   cel: Cel | undefined;
   activiteit: Activiteit;
@@ -2149,6 +2218,9 @@ const CellBox = memo(function CellBox({
   currentWeekTooltip?: string | null;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
+  weekId: string;
+  dagIndex: number;
+  onMoveCell: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
 }) {
   const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
   const isCap =
@@ -2260,19 +2332,56 @@ const CellBox = memo(function CellBox({
       ? `inset 0 0 0 2px ${highlightColor}, 0 0 12px ${highlightColor}80`
       : undefined;
 
+  // Drag-and-drop: gevulde cel = sleepbron; elke cel binnen dezelfde activiteit = doel.
+  const [isDragOver, setIsDragOver] = useState(false);
+  const draggable = filled && !!cel;
+
   return (
     <button
       onClick={onClick}
       onContextMenu={onContextMenu}
-      title={hoverTitle}
+      title={
+        draggable
+          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om naar een andere dag te verplaatsen`
+          : hoverTitle
+      }
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (!draggable || !cel) return;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("application/x-plannen-cel", cel.id);
+        e.dataTransfer.setData("application/x-plannen-activiteit", activiteit.id);
+      }}
+      onDragOver={(e) => {
+        const sourceAct = e.dataTransfer.types.includes("application/x-plannen-activiteit");
+        if (!sourceAct) return;
+        // We laten de drop alleen toe binnen dezelfde activiteit-rij. Omdat we tijdens
+        // dragOver de payload niet mogen lezen, accepteren we hier altijd en valideren in onDrop.
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (!isDragOver) setIsDragOver(true);
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const sourceCelId = e.dataTransfer.getData("application/x-plannen-cel");
+        const sourceActId = e.dataTransfer.getData("application/x-plannen-activiteit");
+        if (!sourceCelId || sourceActId !== activiteit.id) return;
+        if (cel && cel.id === sourceCelId) return;
+        onMoveCell(sourceCelId, weekId, dagIndex);
+      }}
       className={[
         "group relative shrink-0 transition-all",
         showHoverPlus ? "hover:bg-white/[0.03]" : "",
+        draggable ? "cursor-grab active:cursor-grabbing" : "",
       ].join(" ")}
       style={{
         width: CELL_W,
         height: CELL_H,
-        backgroundColor: filled
+        backgroundColor: isDragOver
+          ? "rgba(63,255,139,0.18)"
+          : filled
           ? hexToRgba(kleur!, isHighlighted ? 0.55 : 0.35)
           : isCurrentWeek
           ? "rgba(63,255,139,0.02)"
@@ -2283,8 +2392,12 @@ const CellBox = memo(function CellBox({
         borderLeft: filled
           ? `3px solid ${kleur}`
           : "1px solid rgba(255,255,255,0.06)",
-        outline: filled && !voldoet ? "2px solid #feb300" : undefined,
-        outlineOffset: filled && !voldoet ? "-2px" : undefined,
+        outline: isDragOver
+          ? "2px dashed rgba(63,255,139,0.9)"
+          : filled && !voldoet
+          ? "2px solid #feb300"
+          : undefined,
+        outlineOffset: isDragOver || (filled && !voldoet) ? "-2px" : undefined,
         boxShadow: highlightShadow,
         opacity: isDimmed && filled ? 0.35 : 1,
         zIndex: isHighlighted ? 2 : undefined,
