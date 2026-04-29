@@ -1808,7 +1808,9 @@ const Plannen = () => {
                       onMoveCell={moveCell}
                       onMoveCellsGroup={moveCellsGroup}
                       selectedCelIds={selectedCelIds}
+                      groupIndexByCelId={groupIndexByCelId}
                       onToggleSelect={toggleCellSelection}
+                      onStartNewGroup={startNewGroupWithCell}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
