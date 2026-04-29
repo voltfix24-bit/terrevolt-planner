@@ -2922,6 +2922,8 @@ const CellBox = memo(function CellBox({
         height: CELL_H,
         backgroundColor: isDragOver
           ? "rgba(63,255,139,0.18)"
+          : inFillRange
+          ? hexToRgba(kleur ?? "#3fff8b", filled ? 0.55 : 0.22)
           : filled
           ? hexToRgba(kleur!, isHighlighted || isSelected ? 0.55 : 0.35)
           : isCurrentWeek
