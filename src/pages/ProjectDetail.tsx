@@ -2158,6 +2158,15 @@ const ProjectDetail = () => {
                   · Fictieve dagen, pas inplannen bij keuze van weeknummer
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/plannen?project=${id}`)}
+                className="flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-display font-semibold text-primary transition-all hover:bg-primary/20 hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title="Open de echte (week-gebaseerde) planning van dit project"
+              >
+                Open planning
+                <ArrowRight className="h-3 w-3" />
+              </button>
             </div>
             <ProjectConceptPlanning projectId={id!} />
           </section>
