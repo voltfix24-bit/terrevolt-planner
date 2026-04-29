@@ -2618,7 +2618,11 @@ const GridRow = memo(function GridRow({
               isSelected={!!cel && selectedCelIds.has(cel.id)}
               groupColorHex={cel ? (groupIndexByCelId.has(cel.id) ? groupColor(groupIndexByCelId.get(cel.id)!) : null) : null}
               groupIndex={cel ? groupIndexByCelId.get(cel.id) ?? null : null}
-              selectedCelIds={selectedCelIds}
+              groupCelIds={
+                cel && groupIndexByCelId.has(cel.id)
+                  ? selectedGroups[groupIndexByCelId.get(cel.id)!] ?? null
+                  : null
+              }
               onToggleSelect={onToggleSelect}
               onStartNewGroup={onStartNewGroup}
               onClick={() => onClick(activiteit, w.id, d)}
