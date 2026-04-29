@@ -2834,6 +2834,10 @@ const CellBox = memo(function CellBox({
 
   return (
     <button
+      data-cel-slot={slot}
+      data-cel-activiteit={activiteitId}
+      data-cel-week={weekId}
+      data-cel-dag={dagIndex}
       onClick={(e) => {
         // Shift-klik op gevulde cel = start nieuwe selectiegroep
         if (e.shiftKey && draggable && cel) {
