@@ -2402,6 +2402,7 @@ const CelModal = ({
   activiteit,
   week,
   monteurs,
+  ploegen,
   monteurIdsAssigned,
   monteurById,
   template,
