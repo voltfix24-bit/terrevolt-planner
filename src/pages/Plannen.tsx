@@ -931,6 +931,126 @@ const Plannen = () => {
     [cellen, weken, moveCellsByDelta]
   );
 
+  // Excel-style fill handle: kopieer kleur + notitie + monteurs van bron-cel naar
+  // alle dagen tussen bron en doel binnen DEZELFDE activiteit-rij. Bestaande inhoud
+  // op tussenliggende dagen wordt na bevestiging overschreven.
+  const fillCellRange = useCallback(
+    async (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => {
+      let sourceCel: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === sourceCelId) sourceCel = c;
+      });
+      if (!sourceCel) return;
+      const src = sourceCel as Cel;
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      const srcWi = weekIndexById.get(src.week_id);
+      const tgtWi = weekIndexById.get(targetWeekId);
+      if (srcWi == null || tgtWi == null) return;
+      const srcSlot = srcWi * 5 + src.dag_index;
+      const tgtSlot = tgtWi * 5 + targetDagIndex;
+      if (srcSlot === tgtSlot) return;
+
+      const step = tgtSlot > srcSlot ? 1 : -1;
+      const targetSlots: number[] = [];
+      for (let s = srcSlot + step; step > 0 ? s <= tgtSlot : s >= tgtSlot; s += step) {
+        targetSlots.push(s);
+      }
+
+      // Map slot -> {weekId, dagIndex}
+      const slotToCoord = (slot: number): { weekId: string; dagIndex: number } | null => {
+        const wi = Math.floor(slot / 5);
+        const di = slot % 5;
+        const w = weken[wi];
+        if (!w) return null;
+        return { weekId: w.id, dagIndex: di };
+      };
+
+      // Detecteer conflicten (al gevulde doel-cellen, exclusief bron)
+      const conflicts: Cel[] = [];
+      for (const s of targetSlots) {
+        const coord = slotToCoord(s);
+        if (!coord) continue;
+        const existing = cellen.get(cellKey(src.activiteit_id, coord.weekId, coord.dagIndex));
+        if (!existing) continue;
+        const ms = celMonteurs.get(existing.id) ?? [];
+        const heeftInhoud = !!existing.kleur_code || ms.length > 0 || !!existing.notitie;
+        if (heeftInhoud) conflicts.push(existing);
+      }
+      if (conflicts.length > 0) {
+        const ok = window.confirm(
+          `${conflicts.length} doel-${conflicts.length === 1 ? "dag is" : "dagen zijn"} al gevuld. Wil je de bestaande inhoud overschrijven?`
+        );
+        if (!ok) return;
+      }
+
+      // Verwijder conflict-cellen
+      for (const c of conflicts) {
+        await supabase.from("cel_monteurs").delete().eq("cel_id", c.id);
+        await supabase.from("planning_cellen").delete().eq("id", c.id);
+      }
+      setCellen((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) {
+          m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+        }
+        return m;
+      });
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) m.delete(c.id);
+        return m;
+      });
+
+      const srcMonteurs = celMonteurs.get(src.id) ?? [];
+
+      // Maak voor elk doel-slot een nieuwe cel met dezelfde kleur/notitie/monteurs
+      for (const s of targetSlots) {
+        const coord = slotToCoord(s);
+        if (!coord) continue;
+        const { data, error } = await supabase
+          .from("planning_cellen")
+          .insert({
+            activiteit_id: src.activiteit_id,
+            week_id: coord.weekId,
+            dag_index: coord.dagIndex,
+            kleur_code: src.kleur_code,
+            notitie: src.notitie,
+            capaciteit: src.capaciteit,
+          })
+          .select()
+          .single();
+        if (error || !data) {
+          toast.error("Doortrekken mislukt");
+          loadAll();
+          return;
+        }
+        const newCel = data as Cel;
+        updateCellLocal(newCel);
+        if (srcMonteurs.length > 0) {
+          const { error: mErr } = await supabase
+            .from("cel_monteurs")
+            .insert(srcMonteurs.map((mid) => ({ cel_id: newCel.id, monteur_id: mid })));
+          if (!mErr) {
+            setCelMonteurs((prev) => {
+              const m = new Map(prev);
+              m.set(newCel.id, [...srcMonteurs]);
+              return m;
+            });
+          }
+        }
+      }
+    },
+    [cellen, celMonteurs, weken, updateCellLocal, loadAll]
+  );
+
+  // Live preview-state tijdens slepen van fill-handle (gedeeld met cellen voor highlight)
+  const [fillState, setFillState] = useState<{
+    activiteitId: string;
+    sourceCelId: string;
+    sourceSlot: number;
+    currentSlot: number;
+  } | null>(null);
+
   // Wrapper voor toolbar-knoppen: verschuif één specifieke groep met N slots
   const shiftGroup = useCallback(
     async (groupIdx: number, deltaSlots: number) => {
