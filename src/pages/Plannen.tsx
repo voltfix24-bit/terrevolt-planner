@@ -336,6 +336,11 @@ const Plannen = () => {
   }, [selectedGroups.length, clearSelection]);
 
 
+  // Export-selectie: leeg = alles. Bevat ids van weken/activiteiten die in de
+  // download moeten verschijnen. Wordt beheerd via de Download-dropdown.
+  const [exportWeekIds, setExportWeekIds] = useState<Set<string>>(new Set());
+  const [exportActiviteitIds, setExportActiviteitIds] = useState<Set<string>>(new Set());
+
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
