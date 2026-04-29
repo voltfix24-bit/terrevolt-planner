@@ -1453,8 +1453,38 @@ const Plannen = () => {
             {selectedCelIds.size} cel{selectedCelIds.size === 1 ? "" : "len"} geselecteerd
           </span>
           <span className="text-[11px] text-muted-foreground">
-            Sleep een geselecteerde cel om alle samen te verplaatsen
+            Sleep een geselecteerde cel of gebruik de knoppen om als groep te verschuiven
           </span>
+          <div className="flex items-center gap-1 rounded-md border border-white/15 p-0.5">
+            <button
+              onClick={() => shiftSelection(-5)}
+              title="Verschuif 1 week terug"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              −1 wk
+            </button>
+            <button
+              onClick={() => shiftSelection(-1)}
+              title="Verschuif 1 dag terug"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              −1 dag
+            </button>
+            <button
+              onClick={() => shiftSelection(1)}
+              title="Verschuif 1 dag vooruit"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              +1 dag
+            </button>
+            <button
+              onClick={() => shiftSelection(5)}
+              title="Verschuif 1 week vooruit"
+              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+            >
+              +1 wk
+            </button>
+          </div>
           <button
             onClick={clearSelection}
             className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.08]"
