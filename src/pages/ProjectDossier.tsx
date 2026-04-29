@@ -329,14 +329,19 @@ const ProjectDossier = () => {
       const [cp, actRes, mRes] = await Promise.all([
         loadConceptPlanning(id),
         supabase.from("project_activiteiten").select("id,naam").eq("project_id", id),
-        supabase.from("monteurs").select("id,naam"),
+        supabase.from("monteurs").select("id,naam,type"),
       ]);
       setConceptCellen(cp);
       const am = new Map<string, string>();
       (actRes.data ?? []).forEach((a) => am.set(a.id as string, a.naam as string));
       setActiviteitenMap(am);
-      const mm = new Map<string, string>();
-      (mRes.data ?? []).forEach((m) => mm.set(m.id as string, m.naam as string));
+      const mm = new Map<string, { naam: string; type: string }>();
+      (mRes.data ?? []).forEach((m) =>
+        mm.set(m.id as string, {
+          naam: (m as { naam: string }).naam,
+          type: (m as { type: string }).type,
+        }),
+      );
       setMonteursMap(mm);
     } catch (e) {
       console.warn("Concept-planning kon niet laden", e);
