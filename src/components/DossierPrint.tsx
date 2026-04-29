@@ -6,6 +6,7 @@ import {
   intakeLabel,
   tijdelijkeLabel,
 } from "@/lib/dossier-labels";
+import { dagOffsetLabel } from "@/lib/concept-planning";
 
 // =====================================================
 // Types (loose — same shape as ProjectDossier)
