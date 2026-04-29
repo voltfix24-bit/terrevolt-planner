@@ -27,6 +27,8 @@ interface TekeningRow {
   revisie: string | null;
   notitie: string | null;
   created_at: string;
+  mime_type?: string | null;
+  previewUrl?: string | null;
 }
 
 interface Critical {
@@ -563,36 +565,98 @@ const Line: React.FC<{ k: string; v: React.ReactNode }> = ({ k, v }) => (
   </div>
 );
 
+const isImageMime = (m?: string | null) =>
+  !!m && m.toLowerCase().startsWith("image/");
+
 const DocTable: React.FC<{ items: TekeningRow[] }> = ({ items }) => {
   if (items.length === 0) {
     return <div className="pp-empty">Geen documenten beschikbaar.</div>;
   }
   return (
-    <table className="pp-table">
-      <thead>
-        <tr>
-          <th>Document</th>
-          <th style={{ width: "22%" }}>Tekening nr.</th>
-          <th style={{ width: "12%" }}>Revisie</th>
-          <th style={{ width: "16%" }}>Bestand</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((t) => (
-          <tr key={t.id}>
-            <td>
-              {t.titel || t.bestandsnaam}
-              {t.notitie && <div className="pp-sub">{t.notitie}</div>}
-            </td>
-            <td className="pp-mono">{t.tekening_nummer || "—"}</td>
-            <td className="pp-mono">{t.revisie || "—"}</td>
-            <td className="pp-mono pp-sub" style={{ wordBreak: "break-all" }}>
-              {t.bestandsnaam}
-            </td>
+    <>
+      <table className="pp-table">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th style={{ width: "22%" }}>Tekening nr.</th>
+            <th style={{ width: "12%" }}>Revisie</th>
+            <th style={{ width: "16%" }}>Bestand</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {items.map((t) => (
+            <tr key={t.id}>
+              <td>
+                {t.titel || t.bestandsnaam}
+                {t.notitie && <div className="pp-sub">{t.notitie}</div>}
+              </td>
+              <td className="pp-mono">{t.tekening_nummer || "—"}</td>
+              <td className="pp-mono">{t.revisie || "—"}</td>
+              <td className="pp-mono pp-sub" style={{ wordBreak: "break-all" }}>
+                {t.bestandsnaam}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Visuele previews — alleen voor afbeeldingen */}
+      {items.some((t) => isImageMime(t.mime_type) && t.previewUrl) && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: "8pt",
+            marginTop: "8pt",
+          }}
+        >
+          {items
+            .filter((t) => isImageMime(t.mime_type) && t.previewUrl)
+            .map((t) => (
+              <figure
+                key={`fig-${t.id}`}
+                style={{
+                  margin: 0,
+                  border: "1px solid #d6dde6",
+                  borderRadius: "3pt",
+                  background: "#ffffff",
+                  padding: "6pt",
+                  pageBreakInside: "avoid",
+                  breakInside: "avoid",
+                }}
+              >
+                <img
+                  src={t.previewUrl as string}
+                  alt={t.titel || t.bestandsnaam}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "auto",
+                    maxHeight: "180mm",
+                    objectFit: "contain",
+                  }}
+                />
+                <figcaption
+                  style={{
+                    marginTop: "4pt",
+                    fontSize: "8.5pt",
+                    color: "#5b6b7d",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "8pt",
+                  }}
+                >
+                  <span>{t.titel || t.bestandsnaam}</span>
+                  <span className="pp-mono">
+                    {t.tekening_nummer ? `${t.tekening_nummer}` : ""}
+                    {t.revisie ? ` · rev ${t.revisie}` : ""}
+                  </span>
+                </figcaption>
+              </figure>
+            ))}
+        </div>
+      )}
+    </>
   );
 };
 
