@@ -1681,23 +1681,33 @@ const Plannen = () => {
     if (!project) return;
     try {
       const projectJaar = project.jaar ?? new Date().getFullYear();
+      const expWeken = exportWeekIds.size === 0 ? weken : weken.filter((w) => exportWeekIds.has(w.id));
+      const expActiviteiten = exportActiviteitIds.size === 0
+        ? activiteiten
+        : activiteiten.filter((a) => exportActiviteitIds.has(a.id));
+      if (expWeken.length === 0 || expActiviteiten.length === 0) {
+        toast.error("Selecteer minstens één week en één activiteit");
+        return;
+      }
+      const expWeekIdSet = new Set(expWeken.map((w) => w.id));
+      const expActIdSet = new Set(expActiviteiten.map((a) => a.id));
       const esc = (s: string) =>
         s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-      const weekHeaderCells = weken
+      const weekHeaderCells = expWeken
         .map((w) => {
           const isNu = w.week_nr === CURRENT_WEEK && projectJaar === CURRENT_YEAR;
           return `<th class="wk${isNu ? " nu" : ""}" colspan="5">Week ${w.week_nr}${isNu ? " <span class='nu-badge'>NU</span>" : ""}</th>`;
         })
         .join("");
 
-      const dayHeaderCells = weken
+      const dayHeaderCells = expWeken
         .map(() => DAG_LABELS.map((d) => `<th class="dag">${d}</th>`).join(""))
         .join("");
 
-      const bodyRows = activiteiten
+      const bodyRows = expActiviteiten
         .map((a) => {
-          const cellsHtml = weken
+          const cellsHtml = expWeken
             .map((w) =>
               Array.from({ length: 5 }, (_, d) => {
                 const cel = cellen.get(cellKey(a.id, w.id, d));
@@ -1718,12 +1728,13 @@ const Plannen = () => {
         })
         .join("");
 
-      const opmCells = weken
+      const opmCells = expWeken
         .map((w) => `<td class="opm" colspan="5">${esc(w.opmerking ?? "")}</td>`)
         .join("");
 
       const ingeplandeIds = new Set<string>();
       for (const cel of cellen.values()) {
+        if (!expWeekIdSet.has(cel.week_id) || !expActIdSet.has(cel.activiteit_id)) continue;
         const ids = celMonteurs.get(cel.id);
         if (!ids) continue;
         for (const id of ids) ingeplandeIds.add(id);
