@@ -2571,6 +2571,11 @@ const GridRow = memo(function GridRow({
               onStartNewGroup={onStartNewGroup}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
+              activiteitId={activiteit.id}
+              slot={slot}
+              inFillRange={inFillRange}
+              onFillRange={onFillRange}
+              setFillState={setFillState}
             />
           );
         });
