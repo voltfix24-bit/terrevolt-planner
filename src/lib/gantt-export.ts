@@ -217,10 +217,15 @@ export function exportGanttPDF(input: GanttExportInput): void {
     });
   }
 
-  // Legend
-  const legend = Object.entries(COLOR_MAP)
+  // Legend — vereenvoudigd: 3 categorieën
+  const legendItems: Array<{ hex: string; naam: string }> = [
+    { hex: "#1d4ed8", naam: "Montage" },
+    { hex: "#fdcb35", naam: "Schakelen" },
+    { hex: "#65a30d", naam: "Diverse" },
+  ];
+  const legend = legendItems
     .map(
-      ([code, c]) =>
+      (c) =>
         `<div class="lg-item"><span class="lg-dot" style="background:${c.hex}"></span>${escHtml(c.naam)}</div>`,
     )
     .join("");
