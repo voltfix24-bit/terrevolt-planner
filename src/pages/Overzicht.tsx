@@ -1208,26 +1208,29 @@ export default function Overzicht() {
         <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
           Overzicht
         </h1>
-        <div
-          className="flex items-center gap-2"
-          style={{
-            background: "rgba(63,255,139,0.15)",
-            border: "1px solid rgba(63,255,139,0.3)",
-            color: "#3fff8b",
-            fontSize: 12,
-            fontWeight: 700,
-            padding: "6px 14px",
-            borderRadius: 999,
-          }}
-        >
-          <span
+        <div className="flex items-center gap-3">
+          <OverzichtDownloadMenu />
+          <div
+            className="flex items-center gap-2"
             style={{
-              width: 8, height: 8, borderRadius: 999,
-              background: "#3fff8b",
-              boxShadow: "0 0 6px rgba(63,255,139,0.6)",
+              background: "rgba(63,255,139,0.15)",
+              border: "1px solid rgba(63,255,139,0.3)",
+              color: "#3fff8b",
+              fontSize: 12,
+              fontWeight: 700,
+              padding: "6px 14px",
+              borderRadius: 999,
             }}
-          />
-          {teamCapPct}% TEAM CAP.
+          >
+            <span
+              style={{
+                width: 8, height: 8, borderRadius: 999,
+                background: "#3fff8b",
+                boxShadow: "0 0 6px rgba(63,255,139,0.6)",
+              }}
+            />
+            {teamCapPct}% TEAM CAP.
+          </div>
         </div>
       </div>
 
