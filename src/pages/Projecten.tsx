@@ -207,13 +207,16 @@ const Projecten = () => {
     <div>
       <div className="mb-6 flex items-end justify-between gap-4">
         <PageHeader title="Projecten" description="Overzicht van alle TerreVolt-projecten." />
-        <Button
-          onClick={handleNewProject}
-          disabled={creating}
-          className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
-        >
-          <Plus className="mr-1.5 h-4 w-4" strokeWidth={2.5} /> Project toevoegen
-        </Button>
+        <div className="flex items-center gap-2">
+          <ProjectenDownloadMenu rows={filtered} opdrachtgeverById={opdrachtgeverById} />
+          <Button
+            onClick={handleNewProject}
+            disabled={creating}
+            className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+          >
+            <Plus className="mr-1.5 h-4 w-4" strokeWidth={2.5} /> Project toevoegen
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
