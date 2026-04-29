@@ -2059,6 +2059,7 @@ interface GridRowProps {
     week_id: string,
     dag_index: number
   ) => void;
+  onMoveCell: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
 }
 
 const GridRow = memo(function GridRow({
