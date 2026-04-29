@@ -1955,6 +1955,9 @@ const Plannen = () => {
                       groupIndexByCelId={groupIndexByCelId}
                       onToggleSelect={toggleCellSelection}
                       onStartNewGroup={startNewGroupWithCell}
+                      onFillRange={fillCellRange}
+                      fillState={fillState}
+                      setFillState={setFillState}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
