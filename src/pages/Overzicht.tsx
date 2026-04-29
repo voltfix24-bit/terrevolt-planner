@@ -1205,7 +1205,15 @@ export default function Overzicht() {
           Overzicht
         </h1>
         <div className="flex items-center gap-3">
-          <OverzichtDownloadMenu />
+          <GanttPrintMenu
+            projecten={projecten}
+            weken={weken}
+            activiteiten={activiteiten}
+            cellen={cellen}
+            monteurs={monteurs}
+            celMonteurs={celMonteurs}
+            jaar={jaar}
+          />
           <div
             className="flex items-center gap-2"
             style={{
