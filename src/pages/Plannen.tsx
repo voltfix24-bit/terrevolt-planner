@@ -753,6 +753,135 @@ const Plannen = () => {
     [cellen, celMonteurs, loadAll]
   );
 
+  // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
+  // (1 slot = 1 dag; een week = 5 slots). Alle cellen blijven binnen hun eigen
+  // activiteit-rij; de delta wordt bepaald door de bron-cel die de gebruiker sleept
+  // en de doel-(week, dag).
+  const moveCellsGroup = useCallback(
+    async (
+      sourceCelIds: string[],
+      anchorCelId: string,
+      targetWeekId: string,
+      targetDagIndex: number
+    ) => {
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      const totalSlots = weken.length * 5;
+      const slotToWeekDag = (slot: number): { week_id: string; dag_index: number } | null => {
+        if (slot < 0 || slot >= totalSlots) return null;
+        const wi = Math.floor(slot / 5);
+        return { week_id: weken[wi].id, dag_index: slot % 5 };
+      };
+
+      const anchor = cellen.get(
+        Array.from(cellen.values()).find((c) => c.id === anchorCelId)
+          ? cellKey(
+              (Array.from(cellen.values()).find((c) => c.id === anchorCelId) as Cel).activiteit_id,
+              (Array.from(cellen.values()).find((c) => c.id === anchorCelId) as Cel).week_id,
+              (Array.from(cellen.values()).find((c) => c.id === anchorCelId) as Cel).dag_index
+            )
+          : ""
+      );
+      if (!anchor) return;
+      const anchorWi = weekIndexById.get(anchor.week_id);
+      const targetWi = weekIndexById.get(targetWeekId);
+      if (anchorWi == null || targetWi == null) return;
+      const anchorSlot = anchorWi * 5 + anchor.dag_index;
+      const targetSlot = targetWi * 5 + targetDagIndex;
+      const delta = targetSlot - anchorSlot;
+      if (delta === 0) return;
+
+      // Verzamel alle bron-cellen
+      const sources: Cel[] = [];
+      cellen.forEach((c) => {
+        if (sourceCelIds.includes(c.id)) sources.push(c);
+      });
+      if (sources.length === 0) return;
+
+      // Bereken nieuwe posities + check out-of-range
+      type Move = { src: Cel; newWeekId: string; newDagIndex: number; newKey: string };
+      const moves: Move[] = [];
+      for (const src of sources) {
+        const wi = weekIndexById.get(src.week_id);
+        if (wi == null) return;
+        const slot = wi * 5 + src.dag_index;
+        const dest = slotToWeekDag(slot + delta);
+        if (!dest) {
+          toast.error("Verplaatsing valt buiten het zichtbare bereik");
+          return;
+        }
+        moves.push({
+          src,
+          newWeekId: dest.week_id,
+          newDagIndex: dest.dag_index,
+          newKey: cellKey(src.activiteit_id, dest.week_id, dest.dag_index),
+        });
+      }
+
+      // Detecteer conflicten met cellen die NIET in de selectie zitten
+      const sourceIdSet = new Set(sourceCelIds);
+      const conflicts: Cel[] = [];
+      for (const m of moves) {
+        const existing = cellen.get(m.newKey);
+        if (!existing) continue;
+        if (sourceIdSet.has(existing.id)) continue; // wordt zelf ook verplaatst
+        const monteurs = celMonteurs.get(existing.id) ?? [];
+        const heeftInhoud = !!existing.kleur_code || monteurs.length > 0 || !!existing.notitie;
+        if (heeftInhoud) conflicts.push(existing);
+      }
+      if (conflicts.length > 0) {
+        const ok = window.confirm(
+          `${conflicts.length} doel-${conflicts.length === 1 ? "dag is" : "dagen zijn"} al gevuld. Wil je de bestaande inhoud overschrijven?`
+        );
+        if (!ok) return;
+      }
+
+      // Verwijder conflict-cellen (db + lokaal)
+      for (const c of conflicts) {
+        await supabase.from("cel_monteurs").delete().eq("cel_id", c.id);
+        await supabase.from("planning_cellen").delete().eq("id", c.id);
+      }
+
+      // Update lokale Map: eerst alle oude keys verwijderen, dan nieuwe inzetten
+      setCellen((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) {
+          m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+        }
+        for (const mv of moves) {
+          m.delete(cellKey(mv.src.activiteit_id, mv.src.week_id, mv.src.dag_index));
+        }
+        for (const mv of moves) {
+          m.set(mv.newKey, {
+            ...mv.src,
+            week_id: mv.newWeekId,
+            dag_index: mv.newDagIndex,
+          });
+        }
+        return m;
+      });
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) m.delete(c.id);
+        return m;
+      });
+
+      // Database updates parallel
+      const results = await Promise.all(
+        moves.map((mv) =>
+          supabase
+            .from("planning_cellen")
+            .update({ week_id: mv.newWeekId, dag_index: mv.newDagIndex })
+            .eq("id", mv.src.id)
+        )
+      );
+      if (results.some((r) => r.error)) {
+        toast.error("Verplaatsen mislukt");
+        loadAll();
+      }
+    },
+    [cellen, celMonteurs, weken, loadAll]
+  );
+
   /* ----------------------------- undo / history ----------------------------- */
   const reverseHistoryEntry = useCallback(
     async (entry: HistoryEntry) => {
