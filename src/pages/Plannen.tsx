@@ -2661,57 +2661,100 @@ const CelModal = ({
                 })}
               </div>
 
-              {eligibleMonteurs.length > 0 && (
+              {(eligibleMonteurs.length > 0 || eligiblePloegen.length > 0) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 px-3 py-2 text-xs font-display font-semibold text-muted-foreground hover:bg-white/[0.04] hover:text-foreground">
-                      <Plus className="h-3.5 w-3.5" /> Monteur toevoegen
+                      <Plus className="h-3.5 w-3.5" /> Monteur of ploeg toevoegen
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="start"
-                    className="w-[360px] border-white/10 bg-[#0a1a30] text-foreground max-h-72 overflow-y-auto"
+                    className="w-[360px] border-white/10 bg-[#0a1a30] text-foreground max-h-80 overflow-y-auto"
                   >
-                    {eligibleMonteurs.map((m) => (
-                      <DropdownMenuItem
-                        key={m.id}
-                        onSelect={() => onAddMonteur(m.id)}
-                        className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
-                      >
-                        <span className="font-display text-sm font-semibold flex-1">
-                          {m.naam}
-                        </span>
-                        <span
-                          className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                          style={{
-                            backgroundColor:
-                              m.type === "schakelmonteur" ? "#feb300" : "#378add",
-                            color: "#0a1a30",
-                          }}
-                        >
-                          {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
-                        </span>
-                        {m.aanwijzing_ls && (
-                          <span
-                            className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                            style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                    {eligiblePloegen.length > 0 && (
+                      <>
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Ploegen
+                        </DropdownMenuLabel>
+                        {eligiblePloegen.map(({ ploeg, toAdd }) => (
+                          <DropdownMenuItem
+                            key={ploeg.id}
+                            onSelect={() => {
+                              toAdd.forEach((id) => onAddMonteur(id));
+                            }}
+                            className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
                           >
-                            LS {m.aanwijzing_ls}
-                          </span>
-                        )}
-                        {m.aanwijzing_ms && (
-                          <span
-                            className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                            style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                            <Users className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="font-display text-sm font-semibold flex-1">
+                              {ploeg.naam}
+                            </span>
+                            <span
+                              className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                              style={{
+                                backgroundColor:
+                                  ploeg.type === "schakelmonteur" ? "#feb300" : "#378add",
+                                color: "#0a1a30",
+                              }}
+                            >
+                              {ploeg.type === "schakelmonteur" ? "Schakel" : "Montage"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              +{toAdd.length}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                        {eligibleMonteurs.length > 0 && <DropdownMenuSeparator />}
+                      </>
+                    )}
+                    {eligibleMonteurs.length > 0 && (
+                      <>
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Individuele monteurs
+                        </DropdownMenuLabel>
+                        {eligibleMonteurs.map((m) => (
+                          <DropdownMenuItem
+                            key={m.id}
+                            onSelect={() => onAddMonteur(m.id)}
+                            className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
                           >
-                            MS {m.aanwijzing_ms}
-                          </span>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
+                            <span className="font-display text-sm font-semibold flex-1">
+                              {m.naam}
+                            </span>
+                            <span
+                              className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                              style={{
+                                backgroundColor:
+                                  m.type === "schakelmonteur" ? "#feb300" : "#378add",
+                                color: "#0a1a30",
+                              }}
+                            >
+                              {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
+                            </span>
+                            {m.aanwijzing_ls && (
+                              <span
+                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                              >
+                                LS {m.aanwijzing_ls}
+                              </span>
+                            )}
+                            {m.aanwijzing_ms && (
+                              <span
+                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                              >
+                                MS {m.aanwijzing_ms}
+                              </span>
+                            )}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+
 
               {/* Banner */}
               <div
