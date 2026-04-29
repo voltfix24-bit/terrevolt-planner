@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Trash2,
@@ -7,6 +8,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Copy,
+  ExternalLink,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
