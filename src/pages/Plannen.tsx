@@ -2481,6 +2481,21 @@ interface GridRowProps {
   groupIndexByCelId: Map<string, number>;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
+  onFillRange: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
+  fillState: {
+    activiteitId: string;
+    sourceCelId: string;
+    sourceSlot: number;
+    currentSlot: number;
+  } | null;
+  setFillState: React.Dispatch<
+    React.SetStateAction<{
+      activiteitId: string;
+      sourceCelId: string;
+      sourceSlot: number;
+      currentSlot: number;
+    } | null>
+  >;
 }
 
 const GridRow = memo(function GridRow({
