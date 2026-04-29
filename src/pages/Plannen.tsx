@@ -1656,10 +1656,13 @@ const Plannen = () => {
         >
           <div className="flex items-center justify-between gap-3 border-b pb-1.5" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
             <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-              Selectiegroepen — Shift-klik = nieuwe groep, Ctrl/Cmd-klik = aan actieve groep
+              Selectiegroepen — Shift-klik = nieuwe groep · Ctrl/Cmd-klik = aan actieve groep · Esc = wis alles
             </span>
             <button
-              onClick={clearSelection}
+              onClick={() => {
+                clearSelection();
+                setGroupNames({});
+              }}
               className="rounded-md border border-white/15 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-white/[0.08]"
             >
               Wis alles
@@ -1667,6 +1670,7 @@ const Plannen = () => {
           </div>
           {selectedGroups.map((g, idx) => {
             const c = groupColor(idx);
+            const naam = groupNames[idx] ?? `Groep ${idx + 1}`;
             return (
               <div key={idx} className="flex items-center gap-2">
                 <span
@@ -1676,10 +1680,15 @@ const Plannen = () => {
                 >
                   {idx + 1}
                 </span>
-                <span className="font-display text-xs font-semibold" style={{ color: c }}>
-                  {g.length} cel{g.length === 1 ? "" : "len"}
+                <GroupNameEditor
+                  naam={naam}
+                  color={c}
+                  onSave={(v) => renameGroup(idx, v)}
+                />
+                <span className="font-display text-[10px] font-semibold text-muted-foreground">
+                  · {g.length} cel{g.length === 1 ? "" : "len"}
                 </span>
-                <div className="flex items-center gap-1 rounded-md border border-white/15 p-0.5">
+                <div className="ml-2 flex items-center gap-1 rounded-md border border-white/15 p-0.5">
                   <button
                     onClick={() => shiftGroup(idx, -5)}
                     title="Verschuif 1 week terug"
@@ -1711,10 +1720,10 @@ const Plannen = () => {
                 </div>
                 <button
                   onClick={() => removeGroup(idx)}
-                  title="Verwijder deze groep"
-                  className="ml-auto rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                  title="Deselecteer deze groep"
+                  className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/15 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
                 >
-                  ✕
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             );
