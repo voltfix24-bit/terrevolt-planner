@@ -1674,7 +1674,7 @@ const Plannen = () => {
       console.error(e);
       toast.error("Excel export mislukt");
     }
-  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs]);
+  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs, exportWeekIds, exportActiviteitIds]);
 
   /* ----------------------------- pdf export (via print) ----------------------------- */
   const exportPDF = useCallback(() => {
