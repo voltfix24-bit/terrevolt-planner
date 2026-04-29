@@ -6,6 +6,7 @@ import {
   intakeLabel,
   tijdelijkeLabel,
 } from "@/lib/dossier-labels";
+import { dagOffsetLabel } from "@/lib/concept-planning";
 
 // =====================================================
 // Types (loose — same shape as ProjectDossier)
@@ -37,6 +38,15 @@ interface Critical {
   tone: "danger" | "warning" | "info";
 }
 
+export interface DossierConceptCel {
+  id: string;
+  dag_offset: number;
+  activiteit_id: string | null;
+  kleur_code: string | null;
+  notitie: string | null;
+  monteur_ids: string[];
+}
+
 export interface DossierPrintProps {
   project: ProjectRow;
   opdrachtgeverNaam: string;
@@ -48,6 +58,9 @@ export interface DossierPrintProps {
   samenvatting: string;
   periodeLabel: string;
   periodeDuur: number | null;
+  conceptCellen?: DossierConceptCel[];
+  activiteitenMap?: Map<string, string>;
+  monteursMap?: Map<string, string>;
 }
 
 // =====================================================
@@ -92,6 +105,9 @@ const DossierPrint: React.FC<DossierPrintProps> = (props) => {
     samenvatting,
     periodeLabel,
     periodeDuur,
+    conceptCellen = [],
+    activiteitenMap,
+    monteursMap,
   } = props;
 
   const get = <T,>(k: string): T | undefined => project?.[k] as T | undefined;
@@ -287,6 +303,47 @@ const DossierPrint: React.FC<DossierPrintProps> = (props) => {
             </tbody>
           </table>
         </div>
+
+        {/* Concept-planning (week-onafhankelijk) */}
+        {conceptCellen.length > 0 && (
+          <div className="pp-section">
+            <div className="pp-section-h">
+              Concept-planning · <span style={{ fontWeight: 400, fontStyle: "italic" }}>nog niet ingepland</span>
+            </div>
+            <table className="pp-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "22%" }}>Dag</th>
+                  <th style={{ width: "33%" }}>Activiteit</th>
+                  <th style={{ width: "30%" }}>Monteurs</th>
+                  <th>Notitie</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...conceptCellen]
+                  .sort((a, b) => a.dag_offset - b.dag_offset)
+                  .map((c) => {
+                    const actNaam = c.activiteit_id
+                      ? activiteitenMap?.get(c.activiteit_id) ?? "—"
+                      : "—";
+                    const monteurNamen =
+                      c.monteur_ids
+                        .map((id) => monteursMap?.get(id) ?? "")
+                        .filter(Boolean)
+                        .join(", ") || "—";
+                    return (
+                      <tr key={c.id}>
+                        <td>{dagOffsetLabel(c.dag_offset)}</td>
+                        <td>{actNaam}</td>
+                        <td>{monteurNamen}</td>
+                        <td>{c.notitie || "—"}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Monteur checklist */}
         <div className="pp-section">

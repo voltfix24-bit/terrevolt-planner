@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProjectTekeningen } from "@/components/ProjectTekeningen";
+import { ProjectConceptPlanning } from "@/components/ProjectConceptPlanning";
 
 // =====================================================
 // Types
@@ -932,6 +933,7 @@ const ProjectDetail = () => {
     { id: "deel-b", key: "B", label: "Huidige situatie", sub: "Deel B", icon: <Layers className="h-3.5 w-3.5" /> },
     { id: "deel-c", key: "C", label: "Tijdelijke situatie", sub: "Deel C", icon: <Wrench className="h-3.5 w-3.5" /> },
     { id: "deel-d", key: "D", label: "Gewenste situatie", sub: "Deel D", icon: <Target className="h-3.5 w-3.5" /> },
+    { id: "concept-planning", key: "X", label: "Concept-planning", sub: "Fictieve weken", icon: <CalendarRange className="h-3.5 w-3.5" /> },
     { id: "archief", key: "X", label: "Project Archief", sub: "Documenten", icon: <Archive className="h-3.5 w-3.5" />, soon: true },
   ];
 
@@ -2137,6 +2139,28 @@ const ProjectDetail = () => {
               )}
             </SubBlock>
           </Section>
+
+          {/* ============================================ */}
+          {/* CONCEPT-PLANNING (week-onafhankelijk)        */}
+          {/* ============================================ */}
+          <section
+            id="concept-planning"
+            className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-white/10 px-4 py-3.5"
+          >
+            <div className="absolute left-0 top-0 h-full w-[3px] bg-primary/50" />
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                <h2 className="font-display text-base font-bold tracking-tight text-foreground">
+                  Concept-planning
+                </h2>
+                <span className="hidden text-[11px] text-muted-foreground md:inline">
+                  · Fictieve dagen, pas inplannen bij keuze van weeknummer
+                </span>
+              </div>
+            </div>
+            <ProjectConceptPlanning projectId={id!} />
+          </section>
 
           {/* ============================================ */}
           {/* PROJECT ARCHIEF (placeholder)                */}

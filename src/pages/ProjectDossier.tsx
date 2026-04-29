@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import DossierPrint from "@/components/DossierPrint";
 import { printDossierInPopup } from "@/lib/print-dossier";
 import { intakeLabel } from "@/lib/dossier-labels";
+import { loadConceptPlanning, dagOffsetLabel, type ConceptCel } from "@/lib/concept-planning";
 
 // =====================================================
 // Types
@@ -279,6 +280,9 @@ const ProjectDossier = () => {
   const [msKabels, setMsKabels] = useState<KabelRow[]>([]);
   const [lsKabels, setLsKabels] = useState<KabelRow[]>([]);
   const [tekeningen, setTekeningen] = useState<TekeningRow[]>([]);
+  const [conceptCellen, setConceptCellen] = useState<ConceptCel[]>([]);
+  const [activiteitenMap, setActiviteitenMap] = useState<Map<string, string>>(new Map());
+  const [monteursMap, setMonteursMap] = useState<Map<string, string>>(new Map());
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -317,6 +321,25 @@ const ProjectDossier = () => {
     setMsKabels((msRes.data ?? []) as KabelRow[]);
     setLsKabels((lsRes.data ?? []) as KabelRow[]);
     setTekeningen((tkRes.data ?? []) as TekeningRow[]);
+
+    // Concept-planning + lookup voor namen
+    try {
+      const [cp, actRes, mRes] = await Promise.all([
+        loadConceptPlanning(id),
+        supabase.from("project_activiteiten").select("id,naam").eq("project_id", id),
+        supabase.from("monteurs").select("id,naam"),
+      ]);
+      setConceptCellen(cp);
+      const am = new Map<string, string>();
+      (actRes.data ?? []).forEach((a) => am.set(a.id as string, a.naam as string));
+      setActiviteitenMap(am);
+      const mm = new Map<string, string>();
+      (mRes.data ?? []).forEach((m) => mm.set(m.id as string, m.naam as string));
+      setMonteursMap(mm);
+    } catch (e) {
+      console.warn("Concept-planning kon niet laden", e);
+    }
+
     setLoading(false);
   }, [id, navigate]);
 
@@ -1062,6 +1085,9 @@ const ProjectDossier = () => {
         samenvatting={samenvatting}
         periodeLabel={periodeLabel}
         periodeDuur={periodeDuur}
+        conceptCellen={conceptCellen}
+        activiteitenMap={activiteitenMap}
+        monteursMap={monteursMap}
       />
     </div>
   );
