@@ -282,7 +282,9 @@ const ProjectDossier = () => {
   const [tekeningen, setTekeningen] = useState<TekeningRow[]>([]);
   const [conceptCellen, setConceptCellen] = useState<ConceptCel[]>([]);
   const [activiteitenMap, setActiviteitenMap] = useState<Map<string, string>>(new Map());
-  const [monteursMap, setMonteursMap] = useState<Map<string, string>>(new Map());
+  const [monteursMap, setMonteursMap] = useState<
+    Map<string, { naam: string; type: string }>
+  >(new Map());
 
   const load = useCallback(async () => {
     if (!id) return;
