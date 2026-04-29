@@ -933,6 +933,7 @@ const ProjectDetail = () => {
     { id: "deel-b", key: "B", label: "Huidige situatie", sub: "Deel B", icon: <Layers className="h-3.5 w-3.5" /> },
     { id: "deel-c", key: "C", label: "Tijdelijke situatie", sub: "Deel C", icon: <Wrench className="h-3.5 w-3.5" /> },
     { id: "deel-d", key: "D", label: "Gewenste situatie", sub: "Deel D", icon: <Target className="h-3.5 w-3.5" /> },
+    { id: "concept-planning", key: "X", label: "Concept-planning", sub: "Fictieve weken", icon: <CalendarRange className="h-3.5 w-3.5" /> },
     { id: "archief", key: "X", label: "Project Archief", sub: "Documenten", icon: <Archive className="h-3.5 w-3.5" />, soon: true },
   ];
 
