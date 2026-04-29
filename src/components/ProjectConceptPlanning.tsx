@@ -44,6 +44,7 @@ interface ProjectActiviteit {
 export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
   projectId,
 }) => {
+  const navigate = useNavigate();
   const [cellen, setCellen] = useState<ConceptCel[]>([]);
   const [activiteiten, setActiviteiten] = useState<ProjectActiviteit[]>([]);
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
