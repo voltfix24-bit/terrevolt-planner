@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, FileText, PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
-  exportProjectenExcel,
-  exportProjectenPDF,
-  exportTotaalExcel,
-  exportTotaalPDF,
-  type CapaciteitInput,
-  type ProjectExportRow,
-} from "@/lib/overview-exports";
+  exportGanttPDF,
+  type GanttMonteurWeergave,
+} from "@/lib/gantt-export";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
