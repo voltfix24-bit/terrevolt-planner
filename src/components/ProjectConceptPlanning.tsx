@@ -120,7 +120,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
     if (Object.keys(dbPatch).length > 0) {
       await supabase
         .from("project_concept_planning")
-        .update(dbPatch)
+        .update(dbPatch as never)
         .eq("id", id);
     }
   };
