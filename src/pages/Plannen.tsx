@@ -239,6 +239,19 @@ const Plannen = () => {
   // null => geen highlight actief.
   const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
 
+  // Multi-select voor groep-verplaatsen via drag-and-drop.
+  // Houdt de id's bij van planning_cellen die de gebruiker met Ctrl/Cmd of Shift heeft aangeklikt.
+  const [selectedCelIds, setSelectedCelIds] = useState<Set<string>>(new Set());
+  const clearSelection = useCallback(() => setSelectedCelIds(new Set()), []);
+  const toggleCellSelection = useCallback((celId: string) => {
+    setSelectedCelIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(celId)) next.delete(celId);
+      else next.add(celId);
+      return next;
+    });
+  }, []);
+
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
