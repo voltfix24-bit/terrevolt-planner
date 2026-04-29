@@ -991,6 +991,9 @@ const Plannen = () => {
         e.preventDefault();
         handleUndo();
       }
+      if (e.key === "Escape") {
+        setSelectedCelIds((prev) => (prev.size > 0 ? new Set() : prev));
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
