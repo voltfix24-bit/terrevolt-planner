@@ -4,11 +4,9 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
-  Download,
   FileText,
   MapPin,
   Plus,
-  Printer,
   Search,
   Trash2,
   User,
@@ -30,12 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  exportProjectenExcel,
-  exportProjectenPDF,
-  type ProjectExportRow,
-} from "@/lib/overview-exports";
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
@@ -208,7 +200,7 @@ const Projecten = () => {
       <div className="mb-6 flex items-end justify-between gap-4">
         <PageHeader title="Projecten" description="Overzicht van alle TerreVolt-projecten." />
         <div className="flex items-center gap-2">
-          <ProjectenDownloadMenu rows={filtered} opdrachtgeverById={opdrachtgeverById} />
+          
           <Button
             onClick={handleNewProject}
             disabled={creating}
@@ -417,63 +409,3 @@ const Projecten = () => {
 
 export default Projecten;
 
-/* ===================== Download menu ===================== */
-
-interface ProjectenDownloadMenuProps {
-  rows: Project[];
-  opdrachtgeverById: Map<string, string>;
-}
-
-const ProjectenDownloadMenu = ({ rows, opdrachtgeverById }: ProjectenDownloadMenuProps) => {
-  const [open, setOpen] = useState(false);
-
-  const buildRows = (): ProjectExportRow[] =>
-    rows.map((p) => ({
-      case_nummer: p.case_nummer,
-      station_naam: p.station_naam,
-      wv_naam: p.wv_naam,
-      status: p.status,
-      jaar: p.jaar,
-      opdrachtgever: p.opdrachtgever_id ? opdrachtgeverById.get(p.opdrachtgever_id) ?? null : null,
-      straat: p.straat,
-      postcode: p.postcode,
-      stad: p.stad,
-      gemeente: p.gemeente,
-      notities: p.notities,
-    }));
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          title="Projecten downloaden"
-          className="flex h-9 items-center gap-1 rounded-md border border-white/15 bg-transparent px-3 text-sm text-foreground hover:bg-white/[0.06]"
-        >
-          <Download className="h-4 w-4" />
-          <span className="font-display font-semibold">Download</span>
-          <ChevronDown className="h-3 w-3 opacity-70" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-1">
-        <div className="px-2 py-1.5 text-[11px] text-muted-foreground border-b border-border/60 mb-1">
-          {rows.length} project{rows.length === 1 ? "" : "en"} (huidige filter)
-        </div>
-        <button
-          type="button"
-          onClick={async () => { await exportProjectenExcel(buildRows()); setOpen(false); }}
-          className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-        >
-          <FileText className="h-4 w-4" /> Excel (.xlsx)
-        </button>
-        <button
-          type="button"
-          onClick={() => { exportProjectenPDF(buildRows()); setOpen(false); }}
-          className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-        >
-          <Printer className="h-4 w-4" /> PDF (print-klaar)
-        </button>
-      </PopoverContent>
-    </Popover>
-  );
-};
