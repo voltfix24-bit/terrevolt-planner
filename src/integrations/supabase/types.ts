@@ -325,6 +325,63 @@ export type Database = {
           },
         ]
       }
+      project_concept_monteurs: {
+        Row: {
+          concept_cel_id: string
+          created_at: string
+          id: string
+          monteur_id: string
+        }
+        Insert: {
+          concept_cel_id: string
+          created_at?: string
+          id?: string
+          monteur_id: string
+        }
+        Update: {
+          concept_cel_id?: string
+          created_at?: string
+          id?: string
+          monteur_id?: string
+        }
+        Relationships: []
+      }
+      project_concept_planning: {
+        Row: {
+          activiteit_id: string | null
+          capaciteit: number | null
+          created_at: string
+          dag_offset: number
+          id: string
+          kleur_code: string | null
+          notitie: string | null
+          positie: number
+          project_id: string
+        }
+        Insert: {
+          activiteit_id?: string | null
+          capaciteit?: number | null
+          created_at?: string
+          dag_offset: number
+          id?: string
+          kleur_code?: string | null
+          notitie?: string | null
+          positie?: number
+          project_id: string
+        }
+        Update: {
+          activiteit_id?: string | null
+          capaciteit?: number | null
+          created_at?: string
+          dag_offset?: number
+          id?: string
+          kleur_code?: string | null
+          notitie?: string | null
+          positie?: number
+          project_id?: string
+        }
+        Relationships: []
+      }
       project_ls_kabels: {
         Row: {
           created_at: string | null
