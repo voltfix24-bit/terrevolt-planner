@@ -3007,6 +3007,70 @@ const CellBox = memo(function CellBox({
           !
         </span>
       )}
+      {draggable && cel && (
+        <span
+          role="presentation"
+          title="Sleep om door te trekken (zoals in Excel)"
+          onMouseDown={(e) => {
+            if (!cel) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const sourceCelId = cel.id;
+            const sourceSlot = slot;
+            const sourceActiviteitId = activiteitId;
+            setFillState({
+              activiteitId: sourceActiviteitId,
+              sourceCelId,
+              sourceSlot,
+              currentSlot: sourceSlot,
+            });
+
+            let lastTarget: { weekId: string; dagIndex: number } | null = null;
+
+            const onMove = (ev: MouseEvent) => {
+              const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+              const cellEl = el?.closest("[data-cel-slot]") as HTMLElement | null;
+              if (!cellEl) return;
+              if (cellEl.dataset.celActiviteit !== sourceActiviteitId) return;
+              const s = Number(cellEl.dataset.celSlot);
+              if (Number.isNaN(s)) return;
+              lastTarget = {
+                weekId: cellEl.dataset.celWeek ?? "",
+                dagIndex: Number(cellEl.dataset.celDag ?? "0"),
+              };
+              setFillState((prev) =>
+                prev && prev.sourceCelId === sourceCelId
+                  ? { ...prev, currentSlot: s }
+                  : prev
+              );
+            };
+
+            const onUp = () => {
+              window.removeEventListener("mousemove", onMove);
+              window.removeEventListener("mouseup", onUp);
+              setFillState(null);
+              if (lastTarget && (lastTarget.weekId !== weekId || lastTarget.dagIndex !== dagIndex)) {
+                onFillRange(sourceCelId, lastTarget.weekId, lastTarget.dagIndex);
+              }
+            };
+
+            window.addEventListener("mousemove", onMove);
+            window.addEventListener("mouseup", onUp);
+          }}
+          className="absolute opacity-0 transition-opacity group-hover:opacity-100"
+          style={{
+            right: -3,
+            bottom: -3,
+            width: 10,
+            height: 10,
+            backgroundColor: "#3fff8b",
+            border: "1.5px solid rgba(0,0,0,0.6)",
+            cursor: "ew-resize",
+            zIndex: 5,
+            borderRadius: 1,
+          }}
+        />
+      )}
     </button>
   );
 });
