@@ -3909,6 +3909,32 @@ const CelModal = ({
   const vereistAanwijzing =
     activiteit.min_aanwijzing_ms ?? activiteit.min_aanwijzing_ls ?? null;
 
+  // Beschikbaarheid van monteurs op deze (week, dag): vrije dag, feestdag, verlof.
+  const beschikbaarheid = useMemo(() => {
+    const map = new Map<
+      string,
+      import("@/lib/monteur-beschikbaarheid").BeschikbaarheidResultaat
+    >();
+    for (const m of monteurs) {
+      const res = checkBeschikbaarheid({
+        monteurId: m.id,
+        werkdagen: m.werkdagen ?? null,
+        weekNr: week.week_nr,
+        jaar: projectJaar,
+        dagIndex: cel.dag_index,
+        afwezigheid,
+        feestdagenMap,
+      });
+      map.set(m.id, res);
+    }
+    return map;
+  }, [monteurs, week.week_nr, projectJaar, cel.dag_index, afwezigheid, feestdagenMap]);
+
+  const dagFeestdag = useMemo(
+    () => isFeestdag(feestdagenMap, week.week_nr, projectJaar, cel.dag_index),
+    [feestdagenMap, week.week_nr, projectJaar, cel.dag_index],
+  );
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
