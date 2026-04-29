@@ -2984,11 +2984,9 @@ const CellBox = memo(function CellBox({
       onDragStart={(e) => {
         if (!draggable || !cel) return;
         e.dataTransfer.effectAllowed = "move";
-        // Als de gesleepte cel onderdeel is van de selectie, sleep de hele groep mee.
-        // Anders: sleep alleen deze cel (en wis de selectie niet — de gebruiker mag selectie houden).
-        const groupIds = selectedCelIds.has(cel.id)
-          ? Array.from(selectedCelIds)
-          : [cel.id];
+        // Sleep alleen de cellen van de groep waar deze cel in zit. Andere
+        // selectiegroepen blijven staan zodat groepen onafhankelijk verplaatsen.
+        const groupIds = groupCelIds && groupCelIds.length > 0 ? [...groupCelIds] : [cel.id];
         e.dataTransfer.setData("application/x-plannen-cel", cel.id);
         e.dataTransfer.setData("application/x-plannen-activiteit", activiteit.id);
         e.dataTransfer.setData(
