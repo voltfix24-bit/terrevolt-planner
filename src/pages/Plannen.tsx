@@ -1437,7 +1437,7 @@ const Plannen = () => {
 
       // Week header rij (rij 2)
       const weekRow: string[] = ["Activiteit"];
-      weken.forEach((w) => {
+      expWeken.forEach((w) => {
         const isNu = w.week_nr === CURRENT_WEEK && projectJaar === CURRENT_YEAR;
         weekRow.push(isNu ? `Week ${w.week_nr} (NU)` : `Week ${w.week_nr}`, "", "", "", "");
       });
@@ -1445,14 +1445,14 @@ const Plannen = () => {
 
       // Dag rij (rij 3)
       const dayRow: string[] = [""];
-      weken.forEach(() => DAG_LABELS.forEach((d) => dayRow.push(d)));
+      expWeken.forEach(() => DAG_LABELS.forEach((d) => dayRow.push(d)));
       aoa.push(dayRow);
 
       // Activiteit rijen (start rij 4)
       const activityStartRow = aoa.length;
-      activiteiten.forEach((a) => {
+      expActiviteiten.forEach((a) => {
         const row: string[] = [a.naam];
-        weken.forEach((w) => {
+        expWeken.forEach((w) => {
           for (let d = 0; d < 5; d++) {
             const cel = cellen.get(cellKey(a.id, w.id, d));
             if (!cel || !cel.kleur_code) {
@@ -1473,7 +1473,7 @@ const Plannen = () => {
 
       // Opmerkingen rij
       const opmRow: string[] = ["Opmerkingen"];
-      weken.forEach((w) => {
+      expWeken.forEach((w) => {
         opmRow.push(w.opmerking ?? "", "", "", "", "");
       });
       aoa.push(opmRow);
