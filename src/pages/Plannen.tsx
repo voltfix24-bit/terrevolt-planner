@@ -1752,6 +1752,7 @@ const Plannen = () => {
           activiteit={openCel.activiteit}
           week={openCel.week}
           monteurs={monteurs}
+          ploegen={ploegen}
           monteurIdsAssigned={celMonteurs.get(openCel.cel.id) ?? []}
           monteurById={monteurById}
           template={
