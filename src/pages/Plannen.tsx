@@ -1393,40 +1393,52 @@ const Plannen = () => {
     [activiteiten, loadAll]
   );
 
+  /* ----------------------------- export helpers ----------------------------- */
+  // Bepaal of tekst zwart of wit moet zijn op een gegeven achtergrondkleur (WCAG-luminantie).
+  const getTextColorForBg = (hex: string): "000000" | "FFFFFF" => {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.slice(0, 2), 16) / 255;
+    const g = parseInt(h.slice(2, 4), 16) / 255;
+    const b = parseInt(h.slice(4, 6), 16) / 255;
+    const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    return L > 0.5 ? "000000" : "FFFFFF";
+  };
+
   /* ----------------------------- excel export ----------------------------- */
   const exportExcel = useCallback(async () => {
     if (!project) return;
     try {
-      // dynamic load
       const XLSX: any = await loadSheetJS();
-      const aoa: (string | number)[][] = [];
-      aoa.push([
-        "Case:",
-        project.case_nummer ?? "",
-        "Station:",
-        project.station_naam ?? "",
-        "WV:",
-        project.wv_naam ?? "",
-      ]);
-      aoa.push([]);
-      // week header row — markeer de huidige ISO-week met " — NU"
       const projectJaar = project.jaar ?? new Date().getFullYear();
-      const weekRow: string[] = [""];
+      const aoa: (string | number)[][] = [];
+
+      // Rij 0: project header
+      aoa.push([
+        `Case ${project.case_nummer ?? ""}`,
+        `Station: ${project.station_naam ?? ""}`,
+        `WV: ${project.wv_naam ?? ""}`,
+        "", "", "", "",
+      ]);
+      aoa.push([]); // blank
+
+      // Week header rij (rij 2)
+      const weekRow: string[] = ["Activiteit"];
       weken.forEach((w) => {
         const isNu = w.week_nr === CURRENT_WEEK && projectJaar === CURRENT_YEAR;
-        const label = isNu ? `Week ${w.week_nr} — NU` : `Week ${w.week_nr}`;
-        weekRow.push(label, "", "", "", "");
+        weekRow.push(isNu ? `Week ${w.week_nr} (NU)` : `Week ${w.week_nr}`, "", "", "", "");
       });
       aoa.push(weekRow);
-      // day row
+
+      // Dag rij (rij 3)
       const dayRow: string[] = [""];
-      weken.forEach(() => {
-        DAG_LABELS.forEach((d) => dayRow.push(d));
-      });
+      weken.forEach(() => DAG_LABELS.forEach((d) => dayRow.push(d)));
       aoa.push(dayRow);
-      // activity rows
+
+      // Activiteit rijen (start rij 4)
+      const activityStartRow = aoa.length;
       activiteiten.forEach((a) => {
-        const row: (string | number)[] = [a.naam];
+        const row: string[] = [a.naam];
         weken.forEach((w) => {
           for (let d = 0; d < 5; d++) {
             const cel = cellen.get(cellKey(a.id, w.id, d));
@@ -1434,26 +1446,26 @@ const Plannen = () => {
               row.push("");
               continue;
             }
-            const kleurNaam = COLOR_MAP[cel.kleur_code]?.naam ?? cel.kleur_code;
             const ids = celMonteurs.get(cel.id) ?? [];
-            const namen = ids
+            const inits = ids
               .map((mid) => monteurs.find((m) => m.id === mid)?.naam)
               .filter(Boolean)
-              .join(", ");
-            row.push(namen ? `${kleurNaam} — ${namen}` : kleurNaam);
+              .map((n) => initialen(n as string))
+              .join(" ");
+            row.push(inits);
           }
         });
         aoa.push(row);
       });
-      // opmerkingen row
+
+      // Opmerkingen rij
       const opmRow: string[] = ["Opmerkingen"];
       weken.forEach((w) => {
         opmRow.push(w.opmerking ?? "", "", "", "", "");
       });
       aoa.push(opmRow);
 
-      // ---- Ingeplande monteurs sectie ----
-      // Verzamel unieke monteurs die ergens in dit project staan ingepland.
+      // Ingeplande monteurs sectie
       const ingeplandeIds = new Set<string>();
       for (const cel of cellen.values()) {
         const ids = celMonteurs.get(cel.id);
@@ -1470,29 +1482,339 @@ const Plannen = () => {
 
       aoa.push([]);
       aoa.push([`Ingeplande monteurs (${ingeplandeList.length})`]);
+      const monteursHeaderRow = aoa.length - 1;
       if (ingeplandeList.length === 0) {
         aoa.push(["Nog geen monteurs ingepland"]);
       } else {
-        aoa.push(["Naam", "Type", "Aanwijzing LS", "Aanwijzing MS"]);
+        aoa.push(["Initialen", "Naam", "Type", "Aanwijzing LS", "Aanwijzing MS"]);
         ingeplandeList.forEach((m) => {
-          const typeLabel =
-            m.type === "schakelmonteur" ? "Schakelmonteur" : "Montagemonteur";
           aoa.push([
+            initialen(m.naam),
             m.naam,
-            typeLabel,
+            m.type === "schakelmonteur" ? "Schakelmonteur" : "Montagemonteur",
             m.aanwijzing_ls ?? "—",
             m.aanwijzing_ms ?? "—",
           ]);
         });
       }
 
+      // Legenda kleuren
+      aoa.push([]);
+      aoa.push(["Legenda kleuren"]);
+      const legendaHeaderRow = aoa.length - 1;
+      const legendaStartRow = aoa.length;
+      Object.entries(COLOR_MAP).forEach(([code, info]) => {
+        aoa.push(["", info.naam, code]);
+      });
+
       const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      // Kolombreedtes — eerste kolom breed voor activiteit-namen, dagcellen smal
+      const totalCols = 1 + weken.length * 5;
+      const cols: { wch: number }[] = [{ wch: 32 }];
+      for (let i = 1; i < totalCols; i++) cols.push({ wch: 5 });
+      ws["!cols"] = cols;
+
+      // Rij-hoogtes
+      const rows: { hpt: number }[] = [];
+      rows[0] = { hpt: 22 };
+      rows[2] = { hpt: 22 };
+      rows[3] = { hpt: 18 };
+      ws["!rows"] = rows;
+
+      // Merges voor week-headers (rij 2, kolommen per week)
+      const merges: any[] = [];
+      weken.forEach((_, wi) => {
+        const startCol = 1 + wi * 5;
+        merges.push({ s: { r: 2, c: startCol }, e: { r: 2, c: startCol + 4 } });
+        // Opmerkingen ook mergen
+        const opmRowIdx = activityStartRow + activiteiten.length;
+        merges.push({ s: { r: opmRowIdx, c: startCol }, e: { r: opmRowIdx, c: startCol + 4 } });
+      });
+      ws["!merges"] = merges;
+
+      // Helpers voor stijl
+      const border = {
+        top: { style: "thin", color: { rgb: "BFBFBF" } },
+        bottom: { style: "thin", color: { rgb: "BFBFBF" } },
+        left: { style: "thin", color: { rgb: "BFBFBF" } },
+        right: { style: "thin", color: { rgb: "BFBFBF" } },
+      };
+      const setStyle = (r: number, c: number, style: any) => {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        if (!ws[ref]) ws[ref] = { t: "s", v: "" };
+        ws[ref].s = { ...(ws[ref].s ?? {}), ...style };
+      };
+
+      // Project header (rij 0): vetgedrukt, groot
+      for (let c = 0; c < 7; c++) {
+        setStyle(0, c, {
+          font: { bold: true, sz: 13, color: { rgb: "111111" } },
+          alignment: { vertical: "center" },
+        });
+      }
+
+      // Week-header rij (rij 2): donkerblauwe band, witte tekst, gecentreerd
+      for (let c = 0; c < totalCols; c++) {
+        setStyle(2, c, {
+          font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+          fill: { patternType: "solid", fgColor: { rgb: "1F2937" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border,
+        });
+      }
+
+      // Dag-rij (rij 3): lichte band
+      for (let c = 0; c < totalCols; c++) {
+        setStyle(3, c, {
+          font: { bold: true, sz: 10, color: { rgb: "111111" } },
+          fill: { patternType: "solid", fgColor: { rgb: "E5E7EB" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border,
+        });
+      }
+
+      // Activiteit-rijen
+      activiteiten.forEach((a, ai) => {
+        const r = activityStartRow + ai;
+        // Activiteit-naam kolom
+        setStyle(r, 0, {
+          font: { bold: true, sz: 11, color: { rgb: "111111" } },
+          fill: { patternType: "solid", fgColor: { rgb: "F3F4F6" } },
+          alignment: { vertical: "center", wrapText: true },
+          border,
+        });
+        weken.forEach((w, wi) => {
+          for (let d = 0; d < 5; d++) {
+            const c = 1 + wi * 5 + d;
+            const cel = cellen.get(cellKey(a.id, w.id, d));
+            if (!cel || !cel.kleur_code) {
+              setStyle(r, c, {
+                fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+                border,
+              });
+              continue;
+            }
+            const hex = (COLOR_MAP[cel.kleur_code]?.hex ?? "#777777").replace("#", "").toUpperCase();
+            const fg = getTextColorForBg(hex);
+            setStyle(r, c, {
+              font: { bold: true, sz: 10, color: { rgb: fg } },
+              fill: { patternType: "solid", fgColor: { rgb: hex } },
+              alignment: { horizontal: "center", vertical: "center" },
+              border,
+            });
+          }
+        });
+      });
+
+      // Opmerkingen rij stijl
+      const opmRowIdx = activityStartRow + activiteiten.length;
+      setStyle(opmRowIdx, 0, {
+        font: { bold: true, italic: true, sz: 10, color: { rgb: "374151" } },
+        fill: { patternType: "solid", fgColor: { rgb: "F9FAFB" } },
+        alignment: { vertical: "center" },
+        border,
+      });
+      for (let c = 1; c < totalCols; c++) {
+        setStyle(opmRowIdx, c, {
+          font: { italic: true, sz: 10, color: { rgb: "374151" } },
+          fill: { patternType: "solid", fgColor: { rgb: "F9FAFB" } },
+          alignment: { vertical: "center", wrapText: true },
+          border,
+        });
+      }
+
+      // Monteurs sectie header
+      setStyle(monteursHeaderRow, 0, {
+        font: { bold: true, sz: 12, color: { rgb: "111111" } },
+      });
+
+      // Legenda: kleurblokjes
+      setStyle(legendaHeaderRow, 0, {
+        font: { bold: true, sz: 12, color: { rgb: "111111" } },
+      });
+      Object.entries(COLOR_MAP).forEach(([_code, info], i) => {
+        const r = legendaStartRow + i;
+        const hex = info.hex.replace("#", "").toUpperCase();
+        setStyle(r, 0, {
+          fill: { patternType: "solid", fgColor: { rgb: hex } },
+          border,
+        });
+        setStyle(r, 1, {
+          font: { sz: 11, color: { rgb: "111111" } },
+          alignment: { vertical: "center" },
+        });
+      });
+
+      // Freeze panes: bovenste 4 rijen + eerste kolom
+      ws["!freeze"] = { xSplit: 1, ySplit: 4 };
+      (ws as any)["!views"] = [{ state: "frozen", xSplit: 1, ySplit: 4 }];
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Planning");
-      const filename = `Terrevolt_${project.case_nummer ?? "project"}_${project.jaar ?? new Date().getFullYear()}.xlsx`;
+      const filename = `Terrevolt_${project.case_nummer ?? "project"}_${projectJaar}.xlsx`;
       XLSX.writeFile(wb, filename);
-    } catch {
+    } catch (e) {
+      console.error(e);
       toast.error("Excel export mislukt");
+    }
+  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs]);
+
+  /* ----------------------------- pdf export (via print) ----------------------------- */
+  const exportPDF = useCallback(() => {
+    if (!project) return;
+    try {
+      const projectJaar = project.jaar ?? new Date().getFullYear();
+      const esc = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+      const weekHeaderCells = weken
+        .map((w) => {
+          const isNu = w.week_nr === CURRENT_WEEK && projectJaar === CURRENT_YEAR;
+          return `<th class="wk${isNu ? " nu" : ""}" colspan="5">Week ${w.week_nr}${isNu ? " <span class='nu-badge'>NU</span>" : ""}</th>`;
+        })
+        .join("");
+
+      const dayHeaderCells = weken
+        .map(() => DAG_LABELS.map((d) => `<th class="dag">${d}</th>`).join(""))
+        .join("");
+
+      const bodyRows = activiteiten
+        .map((a) => {
+          const cellsHtml = weken
+            .map((w) =>
+              Array.from({ length: 5 }, (_, d) => {
+                const cel = cellen.get(cellKey(a.id, w.id, d));
+                if (!cel || !cel.kleur_code) return `<td class="cel leeg"></td>`;
+                const hex = COLOR_MAP[cel.kleur_code]?.hex ?? "#777";
+                const fg = getTextColorForBg(hex.replace("#", "")) === "000000" ? "#000" : "#fff";
+                const ids = celMonteurs.get(cel.id) ?? [];
+                const inits = ids
+                  .map((mid) => monteurs.find((m) => m.id === mid)?.naam)
+                  .filter(Boolean)
+                  .map((n) => initialen(n as string))
+                  .join(" ");
+                return `<td class="cel" style="background:${hex};color:${fg}">${esc(inits)}</td>`;
+              }).join("")
+            )
+            .join("");
+          return `<tr><th class="act">${esc(a.naam)}</th>${cellsHtml}</tr>`;
+        })
+        .join("");
+
+      const opmCells = weken
+        .map((w) => `<td class="opm" colspan="5">${esc(w.opmerking ?? "")}</td>`)
+        .join("");
+
+      const ingeplandeIds = new Set<string>();
+      for (const cel of cellen.values()) {
+        const ids = celMonteurs.get(cel.id);
+        if (!ids) continue;
+        for (const id of ids) ingeplandeIds.add(id);
+      }
+      const ingeplandeList = Array.from(ingeplandeIds)
+        .map((id) => monteurs.find((m) => m.id === id))
+        .filter((m): m is Monteur => !!m)
+        .sort((a, b) => {
+          if (a.type !== b.type) return a.type === "schakelmonteur" ? -1 : 1;
+          return a.naam.localeCompare(b.naam, "nl");
+        });
+
+      const monteursRows = ingeplandeList
+        .map(
+          (m) => `<tr>
+            <td class="mon-init">${esc(initialen(m.naam))}</td>
+            <td>${esc(m.naam)}</td>
+            <td>${m.type === "schakelmonteur" ? "Schakelmonteur" : "Montagemonteur"}</td>
+            <td>${esc(m.aanwijzing_ls ?? "—")}</td>
+            <td>${esc(m.aanwijzing_ms ?? "—")}</td>
+          </tr>`
+        )
+        .join("");
+
+      const legendaItems = Object.values(COLOR_MAP)
+        .map((info) => {
+          const fg = getTextColorForBg(info.hex.replace("#", "")) === "000000" ? "#000" : "#fff";
+          return `<div class="leg-item"><span class="leg-sw" style="background:${info.hex};color:${fg}">&nbsp;</span><span>${esc(info.naam)}</span></div>`;
+        })
+        .join("");
+
+      const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"/>
+<title>Planning ${esc(project.case_nummer ?? "")} — ${projectJaar}</title>
+<style>
+  @page { size: A3 landscape; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: #111; background: #fff; margin: 0; padding: 16px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .meta { font-size: 12px; color: #374151; margin-bottom: 12px; }
+  .meta strong { color: #111; }
+  table.planning { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; }
+  table.planning th, table.planning td { border: 1px solid #9ca3af; padding: 2px; text-align: center; vertical-align: middle; }
+  table.planning th.act { width: 180px; text-align: left; padding: 4px 6px; background: #f3f4f6; font-weight: 700; font-size: 11px; color: #111; }
+  table.planning th.wk { background: #1f2937; color: #fff; font-weight: 700; font-size: 11px; padding: 4px; }
+  table.planning th.wk.nu { background: #b45309; }
+  table.planning .nu-badge { display: inline-block; margin-left: 4px; padding: 0 4px; background: #fff; color: #b45309; border-radius: 3px; font-size: 9px; font-weight: 800; }
+  table.planning th.dag { background: #e5e7eb; font-weight: 700; color: #111; padding: 2px; }
+  table.planning td.cel { height: 26px; font-weight: 700; font-size: 10px; }
+  table.planning td.cel.leeg { background: #fff; }
+  table.planning td.opm { background: #f9fafb; text-align: left; font-style: italic; color: #374151; padding: 4px 6px; font-size: 10px; }
+  .section { margin-top: 18px; page-break-inside: avoid; }
+  .section h2 { font-size: 13px; margin: 0 0 6px; color: #111; }
+  table.simple { border-collapse: collapse; font-size: 11px; }
+  table.simple th, table.simple td { border: 1px solid #cbd5e1; padding: 4px 8px; text-align: left; }
+  table.simple th { background: #f3f4f6; font-weight: 700; }
+  table.simple td.mon-init { font-weight: 700; background: #1f2937; color: #fff; text-align: center; width: 56px; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .leg-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; }
+  .leg-sw { display: inline-block; width: 22px; height: 14px; border: 1px solid #6b7280; border-radius: 2px; }
+  @media print { body { padding: 0; } .no-print { display: none; } }
+</style></head><body>
+<h1>Planning — Case ${esc(project.case_nummer ?? "")} (${projectJaar})</h1>
+<div class="meta"><strong>Station:</strong> ${esc(project.station_naam ?? "—")} &nbsp; <strong>WV:</strong> ${esc(project.wv_naam ?? "—")}</div>
+
+<table class="planning">
+  <thead>
+    <tr><th class="act" rowspan="2">Activiteit</th>${weekHeaderCells}</tr>
+    <tr>${dayHeaderCells}</tr>
+  </thead>
+  <tbody>
+    ${bodyRows}
+    <tr><th class="act">Opmerkingen</th>${opmCells}</tr>
+  </tbody>
+</table>
+
+<div class="section">
+  <h2>Ingeplande monteurs (${ingeplandeList.length})</h2>
+  ${
+    ingeplandeList.length === 0
+      ? `<div style="font-size:11px;color:#6b7280">Nog geen monteurs ingepland</div>`
+      : `<table class="simple"><thead><tr><th>Init.</th><th>Naam</th><th>Type</th><th>Aanwijzing LS</th><th>Aanwijzing MS</th></tr></thead><tbody>${monteursRows}</tbody></table>`
+  }
+</div>
+
+<div class="section">
+  <h2>Legenda kleuren</h2>
+  <div class="legenda">${legendaItems}</div>
+</div>
+
+<script>
+  window.addEventListener("load", function () {
+    setTimeout(function () { window.focus(); window.print(); }, 150);
+  });
+</script>
+</body></html>`;
+
+      const win = window.open("", "_blank", "width=1200,height=800");
+      if (!win) {
+        toast.error("Sta pop-ups toe om de PDF te genereren");
+        return;
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } catch (e) {
+      console.error(e);
+      toast.error("PDF export mislukt");
     }
   }, [project, weken, activiteiten, cellen, celMonteurs, monteurs]);
 
@@ -1851,14 +2173,30 @@ const Plannen = () => {
           >
             <CalendarDays className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            onClick={exportExcel}
-            title="Exporteer naar Excel"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
-          >
-            <Download className="h-4 w-4" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title="Planning downloaden"
+                className="flex h-8 items-center gap-1 rounded-md border border-white/15 bg-transparent px-2 text-foreground hover:bg-white/[0.06]"
+              >
+                <Download className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Download planning</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={exportExcel}>
+                <FileText className="mr-2 h-4 w-4" />
+                Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportPDF}>
+                <Printer className="mr-2 h-4 w-4" />
+                PDF (print-klaar)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             onClick={() => window.print()}
@@ -3708,9 +4046,11 @@ function loadSheetJS(): Promise<any> {
   const w = window as unknown as { XLSX?: any };
   if (w.XLSX) return Promise.resolve(w.XLSX);
   if (sheetJsPromise) return sheetJsPromise;
+  // xlsx-js-style: drop-in vervanger van SheetJS met ondersteuning voor cell styling
+  // (kleuren, borders, fonts) — nodig voor de gekleurde planning-export.
   sheetJsPromise = new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+    s.src = "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js";
     s.onload = () => {
       const xw = window as unknown as { XLSX?: any };
       if (xw.XLSX) resolve(xw.XLSX);
