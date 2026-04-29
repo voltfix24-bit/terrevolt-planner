@@ -2197,6 +2197,9 @@ const CellBox = memo(function CellBox({
   currentWeekTooltip = null,
   onClick,
   onContextMenu,
+  weekId,
+  dagIndex,
+  onMoveCell,
 }: {
   cel: Cel | undefined;
   activiteit: Activiteit;
@@ -2209,6 +2212,9 @@ const CellBox = memo(function CellBox({
   currentWeekTooltip?: string | null;
   onClick: () => void;
   onContextMenu: (e: ReactMouseEvent) => void;
+  weekId: string;
+  dagIndex: number;
+  onMoveCell: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
 }) {
   const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
   const isCap =
