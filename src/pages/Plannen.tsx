@@ -2674,6 +2674,11 @@ const CellBox = memo(function CellBox({
   selectedCelIds,
   onToggleSelect,
   onStartNewGroup,
+  activiteitId,
+  slot,
+  inFillRange = false,
+  onFillRange,
+  setFillState,
 }: {
   cel: Cel | undefined;
   activiteit: Activiteit;
@@ -2700,6 +2705,18 @@ const CellBox = memo(function CellBox({
   selectedCelIds: Set<string>;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
+  activiteitId: string;
+  slot: number;
+  inFillRange?: boolean;
+  onFillRange: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
+  setFillState: React.Dispatch<
+    React.SetStateAction<{
+      activiteitId: string;
+      sourceCelId: string;
+      sourceSlot: number;
+      currentSlot: number;
+    } | null>
+  >;
 }) {
   const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
   const isCap =
