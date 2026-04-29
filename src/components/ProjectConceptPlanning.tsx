@@ -101,7 +101,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
     }
     setCellen((prev) => [
       ...prev,
-      { ...(data as ConceptCel), monteur_ids: [] },
+      { ...(data as unknown as ConceptCel), monteur_ids: [] },
     ]);
   };
 
