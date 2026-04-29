@@ -2384,6 +2384,7 @@ interface CelModalProps {
   activiteit: Activiteit;
   week: Week;
   monteurs: Monteur[];
+  ploegen: import("@/lib/ploegen").Ploeg[];
   monteurIdsAssigned: string[];
   monteurById: Map<string, Monteur>;
   template: ActiviteitTypeOption | null;
