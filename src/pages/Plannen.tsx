@@ -410,6 +410,46 @@ const Plannen = () => {
       setPloegen([]);
     }
 
+    // Laad feestdagen + afwezigheid (best effort) zodat de planning kan waarschuwen
+    try {
+      const proj = projRes.data as Project;
+      const projectJaar = proj?.jaar ?? new Date().getFullYear();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      const [fdRes, awRes] = await Promise.all([
+        sb
+          .from("feestdagen")
+          .select("datum, naam")
+          .in("jaar", [projectJaar - 1, projectJaar, projectJaar + 1]),
+        sb
+          .from("monteur_afwezigheid")
+          .select("monteur_id, datum_van, datum_tot, type, omschrijving"),
+      ]);
+      const fdMap = new Map<string, string>();
+      for (const f of (fdRes.data ?? []) as { datum: string; naam: string }[]) {
+        fdMap.set(f.datum, f.naam);
+      }
+      setFeestdagenMap(fdMap);
+      setAfwezigheid(
+        ((awRes.data ?? []) as Array<{
+          monteur_id: string;
+          datum_van: string;
+          datum_tot: string;
+          type: string;
+          omschrijving: string | null;
+        }>).map((a) => ({
+          monteur_id: a.monteur_id,
+          datum_van: a.datum_van,
+          datum_tot: a.datum_tot,
+          type: a.type,
+          omschrijving: a.omschrijving,
+        })),
+      );
+    } catch {
+      setFeestdagenMap(new Map());
+      setAfwezigheid([]);
+    }
+
     // Auto-seed project_activiteiten vanuit template wanneer leeg
     const proj = projRes.data as Project;
     if (actRows.length === 0 && proj?.template_id) {
