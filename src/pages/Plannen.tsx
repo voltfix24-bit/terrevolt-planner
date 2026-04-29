@@ -239,6 +239,19 @@ const Plannen = () => {
   // null => geen highlight actief.
   const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
 
+  // Multi-select voor groep-verplaatsen via drag-and-drop.
+  // Houdt de id's bij van planning_cellen die de gebruiker met Ctrl/Cmd of Shift heeft aangeklikt.
+  const [selectedCelIds, setSelectedCelIds] = useState<Set<string>>(new Set());
+  const clearSelection = useCallback(() => setSelectedCelIds(new Set()), []);
+  const toggleCellSelection = useCallback((celId: string) => {
+    setSelectedCelIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(celId)) next.delete(celId);
+      else next.add(celId);
+      return next;
+    });
+  }, []);
+
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -740,6 +753,131 @@ const Plannen = () => {
     [cellen, celMonteurs, loadAll]
   );
 
+  // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
+  // (1 slot = 1 dag; een week = 5 slots). Alle cellen blijven binnen hun eigen
+  // activiteit-rij; de delta wordt bepaald door de bron-cel die de gebruiker sleept
+  // en de doel-(week, dag).
+  const moveCellsGroup = useCallback(
+    async (
+      sourceCelIds: string[],
+      anchorCelId: string,
+      targetWeekId: string,
+      targetDagIndex: number
+    ) => {
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      const totalSlots = weken.length * 5;
+      const slotToWeekDag = (slot: number): { week_id: string; dag_index: number } | null => {
+        if (slot < 0 || slot >= totalSlots) return null;
+        const wi = Math.floor(slot / 5);
+        return { week_id: weken[wi].id, dag_index: slot % 5 };
+      };
+
+      let anchor: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === anchorCelId) anchor = c;
+      });
+      if (!anchor) return;
+      const a = anchor as Cel;
+      const anchorWi = weekIndexById.get(a.week_id);
+      const targetWi = weekIndexById.get(targetWeekId);
+      if (anchorWi == null || targetWi == null) return;
+      const anchorSlot = anchorWi * 5 + a.dag_index;
+      const targetSlot = targetWi * 5 + targetDagIndex;
+      const delta = targetSlot - anchorSlot;
+      if (delta === 0) return;
+
+      // Verzamel alle bron-cellen
+      const sources: Cel[] = [];
+      cellen.forEach((c) => {
+        if (sourceCelIds.includes(c.id)) sources.push(c);
+      });
+      if (sources.length === 0) return;
+
+      // Bereken nieuwe posities + check out-of-range
+      type Move = { src: Cel; newWeekId: string; newDagIndex: number; newKey: string };
+      const moves: Move[] = [];
+      for (const src of sources) {
+        const wi = weekIndexById.get(src.week_id);
+        if (wi == null) return;
+        const slot = wi * 5 + src.dag_index;
+        const dest = slotToWeekDag(slot + delta);
+        if (!dest) {
+          toast.error("Verplaatsing valt buiten het zichtbare bereik");
+          return;
+        }
+        moves.push({
+          src,
+          newWeekId: dest.week_id,
+          newDagIndex: dest.dag_index,
+          newKey: cellKey(src.activiteit_id, dest.week_id, dest.dag_index),
+        });
+      }
+
+      // Detecteer conflicten met cellen die NIET in de selectie zitten
+      const sourceIdSet = new Set(sourceCelIds);
+      const conflicts: Cel[] = [];
+      for (const m of moves) {
+        const existing = cellen.get(m.newKey);
+        if (!existing) continue;
+        if (sourceIdSet.has(existing.id)) continue; // wordt zelf ook verplaatst
+        const monteurs = celMonteurs.get(existing.id) ?? [];
+        const heeftInhoud = !!existing.kleur_code || monteurs.length > 0 || !!existing.notitie;
+        if (heeftInhoud) conflicts.push(existing);
+      }
+      if (conflicts.length > 0) {
+        const ok = window.confirm(
+          `${conflicts.length} doel-${conflicts.length === 1 ? "dag is" : "dagen zijn"} al gevuld. Wil je de bestaande inhoud overschrijven?`
+        );
+        if (!ok) return;
+      }
+
+      // Verwijder conflict-cellen (db + lokaal)
+      for (const c of conflicts) {
+        await supabase.from("cel_monteurs").delete().eq("cel_id", c.id);
+        await supabase.from("planning_cellen").delete().eq("id", c.id);
+      }
+
+      // Update lokale Map: eerst alle oude keys verwijderen, dan nieuwe inzetten
+      setCellen((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) {
+          m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+        }
+        for (const mv of moves) {
+          m.delete(cellKey(mv.src.activiteit_id, mv.src.week_id, mv.src.dag_index));
+        }
+        for (const mv of moves) {
+          m.set(mv.newKey, {
+            ...mv.src,
+            week_id: mv.newWeekId,
+            dag_index: mv.newDagIndex,
+          });
+        }
+        return m;
+      });
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        for (const c of conflicts) m.delete(c.id);
+        return m;
+      });
+
+      // Database updates parallel
+      const results = await Promise.all(
+        moves.map((mv) =>
+          supabase
+            .from("planning_cellen")
+            .update({ week_id: mv.newWeekId, dag_index: mv.newDagIndex })
+            .eq("id", mv.src.id)
+        )
+      );
+      if (results.some((r) => r.error)) {
+        toast.error("Verplaatsen mislukt");
+        loadAll();
+      }
+    },
+    [cellen, celMonteurs, weken, loadAll]
+  );
+
   /* ----------------------------- undo / history ----------------------------- */
   const reverseHistoryEntry = useCallback(
     async (entry: HistoryEntry) => {
@@ -852,6 +990,9 @@ const Plannen = () => {
         }
         e.preventDefault();
         handleUndo();
+      }
+      if (e.key === "Escape") {
+        setSelectedCelIds((prev) => (prev.size > 0 ? new Set() : prev));
       }
     };
     window.addEventListener("keydown", handler);
@@ -1280,6 +1421,30 @@ const Plannen = () => {
 
   return (
     <div className="-mx-8 -my-8">
+      {/* Selectie-toolbar voor groep-verplaatsen via drag-and-drop */}
+      {selectedCelIds.size > 0 && (
+        <div
+          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-2 shadow-lg"
+          style={{
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            borderColor: "#38bdf8",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <span className="font-display text-xs font-bold uppercase tracking-wider text-sky-300">
+            {selectedCelIds.size} cel{selectedCelIds.size === 1 ? "" : "len"} geselecteerd
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Sleep een geselecteerde cel om alle samen te verplaatsen
+          </span>
+          <button
+            onClick={clearSelection}
+            className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.08]"
+          >
+            Wis selectie
+          </button>
+        </div>
+      )}
       {/* Project info bar (sticky) */}
       <div
         className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b px-8 py-3"
@@ -1548,6 +1713,9 @@ const Plannen = () => {
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
                       onMoveCell={moveCell}
+                      onMoveCellsGroup={moveCellsGroup}
+                      selectedCelIds={selectedCelIds}
+                      onToggleSelect={toggleCellSelection}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
@@ -2061,6 +2229,14 @@ interface GridRowProps {
     dag_index: number
   ) => void;
   onMoveCell: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
+  onMoveCellsGroup: (
+    sourceCelIds: string[],
+    anchorCelId: string,
+    targetWeekId: string,
+    targetDagIndex: number
+  ) => void;
+  selectedCelIds: Set<string>;
+  onToggleSelect: (celId: string) => void;
 }
 
 const GridRow = memo(function GridRow({
@@ -2075,6 +2251,9 @@ const GridRow = memo(function GridRow({
   onClick,
   onRightClick,
   onMoveCell,
+  onMoveCellsGroup,
+  selectedCelIds,
+  onToggleSelect,
 }: GridRowProps) {
   return (
     <div
@@ -2112,6 +2291,10 @@ const GridRow = memo(function GridRow({
               weekId={w.id}
               dagIndex={d}
               onMoveCell={onMoveCell}
+              onMoveCellsGroup={onMoveCellsGroup}
+              isSelected={!!cel && selectedCelIds.has(cel.id)}
+              selectedCelIds={selectedCelIds}
+              onToggleSelect={onToggleSelect}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
@@ -2206,6 +2389,10 @@ const CellBox = memo(function CellBox({
   weekId,
   dagIndex,
   onMoveCell,
+  onMoveCellsGroup,
+  isSelected = false,
+  selectedCelIds,
+  onToggleSelect,
 }: {
   cel: Cel | undefined;
   activiteit: Activiteit;
@@ -2221,6 +2408,15 @@ const CellBox = memo(function CellBox({
   weekId: string;
   dagIndex: number;
   onMoveCell: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
+  onMoveCellsGroup: (
+    sourceCelIds: string[],
+    anchorCelId: string,
+    targetWeekId: string,
+    targetDagIndex: number
+  ) => void;
+  isSelected?: boolean;
+  selectedCelIds: Set<string>;
+  onToggleSelect: (celId: string) => void;
 }) {
   const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
   const isCap =
@@ -2338,19 +2534,37 @@ const CellBox = memo(function CellBox({
 
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => {
+        // Ctrl/Cmd of Shift-klik op een gevulde cel = (de)selecteren voor groep-verplaatsen
+        if ((e.ctrlKey || e.metaKey || e.shiftKey) && draggable && cel) {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleSelect(cel.id);
+          return;
+        }
+        onClick();
+      }}
       onContextMenu={onContextMenu}
       title={
         draggable
-          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om naar een andere dag te verplaatsen`
+          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om te verplaatsen. Ctrl/Shift-klik om meerdere cellen te selecteren en samen te slepen.`
           : hoverTitle
       }
       draggable={draggable}
       onDragStart={(e) => {
         if (!draggable || !cel) return;
         e.dataTransfer.effectAllowed = "move";
+        // Als de gesleepte cel onderdeel is van de selectie, sleep de hele groep mee.
+        // Anders: sleep alleen deze cel (en wis de selectie niet — de gebruiker mag selectie houden).
+        const groupIds = selectedCelIds.has(cel.id)
+          ? Array.from(selectedCelIds)
+          : [cel.id];
         e.dataTransfer.setData("application/x-plannen-cel", cel.id);
         e.dataTransfer.setData("application/x-plannen-activiteit", activiteit.id);
+        e.dataTransfer.setData(
+          "application/x-plannen-cel-group",
+          JSON.stringify(groupIds)
+        );
       }}
       onDragOver={(e) => {
         const sourceAct = e.dataTransfer.types.includes("application/x-plannen-activiteit");
@@ -2367,9 +2581,25 @@ const CellBox = memo(function CellBox({
         setIsDragOver(false);
         const sourceCelId = e.dataTransfer.getData("application/x-plannen-cel");
         const sourceActId = e.dataTransfer.getData("application/x-plannen-activiteit");
+        const groupRaw = e.dataTransfer.getData("application/x-plannen-cel-group");
         if (!sourceCelId || sourceActId !== activiteit.id) return;
         if (cel && cel.id === sourceCelId) return;
-        onMoveCell(sourceCelId, weekId, dagIndex);
+        let groupIds: string[] = [sourceCelId];
+        if (groupRaw) {
+          try {
+            const parsed = JSON.parse(groupRaw);
+            if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
+              groupIds = parsed;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        if (groupIds.length > 1) {
+          onMoveCellsGroup(groupIds, sourceCelId, weekId, dagIndex);
+        } else {
+          onMoveCell(sourceCelId, weekId, dagIndex);
+        }
       }}
       className={[
         "group relative shrink-0 transition-all",
@@ -2382,7 +2612,7 @@ const CellBox = memo(function CellBox({
         backgroundColor: isDragOver
           ? "rgba(63,255,139,0.18)"
           : filled
-          ? hexToRgba(kleur!, isHighlighted ? 0.55 : 0.35)
+          ? hexToRgba(kleur!, isHighlighted || isSelected ? 0.55 : 0.35)
           : isCurrentWeek
           ? "rgba(63,255,139,0.02)"
           : "transparent",
@@ -2394,13 +2624,20 @@ const CellBox = memo(function CellBox({
           : "1px solid rgba(255,255,255,0.06)",
         outline: isDragOver
           ? "2px dashed rgba(63,255,139,0.9)"
+          : isSelected
+          ? "2px dashed #38bdf8"
           : filled && !voldoet
           ? "2px solid #feb300"
           : undefined,
-        outlineOffset: isDragOver || (filled && !voldoet) ? "-2px" : undefined,
-        boxShadow: highlightShadow,
+        outlineOffset:
+          isDragOver || isSelected || (filled && !voldoet) ? "-2px" : undefined,
+        boxShadow: isSelected
+          ? `inset 0 0 0 2px #38bdf8, 0 0 10px rgba(56,189,248,0.5)${
+              highlightShadow ? `, ${highlightShadow}` : ""
+            }`
+          : highlightShadow,
         opacity: isDimmed && filled ? 0.35 : 1,
-        zIndex: isHighlighted ? 2 : undefined,
+        zIndex: isHighlighted || isSelected ? 2 : undefined,
       }}
     >
       {showAvatars && (
