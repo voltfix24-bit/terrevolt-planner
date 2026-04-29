@@ -2563,6 +2563,7 @@ const GridRow = memo(function GridRow({
   onMoveCellsGroup,
   selectedCelIds,
   groupIndexByCelId,
+  selectedGroups,
   onToggleSelect,
   onStartNewGroup,
   onFillRange,
