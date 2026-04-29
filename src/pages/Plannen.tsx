@@ -772,17 +772,16 @@ const Plannen = () => {
         return { week_id: weken[wi].id, dag_index: slot % 5 };
       };
 
-      const anchor = cellen.get(
-        Array.from(cellen.values()).find((c) => c.id === anchorCelId)
-          ? cellKey(
-              (Array.from(cellen.values()).find((c) => c.id === anchorCelId) as Cel).activiteit_id,
-              (Array.from(cellen.values()).find((c) => c.id === anchorCelId) as Cel).week_id,
-              (Array.from(cellen.values()).find((c) => c.id === anchorCelId) as Cel).dag_index
-            )
-          : ""
-      );
+      let anchor: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === anchorCelId) anchor = c;
+      });
       if (!anchor) return;
-      const anchorWi = weekIndexById.get(anchor.week_id);
+      const a = anchor as Cel;
+      const anchorWi = weekIndexById.get(a.week_id);
+      const targetWi = weekIndexById.get(targetWeekId);
+      if (anchorWi == null || targetWi == null) return;
+      const anchorSlot = anchorWi * 5 + a.dag_index;
       const targetWi = weekIndexById.get(targetWeekId);
       if (anchorWi == null || targetWi == null) return;
       const anchorSlot = anchorWi * 5 + anchor.dag_index;
