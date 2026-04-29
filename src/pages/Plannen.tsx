@@ -2789,7 +2789,7 @@ const CellBox = memo(function CellBox({
   isSelected = false,
   groupColorHex = null,
   groupIndex = null,
-  selectedCelIds,
+  groupCelIds = null,
   onToggleSelect,
   onStartNewGroup,
   activiteitId,
