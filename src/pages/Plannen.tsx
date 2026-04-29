@@ -1591,7 +1591,7 @@ const Plannen = () => {
       }
 
       // Activiteit-rijen
-      activiteiten.forEach((a, ai) => {
+      expActiviteiten.forEach((a, ai) => {
         const r = activityStartRow + ai;
         // Activiteit-naam kolom
         setStyle(r, 0, {
@@ -1600,7 +1600,7 @@ const Plannen = () => {
           alignment: { vertical: "center", wrapText: true },
           border,
         });
-        weken.forEach((w, wi) => {
+        expWeken.forEach((w, wi) => {
           for (let d = 0; d < 5; d++) {
             const c = 1 + wi * 5 + d;
             const cel = cellen.get(cellKey(a.id, w.id, d));
@@ -1624,7 +1624,7 @@ const Plannen = () => {
       });
 
       // Opmerkingen rij stijl
-      const opmRowIdx = activityStartRow + activiteiten.length;
+      const opmRowIdx = activityStartRow + expActiviteiten.length;
       setStyle(opmRowIdx, 0, {
         font: { bold: true, italic: true, sz: 10, color: { rgb: "374151" } },
         fill: { patternType: "solid", fgColor: { rgb: "F9FAFB" } },
