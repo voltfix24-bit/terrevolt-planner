@@ -37,6 +37,15 @@ interface Critical {
   tone: "danger" | "warning" | "info";
 }
 
+export interface DossierConceptCel {
+  id: string;
+  dag_offset: number;
+  activiteit_id: string | null;
+  kleur_code: string | null;
+  notitie: string | null;
+  monteur_ids: string[];
+}
+
 export interface DossierPrintProps {
   project: ProjectRow;
   opdrachtgeverNaam: string;
@@ -48,6 +57,9 @@ export interface DossierPrintProps {
   samenvatting: string;
   periodeLabel: string;
   periodeDuur: number | null;
+  conceptCellen?: DossierConceptCel[];
+  activiteitenMap?: Map<string, string>;
+  monteursMap?: Map<string, string>;
 }
 
 // =====================================================
