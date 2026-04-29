@@ -2502,9 +2502,14 @@ function MonteurCellsRow({
         return (
           <div
             key={i}
-            onClick={() => s.projectId && onProjectClick(s.projectId)}
+            onClick={() =>
+              s.projectId &&
+              (isConcept
+                ? onConceptClick(s.projectId)
+                : onProjectClick(s.projectId))
+            }
             className="absolute flex cursor-pointer items-center justify-center"
-            title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " (concept)" : ""}` : ""}
+            title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " · concept-reservering · klik voor concept-status" : " · klik voor planning"}` : ""}
             style={{
               left: left + 2, width: width - 4,
               top: topPad, height: PILL_H_MONTEUR,
