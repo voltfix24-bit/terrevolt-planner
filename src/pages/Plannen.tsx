@@ -65,6 +65,11 @@ import {
   initialen,
   wrapWeek,
 } from "@/lib/planning-types";
+import {
+  checkBeschikbaarheid,
+  isFeestdag,
+  shortReason,
+} from "@/lib/monteur-beschikbaarheid";
 import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
