@@ -2207,6 +2207,7 @@ interface GridRowProps {
   ) => void;
   selectedCelIds: Set<string>;
   onToggleSelect: (celId: string) => void;
+}
 
 const GridRow = memo(function GridRow({
   activiteit,
