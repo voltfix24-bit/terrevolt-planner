@@ -2490,8 +2490,10 @@ const CellBox = memo(function CellBox({
   onMoveCell,
   onMoveCellsGroup,
   isSelected = false,
+  groupColorHex = null,
   selectedCelIds,
   onToggleSelect,
+  onStartNewGroup,
 }: {
   cel: Cel | undefined;
   activiteit: Activiteit;
@@ -2514,8 +2516,10 @@ const CellBox = memo(function CellBox({
     targetDagIndex: number
   ) => void;
   isSelected?: boolean;
+  groupColorHex?: string | null;
   selectedCelIds: Set<string>;
   onToggleSelect: (celId: string) => void;
+  onStartNewGroup: (celId: string) => void;
 }) {
   const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
   const isCap =
