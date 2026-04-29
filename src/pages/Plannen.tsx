@@ -680,6 +680,66 @@ const Plannen = () => {
   }, [pushHistory]);
 
 
+  /* ----------------------------- drag-and-drop verplaatsen ----------------------------- */
+  // Versleep een gevulde cel naar een andere (week_id, dag_index) binnen DEZELFDE activiteit-rij.
+  // De hele inhoud (kleur + notitie + monteurs) verhuist mee, omdat planning_cellen.id behouden blijft.
+  const moveCell = useCallback(
+    async (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => {
+      let sourceCel: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === sourceCelId) sourceCel = c;
+      });
+      if (!sourceCel) return;
+      const src = sourceCel as Cel;
+      if (src.week_id === targetWeekId && src.dag_index === targetDagIndex) return;
+
+      const targetKey = cellKey(src.activiteit_id, targetWeekId, targetDagIndex);
+      const targetCel = cellen.get(targetKey);
+
+      if (targetCel) {
+        const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
+        const heeftInhoud =
+          !!targetCel.kleur_code || targetMonteurs.length > 0 || !!targetCel.notitie;
+        if (heeftInhoud) {
+          const ok = window.confirm(
+            "De doel-dag is al gevuld. Wil je de bestaande inhoud overschrijven?"
+          );
+          if (!ok) return;
+        }
+        await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
+        await supabase.from("planning_cellen").delete().eq("id", targetCel.id);
+        setCelMonteurs((prev) => {
+          const m = new Map(prev);
+          m.delete(targetCel.id);
+          return m;
+        });
+        setCellen((prev) => {
+          const m = new Map(prev);
+          m.delete(targetKey);
+          return m;
+        });
+      }
+
+      const oldKey = cellKey(src.activiteit_id, src.week_id, src.dag_index);
+      const updated: Cel = { ...src, week_id: targetWeekId, dag_index: targetDagIndex };
+      setCellen((prev) => {
+        const m = new Map(prev);
+        m.delete(oldKey);
+        m.set(targetKey, updated);
+        return m;
+      });
+      const { error } = await supabase
+        .from("planning_cellen")
+        .update({ week_id: targetWeekId, dag_index: targetDagIndex })
+        .eq("id", src.id);
+      if (error) {
+        toast.error("Verplaatsen mislukt");
+        loadAll();
+      }
+    },
+    [cellen, celMonteurs, loadAll]
+  );
+
   /* ----------------------------- undo / history ----------------------------- */
   const reverseHistoryEntry = useCallback(
     async (entry: HistoryEntry) => {
