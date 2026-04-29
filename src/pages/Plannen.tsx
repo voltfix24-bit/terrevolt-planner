@@ -2001,6 +2001,7 @@ const Plannen = () => {
                       onMoveCellsGroup={moveCellsGroup}
                       selectedCelIds={selectedCelIds}
                       groupIndexByCelId={groupIndexByCelId}
+                      selectedGroups={selectedGroups}
                       onToggleSelect={toggleCellSelection}
                       onStartNewGroup={startNewGroupWithCell}
                       onFillRange={fillCellRange}
@@ -2527,6 +2528,7 @@ interface GridRowProps {
   ) => void;
   selectedCelIds: Set<string>;
   groupIndexByCelId: Map<string, number>;
+  selectedGroups: string[][];
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
   onFillRange: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
@@ -2561,6 +2563,7 @@ const GridRow = memo(function GridRow({
   onMoveCellsGroup,
   selectedCelIds,
   groupIndexByCelId,
+  selectedGroups,
   onToggleSelect,
   onStartNewGroup,
   onFillRange,
@@ -2615,7 +2618,11 @@ const GridRow = memo(function GridRow({
               isSelected={!!cel && selectedCelIds.has(cel.id)}
               groupColorHex={cel ? (groupIndexByCelId.has(cel.id) ? groupColor(groupIndexByCelId.get(cel.id)!) : null) : null}
               groupIndex={cel ? groupIndexByCelId.get(cel.id) ?? null : null}
-              selectedCelIds={selectedCelIds}
+              groupCelIds={
+                cel && groupIndexByCelId.has(cel.id)
+                  ? selectedGroups[groupIndexByCelId.get(cel.id)!] ?? null
+                  : null
+              }
               onToggleSelect={onToggleSelect}
               onStartNewGroup={onStartNewGroup}
               onClick={() => onClick(activiteit, w.id, d)}
@@ -2782,7 +2789,7 @@ const CellBox = memo(function CellBox({
   isSelected = false,
   groupColorHex = null,
   groupIndex = null,
-  selectedCelIds,
+  groupCelIds = null,
   onToggleSelect,
   onStartNewGroup,
   activiteitId,
@@ -2814,7 +2821,7 @@ const CellBox = memo(function CellBox({
   isSelected?: boolean;
   groupColorHex?: string | null;
   groupIndex?: number | null;
-  selectedCelIds: Set<string>;
+  groupCelIds?: string[] | null;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
   activiteitId: string;
@@ -2977,11 +2984,9 @@ const CellBox = memo(function CellBox({
       onDragStart={(e) => {
         if (!draggable || !cel) return;
         e.dataTransfer.effectAllowed = "move";
-        // Als de gesleepte cel onderdeel is van de selectie, sleep de hele groep mee.
-        // Anders: sleep alleen deze cel (en wis de selectie niet — de gebruiker mag selectie houden).
-        const groupIds = selectedCelIds.has(cel.id)
-          ? Array.from(selectedCelIds)
-          : [cel.id];
+        // Sleep alleen de cellen van de groep waar deze cel in zit. Andere
+        // selectiegroepen blijven staan zodat groepen onafhankelijk verplaatsen.
+        const groupIds = groupCelIds && groupCelIds.length > 0 ? [...groupCelIds] : [cel.id];
         e.dataTransfer.setData("application/x-plannen-cel", cel.id);
         e.dataTransfer.setData("application/x-plannen-activiteit", activiteit.id);
         e.dataTransfer.setData(
