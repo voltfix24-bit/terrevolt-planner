@@ -205,8 +205,14 @@ export function exportGanttPDF(input: GanttExportInput): void {
             DAG_LABELS.map((_, di) => {
               const cel = cellMap.get(`${a.id}|${w.week_nr}|${di}`);
               const isLastOfWeek = di === 4;
+              const monday = getMondayOfWeek(w.week_nr, w.jaar);
+              const dt = new Date(monday);
+              dt.setDate(monday.getDate() + di);
+              const feestNaam = feestdagenMap.get(ymd(dt));
               const endCls = isLastOfWeek ? " end-wk" : "";
-              if (!cel) return `<td class="cell empty-cell${endCls}"></td>`;
+              const feestCls = feestNaam ? " feestdag" : "";
+              const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
+              if (!cel) return `<td class="cell empty-cell${endCls}${feestCls}"${tip}></td>`;
               const colorEntry = cel.kleur_code ? COLOR_MAP[cel.kleur_code] : null;
               const bg = colorEntry?.hex ?? "#cbd5e1";
               const fg = readableTextColor(bg);
@@ -221,7 +227,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
                   label = namen.join(", ");
                 }
               }
-              return `<td class="cell filled${endCls}" style="background:${bg};color:${fg};">${escHtml(label)}</td>`;
+              return `<td class="cell filled${endCls}${feestCls}"${tip} style="background:${bg};color:${fg};">${escHtml(label)}</td>`;
             }).join(""),
           )
           .join("");
