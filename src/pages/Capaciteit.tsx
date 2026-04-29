@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit2, Plus, Power, Trash2, X } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Edit2, FileText, Plus, Power, Printer, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -960,25 +960,36 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {([2, 4, 8] as const).map((n) => {
-              const active = numWeeks === n;
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setNumWeeks(n)}
-                  className={[
-                    "rounded-md px-3 py-1.5 text-xs font-display font-semibold transition-all",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
-                  ].join(" ")}
-                >
-                  {n} weken
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {([2, 4, 8] as const).map((n) => {
+                const active = numWeeks === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNumWeeks(n)}
+                    className={[
+                      "rounded-md px-3 py-1.5 text-xs font-display font-semibold transition-all",
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    {n} weken
+                  </button>
+                );
+              })}
+            </div>
+            <CapaciteitDownloadMenu
+              monteurs={monteurs}
+              visibleWeeks={visibleWeeks}
+              visibleDays={visibleDays}
+              planMap={planMap}
+              projects={projects}
+              startWeek={startWeek}
+              numWeeks={numWeeks}
+            />
           </div>
         </div>
 
@@ -2563,3 +2574,208 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
 };
 
 export default Capaciteit;
+
+/* ===================== Capaciteit Download Menu ===================== */
+
+import { exportCapaciteitExcel, exportCapaciteitPDF, type CapaciteitInput } from "@/lib/overview-exports";
+
+interface CapaciteitDownloadMenuProps {
+  monteurs: Monteur[];
+  visibleWeeks: { week: number; jaar: number; monday: Date }[];
+  visibleDays: { date: Date; key: string; weekIdx: number; dayIdx: number }[];
+  planMap: Record<string, Record<string, string[]>>;
+  projects: Record<string, ProjectInfo>;
+  startWeek: number;
+  numWeeks: number;
+}
+
+const CapaciteitDownloadMenu = ({
+  monteurs,
+  visibleWeeks,
+  visibleDays,
+  planMap,
+  projects,
+  startWeek,
+  numWeeks,
+}: CapaciteitDownloadMenuProps) => {
+  const [open, setOpen] = useState(false);
+  const [selMonteurs, setSelMonteurs] = useState<Set<string>>(new Set());
+  const [selWeeks, setSelWeeks] = useState<Set<number>>(new Set());
+
+  const buildInput = (): CapaciteitInput => {
+    const filteredMonteurs = (selMonteurs.size === 0
+      ? monteurs
+      : monteurs.filter((m) => selMonteurs.has(m.id)))
+      .filter((m) => m.actief)
+      .map((m) => ({ id: m.id, naam: m.naam, type: m.type }));
+
+    const filteredDays = (selWeeks.size === 0
+      ? visibleDays
+      : visibleDays.filter((d) => {
+          const w = visibleWeeks[d.weekIdx];
+          return w && selWeeks.has(w.week);
+        })
+    ).map((d) => ({ date: d.date, weekNr: visibleWeeks[d.weekIdx]?.week ?? 0, dayIdx: d.dayIdx }));
+
+    // bezetting: monteur_id -> dateKey -> case_nummers (uit planMap met project_id -> case_nummer lookup)
+    const bezetting: Record<string, Record<string, string[]>> = {};
+    Object.entries(planMap).forEach(([mid, days]) => {
+      bezetting[mid] = {};
+      Object.entries(days).forEach(([key, projectIds]) => {
+        bezetting[mid][key] = projectIds
+          .map((pid) => projects[pid]?.case_nummer ?? null)
+          .filter((c): c is string => !!c);
+      });
+    });
+
+    const titel = `Capaciteit week ${startWeek} — ${numWeeks} weken`;
+    return { titel, monteurs: filteredMonteurs, days: filteredDays, bezetting };
+  };
+
+  const onExcel = async () => {
+    await exportCapaciteitExcel(buildInput());
+    setOpen(false);
+  };
+  const onPDF = () => {
+    exportCapaciteitPDF(buildInput());
+    setOpen(false);
+  };
+
+  const toggleMonteur = (id: string) =>
+    setSelMonteurs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleWeek = (w: number) =>
+    setSelWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(w)) next.delete(w);
+      else next.add(w);
+      return next;
+    });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title="Capaciteit downloaden"
+          className="flex h-8 items-center gap-1 rounded-md border border-white/15 bg-transparent px-2 text-foreground hover:bg-white/[0.06]"
+        >
+          <Download className="h-4 w-4" />
+          <ChevronDown className="h-3 w-3 opacity-70" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+          <span className="text-sm font-semibold">Download capaciteit</span>
+          {(selMonteurs.size > 0 || selWeeks.size > 0) && (
+            <button
+              type="button"
+              onClick={() => { setSelMonteurs(new Set()); setSelWeeks(new Set()); }}
+              className="text-[11px] text-muted-foreground hover:text-foreground underline"
+            >
+              Wis filter
+            </button>
+          )}
+        </div>
+        <div className="px-3 py-2 text-[11px] text-muted-foreground border-b border-border/60">
+          {selMonteurs.size === 0 && selWeeks.size === 0
+            ? "Volledige zichtbare periode wordt gedownload. Selecteer hieronder om te beperken."
+            : `Selectie: ${selMonteurs.size === 0 ? "alle monteurs" : `${selMonteurs.size} monteur${selMonteurs.size === 1 ? "" : "s"}`} • ${selWeeks.size === 0 ? "alle zichtbare weken" : `${selWeeks.size} ${selWeeks.size === 1 ? "week" : "weken"}`}.`}
+        </div>
+
+        <div className="px-3 py-2 border-b border-border/60">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weken (zichtbaar)</span>
+            <div className="flex gap-2 text-[11px]">
+              <button type="button" onClick={() => setSelWeeks(new Set(visibleWeeks.map((w) => w.week)))} className="text-muted-foreground hover:text-foreground">Alle</button>
+              <button type="button" onClick={() => setSelWeeks(new Set())} className="text-muted-foreground hover:text-foreground">Geen</button>
+            </div>
+          </div>
+          <div className="max-h-32 overflow-y-auto -mx-1 px-1">
+            {visibleWeeks.map((w) => {
+              const checked = selWeeks.size === 0 || selWeeks.has(w.week);
+              return (
+                <label key={`${w.jaar}-${w.week}`} className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      // eerste interactie vanaf "alles": start met alle ingevuld
+                      setSelWeeks((prev) => {
+                        const base = prev.size === 0 ? new Set(visibleWeeks.map((x) => x.week)) : new Set(prev);
+                        if (base.has(w.week)) base.delete(w.week);
+                        else base.add(w.week);
+                        if (base.size === visibleWeeks.length) return new Set();
+                        return base;
+                      });
+                    }}
+                    className="h-3.5 w-3.5 accent-primary"
+                  />
+                  <span>Week {w.week} ({w.jaar})</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="px-3 py-2 border-b border-border/60">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monteurs</span>
+            <div className="flex gap-2 text-[11px]">
+              <button type="button" onClick={() => setSelMonteurs(new Set(monteurs.map((m) => m.id)))} className="text-muted-foreground hover:text-foreground">Alle</button>
+              <button type="button" onClick={() => setSelMonteurs(new Set())} className="text-muted-foreground hover:text-foreground">Geen</button>
+            </div>
+          </div>
+          <div className="max-h-40 overflow-y-auto -mx-1 px-1">
+            {monteurs.length === 0 ? (
+              <div className="text-[11px] text-muted-foreground py-1">Geen monteurs</div>
+            ) : monteurs.map((m) => {
+              const checked = selMonteurs.size === 0 || selMonteurs.has(m.id);
+              return (
+                <label key={m.id} className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setSelMonteurs((prev) => {
+                        const base = prev.size === 0 ? new Set(monteurs.map((x) => x.id)) : new Set(prev);
+                        if (base.has(m.id)) base.delete(m.id);
+                        else base.add(m.id);
+                        if (base.size === monteurs.length) return new Set();
+                        return base;
+                      });
+                    }}
+                    className="h-3.5 w-3.5 accent-primary"
+                  />
+                  <span className={m.type === "schakelmonteur" ? "text-amber-400" : "text-blue-400"}>•</span>
+                  <span className="truncate">{m.naam}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-1">
+          <button
+            type="button"
+            onClick={onExcel}
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+          >
+            <FileText className="h-4 w-4" /> Excel (.xlsx)
+          </button>
+          <button
+            type="button"
+            onClick={onPDF}
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+          >
+            <Printer className="h-4 w-4" /> PDF (print-klaar)
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};

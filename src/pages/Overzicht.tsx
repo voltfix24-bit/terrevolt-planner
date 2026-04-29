@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, FileText, PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
+import {
+  exportProjectenExcel,
+  exportProjectenPDF,
+  exportTotaalExcel,
+  exportTotaalPDF,
+  type CapaciteitInput,
+  type ProjectExportRow,
+} from "@/lib/overview-exports";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
@@ -1198,26 +1208,29 @@ export default function Overzicht() {
         <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
           Overzicht
         </h1>
-        <div
-          className="flex items-center gap-2"
-          style={{
-            background: "rgba(63,255,139,0.15)",
-            border: "1px solid rgba(63,255,139,0.3)",
-            color: "#3fff8b",
-            fontSize: 12,
-            fontWeight: 700,
-            padding: "6px 14px",
-            borderRadius: 999,
-          }}
-        >
-          <span
+        <div className="flex items-center gap-3">
+          <OverzichtDownloadMenu />
+          <div
+            className="flex items-center gap-2"
             style={{
-              width: 8, height: 8, borderRadius: 999,
-              background: "#3fff8b",
-              boxShadow: "0 0 6px rgba(63,255,139,0.6)",
+              background: "rgba(63,255,139,0.15)",
+              border: "1px solid rgba(63,255,139,0.3)",
+              color: "#3fff8b",
+              fontSize: 12,
+              fontWeight: 700,
+              padding: "6px 14px",
+              borderRadius: 999,
             }}
-          />
-          {teamCapPct}% TEAM CAP.
+          >
+            <span
+              style={{
+                width: 8, height: 8, borderRadius: 999,
+                background: "#3fff8b",
+                boxShadow: "0 0 6px rgba(63,255,139,0.6)",
+              }}
+            />
+            {teamCapPct}% TEAM CAP.
+          </div>
         </div>
       </div>
 
@@ -2698,3 +2711,130 @@ function ActiviteitCellsRow({
   );
 }
 
+
+/* ===================== Overzicht Download Menu ===================== */
+
+import { useState as useStateDL } from "react";
+import { supabase as sbDL } from "@/integrations/supabase/client";
+
+function OverzichtDownloadMenu() {
+  const [open, setOpen] = useStateDL(false);
+  const [busy, setBusy] = useStateDL(false);
+
+  const fetchProjecten = async (): Promise<ProjectExportRow[]> => {
+    const [pRes, oRes] = await Promise.all([
+      sbDL.from("projecten").select("*").order("created_at", { ascending: false }),
+      sbDL.from("opdrachtgevers").select("id, naam"),
+    ]);
+    if (pRes.error) throw pRes.error;
+    const ogMap = new Map<string, string>();
+    ((oRes.data ?? []) as { id: string; naam: string }[]).forEach((o) => ogMap.set(o.id, o.naam));
+    return ((pRes.data ?? []) as any[]).map((p) => ({
+      case_nummer: p.case_nummer, station_naam: p.station_naam, wv_naam: p.wv_naam,
+      status: p.status, jaar: p.jaar,
+      opdrachtgever: p.opdrachtgever_id ? ogMap.get(p.opdrachtgever_id) ?? null : null,
+      straat: p.straat, postcode: p.postcode, stad: p.stad, gemeente: p.gemeente, notities: p.notities,
+    }));
+  };
+
+  const fetchCapaciteit = async (): Promise<CapaciteitInput> => {
+    const today = new Date();
+    const days: { date: Date; weekNr: number; dayIdx: number }[] = [];
+    const dow = today.getDay() || 7;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - dow + 1);
+    const isoWeek = (d: Date) => {
+      const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const day = t.getUTCDay() || 7;
+      t.setUTCDate(t.getUTCDate() + 4 - day);
+      const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+      return Math.ceil(((+t - +yearStart) / 86400000 + 1) / 7);
+    };
+    for (let w = 0; w < 8; w++) {
+      for (let d = 0; d < 5; d++) {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + w * 7 + d);
+        days.push({ date, weekNr: isoWeek(date), dayIdx: d });
+      }
+    }
+    const isoKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const weekNrs = Array.from(new Set(days.map((d) => d.weekNr)));
+    const [mRes, wRes] = await Promise.all([
+      sbDL.from("monteurs").select("id, naam, type, actief").eq("actief", true),
+      sbDL.from("project_weken").select("id, week_nr, project_id").in("week_nr", weekNrs),
+    ]);
+    const monteurs = ((mRes.data ?? []) as any[]).map((m) => ({ id: m.id, naam: m.naam, type: m.type as "schakelmonteur" | "montagemonteur" }));
+    const weken = (wRes.data ?? []) as { id: string; week_nr: number; project_id: string | null }[];
+    const weekById = new Map(weken.map((w) => [w.id, w]));
+    const weekIds = weken.map((w) => w.id);
+    const projectIds = Array.from(new Set(weken.map((w) => w.project_id).filter(Boolean) as string[]));
+    const [cRes, prRes] = await Promise.all([
+      weekIds.length ? sbDL.from("planning_cellen").select("id, week_id, dag_index").in("week_id", weekIds) : Promise.resolve({ data: [] } as any),
+      projectIds.length ? sbDL.from("projecten").select("id, case_nummer").in("id", projectIds) : Promise.resolve({ data: [] } as any),
+    ]);
+    const cellen = ((cRes.data ?? []) as { id: string; week_id: string; dag_index: number }[]);
+    const cellIds = cellen.map((c) => c.id);
+    const cmRes = cellIds.length
+      ? await sbDL.from("cel_monteurs").select("cel_id, monteur_id").in("cel_id", cellIds)
+      : { data: [] } as any;
+    const projMap = new Map<string, string | null>();
+    ((prRes.data ?? []) as { id: string; case_nummer: string | null }[]).forEach((p) => projMap.set(p.id, p.case_nummer));
+    const celById = new Map(cellen.map((c) => [c.id, c]));
+    // weeknr+monday lookup
+    const weekNrToMonday = new Map<number, Date>();
+    days.forEach((d) => { if (!weekNrToMonday.has(d.weekNr)) weekNrToMonday.set(d.weekNr, new Date(d.date.getTime() - d.dayIdx * 86400000)); });
+    const bezetting: Record<string, Record<string, string[]>> = {};
+    ((cmRes.data ?? []) as { cel_id: string; monteur_id: string }[]).forEach((cm) => {
+      const cel = celById.get(cm.cel_id);
+      if (!cel) return;
+      const w = weekById.get(cel.week_id);
+      if (!w || !w.project_id) return;
+      const mon = weekNrToMonday.get(w.week_nr);
+      if (!mon) return;
+      const date = new Date(mon); date.setDate(mon.getDate() + cel.dag_index);
+      const key = isoKey(date);
+      const cn = projMap.get(w.project_id);
+      if (!cn) return;
+      if (!bezetting[cm.monteur_id]) bezetting[cm.monteur_id] = {};
+      if (!bezetting[cm.monteur_id][key]) bezetting[cm.monteur_id][key] = [];
+      if (!bezetting[cm.monteur_id][key].includes(cn)) bezetting[cm.monteur_id][key].push(cn);
+    });
+    return { titel: `Capaciteit vanaf week ${days[0]?.weekNr ?? ""} — 8 weken`, monteurs, days, bezetting };
+  };
+
+  const run = async (kind: "proj-xlsx" | "proj-pdf" | "totaal-xlsx" | "totaal-pdf") => {
+    setBusy(true);
+    try {
+      if (kind === "proj-xlsx") await exportProjectenExcel(await fetchProjecten());
+      else if (kind === "proj-pdf") exportProjectenPDF(await fetchProjecten());
+      else {
+        const [proj, cap] = await Promise.all([fetchProjecten(), fetchCapaciteit()]);
+        if (kind === "totaal-xlsx") await exportTotaalExcel(cap, proj);
+        else exportTotaalPDF(cap, proj);
+      }
+      setOpen(false);
+    } catch (e) { console.error(e); toast.error("Download mislukt"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" disabled={busy} className="flex h-8 items-center gap-1 rounded-md border border-white/15 bg-transparent px-3 text-sm text-foreground hover:bg-white/[0.06] disabled:opacity-50">
+          <Download className="h-4 w-4" />
+          <span className="font-display font-semibold">Download</span>
+          <ChevronDown className="h-3 w-3 opacity-70" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-1">
+        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Projecten</div>
+        <button type="button" onClick={() => run("proj-xlsx")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><FileText className="h-4 w-4" /> Projecten — Excel</button>
+        <button type="button" onClick={() => run("proj-pdf")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><Printer className="h-4 w-4" /> Projecten — PDF</button>
+        <div className="my-1 h-px bg-border/60" />
+        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Totaal-overzicht (8 weken)</div>
+        <button type="button" onClick={() => run("totaal-xlsx")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><FileText className="h-4 w-4" /> Totaal — Excel (2 sheets)</button>
+        <button type="button" onClick={() => run("totaal-pdf")} className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"><Printer className="h-4 w-4" /> Totaal — PDF</button>
+      </PopoverContent>
+    </Popover>
+  );
+}
