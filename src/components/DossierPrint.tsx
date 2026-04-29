@@ -303,6 +303,47 @@ const DossierPrint: React.FC<DossierPrintProps> = (props) => {
           </table>
         </div>
 
+        {/* Concept-planning (week-onafhankelijk) */}
+        {conceptCellen.length > 0 && (
+          <div className="pp-section">
+            <div className="pp-section-h">
+              Concept-planning · <span style={{ fontWeight: 400, fontStyle: "italic" }}>nog niet ingepland</span>
+            </div>
+            <table className="pp-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "22%" }}>Dag</th>
+                  <th style={{ width: "33%" }}>Activiteit</th>
+                  <th style={{ width: "30%" }}>Monteurs</th>
+                  <th>Notitie</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...conceptCellen]
+                  .sort((a, b) => a.dag_offset - b.dag_offset)
+                  .map((c) => {
+                    const actNaam = c.activiteit_id
+                      ? activiteitenMap?.get(c.activiteit_id) ?? "—"
+                      : "—";
+                    const monteurNamen =
+                      c.monteur_ids
+                        .map((id) => monteursMap?.get(id) ?? "")
+                        .filter(Boolean)
+                        .join(", ") || "—";
+                    return (
+                      <tr key={c.id}>
+                        <td>{dagOffsetLabel(c.dag_offset)}</td>
+                        <td>{actNaam}</td>
+                        <td>{monteurNamen}</td>
+                        <td>{c.notitie || "—"}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {/* Monteur checklist */}
         <div className="pp-section">
           <div className="pp-section-h">Monteur checklist</div>
