@@ -2445,6 +2445,7 @@ function MonteurCellsRow({
         // segments), so the segment's first column always has a "previous
         // month not planned" left-edge and its last column a "next month
         // not planned" right-edge → fully rounded.
+        const isConcept = !!p && p.status === "concept";
         if (isJaar) {
           const projCount = s.projectIds.length;
           const label =
@@ -2460,7 +2461,7 @@ function MonteurCellsRow({
                       .map((pid) => projectById.get(pid)?.case_nummer ?? pid.slice(0, 6))
                       .join(", ")
                   : p?.case_nummer
-                    ? `${p.case_nummer} — ${p.station_naam ?? ""}`
+                    ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " (concept)" : ""}`
                     : ""
               }
               style={{
@@ -2469,11 +2470,12 @@ function MonteurCellsRow({
                 top: 8,
                 bottom: 8,
                 height: ROW_H_MONTEUR - 16,
-                background: "rgba(63,255,139,0.85)",
-                color: "#0a1a30",
+                background: isConcept ? "transparent" : "rgba(63,255,139,0.85)",
+                color: isConcept ? "rgba(63,255,139,0.85)" : "#0a1a30",
                 fontSize: 9,
                 fontWeight: 700,
                 borderRadius: 4,
+                border: isConcept ? "2px dashed rgba(63,255,139,0.55)" : undefined,
                 overflow: "hidden",
                 whiteSpace: "nowrap",
                 padding: "0 4px",
@@ -2489,14 +2491,15 @@ function MonteurCellsRow({
             key={i}
             onClick={() => s.projectId && onProjectClick(s.projectId)}
             className="absolute flex cursor-pointer items-center justify-center"
-            title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}` : ""}
+            title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " (concept)" : ""}` : ""}
             style={{
               left: left + 2, width: width - 4,
               top: topPad, height: PILL_H_MONTEUR,
-              background: "rgba(63,255,139,0.85)",
-              color: "#0a1a30",
+              background: isConcept ? "transparent" : "rgba(63,255,139,0.85)",
+              color: isConcept ? "rgba(63,255,139,0.9)" : "#0a1a30",
               fontSize: 9, fontWeight: 700,
               borderRadius: 4,
+              border: isConcept ? "2px dashed rgba(63,255,139,0.55)" : undefined,
               overflow: "hidden", whiteSpace: "nowrap",
               padding: "0 4px",
             }}
