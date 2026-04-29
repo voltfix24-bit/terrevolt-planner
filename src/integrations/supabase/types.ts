@@ -268,6 +268,72 @@ export type Database = {
           },
         ]
       }
+      ploeg_monteurs: {
+        Row: {
+          created_at: string | null
+          id: string
+          monteur_id: string
+          ploeg_id: string
+          positie: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          monteur_id: string
+          ploeg_id: string
+          positie?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          monteur_id?: string
+          ploeg_id?: string
+          positie?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ploeg_monteurs_monteur_id_fkey"
+            columns: ["monteur_id"]
+            isOneToOne: false
+            referencedRelation: "monteurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ploeg_monteurs_ploeg_id_fkey"
+            columns: ["ploeg_id"]
+            isOneToOne: false
+            referencedRelation: "ploegen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ploegen: {
+        Row: {
+          actief: boolean | null
+          created_at: string | null
+          id: string
+          naam: string
+          positie: number | null
+          type: string
+        }
+        Insert: {
+          actief?: boolean | null
+          created_at?: string | null
+          id?: string
+          naam: string
+          positie?: number | null
+          type: string
+        }
+        Update: {
+          actief?: boolean | null
+          created_at?: string | null
+          id?: string
+          naam?: string
+          positie?: number | null
+          type?: string
+        }
+        Relationships: []
+      }
       project_activiteiten: {
         Row: {
           activiteit_type_id: string | null

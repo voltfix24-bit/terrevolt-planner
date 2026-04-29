@@ -13,6 +13,7 @@ import {
   Printer,
   Trash2,
   Undo2,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +34,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -211,6 +214,7 @@ const Plannen = () => {
   const [cellen, setCellen] = useState<CelMap>(new Map());
   const [celMonteurs, setCelMonteurs] = useState<CelMonteurMap>(new Map());
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
+  const [ploegen, setPloegen] = useState<import("@/lib/ploegen").Ploeg[]>([]);
   const [activiteitTypes, setActiviteitTypes] = useState<ActiviteitTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -289,6 +293,15 @@ const Plannen = () => {
     setMonteurs((mRes.data ?? []) as Monteur[]);
     const atRows = (atRes.data ?? []) as ActiviteitTypeOption[];
     setActiviteitTypes(atRows);
+
+    // Laad ploegen (best effort)
+    try {
+      const { fetchPloegen } = await import("@/lib/ploegen");
+      const pl = await fetchPloegen();
+      setPloegen(pl.filter((p) => p.actief));
+    } catch {
+      setPloegen([]);
+    }
 
     // Auto-seed project_activiteiten vanuit template wanneer leeg
     const proj = projRes.data as Project;
@@ -1742,6 +1755,7 @@ const Plannen = () => {
           activiteit={openCel.activiteit}
           week={openCel.week}
           monteurs={monteurs}
+          ploegen={ploegen}
           monteurIdsAssigned={celMonteurs.get(openCel.cel.id) ?? []}
           monteurById={monteurById}
           template={
@@ -2373,6 +2387,7 @@ interface CelModalProps {
   activiteit: Activiteit;
   week: Week;
   monteurs: Monteur[];
+  ploegen: import("@/lib/ploegen").Ploeg[];
   monteurIdsAssigned: string[];
   monteurById: Map<string, Monteur>;
   template: ActiviteitTypeOption | null;
@@ -2390,6 +2405,7 @@ const CelModal = ({
   activiteit,
   week,
   monteurs,
+  ploegen,
   monteurIdsAssigned,
   monteurById,
   template,
@@ -2419,6 +2435,28 @@ const CelModal = ({
       return false;
     });
   }, [monteurs, monteurIdsAssigned, activiteit.capaciteit_type]);
+
+  // Ploegen die nog (gedeeltelijk) toegevoegd kunnen worden, gefilterd op activiteit-type
+  const eligiblePloegen = useMemo(() => {
+    return ploegen
+      .filter((p) => {
+        if (activiteit.capaciteit_type === "schakel") return p.type === "schakelmonteur";
+        if (activiteit.capaciteit_type === "montage") return true; // beide types mogen montage
+        return false;
+      })
+      .map((p) => {
+        const toAdd = p.monteur_ids.filter((id) => {
+          if (monteurIdsAssigned.includes(id)) return false;
+          const m = monteurs.find((x) => x.id === id);
+          if (!m) return false;
+          if (activiteit.capaciteit_type === "schakel" && m.type !== "schakelmonteur")
+            return false;
+          return true;
+        });
+        return { ploeg: p, toAdd };
+      })
+      .filter((x) => x.toAdd.length > 0);
+  }, [ploegen, monteurs, monteurIdsAssigned, activiteit.capaciteit_type]);
 
   const check = checkCelVoldoet({
     monteurs: assigned
@@ -2624,57 +2662,100 @@ const CelModal = ({
                 })}
               </div>
 
-              {eligibleMonteurs.length > 0 && (
+              {(eligibleMonteurs.length > 0 || eligiblePloegen.length > 0) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 px-3 py-2 text-xs font-display font-semibold text-muted-foreground hover:bg-white/[0.04] hover:text-foreground">
-                      <Plus className="h-3.5 w-3.5" /> Monteur toevoegen
+                      <Plus className="h-3.5 w-3.5" /> Monteur of ploeg toevoegen
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="start"
-                    className="w-[360px] border-white/10 bg-[#0a1a30] text-foreground max-h-72 overflow-y-auto"
+                    className="w-[360px] border-white/10 bg-[#0a1a30] text-foreground max-h-80 overflow-y-auto"
                   >
-                    {eligibleMonteurs.map((m) => (
-                      <DropdownMenuItem
-                        key={m.id}
-                        onSelect={() => onAddMonteur(m.id)}
-                        className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
-                      >
-                        <span className="font-display text-sm font-semibold flex-1">
-                          {m.naam}
-                        </span>
-                        <span
-                          className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                          style={{
-                            backgroundColor:
-                              m.type === "schakelmonteur" ? "#feb300" : "#378add",
-                            color: "#0a1a30",
-                          }}
-                        >
-                          {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
-                        </span>
-                        {m.aanwijzing_ls && (
-                          <span
-                            className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                            style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                    {eligiblePloegen.length > 0 && (
+                      <>
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Ploegen
+                        </DropdownMenuLabel>
+                        {eligiblePloegen.map(({ ploeg, toAdd }) => (
+                          <DropdownMenuItem
+                            key={ploeg.id}
+                            onSelect={() => {
+                              toAdd.forEach((id) => onAddMonteur(id));
+                            }}
+                            className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
                           >
-                            LS {m.aanwijzing_ls}
-                          </span>
-                        )}
-                        {m.aanwijzing_ms && (
-                          <span
-                            className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                            style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                            <Users className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="font-display text-sm font-semibold flex-1">
+                              {ploeg.naam}
+                            </span>
+                            <span
+                              className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                              style={{
+                                backgroundColor:
+                                  ploeg.type === "schakelmonteur" ? "#feb300" : "#378add",
+                                color: "#0a1a30",
+                              }}
+                            >
+                              {ploeg.type === "schakelmonteur" ? "Schakel" : "Montage"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              +{toAdd.length}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                        {eligibleMonteurs.length > 0 && <DropdownMenuSeparator />}
+                      </>
+                    )}
+                    {eligibleMonteurs.length > 0 && (
+                      <>
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Individuele monteurs
+                        </DropdownMenuLabel>
+                        {eligibleMonteurs.map((m) => (
+                          <DropdownMenuItem
+                            key={m.id}
+                            onSelect={() => onAddMonteur(m.id)}
+                            className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
                           >
-                            MS {m.aanwijzing_ms}
-                          </span>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
+                            <span className="font-display text-sm font-semibold flex-1">
+                              {m.naam}
+                            </span>
+                            <span
+                              className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                              style={{
+                                backgroundColor:
+                                  m.type === "schakelmonteur" ? "#feb300" : "#378add",
+                                color: "#0a1a30",
+                              }}
+                            >
+                              {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
+                            </span>
+                            {m.aanwijzing_ls && (
+                              <span
+                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                              >
+                                LS {m.aanwijzing_ls}
+                              </span>
+                            )}
+                            {m.aanwijzing_ms && (
+                              <span
+                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                              >
+                                MS {m.aanwijzing_ms}
+                              </span>
+                            )}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+
 
               {/* Banner */}
               <div

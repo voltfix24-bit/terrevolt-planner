@@ -45,6 +45,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
   const [cellen, setCellen] = useState<ConceptCel[]>([]);
   const [activiteiten, setActiviteiten] = useState<ProjectActiviteit[]>([]);
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
+  const [ploegen, setPloegen] = useState<import("@/lib/ploegen").Ploeg[]>([]);
   const [loading, setLoading] = useState(true);
   const [startWeek, setStartWeek] = useState<string>("");
   const [uitrollen, setUitrollen] = useState(false);
@@ -73,6 +74,13 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
     setCellen(c);
     setActiviteiten((a.data ?? []) as ProjectActiviteit[]);
     setMonteurs((m.data ?? []) as Monteur[]);
+    try {
+      const { fetchPloegen } = await import("@/lib/ploegen");
+      const pl = await fetchPloegen();
+      setPloegen(pl.filter((p) => p.actief));
+    } catch {
+      setPloegen([]);
+    }
     setLoading(false);
   }, [projectId]);
 
@@ -530,6 +538,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
                   cel={cel}
                   activiteiten={activiteiten}
                   monteurs={monteurs}
+                  ploegen={ploegen}
                   selected={selected.has(cel.id)}
                   onSelect={(e) => handleSelect(cel.id, e)}
                   onChange={(patch) => updateCel(cel.id, patch)}
@@ -559,6 +568,7 @@ const ConceptCelRow: React.FC<{
   cel: ConceptCel;
   activiteiten: ProjectActiviteit[];
   monteurs: Monteur[];
+  ploegen: import("@/lib/ploegen").Ploeg[];
   selected: boolean;
   onSelect: (e: {
     shiftKey: boolean;
@@ -572,6 +582,7 @@ const ConceptCelRow: React.FC<{
   cel,
   activiteiten,
   monteurs,
+  ploegen,
   selected,
   onSelect,
   onChange,
@@ -579,6 +590,13 @@ const ConceptCelRow: React.FC<{
   onToggleMonteur,
 }) => {
   const kleur = cel.kleur_code ? COLOR_MAP[cel.kleur_code] : null;
+  // Voor concept: alle ploegen tonen, klik = voeg ontbrekende leden toe
+  const eligiblePloegen = ploegen
+    .map((p) => {
+      const toAdd = p.monteur_ids.filter((id) => !cel.monteur_ids.includes(id));
+      return { ploeg: p, toAdd };
+    })
+    .filter((x) => x.toAdd.length > 0);
   return (
     <div
       className={`rounded border p-2 space-y-1.5 transition-colors ${
@@ -669,6 +687,24 @@ const ConceptCelRow: React.FC<{
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
+      {eligiblePloegen.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 pl-7">
+          <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">
+            Ploeg:
+          </span>
+          {eligiblePloegen.map(({ ploeg, toAdd }) => (
+            <button
+              key={ploeg.id}
+              type="button"
+              onClick={() => toAdd.forEach((id) => onToggleMonteur(id))}
+              className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] text-foreground transition-colors hover:bg-primary/20"
+              title={`Voeg ploeg "${ploeg.naam}" toe (${toAdd.length} monteur${toAdd.length === 1 ? "" : "s"})`}
+            >
+              + {ploeg.naam} ({toAdd.length})
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap gap-1 pl-7">
         {monteurs.map((m) => {
           const active = cel.monteur_ids.includes(m.id);
