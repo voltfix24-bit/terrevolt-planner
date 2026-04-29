@@ -9,6 +9,7 @@ import {
   FileText,
   GripVertical,
   History,
+  Pencil,
   Plus,
   Printer,
   Trash2,
@@ -294,7 +295,45 @@ const Plannen = () => {
   // Verwijder één groep
   const removeGroup = useCallback((idx: number) => {
     setSelectedGroups((prev) => prev.filter((_, i) => i !== idx));
+    setGroupNames((prev) => {
+      // Schuif namen op zodat ze synchroon blijven met de overgebleven groepen
+      const next: Record<number, string> = {};
+      let newIdx = 0;
+      for (let i = 0; i < Object.keys(prev).length + 1; i++) {
+        if (i === idx) continue;
+        if (prev[i] != null) next[newIdx] = prev[i];
+        newIdx++;
+      }
+      return next;
+    });
   }, []);
+
+  // Aangepaste namen per groep-index. Zonder entry valt de UI terug op "Groep N".
+  const [groupNames, setGroupNames] = useState<Record<number, string>>({});
+  const renameGroup = useCallback((idx: number, naam: string) => {
+    setGroupNames((prev) => {
+      const next = { ...prev };
+      const trimmed = naam.trim();
+      if (trimmed) next[idx] = trimmed;
+      else delete next[idx];
+      return next;
+    });
+  }, []);
+
+  // Esc-toets wist alle selecties.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (selectedGroups.length === 0) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      // Niet wissen als de gebruiker in een input/textarea bezig is
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      clearSelection();
+      setGroupNames({});
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedGroups.length, clearSelection]);
 
 
   // History stack — session only, max 30 entries
@@ -1617,10 +1656,13 @@ const Plannen = () => {
         >
           <div className="flex items-center justify-between gap-3 border-b pb-1.5" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
             <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-              Selectiegroepen — Shift-klik = nieuwe groep, Ctrl/Cmd-klik = aan actieve groep
+              Selectiegroepen — Shift-klik = nieuwe groep · Ctrl/Cmd-klik = aan actieve groep · Esc = wis alles
             </span>
             <button
-              onClick={clearSelection}
+              onClick={() => {
+                clearSelection();
+                setGroupNames({});
+              }}
               className="rounded-md border border-white/15 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-white/[0.08]"
             >
               Wis alles
@@ -1628,6 +1670,7 @@ const Plannen = () => {
           </div>
           {selectedGroups.map((g, idx) => {
             const c = groupColor(idx);
+            const naam = groupNames[idx] ?? `Groep ${idx + 1}`;
             return (
               <div key={idx} className="flex items-center gap-2">
                 <span
@@ -1637,10 +1680,15 @@ const Plannen = () => {
                 >
                   {idx + 1}
                 </span>
-                <span className="font-display text-xs font-semibold" style={{ color: c }}>
-                  {g.length} cel{g.length === 1 ? "" : "len"}
+                <GroupNameEditor
+                  naam={naam}
+                  color={c}
+                  onSave={(v) => renameGroup(idx, v)}
+                />
+                <span className="font-display text-[10px] font-semibold text-muted-foreground">
+                  · {g.length} cel{g.length === 1 ? "" : "len"}
                 </span>
-                <div className="flex items-center gap-1 rounded-md border border-white/15 p-0.5">
+                <div className="ml-2 flex items-center gap-1 rounded-md border border-white/15 p-0.5">
                   <button
                     onClick={() => shiftGroup(idx, -5)}
                     title="Verschuif 1 week terug"
@@ -1672,10 +1720,10 @@ const Plannen = () => {
                 </div>
                 <button
                   onClick={() => removeGroup(idx)}
-                  title="Verwijder deze groep"
-                  className="ml-auto rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                  title="Deselecteer deze groep"
+                  className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/15 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
                 >
-                  ✕
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             );
@@ -2584,6 +2632,67 @@ const GridRow = memo(function GridRow({
     </div>
   );
 });
+
+const GroupNameEditor = ({
+  naam,
+  color,
+  onSave,
+}: {
+  naam: string;
+  color: string;
+  onSave: (v: string) => void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(naam);
+  useEffect(() => {
+    if (!editing) setVal(naam);
+  }, [naam, editing]);
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={() => {
+          onSave(val);
+          setEditing(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            onSave(val);
+            setEditing(false);
+          } else if (e.key === "Escape") {
+            setVal(naam);
+            setEditing(false);
+          }
+          e.stopPropagation();
+        }}
+        maxLength={40}
+        className="h-6 w-32 rounded border bg-transparent px-1.5 font-display text-xs font-semibold focus:outline-none"
+        style={{ color, borderColor: color }}
+      />
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span
+        className="font-display text-xs font-semibold"
+        style={{ color }}
+        title="Klik op het potlood om te hernoemen"
+      >
+        {naam}
+      </span>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        title="Hernoem groep"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+      >
+        <Pencil className="h-3 w-3" />
+      </button>
+    </span>
+  );
+};
 
 const MonteurAvatar = ({
   naam,
