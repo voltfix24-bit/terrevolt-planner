@@ -2108,6 +2108,9 @@ const GridRow = memo(function GridRow({
               highlightColor={highlightColor}
               isDimmed={highlightedMonteurId !== null && !isHighlighted}
               currentWeekTooltip={isCurrentWeek ? currentWeekTooltip : null}
+              weekId={w.id}
+              dagIndex={d}
+              onMoveCell={onMoveCell}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
