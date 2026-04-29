@@ -201,6 +201,10 @@ const CELL_W = 52;
 const CELL_H = 40;
 const HEADER_H = 56;
 
+// Kleuren-cyclus voor onafhankelijke selectiegroepen (cyaan, paars, oranje, roze, groen)
+const GROUP_COLORS = ["#38bdf8", "#a78bfa", "#fb923c", "#f472b6", "#34d399"];
+const groupColor = (idx: number): string => GROUP_COLORS[idx % GROUP_COLORS.length];
+
 /* ----------------------------- Page ----------------------------- */
 
 const Plannen = () => {
@@ -239,18 +243,59 @@ const Plannen = () => {
   // null => geen highlight actief.
   const [highlightedMonteurId, setHighlightedMonteurId] = useState<string | null>(null);
 
-  // Multi-select voor groep-verplaatsen via drag-and-drop.
-  // Houdt de id's bij van planning_cellen die de gebruiker met Ctrl/Cmd of Shift heeft aangeklikt.
-  const [selectedCelIds, setSelectedCelIds] = useState<Set<string>>(new Set());
-  const clearSelection = useCallback(() => setSelectedCelIds(new Set()), []);
+  // Multi-select voor groep-verplaatsen. Meerdere onafhankelijke groepen mogelijk:
+  // - Ctrl/Cmd-klik op gevulde cel  -> toggle in de actieve (laatste) groep
+  // - Shift-klik op gevulde cel     -> sluit huidige groep af en start een nieuwe groep
+  // Drag-and-drop verplaatst alle groepen tegelijk met dezelfde delta;
+  // toolbar-knoppen werken per groep apart zodat groepen onafhankelijk kunnen verschuiven.
+  const [selectedGroups, setSelectedGroups] = useState<string[][]>([]);
+  const clearSelection = useCallback(() => setSelectedGroups([]), []);
+
+  // Set met alle geselecteerde cel-ids over alle groepen heen — handig voor lookups
+  const selectedCelIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const g of selectedGroups) for (const id of g) s.add(id);
+    return s;
+  }, [selectedGroups]);
+
+  // Map: cel-id -> groep-index (0-based). Voor kleur/ring per cel.
+  const groupIndexByCelId = useMemo(() => {
+    const m = new Map<string, number>();
+    selectedGroups.forEach((g, i) => g.forEach((id) => m.set(id, i)));
+    return m;
+  }, [selectedGroups]);
+
+  // Voeg toe aan actieve groep (Ctrl/Cmd-klik). Verwijdert uit andere groepen indien nodig.
+  // Als de cel al in de actieve groep zit -> verwijderen. Als geen groep bestaat -> nieuwe.
   const toggleCellSelection = useCallback((celId: string) => {
-    setSelectedCelIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(celId)) next.delete(celId);
-      else next.add(celId);
-      return next;
+    setSelectedGroups((prev) => {
+      if (prev.length === 0) return [[celId]];
+      // Verwijder uit alle bestaande groepen om dubbele te voorkomen
+      const cleaned = prev.map((g) => g.filter((id) => id !== celId));
+      const wasInActive = prev[prev.length - 1].includes(celId);
+      if (wasInActive) {
+        // Toggle off
+        return cleaned.filter((g) => g.length > 0);
+      }
+      // Voeg toe aan actieve (laatste) groep
+      const next = cleaned.map((g, i) => (i === cleaned.length - 1 ? [...g, celId] : g));
+      return next.filter((g) => g.length > 0);
     });
   }, []);
+
+  // Shift-klik: start nieuwe groep met deze cel (verwijdert hem uit andere groepen).
+  const startNewGroupWithCell = useCallback((celId: string) => {
+    setSelectedGroups((prev) => {
+      const cleaned = prev.map((g) => g.filter((id) => id !== celId)).filter((g) => g.length > 0);
+      return [...cleaned, [celId]];
+    });
+  }, []);
+
+  // Verwijder één groep
+  const removeGroup = useCallback((idx: number) => {
+    setSelectedGroups((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
 
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -886,14 +931,14 @@ const Plannen = () => {
     [cellen, weken, moveCellsByDelta]
   );
 
-  // Wrapper voor toolbar-knoppen: verschuif alle geselecteerde cellen met N slots
-  const shiftSelection = useCallback(
-    async (deltaSlots: number) => {
-      const ids = Array.from(selectedCelIds);
-      if (ids.length === 0) return;
-      await moveCellsByDelta(ids, deltaSlots);
+  // Wrapper voor toolbar-knoppen: verschuif één specifieke groep met N slots
+  const shiftGroup = useCallback(
+    async (groupIdx: number, deltaSlots: number) => {
+      const g = selectedGroups[groupIdx];
+      if (!g || g.length === 0) return;
+      await moveCellsByDelta(g, deltaSlots);
     },
-    [selectedCelIds, moveCellsByDelta]
+    [selectedGroups, moveCellsByDelta]
   );
 
   /* ----------------------------- undo / history ----------------------------- */
@@ -1010,7 +1055,7 @@ const Plannen = () => {
         handleUndo();
       }
       if (e.key === "Escape") {
-        setSelectedCelIds((prev) => (prev.size > 0 ? new Set() : prev));
+        setSelectedGroups((prev) => (prev.length > 0 ? [] : prev));
       }
     };
     window.addEventListener("keydown", handler);
@@ -1439,58 +1484,82 @@ const Plannen = () => {
 
   return (
     <div className="-mx-8 -my-8">
-      {/* Selectie-toolbar voor groep-verplaatsen via drag-and-drop */}
-      {selectedCelIds.size > 0 && (
+      {/* Selectie-toolbar: één rij per onafhankelijke groep + globale wis-knop */}
+      {selectedGroups.length > 0 && (
         <div
-          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-2 shadow-lg"
+          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 flex-col gap-2 rounded-xl border px-3 py-2 shadow-lg"
           style={{
             backgroundColor: "rgba(10, 26, 48, 0.95)",
-            borderColor: "#38bdf8",
+            borderColor: "rgba(255,255,255,0.15)",
             backdropFilter: "blur(8px)",
+            minWidth: 480,
           }}
         >
-          <span className="font-display text-xs font-bold uppercase tracking-wider text-sky-300">
-            {selectedCelIds.size} cel{selectedCelIds.size === 1 ? "" : "len"} geselecteerd
-          </span>
-          <span className="text-[11px] text-muted-foreground">
-            Sleep een geselecteerde cel of gebruik de knoppen om als groep te verschuiven
-          </span>
-          <div className="flex items-center gap-1 rounded-md border border-white/15 p-0.5">
+          <div className="flex items-center justify-between gap-3 border-b pb-1.5" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+              Selectiegroepen — Shift-klik = nieuwe groep, Ctrl/Cmd-klik = aan actieve groep
+            </span>
             <button
-              onClick={() => shiftSelection(-5)}
-              title="Verschuif 1 week terug"
-              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+              onClick={clearSelection}
+              className="rounded-md border border-white/15 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-white/[0.08]"
             >
-              −1 wk
-            </button>
-            <button
-              onClick={() => shiftSelection(-1)}
-              title="Verschuif 1 dag terug"
-              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
-            >
-              −1 dag
-            </button>
-            <button
-              onClick={() => shiftSelection(1)}
-              title="Verschuif 1 dag vooruit"
-              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
-            >
-              +1 dag
-            </button>
-            <button
-              onClick={() => shiftSelection(5)}
-              title="Verschuif 1 week vooruit"
-              className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
-            >
-              +1 wk
+              Wis alles
             </button>
           </div>
-          <button
-            onClick={clearSelection}
-            className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.08]"
-          >
-            Wis selectie
-          </button>
+          {selectedGroups.map((g, idx) => {
+            const c = groupColor(idx);
+            return (
+              <div key={idx} className="flex items-center gap-2">
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full font-display text-[10px] font-bold"
+                  style={{ backgroundColor: c, color: "#0a1a30" }}
+                  title={`Groep ${idx + 1}`}
+                >
+                  {idx + 1}
+                </span>
+                <span className="font-display text-xs font-semibold" style={{ color: c }}>
+                  {g.length} cel{g.length === 1 ? "" : "len"}
+                </span>
+                <div className="flex items-center gap-1 rounded-md border border-white/15 p-0.5">
+                  <button
+                    onClick={() => shiftGroup(idx, -5)}
+                    title="Verschuif 1 week terug"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                  >
+                    −1 wk
+                  </button>
+                  <button
+                    onClick={() => shiftGroup(idx, -1)}
+                    title="Verschuif 1 dag terug"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                  >
+                    −1 dag
+                  </button>
+                  <button
+                    onClick={() => shiftGroup(idx, 1)}
+                    title="Verschuif 1 dag vooruit"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                  >
+                    +1 dag
+                  </button>
+                  <button
+                    onClick={() => shiftGroup(idx, 5)}
+                    title="Verschuif 1 week vooruit"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                  >
+                    +1 wk
+                  </button>
+                </div>
+                <button
+                  onClick={() => removeGroup(idx)}
+                  title="Verwijder deze groep"
+                  className="ml-auto rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
       {/* Project info bar (sticky) */}
@@ -1763,7 +1832,9 @@ const Plannen = () => {
                       onMoveCell={moveCell}
                       onMoveCellsGroup={moveCellsGroup}
                       selectedCelIds={selectedCelIds}
+                      groupIndexByCelId={groupIndexByCelId}
                       onToggleSelect={toggleCellSelection}
+                      onStartNewGroup={startNewGroupWithCell}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
@@ -2284,7 +2355,9 @@ interface GridRowProps {
     targetDagIndex: number
   ) => void;
   selectedCelIds: Set<string>;
+  groupIndexByCelId: Map<string, number>;
   onToggleSelect: (celId: string) => void;
+  onStartNewGroup: (celId: string) => void;
 }
 
 const GridRow = memo(function GridRow({
@@ -2301,7 +2374,9 @@ const GridRow = memo(function GridRow({
   onMoveCell,
   onMoveCellsGroup,
   selectedCelIds,
+  groupIndexByCelId,
   onToggleSelect,
+  onStartNewGroup,
 }: GridRowProps) {
   return (
     <div
@@ -2341,8 +2416,10 @@ const GridRow = memo(function GridRow({
               onMoveCell={onMoveCell}
               onMoveCellsGroup={onMoveCellsGroup}
               isSelected={!!cel && selectedCelIds.has(cel.id)}
+              groupColorHex={cel ? (groupIndexByCelId.has(cel.id) ? groupColor(groupIndexByCelId.get(cel.id)!) : null) : null}
               selectedCelIds={selectedCelIds}
               onToggleSelect={onToggleSelect}
+              onStartNewGroup={onStartNewGroup}
               onClick={() => onClick(activiteit, w.id, d)}
               onContextMenu={(e) => onRightClick(e, activiteit.id, w.id, d)}
             />
@@ -2439,8 +2516,10 @@ const CellBox = memo(function CellBox({
   onMoveCell,
   onMoveCellsGroup,
   isSelected = false,
+  groupColorHex = null,
   selectedCelIds,
   onToggleSelect,
+  onStartNewGroup,
 }: {
   cel: Cel | undefined;
   activiteit: Activiteit;
@@ -2463,8 +2542,10 @@ const CellBox = memo(function CellBox({
     targetDagIndex: number
   ) => void;
   isSelected?: boolean;
+  groupColorHex?: string | null;
   selectedCelIds: Set<string>;
   onToggleSelect: (celId: string) => void;
+  onStartNewGroup: (celId: string) => void;
 }) {
   const kleur = cel?.kleur_code ? COLOR_MAP[cel.kleur_code]?.hex : null;
   const isCap =
@@ -2583,8 +2664,15 @@ const CellBox = memo(function CellBox({
   return (
     <button
       onClick={(e) => {
-        // Ctrl/Cmd of Shift-klik op een gevulde cel = (de)selecteren voor groep-verplaatsen
-        if ((e.ctrlKey || e.metaKey || e.shiftKey) && draggable && cel) {
+        // Shift-klik op gevulde cel = start nieuwe selectiegroep
+        if (e.shiftKey && draggable && cel) {
+          e.preventDefault();
+          e.stopPropagation();
+          onStartNewGroup(cel.id);
+          return;
+        }
+        // Ctrl/Cmd-klik = toggle in actieve groep
+        if ((e.ctrlKey || e.metaKey) && draggable && cel) {
           e.preventDefault();
           e.stopPropagation();
           onToggleSelect(cel.id);
@@ -2595,7 +2683,7 @@ const CellBox = memo(function CellBox({
       onContextMenu={onContextMenu}
       title={
         draggable
-          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om te verplaatsen. Ctrl/Shift-klik om meerdere cellen te selecteren en samen te slepen.`
+          ? `${hoverTitle ?? ""}${hoverTitle ? "\n\n" : ""}Tip: sleep om te verplaatsen. Ctrl/Cmd-klik = aan actieve groep toevoegen. Shift-klik = nieuwe groep starten.`
           : hoverTitle
       }
       draggable={draggable}
@@ -2673,14 +2761,14 @@ const CellBox = memo(function CellBox({
         outline: isDragOver
           ? "2px dashed rgba(63,255,139,0.9)"
           : isSelected
-          ? "2px dashed #38bdf8"
+          ? `2px dashed ${groupColorHex ?? "#38bdf8"}`
           : filled && !voldoet
           ? "2px solid #feb300"
           : undefined,
         outlineOffset:
           isDragOver || isSelected || (filled && !voldoet) ? "-2px" : undefined,
         boxShadow: isSelected
-          ? `inset 0 0 0 2px #38bdf8, 0 0 10px rgba(56,189,248,0.5)${
+          ? `inset 0 0 0 2px ${groupColorHex ?? "#38bdf8"}, 0 0 10px ${(groupColorHex ?? "#38bdf8")}80${
               highlightShadow ? `, ${highlightShadow}` : ""
             }`
           : highlightShadow,
