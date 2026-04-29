@@ -9,6 +9,7 @@ import {
   FileText,
   GripVertical,
   History,
+  Pencil,
   Plus,
   Printer,
   Trash2,
