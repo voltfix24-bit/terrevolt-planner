@@ -1085,6 +1085,9 @@ const ProjectDossier = () => {
         samenvatting={samenvatting}
         periodeLabel={periodeLabel}
         periodeDuur={periodeDuur}
+        conceptCellen={conceptCellen}
+        activiteitenMap={activiteitenMap}
+        monteursMap={monteursMap}
       />
     </div>
   );
