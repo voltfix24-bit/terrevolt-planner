@@ -697,7 +697,7 @@ const ConceptCelRow: React.FC<{
               key={ploeg.id}
               type="button"
               onClick={() => toAdd.forEach((id) => onToggleMonteur(id))}
-              className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] text-foreground transition-colors hover:bg-primary/20"
+              className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] text-foreground transition-all hover:bg-primary/30 hover:border-primary hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:bg-primary/30"
               title={`Voeg ploeg "${ploeg.naam}" toe (${toAdd.length} monteur${toAdd.length === 1 ? "" : "s"})`}
             >
               + {ploeg.naam} ({toAdd.length})
@@ -713,12 +713,13 @@ const ConceptCelRow: React.FC<{
               key={m.id}
               type="button"
               onClick={() => onToggleMonteur(m.id)}
-              className={`rounded border px-1.5 py-0.5 text-[10px] transition-colors ${
+              className={`rounded border px-1.5 py-0.5 text-[10px] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                 active
-                  ? "border-primary bg-primary/20 text-foreground"
-                  : "border-white/10 bg-white/[0.02] text-muted-foreground hover:bg-white/[0.06]"
+                  ? "border-primary bg-primary/20 text-foreground hover:bg-primary/30 hover:border-primary hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)]"
+                  : "border-white/10 bg-white/[0.02] text-muted-foreground hover:bg-white/[0.10] hover:border-white/30 hover:text-foreground"
               }`}
               title={m.naam}
+              aria-pressed={active}
             >
               {m.naam}
             </button>
