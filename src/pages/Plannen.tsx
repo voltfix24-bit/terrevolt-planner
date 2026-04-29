@@ -1526,7 +1526,7 @@ const Plannen = () => {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
 
       // Kolombreedtes — eerste kolom breed voor activiteit-namen, dagcellen smal
-      const totalCols = 1 + weken.length * 5;
+      const totalCols = 1 + expWeken.length * 5;
       const cols: { wch: number }[] = [{ wch: 32 }];
       for (let i = 1; i < totalCols; i++) cols.push({ wch: 5 });
       ws["!cols"] = cols;
@@ -1540,11 +1540,11 @@ const Plannen = () => {
 
       // Merges voor week-headers (rij 2, kolommen per week)
       const merges: any[] = [];
-      weken.forEach((_, wi) => {
+      expWeken.forEach((_, wi) => {
         const startCol = 1 + wi * 5;
         merges.push({ s: { r: 2, c: startCol }, e: { r: 2, c: startCol + 4 } });
         // Opmerkingen ook mergen
-        const opmRowIdx = activityStartRow + activiteiten.length;
+        const opmRowIdx = activityStartRow + expActiviteiten.length;
         merges.push({ s: { r: opmRowIdx, c: startCol }, e: { r: opmRowIdx, c: startCol + 4 } });
       });
       ws["!merges"] = merges;
