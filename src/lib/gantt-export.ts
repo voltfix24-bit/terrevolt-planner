@@ -59,6 +59,15 @@ export interface GanttExportInput {
   monteurs: GanttMonteur[];
   cellen: GanttCel[];
   monteurWeergave: GanttMonteurWeergave;
+  /** Map van YYYY-MM-DD → feestdag-naam. Optioneel. */
+  feestdagen?: Map<string, string>;
+}
+
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 const escHtml = (s: string): string =>
@@ -91,7 +100,8 @@ function projectLabel(p: GanttProject): string {
 }
 
 export function exportGanttPDF(input: GanttExportInput): void {
-  const { titel, weken, projecten, activiteiten, monteurs, cellen, monteurWeergave } = input;
+  const { titel, weken, projecten, activiteiten, monteurs, cellen, monteurWeergave, feestdagen } = input;
+  const feestdagenMap = feestdagen ?? new Map<string, string>();
 
   if (weken.length === 0) {
     throw new Error("Geen weken geselecteerd");
@@ -158,9 +168,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
         const dt = new Date(monday);
         dt.setDate(monday.getDate() + i);
         const isLastOfWeek = i === 4;
-        return `<th class="dag${isLastOfWeek ? " end-wk" : ""}">
+        const feestNaam = feestdagenMap.get(ymd(dt));
+        const cls = ["dag", isLastOfWeek ? "end-wk" : "", feestNaam ? "feestdag-h" : ""].filter(Boolean).join(" ");
+        const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
+        const feestRow = feestNaam
+          ? `<div class="dag-feest" title="${escHtml(feestNaam)}">${escHtml(feestNaam.length > 6 ? feestNaam.slice(0, 6) + "…" : feestNaam)}</div>`
+          : "";
+        return `<th class="${cls}"${tip}>
           <div class="dag-lbl">${d}</div>
           <div class="dag-dt">${formatDate(dt)}</div>
+          ${feestRow}
         </th>`;
       }).join(""),
     )
@@ -188,8 +205,14 @@ export function exportGanttPDF(input: GanttExportInput): void {
             DAG_LABELS.map((_, di) => {
               const cel = cellMap.get(`${a.id}|${w.week_nr}|${di}`);
               const isLastOfWeek = di === 4;
+              const monday = getMondayOfWeek(w.week_nr, w.jaar);
+              const dt = new Date(monday);
+              dt.setDate(monday.getDate() + di);
+              const feestNaam = feestdagenMap.get(ymd(dt));
               const endCls = isLastOfWeek ? " end-wk" : "";
-              if (!cel) return `<td class="cell empty-cell${endCls}"></td>`;
+              const feestCls = feestNaam ? " feestdag" : "";
+              const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
+              if (!cel) return `<td class="cell empty-cell${endCls}${feestCls}"${tip}></td>`;
               const colorEntry = cel.kleur_code ? COLOR_MAP[cel.kleur_code] : null;
               const bg = colorEntry?.hex ?? "#cbd5e1";
               const fg = readableTextColor(bg);
@@ -204,7 +227,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
                   label = namen.join(", ");
                 }
               }
-              return `<td class="cell filled${endCls}" style="background:${bg};color:${fg};">${escHtml(label)}</td>`;
+              return `<td class="cell filled${endCls}${feestCls}"${tip} style="background:${bg};color:${fg};">${escHtml(label)}</td>`;
             }).join(""),
           )
           .join("");
@@ -217,16 +240,17 @@ export function exportGanttPDF(input: GanttExportInput): void {
     });
   }
 
-  // Legend — vereenvoudigd: 3 categorieën
-  const legendItems: Array<{ hex: string; naam: string }> = [
+  // Legend — vereenvoudigd: 3 categorieën + feestdag indicator
+  const legendItems: Array<{ hex: string; naam: string; pattern?: boolean }> = [
     { hex: "#1d4ed8", naam: "Montage" },
     { hex: "#fdcb35", naam: "Schakelen" },
     { hex: "#65a30d", naam: "Diverse" },
+    { hex: "#94a3b8", naam: "Feestdag / vrije dag", pattern: true },
   ];
   const legend = legendItems
     .map(
       (c) =>
-        `<div class="lg-item"><span class="lg-dot" style="background:${c.hex}"></span>${escHtml(c.naam)}</div>`,
+        `<div class="lg-item"><span class="lg-dot${c.pattern ? " lg-dot-feest" : ""}" style="background:${c.hex}"></span>${escHtml(c.naam)}</div>`,
     )
     .join("");
 
@@ -303,6 +327,30 @@ export function exportGanttPDF(input: GanttExportInput): void {
     background: #f8fafc;
   }
 
+  /* Feestdag / vrije dag — diagonale grijze streep over hele kolom */
+  thead th.dag.feestdag-h {
+    background: repeating-linear-gradient(
+      45deg, #e2e8f0, #e2e8f0 3px, #f1f5f9 3px, #f1f5f9 6px
+    );
+  }
+  thead th.dag .dag-feest {
+    font-size: 7px; font-weight: 700; color: #475569;
+    margin-top: 1px; line-height: 1; letter-spacing: 0.02em;
+  }
+  td.cell.feestdag {
+    background-image: repeating-linear-gradient(
+      45deg, rgba(100,116,139,0.18), rgba(100,116,139,0.18) 3px,
+      rgba(148,163,184,0.10) 3px, rgba(148,163,184,0.10) 6px
+    );
+  }
+  /* Wanneer er ook een gevulde activiteit op een feestdag staat: stripes bovenop kleur */
+  td.cell.filled.feestdag {
+    background-image: repeating-linear-gradient(
+      45deg, rgba(0,0,0,0.18), rgba(0,0,0,0.18) 3px,
+      rgba(0,0,0,0) 3px, rgba(0,0,0,0) 6px
+    );
+  }
+
   .legend {
     margin: 12px auto 0 auto;
     width: ${sheetW}px;
@@ -313,6 +361,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   .lg-item { display: inline-flex; align-items: center; gap: 4px; }
   .lg-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.15); display: inline-block; }
+  .lg-dot-feest {
+    background-image: repeating-linear-gradient(
+      45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
+    ) !important;
+  }
 
   .toolbar {
     position: sticky; top: 0; z-index: 10;

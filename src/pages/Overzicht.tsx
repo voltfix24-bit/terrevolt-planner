@@ -1213,6 +1213,7 @@ export default function Overzicht() {
             monteurs={monteurs}
             celMonteurs={celMonteurs}
             jaar={jaar}
+            feestdagen={feestdagMap}
           />
           <div
             className="flex items-center gap-2"
@@ -2726,6 +2727,7 @@ interface GanttPrintMenuProps {
   monteurs: Monteur[];
   celMonteurs: CelMonteur[];
   jaar: number;
+  feestdagen: Map<string, string>;
 }
 
 function GanttPrintMenu({
@@ -2736,6 +2738,7 @@ function GanttPrintMenu({
   monteurs,
   celMonteurs,
   jaar,
+  feestdagen,
 }: GanttPrintMenuProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -2834,6 +2837,7 @@ function GanttPrintMenu({
         monteurs: ganttMonteurs,
         cellen: ganttCellen,
         monteurWeergave,
+        feestdagen,
       });
       setOpen(false);
     } catch (e) {
