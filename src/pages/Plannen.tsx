@@ -4093,10 +4093,22 @@ const CelModal = ({
                         rankAanwijzing(activiteit.min_aanwijzing_ms)
                       : false);
                   const ok = okLs && okMs;
+                  const besch = beschikbaarheid.get(m.id);
+                  const onbeschikbaar = besch && !besch.beschikbaar;
                   return (
                     <div
                       key={m.id}
                       className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                      style={
+                        onbeschikbaar
+                          ? { border: "1px solid rgba(220,38,38,0.45)" }
+                          : undefined
+                      }
+                      title={
+                        onbeschikbaar
+                          ? besch!.redenen.map((r) => r.label).join(" • ")
+                          : undefined
+                      }
                     >
                       <MonteurAvatar
                         naam={m.naam}
@@ -4107,6 +4119,18 @@ const CelModal = ({
                       <div className="flex-1 font-display text-sm font-semibold text-foreground">
                         {m.naam}
                       </div>
+                      {onbeschikbaar && (
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                          style={{
+                            backgroundColor: "rgba(220,38,38,0.18)",
+                            color: "#fca5a5",
+                            border: "1px solid rgba(220,38,38,0.4)",
+                          }}
+                        >
+                          {shortReason(besch!.redenen[0])}
+                        </span>
+                      )}
                       {m.aanwijzing_ls && (
                         <span
                           className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
