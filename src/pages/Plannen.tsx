@@ -65,6 +65,11 @@ import {
   initialen,
   wrapWeek,
 } from "@/lib/planning-types";
+import {
+  checkBeschikbaarheid,
+  isFeestdag,
+  shortReason,
+} from "@/lib/monteur-beschikbaarheid";
 import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
@@ -169,6 +174,7 @@ interface Monteur {
   aanwijzing_ls: Aanwijzing | null;
   aanwijzing_ms: Aanwijzing | null;
   actief: boolean;
+  werkdagen?: number[] | null;
 }
 
 interface Cel {
@@ -221,6 +227,10 @@ const Plannen = () => {
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
   const [ploegen, setPloegen] = useState<import("@/lib/ploegen").Ploeg[]>([]);
   const [activiteitTypes, setActiviteitTypes] = useState<ActiviteitTypeOption[]>([]);
+  const [afwezigheid, setAfwezigheid] = useState<
+    import("@/lib/monteur-beschikbaarheid").AfwezigheidPeriode[]
+  >([]);
+  const [feestdagenMap, setFeestdagenMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const [openCellKey, setOpenCellKey] = useState<string | null>(null);
@@ -403,6 +413,46 @@ const Plannen = () => {
       setPloegen(pl.filter((p) => p.actief));
     } catch {
       setPloegen([]);
+    }
+
+    // Laad feestdagen + afwezigheid (best effort) zodat de planning kan waarschuwen
+    try {
+      const proj = projRes.data as Project;
+      const projectJaar = proj?.jaar ?? new Date().getFullYear();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      const [fdRes, awRes] = await Promise.all([
+        sb
+          .from("feestdagen")
+          .select("datum, naam")
+          .in("jaar", [projectJaar - 1, projectJaar, projectJaar + 1]),
+        sb
+          .from("monteur_afwezigheid")
+          .select("monteur_id, datum_van, datum_tot, type, omschrijving"),
+      ]);
+      const fdMap = new Map<string, string>();
+      for (const f of (fdRes.data ?? []) as { datum: string; naam: string }[]) {
+        fdMap.set(f.datum, f.naam);
+      }
+      setFeestdagenMap(fdMap);
+      setAfwezigheid(
+        ((awRes.data ?? []) as Array<{
+          monteur_id: string;
+          datum_van: string;
+          datum_tot: string;
+          type: string;
+          omschrijving: string | null;
+        }>).map((a) => ({
+          monteur_id: a.monteur_id,
+          datum_van: a.datum_van,
+          datum_tot: a.datum_tot,
+          type: a.type,
+          omschrijving: a.omschrijving,
+        })),
+      );
+    } catch {
+      setFeestdagenMap(new Map());
+      setAfwezigheid([]);
     }
 
     // Auto-seed project_activiteiten vanuit template wanneer leeg
@@ -2785,6 +2835,9 @@ const Plannen = () => {
                 ) ?? null
               : null
           }
+          projectJaar={project?.jaar ?? new Date().getFullYear()}
+          afwezigheid={afwezigheid}
+          feestdagenMap={feestdagenMap}
           onColorChange={(c) => updateCellColor(openCel.cel, c)}
           onNotitieChange={(n) => updateCellNotitie(openCel.cel, n)}
           onAddMonteur={(id) => addMonteurToCell(openCel.cel, id)}
@@ -3770,6 +3823,9 @@ interface CelModalProps {
   monteurIdsAssigned: string[];
   monteurById: Map<string, Monteur>;
   template: ActiviteitTypeOption | null;
+  projectJaar: number;
+  afwezigheid: import("@/lib/monteur-beschikbaarheid").AfwezigheidPeriode[];
+  feestdagenMap: Map<string, string>;
   onColorChange: (c: string) => void;
   onNotitieChange: (n: string) => void;
   onAddMonteur: (id: string) => void;
@@ -3788,6 +3844,9 @@ const CelModal = ({
   monteurIdsAssigned,
   monteurById,
   template,
+  projectJaar,
+  afwezigheid,
+  feestdagenMap,
   onColorChange,
   onNotitieChange,
   onAddMonteur,
@@ -3855,6 +3914,32 @@ const CelModal = ({
   const vereistAanwijzing =
     activiteit.min_aanwijzing_ms ?? activiteit.min_aanwijzing_ls ?? null;
 
+  // Beschikbaarheid van monteurs op deze (week, dag): vrije dag, feestdag, verlof.
+  const beschikbaarheid = useMemo(() => {
+    const map = new Map<
+      string,
+      import("@/lib/monteur-beschikbaarheid").BeschikbaarheidResultaat
+    >();
+    for (const m of monteurs) {
+      const res = checkBeschikbaarheid({
+        monteurId: m.id,
+        werkdagen: m.werkdagen ?? null,
+        weekNr: week.week_nr,
+        jaar: projectJaar,
+        dagIndex: cel.dag_index,
+        afwezigheid,
+        feestdagenMap,
+      });
+      map.set(m.id, res);
+    }
+    return map;
+  }, [monteurs, week.week_nr, projectJaar, cel.dag_index, afwezigheid, feestdagenMap]);
+
+  const dagFeestdag = useMemo(
+    () => isFeestdag(feestdagenMap, week.week_nr, projectJaar, cel.dag_index),
+    [feestdagenMap, week.week_nr, projectJaar, cel.dag_index],
+  );
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
@@ -3884,6 +3969,19 @@ const CelModal = ({
         </div>
 
         <div className="space-y-5 px-6 py-6 max-h-[70vh] overflow-y-auto">
+          {dagFeestdag.isFeestdag && (
+            <div
+              className="rounded-md px-3 py-2 text-xs font-display font-semibold flex items-center gap-2"
+              style={{
+                backgroundColor: "rgba(220,38,38,0.12)",
+                color: "#fca5a5",
+                border: "1px solid rgba(220,38,38,0.35)",
+              }}
+            >
+              <span>⚠</span>
+              <span>Feestdag: {dagFeestdag.naam} — monteurs zijn doorgaans vrij</span>
+            </div>
+          )}
           {/* Kleur */}
           <div className="space-y-2">
             <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -3995,10 +4093,22 @@ const CelModal = ({
                         rankAanwijzing(activiteit.min_aanwijzing_ms)
                       : false);
                   const ok = okLs && okMs;
+                  const besch = beschikbaarheid.get(m.id);
+                  const onbeschikbaar = besch && !besch.beschikbaar;
                   return (
                     <div
                       key={m.id}
                       className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                      style={
+                        onbeschikbaar
+                          ? { border: "1px solid rgba(220,38,38,0.45)" }
+                          : undefined
+                      }
+                      title={
+                        onbeschikbaar
+                          ? besch!.redenen.map((r) => r.label).join(" • ")
+                          : undefined
+                      }
                     >
                       <MonteurAvatar
                         naam={m.naam}
@@ -4009,6 +4119,18 @@ const CelModal = ({
                       <div className="flex-1 font-display text-sm font-semibold text-foreground">
                         {m.naam}
                       </div>
+                      {onbeschikbaar && (
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                          style={{
+                            backgroundColor: "rgba(220,38,38,0.18)",
+                            color: "#fca5a5",
+                            border: "1px solid rgba(220,38,38,0.4)",
+                          }}
+                        >
+                          {shortReason(besch!.redenen[0])}
+                        </span>
+                      )}
                       {m.aanwijzing_ls && (
                         <span
                           className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
@@ -4092,43 +4214,74 @@ const CelModal = ({
                         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           Individuele monteurs
                         </DropdownMenuLabel>
-                        {eligibleMonteurs.map((m) => (
-                          <DropdownMenuItem
-                            key={m.id}
-                            onSelect={() => onAddMonteur(m.id)}
-                            className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
-                          >
-                            <span className="font-display text-sm font-semibold flex-1">
-                              {m.naam}
-                            </span>
-                            <span
-                              className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                              style={{
-                                backgroundColor:
-                                  m.type === "schakelmonteur" ? "#feb300" : "#378add",
-                                color: "#0a1a30",
-                              }}
-                            >
-                              {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
-                            </span>
-                            {m.aanwijzing_ls && (
-                              <span
-                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                                style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                        {[...eligibleMonteurs]
+                          .sort((a, b) => {
+                            const aOk = beschikbaarheid.get(a.id)?.beschikbaar ?? true;
+                            const bOk = beschikbaarheid.get(b.id)?.beschikbaar ?? true;
+                            if (aOk !== bOk) return aOk ? -1 : 1;
+                            return a.naam.localeCompare(b.naam);
+                          })
+                          .map((m) => {
+                            const besch = beschikbaarheid.get(m.id);
+                            const onbeschikbaar = besch && !besch.beschikbaar;
+                            return (
+                              <DropdownMenuItem
+                                key={m.id}
+                                onSelect={() => onAddMonteur(m.id)}
+                                className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
+                                title={
+                                  onbeschikbaar
+                                    ? besch!.redenen.map((r) => r.label).join(" • ")
+                                    : undefined
+                                }
                               >
-                                LS {m.aanwijzing_ls}
-                              </span>
-                            )}
-                            {m.aanwijzing_ms && (
-                              <span
-                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                                style={aanwijzingPillStyle(m.aanwijzing_ms)}
-                              >
-                                MS {m.aanwijzing_ms}
-                              </span>
-                            )}
-                          </DropdownMenuItem>
-                        ))}
+                                <span
+                                  className="font-display text-sm font-semibold flex-1"
+                                  style={onbeschikbaar ? { opacity: 0.55 } : undefined}
+                                >
+                                  {m.naam}
+                                </span>
+                                {onbeschikbaar && (
+                                  <span
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                    style={{
+                                      backgroundColor: "rgba(220,38,38,0.18)",
+                                      color: "#fca5a5",
+                                      border: "1px solid rgba(220,38,38,0.4)",
+                                    }}
+                                  >
+                                    {shortReason(besch!.redenen[0])}
+                                  </span>
+                                )}
+                                <span
+                                  className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                  style={{
+                                    backgroundColor:
+                                      m.type === "schakelmonteur" ? "#feb300" : "#378add",
+                                    color: "#0a1a30",
+                                  }}
+                                >
+                                  {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
+                                </span>
+                                {m.aanwijzing_ls && (
+                                  <span
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                    style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                                  >
+                                    LS {m.aanwijzing_ls}
+                                  </span>
+                                )}
+                                {m.aanwijzing_ms && (
+                                  <span
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                    style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                                  >
+                                    MS {m.aanwijzing_ms}
+                                  </span>
+                                )}
+                              </DropdownMenuItem>
+                            );
+                          })}
                       </>
                     )}
                   </DropdownMenuContent>
