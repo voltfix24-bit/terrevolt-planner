@@ -211,6 +211,7 @@ const Plannen = () => {
   const [cellen, setCellen] = useState<CelMap>(new Map());
   const [celMonteurs, setCelMonteurs] = useState<CelMonteurMap>(new Map());
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
+  const [ploegen, setPloegen] = useState<import("@/lib/ploegen").Ploeg[]>([]);
   const [activiteitTypes, setActiviteitTypes] = useState<ActiviteitTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
 
