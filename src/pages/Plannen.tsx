@@ -294,7 +294,45 @@ const Plannen = () => {
   // Verwijder één groep
   const removeGroup = useCallback((idx: number) => {
     setSelectedGroups((prev) => prev.filter((_, i) => i !== idx));
+    setGroupNames((prev) => {
+      // Schuif namen op zodat ze synchroon blijven met de overgebleven groepen
+      const next: Record<number, string> = {};
+      let newIdx = 0;
+      for (let i = 0; i < Object.keys(prev).length + 1; i++) {
+        if (i === idx) continue;
+        if (prev[i] != null) next[newIdx] = prev[i];
+        newIdx++;
+      }
+      return next;
+    });
   }, []);
+
+  // Aangepaste namen per groep-index. Zonder entry valt de UI terug op "Groep N".
+  const [groupNames, setGroupNames] = useState<Record<number, string>>({});
+  const renameGroup = useCallback((idx: number, naam: string) => {
+    setGroupNames((prev) => {
+      const next = { ...prev };
+      const trimmed = naam.trim();
+      if (trimmed) next[idx] = trimmed;
+      else delete next[idx];
+      return next;
+    });
+  }, []);
+
+  // Esc-toets wist alle selecties.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (selectedGroups.length === 0) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      // Niet wissen als de gebruiker in een input/textarea bezig is
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      clearSelection();
+      setGroupNames({});
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedGroups.length, clearSelection]);
 
 
   // History stack — session only, max 30 entries
