@@ -2166,4 +2166,400 @@ const AfwezigheidModal = ({
   );
 };
 
+
+// ============================================================
+// PloegenView
+// ============================================================
+
+interface Ploeg {
+  id: string;
+  naam: string;
+  type: MonteurType;
+  actief: boolean;
+  positie: number;
+  monteur_ids: string[];
+}
+
+const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
+  const [ploegen, setPloegen] = useState<Ploeg[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Ploeg | null>(null);
+  const [naam, setNaam] = useState("");
+  const [type, setType] = useState<MonteurType>("schakelmonteur");
+  const [selMonteurs, setSelMonteurs] = useState<string[]>([]);
+  const [actief, setActief] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const monteurById = useMemo(() => {
+    const m = new Map<string, Monteur>();
+    monteurs.forEach((x) => m.set(x.id, x));
+    return m;
+  }, [monteurs]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const { data: pl, error } = await sb
+        .from("ploegen")
+        .select("id,naam,type,actief,positie")
+        .order("positie", { ascending: true })
+        .order("naam", { ascending: true });
+      if (error) {
+        toast.error("Kon ploegen niet laden");
+        setLoading(false);
+        return;
+      }
+      const ids = (pl ?? []).map((p: any) => p.id);
+      let leden: { ploeg_id: string; monteur_id: string }[] = [];
+      if (ids.length > 0) {
+        const { data: pm } = await sb
+          .from("ploeg_monteurs")
+          .select("ploeg_id,monteur_id")
+          .in("ploeg_id", ids);
+        leden = pm ?? [];
+      }
+      const map = new Map<string, string[]>();
+      leden.forEach((row: any) => {
+        const arr = map.get(row.ploeg_id) ?? [];
+        arr.push(row.monteur_id);
+        map.set(row.ploeg_id, arr);
+      });
+      setPloegen(
+        (pl ?? []).map((p: any) => ({ ...p, monteur_ids: map.get(p.id) ?? [] }))
+      );
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const openNew = () => {
+    setEditing(null);
+    setNaam("");
+    setType("schakelmonteur");
+    setSelMonteurs([]);
+    setActief(true);
+    setModalOpen(true);
+  };
+
+  const openEdit = (p: Ploeg) => {
+    setEditing(p);
+    setNaam(p.naam);
+    setType(p.type);
+    setSelMonteurs([...p.monteur_ids]);
+    setActief(p.actief);
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!naam.trim()) {
+      toast.error("Naam is verplicht");
+      return;
+    }
+    setSaving(true);
+    const payload = { naam: naam.trim(), type, actief };
+    let ploegId = editing?.id;
+    if (editing) {
+      const { error } = await sb.from("ploegen").update(payload).eq("id", editing.id);
+      if (error) {
+        toast.error("Opslaan mislukt");
+        setSaving(false);
+        return;
+      }
+    } else {
+      const { data, error } = await sb
+        .from("ploegen")
+        .insert({ ...payload, positie: ploegen.length })
+        .select()
+        .single();
+      if (error || !data) {
+        toast.error("Opslaan mislukt");
+        setSaving(false);
+        return;
+      }
+      ploegId = (data as any).id;
+    }
+
+    if (ploegId) {
+      await sb.from("ploeg_monteurs").delete().eq("ploeg_id", ploegId);
+      const validIds = selMonteurs.filter((id) => {
+        const m = monteurById.get(id);
+        return m && m.type === type;
+      });
+      if (validIds.length > 0) {
+        await sb
+          .from("ploeg_monteurs")
+          .insert(validIds.map((mid) => ({ ploeg_id: ploegId, monteur_id: mid })));
+      }
+      setPloegen((cur) => {
+        const updated: Ploeg = {
+          id: ploegId!,
+          naam: payload.naam,
+          type,
+          actief,
+          positie: editing?.positie ?? cur.length,
+          monteur_ids: validIds,
+        };
+        if (editing) return cur.map((p) => (p.id === ploegId ? updated : p));
+        return [...cur, updated];
+      });
+      toast.success("Ploeg opgeslagen");
+      setModalOpen(false);
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (p: Ploeg) => {
+    if (!confirm(`Ploeg "${p.naam}" verwijderen?`)) return;
+    const prev = ploegen;
+    setPloegen(ploegen.filter((x) => x.id !== p.id));
+    const { error } = await sb.from("ploegen").delete().eq("id", p.id);
+    if (error) {
+      setPloegen(prev);
+      toast.error("Verwijderen mislukt");
+    } else {
+      toast.success("Ploeg verwijderd");
+    }
+  };
+
+  const eligibleMonteurs = useMemo(
+    () => monteurs.filter((m) => m.actief && m.type === type),
+    [monteurs, type]
+  );
+
+  const toggleSel = (id: string) =>
+    setSelMonteurs((cur) =>
+      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]
+    );
+
+  return (
+    <div className="surface-card overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4">
+        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {ploegen.length} ploeg{ploegen.length === 1 ? "" : "en"}
+        </div>
+        <Button
+          onClick={openNew}
+          className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+          size="sm"
+        >
+          <Plus className="mr-1.5 h-4 w-4" strokeWidth={2.5} /> Ploeg toevoegen
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="px-6 py-16 text-center text-sm text-muted-foreground">Laden…</div>
+      ) : ploegen.length === 0 ? (
+        <div className="px-6 py-16 text-center text-sm text-muted-foreground">
+          Nog geen ploegen. Een ploeg is een vaste groep monteurs die je in één klik
+          samen kunt inplannen.
+        </div>
+      ) : (
+        <div className="px-2 pb-2">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3">Naam</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Monteurs</th>
+                <th className="px-4 py-3 text-right">Acties</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ploegen.map((p) => (
+                <tr
+                  key={p.id}
+                  className="group border-b transition-colors hover:bg-white/[0.04]"
+                  style={{ borderColor: "rgba(255,255,255,0.06)" }}
+                >
+                  <td className="px-4 py-3.5">
+                    <div className="font-display font-semibold text-foreground">
+                      {p.naam}
+                      {!p.actief && (
+                        <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          inactief
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span
+                      className="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-display font-semibold"
+                      style={typeStyle(p.type)}
+                    >
+                      {typeLabel(p.type)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex flex-wrap gap-1">
+                      {p.monteur_ids.length === 0 && (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                      {p.monteur_ids.map((mid) => {
+                        const m = monteurById.get(mid);
+                        if (!m) return null;
+                        return (
+                          <span
+                            key={mid}
+                            className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold"
+                            style={{
+                              backgroundColor: "rgba(255,255,255,0.06)",
+                              color: "rgba(255,255,255,0.85)",
+                            }}
+                          >
+                            {m.naam}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openEdit(p)}
+                        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                        title="Wijzigen"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p)}
+                        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+                        title="Verwijderen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent
+          className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
+          style={{
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px",
+            backdropFilter: "blur(18px)",
+          }}
+        >
+          <div className="flex items-start justify-between px-6 pt-6">
+            <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
+              {editing ? "Ploeg wijzigen" : "Ploeg toevoegen"}
+            </h2>
+            <button
+              onClick={() => setModalOpen(false)}
+              className="-mr-2 -mt-1 rounded-md p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="space-y-5 px-6 py-6 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Naam
+              </Label>
+              <Input
+                value={naam}
+                onChange={(e) => setNaam(e.target.value)}
+                placeholder="Bijv. Ploeg Ali & Sitki"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Type
+              </Label>
+              <div className="flex gap-2">
+                {(["schakelmonteur", "montagemonteur"] as MonteurType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setType(t);
+                      setSelMonteurs((cur) =>
+                        cur.filter((id) => monteurById.get(id)?.type === t)
+                      );
+                    }}
+                    className={[
+                      "flex-1 rounded-md px-3 py-2 text-xs font-display font-semibold tracking-wide transition-all",
+                      type === t
+                        ? "shadow-[0_0_0_1px_hsl(var(--primary))]"
+                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                    ].join(" ")}
+                    style={type === t ? typeStyle(t) : undefined}
+                  >
+                    {typeLabel(t)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Monteurs ({selMonteurs.length})
+              </Label>
+              {eligibleMonteurs.length === 0 ? (
+                <div className="rounded-md bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground">
+                  Geen actieve {typeLabel(type).toLowerCase()}s beschikbaar
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {eligibleMonteurs.map((m) => {
+                    const active = selMonteurs.includes(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleSel(m.id)}
+                        className={[
+                          "rounded-md border px-2.5 py-1 text-xs font-display font-semibold transition-colors",
+                          active
+                            ? "border-primary bg-primary/15 text-foreground"
+                            : "border-white/10 bg-white/[0.02] text-muted-foreground hover:bg-white/[0.06]",
+                        ].join(" ")}
+                      >
+                        {m.naam}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <label className="flex items-center justify-between gap-3 rounded-md bg-white/[0.03] px-3 py-2.5">
+              <span className="text-sm text-foreground">Ploeg is actief</span>
+              <Switch
+                checked={actief}
+                onCheckedChange={setActief}
+                className="data-[state=checked]:bg-primary"
+              />
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-6 py-4">
+            <Button variant="ghost" onClick={() => setModalOpen(false)}>
+              Annuleren
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {saving ? "Bezig met opslaan…" : "Opslaan"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 export default Capaciteit;
