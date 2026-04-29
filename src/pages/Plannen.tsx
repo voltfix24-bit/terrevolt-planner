@@ -1418,6 +1418,30 @@ const Plannen = () => {
 
   return (
     <div className="-mx-8 -my-8">
+      {/* Selectie-toolbar voor groep-verplaatsen via drag-and-drop */}
+      {selectedCelIds.size > 0 && (
+        <div
+          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-2 shadow-lg"
+          style={{
+            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            borderColor: "#38bdf8",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <span className="font-display text-xs font-bold uppercase tracking-wider text-sky-300">
+            {selectedCelIds.size} cel{selectedCelIds.size === 1 ? "" : "len"} geselecteerd
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Sleep een geselecteerde cel om alle samen te verplaatsen
+          </span>
+          <button
+            onClick={clearSelection}
+            className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.08]"
+          >
+            Wis selectie
+          </button>
+        </div>
+      )}
       {/* Project info bar (sticky) */}
       <div
         className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b px-8 py-3"
