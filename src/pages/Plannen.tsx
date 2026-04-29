@@ -291,6 +291,15 @@ const Plannen = () => {
     const atRows = (atRes.data ?? []) as ActiviteitTypeOption[];
     setActiviteitTypes(atRows);
 
+    // Laad ploegen (best effort)
+    try {
+      const { fetchPloegen } = await import("@/lib/ploegen");
+      const pl = await fetchPloegen();
+      setPloegen(pl.filter((p) => p.actief));
+    } catch {
+      setPloegen([]);
+    }
+
     // Auto-seed project_activiteiten vanuit template wanneer leeg
     const proj = projRes.data as Project;
     if (actRows.length === 0 && proj?.template_id) {
