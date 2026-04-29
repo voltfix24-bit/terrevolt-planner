@@ -74,6 +74,13 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
     setCellen(c);
     setActiviteiten((a.data ?? []) as ProjectActiviteit[]);
     setMonteurs((m.data ?? []) as Monteur[]);
+    try {
+      const { fetchPloegen } = await import("@/lib/ploegen");
+      const pl = await fetchPloegen();
+      setPloegen(pl.filter((p) => p.actief));
+    } catch {
+      setPloegen([]);
+    }
     setLoading(false);
   }, [projectId]);
 
