@@ -1708,6 +1708,29 @@ const Plannen = () => {
             />
             Montage
           </span>
+          <span
+            className="text-muted-foreground"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 10,
+            }}
+            title="Concept-reservering: nog niet definitief ingepland. Wordt definitief zodra het project status 'gepland' krijgt of de concept-planning wordt uitgerold."
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 14,
+                height: 10,
+                borderRadius: 3,
+                border: "1.5px dashed rgba(255,255,255,0.55)",
+                background: "transparent",
+                display: "inline-block",
+              }}
+            />
+            Concept-reservering
+          </span>
         </div>
       </div>
 
