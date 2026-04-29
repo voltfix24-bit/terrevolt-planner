@@ -208,7 +208,7 @@ const Projecten = () => {
       <div className="mb-6 flex items-end justify-between gap-4">
         <PageHeader title="Projecten" description="Overzicht van alle TerreVolt-projecten." />
         <div className="flex items-center gap-2">
-          <ProjectenDownloadMenu rows={filtered} opdrachtgeverById={opdrachtgeverById} />
+          
           <Button
             onClick={handleNewProject}
             disabled={creating}
