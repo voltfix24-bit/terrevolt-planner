@@ -168,9 +168,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
         const dt = new Date(monday);
         dt.setDate(monday.getDate() + i);
         const isLastOfWeek = i === 4;
-        return `<th class="dag${isLastOfWeek ? " end-wk" : ""}">
+        const feestNaam = feestdagenMap.get(ymd(dt));
+        const cls = ["dag", isLastOfWeek ? "end-wk" : "", feestNaam ? "feestdag-h" : ""].filter(Boolean).join(" ");
+        const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
+        const feestRow = feestNaam
+          ? `<div class="dag-feest" title="${escHtml(feestNaam)}">${escHtml(feestNaam.length > 6 ? feestNaam.slice(0, 6) + "…" : feestNaam)}</div>`
+          : "";
+        return `<th class="${cls}"${tip}>
           <div class="dag-lbl">${d}</div>
           <div class="dag-dt">${formatDate(dt)}</div>
+          ${feestRow}
         </th>`;
       }).join(""),
     )
