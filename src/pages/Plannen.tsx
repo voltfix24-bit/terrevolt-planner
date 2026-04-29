@@ -2515,7 +2515,11 @@ const GridRow = memo(function GridRow({
   groupIndexByCelId,
   onToggleSelect,
   onStartNewGroup,
+  onFillRange,
+  fillState,
+  setFillState,
 }: GridRowProps) {
+  const isFillRowActive = fillState?.activiteitId === activiteit.id;
   return (
     <div
       className="flex"
