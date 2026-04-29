@@ -3969,6 +3969,19 @@ const CelModal = ({
         </div>
 
         <div className="space-y-5 px-6 py-6 max-h-[70vh] overflow-y-auto">
+          {dagFeestdag.isFeestdag && (
+            <div
+              className="rounded-md px-3 py-2 text-xs font-display font-semibold flex items-center gap-2"
+              style={{
+                backgroundColor: "rgba(220,38,38,0.12)",
+                color: "#fca5a5",
+                border: "1px solid rgba(220,38,38,0.35)",
+              }}
+            >
+              <span>⚠</span>
+              <span>Feestdag: {dagFeestdag.naam} — monteurs zijn doorgaans vrij</span>
+            </div>
+          )}
           {/* Kleur */}
           <div className="space-y-2">
             <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
