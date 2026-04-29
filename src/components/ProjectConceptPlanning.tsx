@@ -538,6 +538,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
                   cel={cel}
                   activiteiten={activiteiten}
                   monteurs={monteurs}
+                  ploegen={ploegen}
                   selected={selected.has(cel.id)}
                   onSelect={(e) => handleSelect(cel.id, e)}
                   onChange={(patch) => updateCel(cel.id, patch)}
