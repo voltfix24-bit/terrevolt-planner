@@ -2821,7 +2821,7 @@ const CellBox = memo(function CellBox({
   isSelected?: boolean;
   groupColorHex?: string | null;
   groupIndex?: number | null;
-  selectedCelIds: Set<string>;
+  groupCelIds?: string[] | null;
   onToggleSelect: (celId: string) => void;
   onStartNewGroup: (celId: string) => void;
   activiteitId: string;
