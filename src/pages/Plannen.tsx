@@ -2566,6 +2566,7 @@ const GridRow = memo(function GridRow({
               onMoveCellsGroup={onMoveCellsGroup}
               isSelected={!!cel && selectedCelIds.has(cel.id)}
               groupColorHex={cel ? (groupIndexByCelId.has(cel.id) ? groupColor(groupIndexByCelId.get(cel.id)!) : null) : null}
+              groupIndex={cel ? groupIndexByCelId.get(cel.id) ?? null : null}
               selectedCelIds={selectedCelIds}
               onToggleSelect={onToggleSelect}
               onStartNewGroup={onStartNewGroup}
