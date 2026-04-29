@@ -2173,14 +2173,30 @@ const Plannen = () => {
           >
             <CalendarDays className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            onClick={exportExcel}
-            title="Exporteer naar Excel"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
-          >
-            <Download className="h-4 w-4" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title="Planning downloaden"
+                className="flex h-8 items-center gap-1 rounded-md border border-white/15 bg-transparent px-2 text-foreground hover:bg-white/[0.06]"
+              >
+                <Download className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Download planning</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={exportExcel}>
+                <FileText className="mr-2 h-4 w-4" />
+                Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportPDF}>
+                <Printer className="mr-2 h-4 w-4" />
+                PDF (print-klaar)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             onClick={() => window.print()}
