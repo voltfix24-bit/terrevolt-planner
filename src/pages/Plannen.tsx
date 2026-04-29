@@ -2001,6 +2001,7 @@ const Plannen = () => {
                       onMoveCellsGroup={moveCellsGroup}
                       selectedCelIds={selectedCelIds}
                       groupIndexByCelId={groupIndexByCelId}
+                      selectedGroups={selectedGroups}
                       onToggleSelect={toggleCellSelection}
                       onStartNewGroup={startNewGroupWithCell}
                       onFillRange={fillCellRange}
