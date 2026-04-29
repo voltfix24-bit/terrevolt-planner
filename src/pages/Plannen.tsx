@@ -2940,16 +2940,16 @@ const CellBox = memo(function CellBox({
           : inFillRange
           ? "1px dashed rgba(63,255,139,0.85)"
           : isSelected
-          ? `2px dashed ${groupColorHex ?? "#38bdf8"}`
+          ? `3px solid ${groupColorHex ?? "#38bdf8"}`
           : filled && !voldoet
           ? "2px solid #feb300"
           : undefined,
         outlineOffset:
           isDragOver || inFillRange || isSelected || (filled && !voldoet)
-            ? "-2px"
+            ? "-3px"
             : undefined,
         boxShadow: isSelected
-          ? `inset 0 0 0 2px ${groupColorHex ?? "#38bdf8"}, 0 0 10px ${(groupColorHex ?? "#38bdf8")}80${
+          ? `inset 0 0 0 3px ${groupColorHex ?? "#38bdf8"}, inset 0 0 0 6px ${hexToRgba(groupColorHex ?? "#38bdf8", 0.25)}, 0 0 0 1px ${hexToRgba(groupColorHex ?? "#38bdf8", 0.6)}, 0 0 18px ${hexToRgba(groupColorHex ?? "#38bdf8", 0.7)}${
               highlightShadow ? `, ${highlightShadow}` : ""
             }`
           : highlightShadow,
