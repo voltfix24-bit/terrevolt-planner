@@ -201,6 +201,10 @@ const CELL_W = 52;
 const CELL_H = 40;
 const HEADER_H = 56;
 
+// Kleuren-cyclus voor onafhankelijke selectiegroepen (cyaan, paars, oranje, roze, groen)
+const GROUP_COLORS = ["#38bdf8", "#a78bfa", "#fb923c", "#f472b6", "#34d399"];
+const groupColor = (idx: number): string => GROUP_COLORS[idx % GROUP_COLORS.length];
+
 /* ----------------------------- Page ----------------------------- */
 
 const Plannen = () => {
