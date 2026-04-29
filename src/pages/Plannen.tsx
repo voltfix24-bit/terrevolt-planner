@@ -1547,6 +1547,7 @@ const Plannen = () => {
                       currentWeekTooltip={currentWeekTooltip}
                       onClick={handleCellClick}
                       onRightClick={handleCellRightClick}
+                      onMoveCell={moveCell}
                     />
                   ))}
                   {/* spacer to align with the "+ Activiteit toevoegen" row in sidebar */}
