@@ -4214,43 +4214,74 @@ const CelModal = ({
                         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           Individuele monteurs
                         </DropdownMenuLabel>
-                        {eligibleMonteurs.map((m) => (
-                          <DropdownMenuItem
-                            key={m.id}
-                            onSelect={() => onAddMonteur(m.id)}
-                            className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
-                          >
-                            <span className="font-display text-sm font-semibold flex-1">
-                              {m.naam}
-                            </span>
-                            <span
-                              className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                              style={{
-                                backgroundColor:
-                                  m.type === "schakelmonteur" ? "#feb300" : "#378add",
-                                color: "#0a1a30",
-                              }}
-                            >
-                              {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
-                            </span>
-                            {m.aanwijzing_ls && (
-                              <span
-                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                                style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                        {[...eligibleMonteurs]
+                          .sort((a, b) => {
+                            const aOk = beschikbaarheid.get(a.id)?.beschikbaar ?? true;
+                            const bOk = beschikbaarheid.get(b.id)?.beschikbaar ?? true;
+                            if (aOk !== bOk) return aOk ? -1 : 1;
+                            return a.naam.localeCompare(b.naam);
+                          })
+                          .map((m) => {
+                            const besch = beschikbaarheid.get(m.id);
+                            const onbeschikbaar = besch && !besch.beschikbaar;
+                            return (
+                              <DropdownMenuItem
+                                key={m.id}
+                                onSelect={() => onAddMonteur(m.id)}
+                                className="flex cursor-pointer items-center gap-2 focus:bg-primary/15"
+                                title={
+                                  onbeschikbaar
+                                    ? besch!.redenen.map((r) => r.label).join(" • ")
+                                    : undefined
+                                }
                               >
-                                LS {m.aanwijzing_ls}
-                              </span>
-                            )}
-                            {m.aanwijzing_ms && (
-                              <span
-                                className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
-                                style={aanwijzingPillStyle(m.aanwijzing_ms)}
-                              >
-                                MS {m.aanwijzing_ms}
-                              </span>
-                            )}
-                          </DropdownMenuItem>
-                        ))}
+                                <span
+                                  className="font-display text-sm font-semibold flex-1"
+                                  style={onbeschikbaar ? { opacity: 0.55 } : undefined}
+                                >
+                                  {m.naam}
+                                </span>
+                                {onbeschikbaar && (
+                                  <span
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                    style={{
+                                      backgroundColor: "rgba(220,38,38,0.18)",
+                                      color: "#fca5a5",
+                                      border: "1px solid rgba(220,38,38,0.4)",
+                                    }}
+                                  >
+                                    {shortReason(besch!.redenen[0])}
+                                  </span>
+                                )}
+                                <span
+                                  className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                  style={{
+                                    backgroundColor:
+                                      m.type === "schakelmonteur" ? "#feb300" : "#378add",
+                                    color: "#0a1a30",
+                                  }}
+                                >
+                                  {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
+                                </span>
+                                {m.aanwijzing_ls && (
+                                  <span
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                    style={aanwijzingPillStyle(m.aanwijzing_ls)}
+                                  >
+                                    LS {m.aanwijzing_ls}
+                                  </span>
+                                )}
+                                {m.aanwijzing_ms && (
+                                  <span
+                                    className="rounded px-1.5 py-0.5 text-[10px] font-display font-bold"
+                                    style={aanwijzingPillStyle(m.aanwijzing_ms)}
+                                  >
+                                    MS {m.aanwijzing_ms}
+                                  </span>
+                                )}
+                              </DropdownMenuItem>
+                            );
+                          })}
                       </>
                     )}
                   </DropdownMenuContent>
