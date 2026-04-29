@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Trash2,
@@ -7,6 +8,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Copy,
+  ExternalLink,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -42,6 +44,7 @@ interface ProjectActiviteit {
 export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
   projectId,
 }) => {
+  const navigate = useNavigate();
   const [cellen, setCellen] = useState<ConceptCel[]>([]);
   const [activiteiten, setActiviteiten] = useState<ProjectActiviteit[]>([]);
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
@@ -415,6 +418,17 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
         >
           <Rocket className="h-3.5 w-3.5" />
           Kopieer naar planning
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/plannen?project=${projectId}`)}
+          className="gap-1.5"
+          title="Open de definitieve (week-gebaseerde) planning van dit project"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Open planning
         </Button>
         <div className="basis-full text-[11px] text-muted-foreground">
           D1 = maandag van de gekozen week. D6 = maandag week +1, enz. Weken
