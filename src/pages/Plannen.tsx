@@ -2433,6 +2433,28 @@ const CelModal = ({
     });
   }, [monteurs, monteurIdsAssigned, activiteit.capaciteit_type]);
 
+  // Ploegen die nog (gedeeltelijk) toegevoegd kunnen worden, gefilterd op activiteit-type
+  const eligiblePloegen = useMemo(() => {
+    return ploegen
+      .filter((p) => {
+        if (activiteit.capaciteit_type === "schakel") return p.type === "schakelmonteur";
+        if (activiteit.capaciteit_type === "montage") return true; // beide types mogen montage
+        return false;
+      })
+      .map((p) => {
+        const toAdd = p.monteur_ids.filter((id) => {
+          if (monteurIdsAssigned.includes(id)) return false;
+          const m = monteurs.find((x) => x.id === id);
+          if (!m) return false;
+          if (activiteit.capaciteit_type === "schakel" && m.type !== "schakelmonteur")
+            return false;
+          return true;
+        });
+        return { ploeg: p, toAdd };
+      })
+      .filter((x) => x.toAdd.length > 0);
+  }, [ploegen, monteurs, monteurIdsAssigned, activiteit.capaciteit_type]);
+
   const check = checkCelVoldoet({
     monteurs: assigned
       .filter((m) => m.aanwijzing_ls && m.aanwijzing_ms)
