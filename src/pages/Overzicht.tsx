@@ -887,6 +887,9 @@ export default function Overzicht() {
   const navigateToProject = (id: string) => {
     navigate(`/plannen?project=${id}`);
   };
+  const navigateToProjectConcept = (id: string) => {
+    navigate(`/projecten/${id}#concept-planning`);
+  };
 
   // ====== Monteur segments (consecutive slots same project) ======
   type MonteurSeg = { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean };
@@ -1968,6 +1971,7 @@ export default function Overzicht() {
                     scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
+                    onConceptClick={navigateToProjectConcept}
                   />
                 ))}
               </div>
@@ -1999,6 +2003,7 @@ export default function Overzicht() {
                     scale={scale}
                     totalGridWidth={totalGridWidth}
                     onProjectClick={navigateToProject}
+                    onConceptClick={navigateToProjectConcept}
                   />
                 ))}
               </div>
@@ -2371,6 +2376,7 @@ function MonteurCellsRow({
   scale,
   totalGridWidth,
   onProjectClick,
+  onConceptClick,
 }: {
   monteur: Monteur;
   segments: { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean }[];
@@ -2380,6 +2386,7 @@ function MonteurCellsRow({
   scale: Scale;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
+  onConceptClick: (id: string) => void;
 }) {
   const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
   const isJaar = scale === "jaar";
@@ -2453,7 +2460,12 @@ function MonteurCellsRow({
           return (
             <div
               key={i}
-              onClick={() => s.projectId && onProjectClick(s.projectId)}
+              onClick={() =>
+                s.projectId &&
+                (isConcept
+                  ? onConceptClick(s.projectId)
+                  : onProjectClick(s.projectId))
+              }
               className="absolute flex cursor-pointer items-center justify-center"
               title={
                 projCount > 1
@@ -2461,7 +2473,7 @@ function MonteurCellsRow({
                       .map((pid) => projectById.get(pid)?.case_nummer ?? pid.slice(0, 6))
                       .join(", ")
                   : p?.case_nummer
-                    ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " (concept)" : ""}`
+                    ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " · concept-reservering · klik voor concept-status" : " · klik voor planning"}`
                     : ""
               }
               style={{
@@ -2490,9 +2502,14 @@ function MonteurCellsRow({
         return (
           <div
             key={i}
-            onClick={() => s.projectId && onProjectClick(s.projectId)}
+            onClick={() =>
+              s.projectId &&
+              (isConcept
+                ? onConceptClick(s.projectId)
+                : onProjectClick(s.projectId))
+            }
             className="absolute flex cursor-pointer items-center justify-center"
-            title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " (concept)" : ""}` : ""}
+            title={p?.case_nummer ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " · concept-reservering · klik voor concept-status" : " · klik voor planning"}` : ""}
             style={{
               left: left + 2, width: width - 4,
               top: topPad, height: PILL_H_MONTEUR,
