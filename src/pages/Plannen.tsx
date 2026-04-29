@@ -2528,11 +2528,18 @@ const GridRow = memo(function GridRow({
         borderTop: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {weken.map((w) => {
+      {weken.map((w, wi) => {
         const isCurrentWeek = w.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
         return DAG_LABELS.map((_, d) => {
           const cel = cellen.get(cellKey(activiteit.id, w.id, d));
           const monteurIds = cel ? celMonteurs.get(cel.id) ?? [] : [];
+          const slot = wi * 5 + d;
+          let inFillRange = false;
+          if (isFillRowActive && fillState) {
+            const lo = Math.min(fillState.sourceSlot, fillState.currentSlot);
+            const hi = Math.max(fillState.sourceSlot, fillState.currentSlot);
+            inFillRange = slot >= lo && slot <= hi && slot !== fillState.sourceSlot;
+          }
           const isHighlighted =
             highlightedMonteurId !== null &&
             monteurIds.includes(highlightedMonteurId);
