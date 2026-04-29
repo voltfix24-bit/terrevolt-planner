@@ -2374,6 +2374,7 @@ function MonteurCellsRow({
   scale,
   totalGridWidth,
   onProjectClick,
+  onConceptClick,
 }: {
   monteur: Monteur;
   segments: { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean }[];
@@ -2383,6 +2384,7 @@ function MonteurCellsRow({
   scale: Scale;
   totalGridWidth: number;
   onProjectClick: (id: string) => void;
+  onConceptClick: (id: string) => void;
 }) {
   const topPad = (ROW_H_MONTEUR - PILL_H_MONTEUR) / 2;
   const isJaar = scale === "jaar";
