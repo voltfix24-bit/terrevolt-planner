@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import DossierPrint from "@/components/DossierPrint";
 import { printDossierInPopup } from "@/lib/print-dossier";
 import { intakeLabel } from "@/lib/dossier-labels";
+import { loadConceptPlanning, dagOffsetLabel, type ConceptCel } from "@/lib/concept-planning";
 
 // =====================================================
 // Types
