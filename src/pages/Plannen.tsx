@@ -2199,7 +2199,14 @@ interface GridRowProps {
     dag_index: number
   ) => void;
   onMoveCell: (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => void;
-}
+  onMoveCellsGroup: (
+    sourceCelIds: string[],
+    anchorCelId: string,
+    targetWeekId: string,
+    targetDagIndex: number
+  ) => void;
+  selectedCelIds: Set<string>;
+  onToggleSelect: (celId: string) => void;
 
 const GridRow = memo(function GridRow({
   activiteit,
