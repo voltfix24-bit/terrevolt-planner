@@ -2329,7 +2329,9 @@ interface GridRowProps {
     targetDagIndex: number
   ) => void;
   selectedCelIds: Set<string>;
+  groupIndexByCelId: Map<string, number>;
   onToggleSelect: (celId: string) => void;
+  onStartNewGroup: (celId: string) => void;
 }
 
 const GridRow = memo(function GridRow({
