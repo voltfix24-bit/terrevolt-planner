@@ -2997,6 +2997,37 @@ const CellBox = memo(function CellBox({
           +
         </span>
       )}
+      {isSelected && groupColorHex && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `linear-gradient(135deg, ${hexToRgba(groupColorHex, 0.32)}, ${hexToRgba(groupColorHex, 0.12)})`,
+            mixBlendMode: "screen",
+          }}
+        />
+      )}
+      {isSelected && groupColorHex && groupIndex != null && (
+        <span
+          className="pointer-events-none absolute flex items-center justify-center font-bold"
+          style={{
+            top: -7,
+            left: -7,
+            width: 16,
+            height: 16,
+            borderRadius: "50%",
+            backgroundColor: groupColorHex,
+            color: "#0a1a30",
+            fontSize: 9,
+            border: "1.5px solid rgba(0,0,0,0.55)",
+            boxShadow: `0 0 6px ${hexToRgba(groupColorHex, 0.9)}`,
+            zIndex: 6,
+            lineHeight: 1,
+          }}
+        >
+          {groupIndex + 1}
+        </span>
+      )}
       {!voldoet && cel && (
         <span
           className="absolute right-0.5 top-0.5 flex items-center justify-center rounded-full text-[8px] font-bold"
