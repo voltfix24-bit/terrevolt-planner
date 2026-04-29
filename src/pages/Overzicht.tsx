@@ -2727,6 +2727,7 @@ interface GanttPrintMenuProps {
   monteurs: Monteur[];
   celMonteurs: CelMonteur[];
   jaar: number;
+  feestdagen: Map<string, string>;
 }
 
 function GanttPrintMenu({
@@ -2737,6 +2738,7 @@ function GanttPrintMenu({
   monteurs,
   celMonteurs,
   jaar,
+  feestdagen,
 }: GanttPrintMenuProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
