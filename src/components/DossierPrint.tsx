@@ -304,44 +304,77 @@ const DossierPrint: React.FC<DossierPrintProps> = (props) => {
           </table>
         </div>
 
-        {/* Concept-planning (week-onafhankelijk) */}
+        {/* Concept-planning (week-onafhankelijk) — gestippeld om concept-status te benadrukken */}
         {conceptCellen.length > 0 && (
           <div className="pp-section">
             <div className="pp-section-h">
-              Concept-planning · <span style={{ fontWeight: 400, fontStyle: "italic" }}>nog niet ingepland</span>
+              Concept-planning ·{" "}
+              <span style={{ fontWeight: 400, fontStyle: "italic" }}>
+                nog niet ingepland — reservering onder voorbehoud
+              </span>
             </div>
-            <table className="pp-table" style={{ width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={{ width: "22%" }}>Dag</th>
-                  <th style={{ width: "33%" }}>Activiteit</th>
-                  <th style={{ width: "30%" }}>Monteurs</th>
-                  <th>Notitie</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...conceptCellen]
-                  .sort((a, b) => a.dag_offset - b.dag_offset)
-                  .map((c) => {
-                    const actNaam = c.activiteit_id
-                      ? activiteitenMap?.get(c.activiteit_id) ?? "—"
-                      : "—";
-                    const monteurNamen =
-                      c.monteur_ids
-                        .map((id) => monteursMap?.get(id) ?? "")
-                        .filter(Boolean)
-                        .join(", ") || "—";
-                    return (
-                      <tr key={c.id}>
-                        <td>{dagOffsetLabel(c.dag_offset)}</td>
-                        <td>{actNaam}</td>
-                        <td>{monteurNamen}</td>
-                        <td>{c.notitie || "—"}</td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
+            <div
+              style={{
+                border: "1.5px dashed #94a3b8",
+                borderRadius: 4,
+                padding: 6,
+                background: "#f8fafc",
+              }}
+            >
+              <table className="pp-table" style={{ width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "16%" }}>Dag</th>
+                    <th style={{ width: "26%" }}>Activiteit</th>
+                    <th style={{ width: "22%" }}>Schakelmonteurs</th>
+                    <th style={{ width: "22%" }}>Montagemonteurs</th>
+                    <th>Notitie</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...conceptCellen]
+                    .sort((a, b) => a.dag_offset - b.dag_offset)
+                    .map((c) => {
+                      const actNaam = c.activiteit_id
+                        ? activiteitenMap?.get(c.activiteit_id) ?? "—"
+                        : "—";
+                      const schakel: string[] = [];
+                      const montage: string[] = [];
+                      c.monteur_ids.forEach((id) => {
+                        const m = monteursMap?.get(id);
+                        if (!m) return;
+                        if (m.type === "schakelmonteur") schakel.push(m.naam);
+                        else if (m.type === "montagemonteur") montage.push(m.naam);
+                        else schakel.push(m.naam);
+                      });
+                      return (
+                        <tr key={c.id}>
+                          <td>{dagOffsetLabel(c.dag_offset)}</td>
+                          <td>{actNaam}</td>
+                          <td style={{ fontStyle: schakel.length ? "normal" : "italic", color: schakel.length ? undefined : "#94a3b8" }}>
+                            {schakel.length ? schakel.join(", ") : "—"}
+                          </td>
+                          <td style={{ fontStyle: montage.length ? "normal" : "italic", color: montage.length ? undefined : "#94a3b8" }}>
+                            {montage.length ? montage.join(", ") : "—"}
+                          </td>
+                          <td>{c.notitie || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 9,
+                  fontStyle: "italic",
+                  color: "#64748b",
+                }}
+              >
+                Gestippelde rand = concept · D1 = maandag van de gekozen
+                startweek bij uitrol.
+              </div>
+            </div>
           </div>
         )}
 
