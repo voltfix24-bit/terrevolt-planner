@@ -2460,7 +2460,12 @@ function MonteurCellsRow({
           return (
             <div
               key={i}
-              onClick={() => s.projectId && onProjectClick(s.projectId)}
+              onClick={() =>
+                s.projectId &&
+                (isConcept
+                  ? onConceptClick(s.projectId)
+                  : onProjectClick(s.projectId))
+              }
               className="absolute flex cursor-pointer items-center justify-center"
               title={
                 projCount > 1
@@ -2468,7 +2473,7 @@ function MonteurCellsRow({
                       .map((pid) => projectById.get(pid)?.case_nummer ?? pid.slice(0, 6))
                       .join(", ")
                   : p?.case_nummer
-                    ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " (concept)" : ""}`
+                    ? `${p.case_nummer} — ${p.station_naam ?? ""}${isConcept ? " · concept-reservering · klik voor concept-status" : " · klik voor planning"}`
                     : ""
               }
               style={{
