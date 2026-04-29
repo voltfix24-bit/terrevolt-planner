@@ -697,7 +697,8 @@ const ConceptCelRow: React.FC<{
               key={ploeg.id}
               type="button"
               onClick={() => toAdd.forEach((id) => onToggleMonteur(id))}
-              className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] text-foreground transition-all hover:bg-primary/30 hover:border-primary hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:bg-primary/30"
+              className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-foreground transition-all hover:bg-primary/25 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:bg-primary/25"
+              style={{ border: "1.5px dashed rgba(63,255,139,0.7)" }}
               title={`Voeg ploeg "${ploeg.naam}" toe (${toAdd.length} monteur${toAdd.length === 1 ? "" : "s"})`}
             >
               + {ploeg.naam} ({toAdd.length})
@@ -713,12 +714,17 @@ const ConceptCelRow: React.FC<{
               key={m.id}
               type="button"
               onClick={() => onToggleMonteur(m.id)}
-              className={`rounded border px-1.5 py-0.5 text-[10px] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
+              className={`rounded px-1.5 py-0.5 text-[10px] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                 active
-                  ? "border-primary bg-primary/20 text-foreground hover:bg-primary/30 hover:border-primary hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)]"
-                  : "border-white/10 bg-white/[0.02] text-muted-foreground hover:bg-white/[0.10] hover:border-white/30 hover:text-foreground"
+                  ? "bg-primary/20 text-foreground hover:bg-primary/30 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)]"
+                  : "bg-white/[0.02] text-muted-foreground hover:bg-white/[0.10] hover:text-foreground"
               }`}
-              title={m.naam}
+              style={{
+                border: active
+                  ? "1.5px dashed rgba(63,255,139,0.7)"
+                  : "1.5px dashed rgba(255,255,255,0.18)",
+              }}
+              title={`${m.naam}${active ? " — concept-reservering" : ""}`}
               aria-pressed={active}
             >
               {m.naam}
