@@ -981,15 +981,6 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
                 );
               })}
             </div>
-            <CapaciteitDownloadMenu
-              monteurs={monteurs}
-              visibleWeeks={visibleWeeks}
-              visibleDays={visibleDays}
-              planMap={planMap}
-              projects={projects}
-              startWeek={startWeek}
-              numWeeks={numWeeks}
-            />
           </div>
         </div>
 
