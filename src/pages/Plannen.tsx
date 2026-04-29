@@ -222,6 +222,10 @@ const Plannen = () => {
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
   const [ploegen, setPloegen] = useState<import("@/lib/ploegen").Ploeg[]>([]);
   const [activiteitTypes, setActiviteitTypes] = useState<ActiviteitTypeOption[]>([]);
+  const [afwezigheid, setAfwezigheid] = useState<
+    import("@/lib/monteur-beschikbaarheid").AfwezigheidPeriode[]
+  >([]);
+  const [feestdagenMap, setFeestdagenMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const [openCellKey, setOpenCellKey] = useState<string | null>(null);
