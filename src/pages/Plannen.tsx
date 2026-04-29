@@ -336,6 +336,11 @@ const Plannen = () => {
   }, [selectedGroups.length, clearSelection]);
 
 
+  // Export-selectie: leeg = alles. Bevat ids van weken/activiteiten die in de
+  // download moeten verschijnen. Wordt beheerd via de Download-dropdown.
+  const [exportWeekIds, setExportWeekIds] = useState<Set<string>>(new Set());
+  const [exportActiviteitIds, setExportActiviteitIds] = useState<Set<string>>(new Set());
+
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -1411,6 +1416,14 @@ const Plannen = () => {
     try {
       const XLSX: any = await loadSheetJS();
       const projectJaar = project.jaar ?? new Date().getFullYear();
+      const expWeken = exportWeekIds.size === 0 ? weken : weken.filter((w) => exportWeekIds.has(w.id));
+      const expActiviteiten = exportActiviteitIds.size === 0
+        ? activiteiten
+        : activiteiten.filter((a) => exportActiviteitIds.has(a.id));
+      if (expWeken.length === 0 || expActiviteiten.length === 0) {
+        toast.error("Selecteer minstens één week en één activiteit");
+        return;
+      }
       const aoa: (string | number)[][] = [];
 
       // Rij 0: project header
@@ -1424,7 +1437,7 @@ const Plannen = () => {
 
       // Week header rij (rij 2)
       const weekRow: string[] = ["Activiteit"];
-      weken.forEach((w) => {
+      expWeken.forEach((w) => {
         const isNu = w.week_nr === CURRENT_WEEK && projectJaar === CURRENT_YEAR;
         weekRow.push(isNu ? `Week ${w.week_nr} (NU)` : `Week ${w.week_nr}`, "", "", "", "");
       });
@@ -1432,14 +1445,14 @@ const Plannen = () => {
 
       // Dag rij (rij 3)
       const dayRow: string[] = [""];
-      weken.forEach(() => DAG_LABELS.forEach((d) => dayRow.push(d)));
+      expWeken.forEach(() => DAG_LABELS.forEach((d) => dayRow.push(d)));
       aoa.push(dayRow);
 
       // Activiteit rijen (start rij 4)
       const activityStartRow = aoa.length;
-      activiteiten.forEach((a) => {
+      expActiviteiten.forEach((a) => {
         const row: string[] = [a.naam];
-        weken.forEach((w) => {
+        expWeken.forEach((w) => {
           for (let d = 0; d < 5; d++) {
             const cel = cellen.get(cellKey(a.id, w.id, d));
             if (!cel || !cel.kleur_code) {
@@ -1460,14 +1473,17 @@ const Plannen = () => {
 
       // Opmerkingen rij
       const opmRow: string[] = ["Opmerkingen"];
-      weken.forEach((w) => {
+      expWeken.forEach((w) => {
         opmRow.push(w.opmerking ?? "", "", "", "", "");
       });
       aoa.push(opmRow);
 
-      // Ingeplande monteurs sectie
+      // Ingeplande monteurs sectie — alleen voor de geselecteerde scope
+      const expWeekIdSet = new Set(expWeken.map((w) => w.id));
+      const expActIdSet = new Set(expActiviteiten.map((a) => a.id));
       const ingeplandeIds = new Set<string>();
       for (const cel of cellen.values()) {
+        if (!expWeekIdSet.has(cel.week_id) || !expActIdSet.has(cel.activiteit_id)) continue;
         const ids = celMonteurs.get(cel.id);
         if (!ids) continue;
         for (const id of ids) ingeplandeIds.add(id);
@@ -1510,7 +1526,7 @@ const Plannen = () => {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
 
       // Kolombreedtes — eerste kolom breed voor activiteit-namen, dagcellen smal
-      const totalCols = 1 + weken.length * 5;
+      const totalCols = 1 + expWeken.length * 5;
       const cols: { wch: number }[] = [{ wch: 32 }];
       for (let i = 1; i < totalCols; i++) cols.push({ wch: 5 });
       ws["!cols"] = cols;
@@ -1524,11 +1540,11 @@ const Plannen = () => {
 
       // Merges voor week-headers (rij 2, kolommen per week)
       const merges: any[] = [];
-      weken.forEach((_, wi) => {
+      expWeken.forEach((_, wi) => {
         const startCol = 1 + wi * 5;
         merges.push({ s: { r: 2, c: startCol }, e: { r: 2, c: startCol + 4 } });
         // Opmerkingen ook mergen
-        const opmRowIdx = activityStartRow + activiteiten.length;
+        const opmRowIdx = activityStartRow + expActiviteiten.length;
         merges.push({ s: { r: opmRowIdx, c: startCol }, e: { r: opmRowIdx, c: startCol + 4 } });
       });
       ws["!merges"] = merges;
@@ -1575,7 +1591,7 @@ const Plannen = () => {
       }
 
       // Activiteit-rijen
-      activiteiten.forEach((a, ai) => {
+      expActiviteiten.forEach((a, ai) => {
         const r = activityStartRow + ai;
         // Activiteit-naam kolom
         setStyle(r, 0, {
@@ -1584,7 +1600,7 @@ const Plannen = () => {
           alignment: { vertical: "center", wrapText: true },
           border,
         });
-        weken.forEach((w, wi) => {
+        expWeken.forEach((w, wi) => {
           for (let d = 0; d < 5; d++) {
             const c = 1 + wi * 5 + d;
             const cel = cellen.get(cellKey(a.id, w.id, d));
@@ -1608,7 +1624,7 @@ const Plannen = () => {
       });
 
       // Opmerkingen rij stijl
-      const opmRowIdx = activityStartRow + activiteiten.length;
+      const opmRowIdx = activityStartRow + expActiviteiten.length;
       setStyle(opmRowIdx, 0, {
         font: { bold: true, italic: true, sz: 10, color: { rgb: "374151" } },
         fill: { patternType: "solid", fgColor: { rgb: "F9FAFB" } },
@@ -1658,30 +1674,40 @@ const Plannen = () => {
       console.error(e);
       toast.error("Excel export mislukt");
     }
-  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs]);
+  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs, exportWeekIds, exportActiviteitIds]);
 
   /* ----------------------------- pdf export (via print) ----------------------------- */
   const exportPDF = useCallback(() => {
     if (!project) return;
     try {
       const projectJaar = project.jaar ?? new Date().getFullYear();
+      const expWeken = exportWeekIds.size === 0 ? weken : weken.filter((w) => exportWeekIds.has(w.id));
+      const expActiviteiten = exportActiviteitIds.size === 0
+        ? activiteiten
+        : activiteiten.filter((a) => exportActiviteitIds.has(a.id));
+      if (expWeken.length === 0 || expActiviteiten.length === 0) {
+        toast.error("Selecteer minstens één week en één activiteit");
+        return;
+      }
+      const expWeekIdSet = new Set(expWeken.map((w) => w.id));
+      const expActIdSet = new Set(expActiviteiten.map((a) => a.id));
       const esc = (s: string) =>
         s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-      const weekHeaderCells = weken
+      const weekHeaderCells = expWeken
         .map((w) => {
           const isNu = w.week_nr === CURRENT_WEEK && projectJaar === CURRENT_YEAR;
           return `<th class="wk${isNu ? " nu" : ""}" colspan="5">Week ${w.week_nr}${isNu ? " <span class='nu-badge'>NU</span>" : ""}</th>`;
         })
         .join("");
 
-      const dayHeaderCells = weken
+      const dayHeaderCells = expWeken
         .map(() => DAG_LABELS.map((d) => `<th class="dag">${d}</th>`).join(""))
         .join("");
 
-      const bodyRows = activiteiten
+      const bodyRows = expActiviteiten
         .map((a) => {
-          const cellsHtml = weken
+          const cellsHtml = expWeken
             .map((w) =>
               Array.from({ length: 5 }, (_, d) => {
                 const cel = cellen.get(cellKey(a.id, w.id, d));
@@ -1702,12 +1728,13 @@ const Plannen = () => {
         })
         .join("");
 
-      const opmCells = weken
+      const opmCells = expWeken
         .map((w) => `<td class="opm" colspan="5">${esc(w.opmerking ?? "")}</td>`)
         .join("");
 
       const ingeplandeIds = new Set<string>();
       for (const cel of cellen.values()) {
+        if (!expWeekIdSet.has(cel.week_id) || !expActIdSet.has(cel.activiteit_id)) continue;
         const ids = celMonteurs.get(cel.id);
         if (!ids) continue;
         for (const id of ids) ingeplandeIds.add(id);
@@ -1816,7 +1843,7 @@ const Plannen = () => {
       console.error(e);
       toast.error("PDF export mislukt");
     }
-  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs]);
+  }, [project, weken, activiteiten, cellen, celMonteurs, monteurs, exportWeekIds, exportActiviteitIds]);
 
   /* ----------------------------- derived ----------------------------- */
   const monteurById = useMemo(() => {
@@ -2184,17 +2211,152 @@ const Plannen = () => {
                 <ChevronDown className="h-3 w-3 opacity-70" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Download planning</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={exportExcel}>
-                <FileText className="mr-2 h-4 w-4" />
-                Excel (.xlsx)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportPDF}>
-                <Printer className="mr-2 h-4 w-4" />
-                PDF (print-klaar)
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-80 p-0">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+                <span className="text-sm font-semibold">Download planning</span>
+                {(exportWeekIds.size > 0 || exportActiviteitIds.size > 0) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setExportWeekIds(new Set());
+                      setExportActiviteitIds(new Set());
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                  >
+                    Wis filter
+                  </button>
+                )}
+              </div>
+
+              <div className="px-3 py-2 text-[11px] text-muted-foreground border-b border-border/60">
+                {exportWeekIds.size === 0 && exportActiviteitIds.size === 0
+                  ? "Volledige planning wordt gedownload. Selecteer hieronder om te beperken."
+                  : `Selectie: ${exportWeekIds.size === 0 ? "alle weken" : `${exportWeekIds.size} ${exportWeekIds.size === 1 ? "week" : "weken"}`} • ${exportActiviteitIds.size === 0 ? "alle activiteiten" : `${exportActiviteitIds.size} ${exportActiviteitIds.size === 1 ? "activiteit" : "activiteiten"}`}.`}
+              </div>
+
+              {/* Weken */}
+              <div className="px-3 py-2 border-b border-border/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weken</span>
+                  <div className="flex gap-2 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportWeekIds(new Set(weken.map((w) => w.id))); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Alle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportWeekIds(new Set()); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Geen
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-40 overflow-y-auto -mx-1 px-1">
+                  {weken.length === 0 ? (
+                    <div className="text-[11px] text-muted-foreground py-1">Geen weken</div>
+                  ) : (
+                    weken.map((w) => {
+                      const checked = exportWeekIds.size === 0 || exportWeekIds.has(w.id);
+                      return (
+                        <label
+                          key={w.id}
+                          className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setExportWeekIds((prev) => {
+                                // Eerste actie vanuit "alles" → start vanaf volledige set
+                                const base = prev.size === 0 ? new Set(weken.map((x) => x.id)) : new Set(prev);
+                                if (base.has(w.id)) base.delete(w.id);
+                                else base.add(w.id);
+                                // Als alles aan = leeg houden = "alles"
+                                if (base.size === weken.length) return new Set();
+                                return base;
+                              });
+                            }}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          <span>Week {w.week_nr}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Activiteiten */}
+              <div className="px-3 py-2 border-b border-border/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Activiteiten</span>
+                  <div className="flex gap-2 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportActiviteitIds(new Set(activiteiten.map((a) => a.id))); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Alle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setExportActiviteitIds(new Set()); }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Geen
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-40 overflow-y-auto -mx-1 px-1">
+                  {activiteiten.length === 0 ? (
+                    <div className="text-[11px] text-muted-foreground py-1">Geen activiteiten</div>
+                  ) : (
+                    activiteiten.map((a) => {
+                      const checked = exportActiviteitIds.size === 0 || exportActiviteitIds.has(a.id);
+                      return (
+                        <label
+                          key={a.id}
+                          className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setExportActiviteitIds((prev) => {
+                                const base = prev.size === 0 ? new Set(activiteiten.map((x) => x.id)) : new Set(prev);
+                                if (base.has(a.id)) base.delete(a.id);
+                                else base.add(a.id);
+                                if (base.size === activiteiten.length) return new Set();
+                                return base;
+                              });
+                            }}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          <span className="truncate">{a.naam}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="p-1">
+                <DropdownMenuItem onClick={exportExcel}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportPDF}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  PDF (print-klaar)
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
           <button
