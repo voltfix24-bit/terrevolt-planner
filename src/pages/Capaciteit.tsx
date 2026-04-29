@@ -333,6 +333,7 @@ const Capaciteit = () => {
         {(
           [
             { id: "monteurs", label: "Monteurs" },
+            { id: "ploegen", label: "Ploegen" },
             { id: "tijdlijn", label: "Tijdlijn" },
             { id: "beschikbaarheid", label: "Beschikbaarheid" },
           ] as const
