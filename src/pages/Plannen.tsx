@@ -862,6 +862,40 @@ const Plannen = () => {
     [cellen, celMonteurs, weken, loadAll]
   );
 
+  // Wrapper voor drag-and-drop: bepaalt delta op basis van anchor + doel-(week,dag)
+  const moveCellsGroup = useCallback(
+    async (
+      sourceCelIds: string[],
+      anchorCelId: string,
+      targetWeekId: string,
+      targetDagIndex: number
+    ) => {
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      let anchor: Cel | null = null;
+      cellen.forEach((c) => {
+        if (c.id === anchorCelId) anchor = c;
+      });
+      if (!anchor) return;
+      const a = anchor as Cel;
+      const anchorWi = weekIndexById.get(a.week_id);
+      const targetWi = weekIndexById.get(targetWeekId);
+      if (anchorWi == null || targetWi == null) return;
+      const delta = targetWi * 5 + targetDagIndex - (anchorWi * 5 + a.dag_index);
+      await moveCellsByDelta(sourceCelIds, delta);
+    },
+    [cellen, weken, moveCellsByDelta]
+  );
+
+  // Wrapper voor toolbar-knoppen: verschuif alle geselecteerde cellen met N slots
+  const shiftSelection = useCallback(
+    async (deltaSlots: number) => {
+      const ids = Array.from(selectedCelIds);
+      if (ids.length === 0) return;
+      await moveCellsByDelta(ids, deltaSlots);
+    },
+    [selectedCelIds, moveCellsByDelta]
+  );
+
   /* ----------------------------- undo / history ----------------------------- */
   const reverseHistoryEntry = useCallback(
     async (entry: HistoryEntry) => {
