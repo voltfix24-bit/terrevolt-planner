@@ -169,6 +169,7 @@ interface Monteur {
   aanwijzing_ls: Aanwijzing | null;
   aanwijzing_ms: Aanwijzing | null;
   actief: boolean;
+  werkdagen?: number[] | null;
 }
 
 interface Cel {
