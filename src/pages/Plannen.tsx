@@ -931,14 +931,14 @@ const Plannen = () => {
     [cellen, weken, moveCellsByDelta]
   );
 
-  // Wrapper voor toolbar-knoppen: verschuif alle geselecteerde cellen met N slots
-  const shiftSelection = useCallback(
-    async (deltaSlots: number) => {
-      const ids = Array.from(selectedCelIds);
-      if (ids.length === 0) return;
-      await moveCellsByDelta(ids, deltaSlots);
+  // Wrapper voor toolbar-knoppen: verschuif één specifieke groep met N slots
+  const shiftGroup = useCallback(
+    async (groupIdx: number, deltaSlots: number) => {
+      const g = selectedGroups[groupIdx];
+      if (!g || g.length === 0) return;
+      await moveCellsByDelta(g, deltaSlots);
     },
-    [selectedCelIds, moveCellsByDelta]
+    [selectedGroups, moveCellsByDelta]
   );
 
   /* ----------------------------- undo / history ----------------------------- */
