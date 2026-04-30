@@ -809,10 +809,10 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 12px;
   }
   .toolbar button {
-    background: #004ac6; color: #fff; border: 0; padding: 6px 14px;
+    background: var(--accent); color: #fff; border: 0; padding: 6px 14px;
     border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px;
   }
-  .toolbar button:hover { background: #003ea8; }
+  .toolbar button:hover { filter: brightness(0.9); }
   .toolbar label { color: #434655; font-weight: 600; }
   .toolbar select {
     border: 1px solid #c3c6d7; background: #fff; color: #191b23;
