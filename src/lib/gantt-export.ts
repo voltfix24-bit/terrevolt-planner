@@ -396,22 +396,32 @@ export function exportGanttPDF(input: GanttExportInput): void {
   /* ========== Status legend ========== */
   .legend-row {
     width: 100%;
-    display: flex; align-items: center; gap: 18px;
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 6px 14px;
     padding: 4px 0 0 0;
-    font-size: 10.5px;
+    font-size: 10px;
   }
   .legend-row .lg-title {
     font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #737686;
     margin-right: 4px;
+    flex-shrink: 0;
   }
-  .lg-item { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .lg-dot {
-    width: 12px; height: 12px; border-radius: 2px;
-    border: 1px solid rgba(0,0,0,0.10);
+    width: 11px; height: 11px; border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.12);
     display: inline-block;
+    flex-shrink: 0;
   }
-  .lg-lbl { color: #191b23; font-size: 10.5px; }
+  .lg-dot-feest {
+    background-image: repeating-linear-gradient(
+      45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
+    ) !important;
+  }
+  .lg-lbl { color: #191b23; font-size: 10px; }
+  .lg-empty { font-size: 10px; color: #737686; font-style: italic; }
+
 
   /* ========== Gantt table ========== */
   table.gantt {
