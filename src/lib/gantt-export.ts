@@ -310,9 +310,10 @@ export function exportGanttPDF(input: GanttExportInput): void {
   body[data-scale="none"] .gantt-scale {
     transform: none;
   }
+  /* "Standaard" = max 1.0, maar nooit groter dan wat past op de pagina (= fitScale) */
   body[data-scale="standard"] .gantt-scale {
-    transform: scale(${Math.min(1, fitScale * 1.15).toFixed(4)});
-    margin-bottom: ${Math.max(0, (1 - Math.min(1, fitScale * 1.15)) * 100)}px;
+    transform: scale(${fitScale.toFixed(4)});
+    margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
   }
   @media print {
     body[data-scale="fit"] .gantt-scale {
@@ -321,8 +322,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
     }
     body[data-scale="none"] .gantt-scale { transform: none; }
     body[data-scale="standard"] .gantt-scale {
-      transform: scale(${Math.min(1, fitScale * 1.15).toFixed(4)});
-      margin-bottom: ${Math.max(0, (1 - Math.min(1, fitScale * 1.15)) * 100)}px;
+      transform: scale(${fitScale.toFixed(4)});
+      margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
     }
   }
   table.gantt {
