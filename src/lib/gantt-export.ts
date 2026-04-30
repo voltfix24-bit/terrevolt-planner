@@ -394,11 +394,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
 
   .legend {
-    margin: 12px auto 0 auto;
+    margin: 12px 0 0 0;
     width: ${sheetW}px;
     display: flex; flex-wrap: wrap; gap: 8px 14px;
     font-size: 9px; color: #334155;
-    padding-top: 8px;
+    padding: 8px 2px 0 2px;
     border-top: 1px solid #cbd5e1;
   }
   .lg-item { display: inline-flex; align-items: center; gap: 4px; }
