@@ -424,6 +424,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <style>
   /* Page margins: top = ruimte voor fixed header (32mm), bottom = ruimte voor fixed footer (18mm).
      Marges zijn iets groter dan header/footer-hoogte zodat er nooit overlap met tabel is. */
+  /* Branding-kleur (variant-driven) — gebruikt door titel, header-line, project-row borders en toolbar */
+  :root { --accent: ${branding.accentKleur}; }
   @page { size: ${paperSize} landscape; margin: 36mm 12mm 22mm 12mm; }
   * { box-sizing: border-box; }
   html, body {
