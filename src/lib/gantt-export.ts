@@ -268,7 +268,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
                 ? ` title="${escHtml(feestNaam ? `Feestdag: ${feestNaam} — ${fullLabel}` : fullLabel)}"`
                 : tip;
               // Inner block geeft het corporate "blokje in cel" effect
-              return `<td class="cell${endCls}${feestCls}"${labelTip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
+              return `<td class="cell${startCls}${endCls}${feestCls}"${labelTip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
             }).join(""),
           )
           .join("");
