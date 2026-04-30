@@ -325,8 +325,9 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <meta charset="utf-8" />
 <title>${escHtml(titel)}</title>
 <style>
-  /* Royale top/bottom margins zodat fixed header/footer ruimte hebben op elke pagina */
-  @page { size: ${paperSize} landscape; margin: 58mm 14mm 56mm 14mm; }
+  /* Page margins: top = ruimte voor fixed header (32mm), bottom = ruimte voor fixed footer (18mm).
+     Marges zijn iets groter dan header/footer-hoogte zodat er nooit overlap met tabel is. */
+  @page { size: ${paperSize} landscape; margin: 36mm 12mm 22mm 12mm; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
@@ -337,20 +338,25 @@ export function exportGanttPDF(input: GanttExportInput): void {
     print-color-adjust: exact;
   }
 
-  /* ========== Fixed page header (herhaalt op elke pagina bij print) ========== */
+  /* ========== Fixed page header (herhaalt op elke pagina bij print) ==========
+     Hoogte 32mm < page-top-margin 36mm → 4mm safety gap, geen overlap mogelijk. */
   .page-header {
     position: fixed;
-    top: -54mm;
+    top: -34mm;
     left: 0; right: 0;
-    height: 50mm;
+    height: 32mm;
     padding: 0;
+    overflow: hidden;
   }
+  /* Compacte fixed page footer: alleen confidential-line + paginanummer.
+     Hoogte 18mm < page-bottom-margin 22mm → 4mm safety gap. */
   .page-footer {
     position: fixed;
-    bottom: -52mm;
+    bottom: -20mm;
     left: 0; right: 0;
-    height: 48mm;
+    height: 18mm;
     padding: 0;
+    overflow: hidden;
   }
 
   /* Op scherm: laat header/footer in normale flow staan zodat je een preview ziet */
