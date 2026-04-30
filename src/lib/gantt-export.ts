@@ -418,7 +418,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
         <h1>${escHtml(titel)}</h1>
         <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
       </div>
-      <div class="meta">Gegenereerd op ${new Date().toLocaleString("nl-NL")}</div>
+      <div class="meta"></div>
     </div>
     <div class="gantt-scale">
       <table class="gantt">
