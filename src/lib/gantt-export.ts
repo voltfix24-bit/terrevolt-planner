@@ -472,7 +472,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   /* Belangrijk: thead herhaalt op iedere pagina bij print */
   table.gantt thead { display: table-header-group; }
-  table.gantt tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Activiteit-rijen mogen niet midden over een pagina-einde lopen */
+  table.gantt tbody tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Een projectkop mag nooit als laatste rij op een pagina staan zonder activiteiten eronder */
+  table.gantt tr.proj-row { page-break-after: avoid; break-after: avoid; }
+  /* De eerste activiteit-rij van een project blijft bij de projectkop */
+  table.gantt tr.proj-row + tr.act-row { page-break-before: avoid; break-before: avoid; }
   table.gantt th, table.gantt td {
     border: 1px solid #c3c6d7;
     padding: 0;
