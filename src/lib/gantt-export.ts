@@ -416,6 +416,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
     border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;
   }
   .toolbar button:hover { background: #1e293b; }
+  .toolbar label { color: #334155; font-weight: 600; }
+  .toolbar select {
+    border: 1px solid #cbd5e1; background: #fff; color: #0b1220;
+    padding: 5px 8px; border-radius: 6px; font-size: 12px; font-weight: 500;
+    cursor: pointer;
+  }
   .toolbar .hint { color: #64748b; }
   @media print {
     .toolbar { display: none; }
