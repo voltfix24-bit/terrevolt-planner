@@ -420,18 +420,20 @@ export function exportGanttPDF(input: GanttExportInput): void {
       </div>
       <div class="meta">Gegenereerd op ${new Date().toLocaleString("nl-NL")}</div>
     </div>
-    <table class="gantt">
-      <thead>
-        <tr>
-          <th rowspan="2" class="proj-h">Project</th>
-          <th rowspan="2" class="act-h">Activiteit</th>
-          ${weekHeader}
-        </tr>
-        <tr>${dagHeader}</tr>
-      </thead>
-      <tbody>${bodyRows}</tbody>
-    </table>
-    <div class="legend">${legend}</div>
+    <div class="gantt-scale">
+      <table class="gantt">
+        <thead>
+          <tr>
+            <th rowspan="2" class="proj-h">Project</th>
+            <th rowspan="2" class="act-h">Activiteit</th>
+            ${weekHeader}
+          </tr>
+          <tr>${dagHeader}</tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+      <div class="legend">${legend}</div>
+    </div>
   </div>
 </body>
 </html>`;
