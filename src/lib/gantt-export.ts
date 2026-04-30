@@ -287,8 +287,13 @@ export function exportGanttPDF(input: GanttExportInput): void {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .wrap { padding: 8px 4px 24px 4px; }
-  .head { display: flex; justify-content: space-between; align-items: flex-end; margin: 0 4px 8px 4px; }
+  .wrap { padding: 8px 0 24px 0; overflow: hidden; }
+  .head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    width: ${sheetW}px;
+    margin: 0 0 8px 0;
+    padding: 0 2px;
+  }
   h1 { font-size: 18px; margin: 0 0 2px 0; font-weight: 700; letter-spacing: -0.01em; }
   .sub { font-size: 11px; color: #475569; }
   .meta { font-size: 10px; color: #64748b; text-align: right; }
@@ -389,11 +394,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
 
   .legend {
-    margin: 12px auto 0 auto;
+    margin: 12px 0 0 0;
     width: ${sheetW}px;
     display: flex; flex-wrap: wrap; gap: 8px 14px;
     font-size: 9px; color: #334155;
-    padding-top: 8px;
+    padding: 8px 2px 0 2px;
     border-top: 1px solid #cbd5e1;
   }
   .lg-item { display: inline-flex; align-items: center; gap: 4px; }
@@ -441,14 +446,14 @@ export function exportGanttPDF(input: GanttExportInput): void {
     <span class="hint">Kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend. Zet de browser-schaling op 100%.</span>
   </div>
   <div class="wrap">
-    <div class="head">
-      <div>
-        <h1>${escHtml(titel)}</h1>
-        <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
-      </div>
-      <div class="meta"></div>
-    </div>
     <div class="gantt-scale">
+      <div class="head">
+        <div>
+          <h1>${escHtml(titel)}</h1>
+          <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
+        </div>
+        <div class="meta"></div>
+      </div>
       <table class="gantt">
         <thead>
           <tr>
