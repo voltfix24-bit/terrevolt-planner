@@ -920,7 +920,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
           </div>
           <div class="sig-block">
             <div class="lbl">Authorized By</div>
-            <div class="name">Operations Director</div>
+            <div class="name">${escHtml(branding.authorizedBy)}</div>
           </div>
         </div>
       </div>
