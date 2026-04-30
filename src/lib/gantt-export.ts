@@ -272,7 +272,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <meta charset="utf-8" />
 <title>${escHtml(titel)}</title>
 <style>
-  @page { size: ${paperSize} landscape; margin: 14mm 14mm 14mm 14mm; }
+  /* Royale top/bottom margins zodat fixed header/footer ruimte hebben op elke pagina */
+  @page { size: ${paperSize} landscape; margin: 58mm 14mm 56mm 14mm; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
@@ -282,7 +283,33 @@ export function exportGanttPDF(input: GanttExportInput): void {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .wrap { padding: 4px 0 24px 0; overflow: hidden; }
+
+  /* ========== Fixed page header (herhaalt op elke pagina bij print) ========== */
+  .page-header {
+    position: fixed;
+    top: -54mm;
+    left: 0; right: 0;
+    height: 50mm;
+    padding: 0;
+  }
+  .page-footer {
+    position: fixed;
+    bottom: -52mm;
+    left: 0; right: 0;
+    height: 48mm;
+    padding: 0;
+  }
+
+  /* Op scherm: laat header/footer in normale flow staan zodat je een preview ziet */
+  @media screen {
+    .page-header, .page-footer {
+      position: static;
+      height: auto;
+    }
+    .wrap { padding: 14px 14px 24px 14px; }
+  }
+
+  .wrap { overflow: hidden; }
   .gantt-scale {
     width: ${sheetW}px;
     transform-origin: top left;
@@ -298,18 +325,17 @@ export function exportGanttPDF(input: GanttExportInput): void {
     body[data-scale="fit"] .gantt-scale,
     body[data-scale="standard"] .gantt-scale {
       transform: scale(${fitScale.toFixed(4)});
-      margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
     }
     body[data-scale="none"] .gantt-scale { transform: none; }
   }
 
   /* ========== Document header ========== */
   .doc-head {
-    width: ${sheetW}px;
+    width: 100%;
     display: flex; justify-content: space-between; align-items: flex-end;
     border-bottom: 2px solid #004ac6;
-    padding: 0 0 8px 0;
-    margin-bottom: 14px;
+    padding: 0 0 6px 0;
+    margin-bottom: 8px;
   }
   .doc-head .left .title {
     color: #004ac6;
@@ -320,54 +346,53 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   .doc-head .left .sub {
     color: #434655;
-    font-size: 10.5px;
+    font-size: 10px;
     margin-top: 2px;
   }
   .doc-head .right {
     text-align: right;
     color: #434655;
-    font-size: 10.5px;
+    font-size: 10px;
     line-height: 1.5;
   }
   .doc-head .right b { color: #191b23; font-weight: 600; }
 
   /* ========== Reporting period block ========== */
   .meta-grid {
-    width: ${sheetW}px;
+    width: 100%;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4px 24px;
-    margin-bottom: 14px;
+    gap: 2px 24px;
+    margin-bottom: 8px;
   }
   .meta-grid .lbl {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #737686;
   }
   .meta-grid .val {
-    font-size: 12px; color: #191b23; font-weight: 500;
+    font-size: 11px; color: #191b23; font-weight: 500;
   }
   .meta-grid .right { text-align: right; }
 
   /* ========== Status legend ========== */
   .legend-row {
-    width: ${sheetW}px;
+    width: 100%;
     display: flex; align-items: center; gap: 18px;
-    padding: 8px 0;
-    margin-bottom: 12px;
-    font-size: 11px;
+    padding: 4px 0 0 0;
+    font-size: 10.5px;
   }
   .legend-row .lg-title {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #737686;
     margin-right: 4px;
   }
   .lg-item { display: inline-flex; align-items: center; gap: 6px; }
   .lg-dot {
-    width: 14px; height: 14px; border-radius: 2px;
+    width: 12px; height: 12px; border-radius: 2px;
     border: 1px solid rgba(0,0,0,0.10);
     display: inline-block;
   }
-  .lg-lbl { color: #191b23; font-size: 11px; }
+  .lg-lbl { color: #191b23; font-size: 10.5px; }
 
   /* ========== Gantt table ========== */
   table.gantt {
@@ -376,6 +401,9 @@ export function exportGanttPDF(input: GanttExportInput): void {
     width: ${sheetW}px;
     border: 1px solid #c3c6d7;
   }
+  /* Belangrijk: thead herhaalt op iedere pagina bij print */
+  table.gantt thead { display: table-header-group; }
+  table.gantt tr { page-break-inside: avoid; break-inside: avoid; }
   table.gantt th, table.gantt td {
     border: 1px solid #c3c6d7;
     padding: 0;
@@ -449,7 +477,6 @@ export function exportGanttPDF(input: GanttExportInput): void {
     padding: 3px;
   }
   td.cell .block {
-    display: block;
     width: 100%;
     height: 100%;
     border-radius: 2px;
@@ -477,50 +504,50 @@ export function exportGanttPDF(input: GanttExportInput): void {
 
   /* ========== Annotations footer ========== */
   .annotations {
-    width: ${sheetW}px;
-    margin-top: 18px;
-    padding: 12px 16px;
+    width: 100%;
+    margin: 0 0 8px 0;
+    padding: 8px 12px;
     background: #f3f3fe;
     border: 1px solid #c3c6d7;
     border-radius: 4px;
   }
   .annotations .a-title {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #737686;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   .annotations ul { margin: 0; padding-left: 18px; }
   .annotations li {
-    font-size: 10.5px; color: #191b23;
-    margin: 3px 0; line-height: 1.4;
+    font-size: 10px; color: #191b23;
+    margin: 2px 0; line-height: 1.35;
   }
 
   /* ========== Signatures ========== */
   .signatures {
-    width: ${sheetW}px;
-    margin-top: 22px;
+    width: 100%;
+    margin: 6px 0 0 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0 32px;
   }
   .sig-block {
     border-top: 1px solid #434655;
-    padding-top: 6px;
+    padding-top: 4px;
   }
   .sig-block .lbl {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #737686;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
   }
   .sig-block .name {
-    font-size: 11px; color: #191b23; font-weight: 600;
+    font-size: 10.5px; color: #191b23; font-weight: 600;
   }
 
-  /* ========== Document footer ========== */
+  /* ========== Document footer line ========== */
   .doc-foot {
-    width: ${sheetW}px;
-    margin-top: 18px;
-    padding-top: 8px;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 6px;
     border-top: 1px solid #c3c6d7;
     display: flex; justify-content: space-between; align-items: center;
     font-size: 9px;
@@ -534,6 +561,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     letter-spacing: 0.08em;
   }
   .doc-foot .ref { color: #434655; margin-left: 18px; }
+  .doc-foot .pageinfo { color: #434655; }
 
   /* ========== Toolbar (alleen scherm) ========== */
   .toolbar {
@@ -559,6 +587,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
     .toolbar { display: none; }
     .wrap { padding-top: 0; }
   }
+
+  /* Scherm-preview separator tussen header/body/footer */
+  @media screen {
+    .page-header { border-bottom: 1px dashed #c3c6d7; padding-bottom: 8px; margin-bottom: 12px; }
+    .page-footer { border-top: 1px dashed #c3c6d7; padding-top: 8px; margin-top: 12px; }
+  }
 </style>
 </head>
 <body data-scale="fit">
@@ -570,37 +604,68 @@ export function exportGanttPDF(input: GanttExportInput): void {
       <option value="fit" selected>Aanpassen aan pagina</option>
       <option value="none">Geen schaling</option>
     </select>
-    <span class="hint">Kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend. Zet de browser-schaling op 100%.</span>
+    <span class="hint">Kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend. Zet de browser-schaling op 100%. Header, legend, annotaties en voettekst herhalen op elke pagina.</span>
   </div>
+
+  <!-- FIXED PAGE HEADER — herhaalt op elke geprinte pagina -->
+  <div class="page-header">
+    <div class="doc-head">
+      <div class="left">
+        <div class="title">Planning Gantt — ${jaar}</div>
+        <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
+      </div>
+      <div class="right">
+        <div><b>Date:</b> ${todayLabel}</div>
+      </div>
+    </div>
+    <div class="meta-grid">
+      <div>
+        <div class="lbl">Reporting Period</div>
+        <div class="val">${fmtLong(periodStart)} – ${fmtLong(periodEnd)} (${weekRangeLabel})</div>
+      </div>
+      <div class="right">
+        <div class="lbl">Document</div>
+        <div class="val">${escHtml(titel)}</div>
+      </div>
+    </div>
+    <div class="legend-row">
+      <span class="lg-title">Status Legend:</span>
+      ${legend}
+    </div>
+  </div>
+
+  <!-- FIXED PAGE FOOTER — herhaalt op elke geprinte pagina -->
+  <div class="page-footer">
+    <div class="annotations">
+      <div class="a-title">Planning Annotations</div>
+      <ul>
+        <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
+        <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
+        <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
+      </ul>
+    </div>
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="lbl">Prepared By</div>
+        <div class="name">Project Planning Lead</div>
+      </div>
+      <div class="sig-block">
+        <div class="lbl">Authorized By</div>
+        <div class="name">Operations Director</div>
+      </div>
+    </div>
+    <div class="doc-foot">
+      <div>© ${jaar} Corporate Operations Management System.</div>
+      <div>
+        <span class="conf">Confidential Internal Document</span>
+        <span class="ref">Ref: PLAN-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT — alleen de tabel; thead herhaalt automatisch -->
   <div class="wrap">
     <div class="gantt-scale">
-
-      <div class="doc-head">
-        <div class="left">
-          <div class="title">Planning Gantt — ${jaar}</div>
-          <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
-        </div>
-        <div class="right">
-          <div><b>Date:</b> ${todayLabel}</div>
-        </div>
-      </div>
-
-      <div class="meta-grid">
-        <div>
-          <div class="lbl">Reporting Period</div>
-          <div class="val">${fmtLong(periodStart)} – ${fmtLong(periodEnd)} (${weekRangeLabel})</div>
-        </div>
-        <div class="right">
-          <div class="lbl">Document</div>
-          <div class="val">${escHtml(titel)}</div>
-        </div>
-      </div>
-
-      <div class="legend-row">
-        <span class="lg-title">Status Legend:</span>
-        ${legend}
-      </div>
-
       <table class="gantt">
         <thead>
           <tr>
@@ -611,35 +676,6 @@ export function exportGanttPDF(input: GanttExportInput): void {
         </thead>
         <tbody>${bodyRows}</tbody>
       </table>
-
-      <div class="annotations">
-        <div class="a-title">Planning Annotations</div>
-        <ul>
-          <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
-          <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
-          <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
-        </ul>
-      </div>
-
-      <div class="signatures">
-        <div class="sig-block">
-          <div class="lbl">Prepared By</div>
-          <div class="name">Project Planning Lead</div>
-        </div>
-        <div class="sig-block">
-          <div class="lbl">Authorized By</div>
-          <div class="name">Operations Director</div>
-        </div>
-      </div>
-
-      <div class="doc-foot">
-        <div>© ${jaar} Corporate Operations Management System.</div>
-        <div>
-          <span class="conf">Confidential Internal Document</span>
-          <span class="ref">Ref: PLAN-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
-        </div>
-      </div>
-
     </div>
   </div>
 </body>
