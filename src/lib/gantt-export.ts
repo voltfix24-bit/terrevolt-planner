@@ -196,8 +196,9 @@ function projectLabel(p: GanttProject): string {
 }
 
 export function exportGanttPDF(input: GanttExportInput): void {
-  const { titel, weken, projecten, activiteiten, monteurs, cellen, monteurWeergave, feestdagen } = input;
+  const { titel, weken, projecten, activiteiten, monteurs, cellen, monteurWeergave, feestdagen, documentVariant, documentBranding } = input;
   const feestdagenMap = feestdagen ?? new Map<string, string>();
+  const branding = resolveBranding(documentVariant, documentBranding);
 
   if (weken.length === 0) {
     throw new Error("Geen weken geselecteerd");
