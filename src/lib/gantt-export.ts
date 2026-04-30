@@ -287,8 +287,13 @@ export function exportGanttPDF(input: GanttExportInput): void {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .wrap { padding: 8px 4px 24px 4px; }
-  .head { display: flex; justify-content: space-between; align-items: flex-end; margin: 0 4px 8px 4px; }
+  .wrap { padding: 8px 0 24px 0; overflow: hidden; }
+  .head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    width: ${sheetW}px;
+    margin: 0 0 8px 0;
+    padding: 0 2px;
+  }
   h1 { font-size: 18px; margin: 0 0 2px 0; font-weight: 700; letter-spacing: -0.01em; }
   .sub { font-size: 11px; color: #475569; }
   .meta { font-size: 10px; color: #64748b; text-align: right; }
