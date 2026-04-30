@@ -429,10 +429,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
 </style>
 </head>
-<body>
+<body data-scale="fit">
   <div class="toolbar">
     <button onclick="window.print()">Afdrukken / opslaan als PDF</button>
-    <span class="hint">Tip: kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend voor het beste resultaat. Schakel "Aanpassen aan pagina" / "Schalen: standaard" in.</span>
+    <label for="scaleSel">Schaal:</label>
+    <select id="scaleSel" onchange="document.body.setAttribute('data-scale', this.value)">
+      <option value="standard">Standaard</option>
+      <option value="fit" selected>Aanpassen aan pagina</option>
+      <option value="none">Geen schaling</option>
+    </select>
+    <span class="hint">Kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend. Zet de browser-schaling op 100%.</span>
   </div>
   <div class="wrap">
     <div class="head">
