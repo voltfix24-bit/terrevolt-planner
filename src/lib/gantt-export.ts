@@ -772,36 +772,19 @@ export function exportGanttPDF(input: GanttExportInput): void {
     </div>
   </div>
 
-  <!-- FIXED PAGE FOOTER — herhaalt op elke geprinte pagina -->
+  <!-- FIXED PAGE FOOTER — compact, herhaalt op iedere geprinte pagina (1 regel) -->
   <div class="page-footer">
-    <div class="annotations">
-      <div class="a-title">Planning Annotations</div>
-      <ul>
-        <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
-        <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
-        <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
-      </ul>
-    </div>
-    <div class="signatures">
-      <div class="sig-block">
-        <div class="lbl">Prepared By</div>
-        <div class="name">Project Planning Lead</div>
-      </div>
-      <div class="sig-block">
-        <div class="lbl">Authorized By</div>
-        <div class="name">Operations Director</div>
-      </div>
-    </div>
     <div class="doc-foot">
       <div>© ${jaar} Corporate Operations Management System.</div>
       <div>
         <span class="conf">Confidential Internal Document</span>
         <span class="ref">Ref: PLAN-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
+        <span class="ref pageinfo"></span>
       </div>
     </div>
   </div>
 
-  <!-- MAIN CONTENT — alleen de tabel; thead herhaalt automatisch -->
+  <!-- MAIN CONTENT — tabel; thead herhaalt automatisch op elke pagina -->
   <div class="wrap">
     <div class="gantt-scale">
       <table class="gantt">
@@ -814,8 +797,32 @@ export function exportGanttPDF(input: GanttExportInput): void {
         </thead>
         <tbody>${bodyRows}</tbody>
       </table>
+
+      <!-- END-BLOCK — alleen op laatste pagina (na de tabel), bewaard als één geheel -->
+      <div class="end-block">
+        <div class="annotations">
+          <div class="a-title">Planning Annotations</div>
+          <ul>
+            <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
+            <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
+            <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
+          </ul>
+        </div>
+        <div class="signatures">
+          <div class="sig-block">
+            <div class="lbl">Prepared By</div>
+            <div class="name">Project Planning Lead</div>
+          </div>
+          <div class="sig-block">
+            <div class="lbl">Authorized By</div>
+            <div class="name">Operations Director</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+</body>
+</html>`;
 </body>
 </html>`;
 
