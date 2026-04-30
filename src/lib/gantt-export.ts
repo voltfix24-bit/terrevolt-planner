@@ -723,7 +723,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
   <div class="page-header">
     <div class="doc-head">
       <div class="left">
-        <div class="title">Planning Gantt — ${jaar}</div>
+        <div class="title">Planning Terrevolt ${jaar}</div>
         <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
       </div>
       <div class="right">
