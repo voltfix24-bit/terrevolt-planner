@@ -558,6 +558,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
       45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
     ) !important;
   }
+  .lg-lbl { color: #191b23; font-size: 10px; }
   .lg-empty { font-size: 10px; color: #737686; font-style: italic; }
 
 
