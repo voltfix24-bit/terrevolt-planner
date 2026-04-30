@@ -232,9 +232,10 @@ export function exportGanttPDF(input: GanttExportInput): void {
               dt.setDate(monday.getDate() + di);
               const feestNaam = feestdagenMap.get(ymd(dt));
               const endCls = isLastOfWeek ? " end-wk" : "";
+              const startCls = di === 0 ? " start-wk" : "";
               const feestCls = feestNaam ? " feestdag" : "";
               const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
-              if (!cel) return `<td class="cell empty-cell${endCls}${feestCls}"${tip}></td>`;
+              if (!cel) return `<td class="cell empty-cell${startCls}${endCls}${feestCls}"${tip}></td>`;
               const colorEntry = cel.kleur_code ? COLOR_MAP[cel.kleur_code] : null;
               const bg = colorEntry?.hex ?? "#cbd5e1";
               const fg = readableTextColor(bg);
