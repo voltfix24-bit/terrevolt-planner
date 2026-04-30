@@ -297,11 +297,27 @@ export function exportGanttPDF(input: GanttExportInput): void {
     transform-origin: top left;
     margin: 0 auto;
   }
+  /* Schermweergave: standaard fit-to-page zodat preview overeenkomt met print */
+  body[data-scale="fit"] .gantt-scale {
+    transform: scale(${fitScale.toFixed(4)});
+    margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
+  }
+  body[data-scale="none"] .gantt-scale {
+    transform: none;
+  }
+  body[data-scale="standard"] .gantt-scale {
+    transform: scale(${Math.min(1, fitScale * 1.15).toFixed(4)});
+    margin-bottom: ${Math.max(0, (1 - Math.min(1, fitScale * 1.15)) * 100)}px;
+  }
   @media print {
-    .gantt-scale {
+    body[data-scale="fit"] .gantt-scale {
       transform: scale(${fitScale.toFixed(4)});
-      /* compenseer hoogte na scale zodat onderkant niet overlapt met legend */
       margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
+    }
+    body[data-scale="none"] .gantt-scale { transform: none; }
+    body[data-scale="standard"] .gantt-scale {
+      transform: scale(${Math.min(1, fitScale * 1.15).toFixed(4)});
+      margin-bottom: ${Math.max(0, (1 - Math.min(1, fitScale * 1.15)) * 100)}px;
     }
   }
   table.gantt {
@@ -400,6 +416,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
     border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;
   }
   .toolbar button:hover { background: #1e293b; }
+  .toolbar label { color: #334155; font-weight: 600; }
+  .toolbar select {
+    border: 1px solid #cbd5e1; background: #fff; color: #0b1220;
+    padding: 5px 8px; border-radius: 6px; font-size: 12px; font-weight: 500;
+    cursor: pointer;
+  }
   .toolbar .hint { color: #64748b; }
   @media print {
     .toolbar { display: none; }
@@ -407,10 +429,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
 </style>
 </head>
-<body>
+<body data-scale="fit">
   <div class="toolbar">
     <button onclick="window.print()">Afdrukken / opslaan als PDF</button>
-    <span class="hint">Tip: kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend voor het beste resultaat. Schakel "Aanpassen aan pagina" / "Schalen: standaard" in.</span>
+    <label for="scaleSel">Schaal:</label>
+    <select id="scaleSel" onchange="document.body.setAttribute('data-scale', this.value)">
+      <option value="standard">Standaard</option>
+      <option value="fit" selected>Aanpassen aan pagina</option>
+      <option value="none">Geen schaling</option>
+    </select>
+    <span class="hint">Kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend. Zet de browser-schaling op 100%.</span>
   </div>
   <div class="wrap">
     <div class="head">
@@ -445,13 +473,6 @@ export function exportGanttPDF(input: GanttExportInput): void {
   w.document.open();
   w.document.write(html);
   w.document.close();
-  // Auto-trigger print na korte vertraging zodat de browser klaar is met layout
-  setTimeout(() => {
-    try {
-      w.focus();
-      w.print();
-    } catch {
-      /* gebruiker kan de knop in de toolbar gebruiken */
-    }
-  }, 400);
+  // Geen auto-print: gebruiker kiest eerst de schaal en klikt dan op "Afdrukken / opslaan als PDF"
+  w.focus();
 }
