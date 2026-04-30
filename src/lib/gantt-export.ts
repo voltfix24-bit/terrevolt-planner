@@ -14,7 +14,7 @@
  * de browser print-dialog opent zelf, gebruiker kiest "Opslaan als PDF".
  */
 
-import { COLOR_MAP, DAG_LABELS, getMondayOfWeek, formatDate, initialen } from "./planning-types";
+import { COLOR_MAP, COLOR_CODES, DAG_LABELS, getMondayOfWeek, formatDate, initialen } from "./planning-types";
 
 export type GanttMonteurWeergave = "geen" | "initialen" | "namen";
 
