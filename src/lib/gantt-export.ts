@@ -469,6 +469,23 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 10px;
     overflow: hidden;
   }
+  /* Subtiele dag-gridlines: lichtere haarlijn binnen een week,
+     einde-week-streep (#737686) blijft sterker zodat week-grenzen leesbaar blijven */
+  table.gantt td.cell,
+  table.gantt thead th.dag {
+    border-right: 1px solid #ededf9;
+    border-left: 0;
+  }
+  /* Eerste dag van een week krijgt wel een normale linker-grid (week-scheiding) */
+  table.gantt td.cell.start-wk,
+  table.gantt thead th.dag.start-wk {
+    border-left: 1px solid #c3c6d7;
+  }
+  /* Horizontale rij-grid blijft licht zodat dagblokken visueel "los" staan */
+  table.gantt tbody td.cell {
+    border-top: 1px solid #f0f0fb;
+    border-bottom: 1px solid #f0f0fb;
+  }
   thead th {
     background: #ededf9;
     color: #191b23;
@@ -482,6 +499,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #434655;
+    border-right: 1px solid #c3c6d7;
   }
   thead th.wk {
     padding: 6px 2px;
@@ -489,6 +507,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     letter-spacing: 0.05em;
     color: #434655;
     border-bottom: 1px solid #c3c6d7;
+    border-right: 1px solid #c3c6d7;
   }
   thead th.dag {
     width: ${DAG_W}px;
@@ -505,6 +524,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
       45deg, #e1e2ed, #e1e2ed 3px, #f3f3fe 3px, #f3f3fe 6px
     );
   }
+  /* Activiteit-rij scheiding: zachte horizontale lijn zodat blokjes per rij duidelijk zijn */
+  tr.act-row + tr.act-row td { border-top: 1px solid #f0f0fb; }
 
   /* Project group header — label-cel + lege grid-spacer met identiek raster
      zodat activiteit-blokjes daaronder visueel met de week-kolommen uitlijnen */
