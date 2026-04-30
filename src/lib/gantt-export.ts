@@ -473,13 +473,6 @@ export function exportGanttPDF(input: GanttExportInput): void {
   w.document.open();
   w.document.write(html);
   w.document.close();
-  // Auto-trigger print na korte vertraging zodat de browser klaar is met layout
-  setTimeout(() => {
-    try {
-      w.focus();
-      w.print();
-    } catch {
-      /* gebruiker kan de knop in de toolbar gebruiken */
-    }
-  }, 400);
+  // Geen auto-print: gebruiker kiest eerst de schaal en klikt dan op "Afdrukken / opslaan als PDF"
+  w.focus();
 }
