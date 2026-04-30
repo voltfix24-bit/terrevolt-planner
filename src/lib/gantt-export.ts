@@ -138,15 +138,25 @@ export function exportGanttPDF(input: GanttExportInput): void {
     arr.sort((a, b) => (a.positie ?? 0) - (b.positie ?? 0)),
   );
 
-  // Layout consts (px)
-  const COL_PROJECT_W = 220;
-  const COL_ACT_W = 170;
-  const DAG_W = 30;
+  // Layout consts (px) — bij veel weken automatisch smaller maken zodat alles past
+  const totalDays = weken.length * 5;
+  // Schaal dagbreedte tussen 30 (weinig weken) en 14 (heel veel weken)
+  const DAG_W = weken.length <= 8 ? 30 : weken.length <= 14 ? 24 : weken.length <= 20 ? 19 : 15;
+  const COL_PROJECT_W = weken.length <= 14 ? 220 : 170;
+  const COL_ACT_W = weken.length <= 14 ? 170 : 130;
   const ROW_H = 26;
 
-  const totalDays = weken.length * 5;
   const gridW = totalDays * DAG_W;
   const sheetW = COL_PROJECT_W + COL_ACT_W + gridW;
+
+  // Kies papierformaat: A3 normaal, A2 bij heel brede planningen
+  const paperSize = weken.length <= 16 ? "A3" : "A2";
+  // Beschikbare breedte op pagina (mm) na marges (12mm aan beide kanten)
+  // A3 landscape = 420mm, A2 landscape = 594mm → bruikbaar 396 / 570
+  const pageWmm = paperSize === "A3" ? 396 : 570;
+  // 1mm ≈ 3.7795px. Schaalfactor zodat tabel altijd binnen pagina past.
+  const pagePx = pageWmm * 3.7795;
+  const fitScale = sheetW > pagePx ? pagePx / sheetW : 1;
 
   // Build header rows
   const weekHeader = weken
