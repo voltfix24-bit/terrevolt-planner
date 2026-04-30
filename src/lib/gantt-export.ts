@@ -234,18 +234,35 @@ export function exportGanttPDF(input: GanttExportInput): void {
               const bg = colorEntry?.hex ?? "#cbd5e1";
               const fg = readableTextColor(bg);
               let label = "";
+              let fullLabel = "";
               if (monteurWeergave !== "geen" && cel.monteur_ids.length > 0) {
                 const namen = cel.monteur_ids
                   .map((id) => monteurById.get(id)?.naam)
                   .filter((n): n is string => !!n);
                 if (monteurWeergave === "initialen") {
-                  label = namen.map(initialen).join(" ");
+                  const inits = namen.map(initialen);
+                  fullLabel = inits.join(" ");
+                  // Bij smalle cellen: max 2 initialen tonen, rest in title-tooltip
+                  if (DAG_W < 22 && inits.length > 2) {
+                    label = inits.slice(0, 2).join(" ") + "+";
+                  } else {
+                    label = fullLabel;
+                  }
                 } else {
-                  label = namen.join(", ");
+                  fullLabel = namen.join(", ");
+                  // Volledige namen passen vrijwel nooit in een 14-30px cel:
+                  // toon initialen, met volledige namen in tooltip
+                  label = namen.map(initialen).join(" ");
+                  if (DAG_W < 22 && namen.length > 2) {
+                    label = namen.slice(0, 2).map(initialen).join(" ") + "+";
+                  }
                 }
               }
+              const labelTip = fullLabel && fullLabel !== label
+                ? ` title="${escHtml(feestNaam ? `Feestdag: ${feestNaam} — ${fullLabel}` : fullLabel)}"`
+                : tip;
               // Inner block geeft het corporate "blokje in cel" effect
-              return `<td class="cell${endCls}${feestCls}"${tip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
+              return `<td class="cell${endCls}${feestCls}"${labelTip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
             }).join(""),
           )
           .join("");
