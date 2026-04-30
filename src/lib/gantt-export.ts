@@ -823,8 +823,6 @@ export function exportGanttPDF(input: GanttExportInput): void {
   </div>
 </body>
 </html>`;
-</body>
-</html>`;
 
   const w = window.open("", "_blank");
   if (!w) {
