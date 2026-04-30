@@ -625,10 +625,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
     );
   }
 
-  /* ========== Annotations footer ========== */
+  /* ========== End-block (alleen op laatste pagina, na de tabel) ==========
+     Wordt als één geheel bewaard zodat het nooit afgekapt over een page-break valt. */
+  .end-block {
+    margin-top: 14px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
   .annotations {
     width: 100%;
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0;
     padding: 8px 12px;
     background: #f3f3fe;
     border: 1px solid #c3c6d7;
@@ -644,8 +650,6 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 10px; color: #191b23;
     margin: 2px 0; line-height: 1.35;
   }
-
-  /* ========== Signatures ========== */
   .signatures {
     width: 100%;
     margin: 6px 0 0 0;
@@ -666,14 +670,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 10.5px; color: #191b23; font-weight: 600;
   }
 
-  /* ========== Document footer line ========== */
+  /* ========== Compacte fixed page footer (op elke pagina) ==========
+     Slechts 1 regel: confidential + ref + paginanummer. Past binnen 18mm hoogte. */
   .doc-foot {
     width: 100%;
-    margin-top: 8px;
-    padding-top: 6px;
+    height: 100%;
+    padding: 4px 14mm 0 14mm;
+    margin: 0;
     border-top: 1px solid #c3c6d7;
     display: flex; justify-content: space-between; align-items: center;
-    font-size: 9px;
+    font-size: 8.5px;
     color: #737686;
     letter-spacing: 0.05em;
   }
@@ -683,8 +689,17 @@ export function exportGanttPDF(input: GanttExportInput): void {
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  .doc-foot .ref { color: #434655; margin-left: 18px; }
-  .doc-foot .pageinfo { color: #434655; }
+  .doc-foot .ref { color: #434655; margin-left: 14px; }
+  .doc-foot .pageinfo { color: #434655; font-weight: 600; }
+  /* Paginanummer via CSS counter (alleen in print) */
+  @media print {
+    .doc-foot .pageinfo::after {
+      content: "Pagina " counter(page);
+    }
+  }
+  @media screen {
+    .doc-foot .pageinfo::after { content: "Pagina 1"; }
+  }
 
   /* ========== Toolbar (alleen scherm) ========== */
   .toolbar {
