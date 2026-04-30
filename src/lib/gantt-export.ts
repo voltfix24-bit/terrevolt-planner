@@ -194,8 +194,13 @@ export function exportGanttPDF(input: GanttExportInput): void {
         const dt = new Date(monday);
         dt.setDate(monday.getDate() + i);
         const isLastOfWeek = i === 4;
+        const isFirstOfWeek = i === 0;
         const feestNaam = feestdagenMap.get(ymd(dt));
-        const cls = ["dag", isLastOfWeek ? "end-wk" : "", feestNaam ? "feestdag-h" : ""].filter(Boolean).join(" ");
+        const cls = ["dag",
+          isFirstOfWeek ? "start-wk" : "",
+          isLastOfWeek ? "end-wk" : "",
+          feestNaam ? "feestdag-h" : "",
+        ].filter(Boolean).join(" ");
         const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
         return `<th class="${cls}"${tip}>${d}</th>`;
       }).join(""),
