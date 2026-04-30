@@ -556,21 +556,41 @@ export default function Overzicht() {
     return m;
   }, [weken]);
 
+  // Set van cel-id's die in een relevant jaar (huidig jaar ± 2) vallen.
+  // Voorkomt dat we bij grote historische datasets duizenden oude cellen meenemen
+  // in slot/segment-berekeningen. Visuele output verandert hierdoor niet.
+  const relevantCelIds = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const relevantWeekIds = new Set<string>();
+    for (const w of weken) {
+      if (Math.abs(jaar - currentYear) <= 2) {
+        relevantWeekIds.add(w.id);
+      }
+    }
+    const ids = new Set<string>();
+    for (const c of cellen) {
+      if (c.week_id && relevantWeekIds.has(c.week_id)) ids.add(c.id);
+    }
+    return ids;
+  }, [cellen, weken, jaar]);
+
   const monteurIdsByCel = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const cm of celMonteurs) {
       if (!cm.cel_id || !cm.monteur_id) continue;
+      if (!relevantCelIds.has(cm.cel_id)) continue;
       const arr = m.get(cm.cel_id) ?? [];
       arr.push(cm.monteur_id);
       m.set(cm.cel_id, arr);
     }
     return m;
-  }, [celMonteurs]);
+  }, [celMonteurs, relevantCelIds]);
 
   // monteurId → dayKey → Set<project_id>
   const monteurDayProjects = useMemo(() => {
     const m = new Map<string, Map<string, Set<string>>>();
     for (const c of cellen) {
+      if (!relevantCelIds.has(c.id)) continue;
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
@@ -589,7 +609,7 @@ export default function Overzicht() {
       }
     }
     return m;
-  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet]);
+  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds]);
 
   // dayKey → Set<monteurId> double-booked on that day
   const dayConflictMonteurs = useMemo(() => {
