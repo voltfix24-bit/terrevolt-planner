@@ -51,6 +51,36 @@ export interface GanttWeek {
   jaar: number;
 }
 
+/**
+ * Documentvarianten voor de export. Elk preset bevat consistente bedrijfsnaam,
+ * titelopmaak, accent-kleur en footer-tekst — toegepast op ALLE pagina's
+ * (fixed page-header en page-footer) zodat de corporate stijl overal hetzelfde is.
+ */
+export type GanttDocumentVariant =
+  | "terrevolt"          // Default: blauw accent, "Planning Terrevolt {jaar}"
+  | "internal-memo"      // Donkergrijs accent, compactere titel
+  | "client-deliverable" // Groen accent, formele "Project Schedule"
+  | "custom";            // Volledig vrij in te vullen via documentBranding
+
+export interface GanttDocumentBranding {
+  /** Bedrijfsnaam in titel (default per variant) */
+  bedrijfsnaam?: string;
+  /** Titel-template; ondersteunt placeholders {bedrijf} en {jaar} */
+  titelTemplate?: string;
+  /** Accent-kleur (hex) voor titel, header-onderlijn en project-row top-border */
+  accentKleur?: string;
+  /** Naam-label onder "Prepared By" */
+  preparedBy?: string;
+  /** Naam-label onder "Authorized By" */
+  authorizedBy?: string;
+  /** Prefix voor het Ref-nummer in de page-footer (default "PLAN") */
+  refPrefix?: string;
+  /** Copyright-tekst links in de page-footer; ondersteunt placeholder {jaar} */
+  copyright?: string;
+  /** Toon "Confidential Internal Document" badge in de page-footer */
+  toonConfidential?: boolean;
+}
+
 export interface GanttExportInput {
   titel: string;
   weken: GanttWeek[];
@@ -61,6 +91,72 @@ export interface GanttExportInput {
   monteurWeergave: GanttMonteurWeergave;
   /** Map van YYYY-MM-DD → feestdag-naam. Optioneel. */
   feestdagen?: Map<string, string>;
+  /** Documentvariant — bepaalt de huisstijl op iedere pagina. Default: "terrevolt". */
+  documentVariant?: GanttDocumentVariant;
+  /** Optionele branding-overrides; gecombineerd met de variant-defaults. */
+  documentBranding?: GanttDocumentBranding;
+}
+
+interface ResolvedBranding {
+  bedrijfsnaam: string;
+  titelTemplate: string;
+  accentKleur: string;
+  preparedBy: string;
+  authorizedBy: string;
+  refPrefix: string;
+  copyright: string;
+  toonConfidential: boolean;
+}
+
+const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
+  "terrevolt": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Planning {bedrijf} {jaar}",
+    accentKleur: "#004ac6",
+    preparedBy: "Project Planning Lead",
+    authorizedBy: "Operations Director",
+    refPrefix: "PLAN",
+    copyright: "© {jaar} Terrevolt — Operations Management",
+    toonConfidential: true,
+  },
+  "internal-memo": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Internal Planning Memo — {jaar}",
+    accentKleur: "#434655",
+    preparedBy: "Planning Coordinator",
+    authorizedBy: "Operations Manager",
+    refPrefix: "MEMO",
+    copyright: "© {jaar} Terrevolt — Internal use only",
+    toonConfidential: true,
+  },
+  "client-deliverable": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Project Schedule — {bedrijf} {jaar}",
+    accentKleur: "#15803d",
+    preparedBy: "Project Manager",
+    authorizedBy: "Client Representative",
+    refPrefix: "DEL",
+    copyright: "© {jaar} Terrevolt — Prepared for client review",
+    toonConfidential: false,
+  },
+  "custom": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Planning {bedrijf} {jaar}",
+    accentKleur: "#004ac6",
+    preparedBy: "Project Planning Lead",
+    authorizedBy: "Operations Director",
+    refPrefix: "PLAN",
+    copyright: "© {jaar} Terrevolt",
+    toonConfidential: true,
+  },
+};
+
+function resolveBranding(
+  variant: GanttDocumentVariant | undefined,
+  overrides: GanttDocumentBranding | undefined,
+): ResolvedBranding {
+  const base = VARIANT_DEFAULTS[variant ?? "terrevolt"];
+  return { ...base, ...(overrides ?? {}) };
 }
 
 function ymd(d: Date): string {
