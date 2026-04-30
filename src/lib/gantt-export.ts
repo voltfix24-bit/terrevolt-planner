@@ -140,11 +140,20 @@ export function exportGanttPDF(input: GanttExportInput): void {
 
   // Layout consts (px) — bij veel weken automatisch smaller maken zodat alles past
   const totalDays = weken.length * 5;
-  // Schaal dagbreedte tussen 32 (weinig weken) en 14 (heel veel weken)
+  // Schaal dagbreedte tussen 34 (weinig weken) en 14 (heel veel weken)
   const DAG_W = weken.length <= 6 ? 34 : weken.length <= 10 ? 28 : weken.length <= 14 ? 22 : weken.length <= 20 ? 18 : 14;
   // Eén gecombineerde "Project & Activity" kolom
   const COL_LABEL_W = weken.length <= 14 ? 320 : 240;
   const ROW_H = 30;
+
+  // Dynamische cel-binnenruimte: bij smalle dagen minder padding zodat block niet wordt
+  // weggedrukt en niet overlapt met de cel-rand.
+  const CELL_PAD = DAG_W >= 28 ? 3 : DAG_W >= 20 ? 2 : 1;
+  const BLOCK_PAD = DAG_W >= 28 ? 2 : DAG_W >= 20 ? 1 : 0;
+  // Block label-font schaalt mee zodat initialen altijd in de kleurblok passen
+  const BLOCK_FS = DAG_W >= 28 ? 9 : DAG_W >= 22 ? 8 : DAG_W >= 18 ? 7 : 6.5;
+  // Effectieve binnenbreedte voor de block (pixels): DAG_W − 2*CELL_PAD − 2px borders
+  const BLOCK_INNER_W = Math.max(6, DAG_W - 2 * CELL_PAD - 2);
 
   const gridW = totalDays * DAG_W;
   const sheetW = COL_LABEL_W + gridW;
@@ -201,9 +210,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
     zichtbareProjecten.forEach((p) => {
       const acts = actsByProject.get(p.id) ?? [];
       if (acts.length === 0) return;
-      // Project group-header rij over volle breedte
+      // Project group-header rij: label-kolom + grid-overspan apart, zodat de
+      // grid-uitlijning gegarandeerd hetzelfde is als bij activiteit-rijen.
       bodyRows += `<tr class="proj-row">
-        <td colspan="${1 + totalDays}" class="proj-cell">${escHtml(projectLabel(p))}</td>
+        <td class="proj-cell">${escHtml(projectLabel(p))}</td>
+        <td colspan="${totalDays}" class="proj-spacer"></td>
       </tr>`;
       acts.forEach((a) => {
         const dayCells = weken
@@ -223,18 +234,35 @@ export function exportGanttPDF(input: GanttExportInput): void {
               const bg = colorEntry?.hex ?? "#cbd5e1";
               const fg = readableTextColor(bg);
               let label = "";
+              let fullLabel = "";
               if (monteurWeergave !== "geen" && cel.monteur_ids.length > 0) {
                 const namen = cel.monteur_ids
                   .map((id) => monteurById.get(id)?.naam)
                   .filter((n): n is string => !!n);
                 if (monteurWeergave === "initialen") {
-                  label = namen.map(initialen).join(" ");
+                  const inits = namen.map(initialen);
+                  fullLabel = inits.join(" ");
+                  // Bij smalle cellen: max 2 initialen tonen, rest in title-tooltip
+                  if (DAG_W < 22 && inits.length > 2) {
+                    label = inits.slice(0, 2).join(" ") + "+";
+                  } else {
+                    label = fullLabel;
+                  }
                 } else {
-                  label = namen.join(", ");
+                  fullLabel = namen.join(", ");
+                  // Volledige namen passen vrijwel nooit in een 14-30px cel:
+                  // toon initialen, met volledige namen in tooltip
+                  label = namen.map(initialen).join(" ");
+                  if (DAG_W < 22 && namen.length > 2) {
+                    label = namen.slice(0, 2).map(initialen).join(" ") + "+";
+                  }
                 }
               }
+              const labelTip = fullLabel && fullLabel !== label
+                ? ` title="${escHtml(feestNaam ? `Feestdag: ${feestNaam} — ${fullLabel}` : fullLabel)}"`
+                : tip;
               // Inner block geeft het corporate "blokje in cel" effect
-              return `<td class="cell${endCls}${feestCls}"${tip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
+              return `<td class="cell${endCls}${feestCls}"${labelTip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
             }).join(""),
           )
           .join("");
@@ -478,45 +506,73 @@ export function exportGanttPDF(input: GanttExportInput): void {
     );
   }
 
-  /* Project group header */
+  /* Project group header — label-cel + lege grid-spacer met identiek raster
+     zodat activiteit-blokjes daaronder visueel met de week-kolommen uitlijnen */
   tr.proj-row td.proj-cell {
     text-align: left;
     padding: 7px 12px;
     background: #f0f0fb;
     color: #191b23;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
-    border-top: 1px solid #c3c6d7;
+    border-top: 1.5px solid #004ac6;
     border-bottom: 1px solid #c3c6d7;
+    border-right: 1px solid #c3c6d7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${COL_LABEL_W}px;
+    /* Voorkom dat lange projectnamen kolombreedte oprekken */
+    word-break: keep-all;
+  }
+  tr.proj-row td.proj-spacer {
+    background: #f0f0fb;
+    border-top: 1.5px solid #004ac6;
+    border-bottom: 1px solid #c3c6d7;
+    padding: 0;
+    height: ${Math.round(ROW_H * 0.85)}px;
   }
 
   /* Activity row */
   tr.act-row td.act {
     text-align: left;
-    padding: 6px 12px 6px 28px;
+    padding: ${DAG_W >= 22 ? "6px 12px 6px 24px" : "5px 8px 5px 18px"};
     background: #ffffff;
     color: #191b23;
-    font-size: 10.5px;
+    font-size: ${DAG_W >= 22 ? 10.5 : 10}px;
     font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${COL_LABEL_W}px;
   }
 
   td.cell {
     height: ${ROW_H}px;
     background: #ffffff;
-    padding: 3px;
+    padding: ${CELL_PAD}px;
+    /* Cel mag nooit breder worden dan zijn vaste week-kolombreedte */
+    max-width: ${DAG_W}px;
+    min-width: ${DAG_W}px;
+    width: ${DAG_W}px;
   }
   td.cell .block {
     width: 100%;
     height: 100%;
+    max-width: ${BLOCK_INNER_W}px;
     border-radius: 2px;
-    font-size: 8.5px;
+    font-size: ${BLOCK_FS}px;
     font-weight: 700;
     line-height: 1;
-    padding: 2px;
-    word-break: break-word;
+    padding: ${BLOCK_PAD}px;
+    /* Geen wrapping in smalle blokken — overflow wordt afgekapt en zit in title-tooltip */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
   }
   td.cell.empty-cell .block { display: none; }
   td.empty {
