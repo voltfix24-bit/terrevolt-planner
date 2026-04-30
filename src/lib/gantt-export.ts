@@ -277,7 +277,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <meta charset="utf-8" />
 <title>${escHtml(titel)}</title>
 <style>
-  @page { size: A3 landscape; margin: 12mm; }
+  @page { size: ${paperSize} landscape; margin: 12mm; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
