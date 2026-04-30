@@ -446,14 +446,14 @@ export function exportGanttPDF(input: GanttExportInput): void {
     <span class="hint">Kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend. Zet de browser-schaling op 100%.</span>
   </div>
   <div class="wrap">
-    <div class="head">
-      <div>
-        <h1>${escHtml(titel)}</h1>
-        <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
-      </div>
-      <div class="meta"></div>
-    </div>
     <div class="gantt-scale">
+      <div class="head">
+        <div>
+          <h1>${escHtml(titel)}</h1>
+          <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
+        </div>
+        <div class="meta"></div>
+      </div>
       <table class="gantt">
         <thead>
           <tr>
