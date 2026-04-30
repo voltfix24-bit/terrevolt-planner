@@ -14,7 +14,7 @@
  * de browser print-dialog opent zelf, gebruiker kiest "Opslaan als PDF".
  */
 
-import { COLOR_MAP, DAG_LABELS, getMondayOfWeek, formatDate, initialen } from "./planning-types";
+import { COLOR_MAP, COLOR_CODES, DAG_LABELS, getMondayOfWeek, formatDate, initialen } from "./planning-types";
 
 export type GanttMonteurWeergave = "geen" | "initialen" | "namen";
 
@@ -246,18 +246,37 @@ export function exportGanttPDF(input: GanttExportInput): void {
     });
   }
 
-  // Status legend — corporate stijl: 3 hoofdcategorieën
-  const legendItems: Array<{ hex: string; naam: string }> = [
-    { hex: "#1d4ed8", naam: "Montage" },
-    { hex: "#fdcb35", naam: "Schakelen" },
-    { hex: "#15803d", naam: "Uitvoering/Transport" },
-  ];
-  const legend = legendItems
-    .map(
-      (c) =>
-        `<div class="lg-item"><span class="lg-dot" style="background:${c.hex}"></span><span class="lg-lbl">${escHtml(c.naam)}</span></div>`,
-    )
-    .join("");
+  // Status legend — dynamisch op basis van kleurcodes die werkelijk in de export voorkomen.
+  // Volgorde = vaste volgorde van COLOR_MAP (c1..c12) zodat de legenda voorspelbaar leest
+  // en 1-op-1 correspondeert met de Nederlandse statuswaarden uit planning-types.ts.
+  const gebruikteCodes = new Set<string>();
+  cellen.forEach((c) => {
+    if (c.kleur_code && COLOR_MAP[c.kleur_code]) gebruikteCodes.add(c.kleur_code);
+  });
+  const legendItems: Array<{ hex: string; naam: string; pattern?: boolean }> = COLOR_CODES
+    .filter((code) => gebruikteCodes.has(code))
+    .map((code) => ({ hex: COLOR_MAP[code].hex, naam: COLOR_MAP[code].naam }));
+  // Voeg feestdag-indicator toe als er feestdagen in de geselecteerde periode vallen
+  const heeftFeestdagInPeriode = weken.some((w) => {
+    const monday = getMondayOfWeek(w.week_nr, w.jaar);
+    for (let i = 0; i < 5; i++) {
+      const dt = new Date(monday);
+      dt.setDate(monday.getDate() + i);
+      if (feestdagenMap.has(ymd(dt))) return true;
+    }
+    return false;
+  });
+  if (heeftFeestdagInPeriode) {
+    legendItems.push({ hex: "#94a3b8", naam: "Feestdag / vrije dag", pattern: true });
+  }
+  const legend = legendItems.length === 0
+    ? `<span class="lg-empty">Geen statussen in deze periode</span>`
+    : legendItems
+        .map(
+          (c) =>
+            `<div class="lg-item"><span class="lg-dot${c.pattern ? " lg-dot-feest" : ""}" style="background:${c.hex}"></span><span class="lg-lbl">${escHtml(c.naam)}</span></div>`,
+        )
+        .join("");
 
   const monteurWeergaveLabel =
     monteurWeergave === "geen"
@@ -377,22 +396,32 @@ export function exportGanttPDF(input: GanttExportInput): void {
   /* ========== Status legend ========== */
   .legend-row {
     width: 100%;
-    display: flex; align-items: center; gap: 18px;
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 6px 14px;
     padding: 4px 0 0 0;
-    font-size: 10.5px;
+    font-size: 10px;
   }
   .legend-row .lg-title {
     font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #737686;
     margin-right: 4px;
+    flex-shrink: 0;
   }
-  .lg-item { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .lg-dot {
-    width: 12px; height: 12px; border-radius: 2px;
-    border: 1px solid rgba(0,0,0,0.10);
+    width: 11px; height: 11px; border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.12);
     display: inline-block;
+    flex-shrink: 0;
   }
-  .lg-lbl { color: #191b23; font-size: 10.5px; }
+  .lg-dot-feest {
+    background-image: repeating-linear-gradient(
+      45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
+    ) !important;
+  }
+  .lg-lbl { color: #191b23; font-size: 10px; }
+  .lg-empty { font-size: 10px; color: #737686; font-style: italic; }
+
 
   /* ========== Gantt table ========== */
   table.gantt {
