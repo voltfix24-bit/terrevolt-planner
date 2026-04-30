@@ -381,9 +381,48 @@ export function exportGanttPDF(input: GanttExportInput): void {
   // Volgorde = vaste volgorde van COLOR_MAP (c1..c12) zodat de legenda voorspelbaar leest
   // en 1-op-1 correspondeert met de Nederlandse statuswaarden uit planning-types.ts.
   const gebruikteCodes = new Set<string>();
+  const onbekendeCodes = new Set<string>();
   cellen.forEach((c) => {
-    if (c.kleur_code && COLOR_MAP[c.kleur_code]) gebruikteCodes.add(c.kleur_code);
+    if (!c.kleur_code) return;
+    if (COLOR_MAP[c.kleur_code]) {
+      gebruikteCodes.add(c.kleur_code);
+    } else {
+      onbekendeCodes.add(c.kleur_code);
+    }
   });
+
+  // Dev-time validatie: log eventuele ontbrekende mapping zodat de legenda altijd
+  // 1-op-1 blijft met de Nederlandse statuswaarden uit planning-types.ts (COLOR_MAP).
+  if (import.meta.env?.DEV) {
+    // 1) Cellen met een kleurcode die NIET in COLOR_MAP staat
+    if (onbekendeCodes.size > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[gantt-export] Onbekende kleur_code(s) zonder mapping in COLOR_MAP:",
+        Array.from(onbekendeCodes),
+      );
+    }
+    // 2) Sanity-check: elke entry in COLOR_MAP heeft een niet-lege Nederlandse naam + geldige hex
+    const ongeldigeMap = Object.entries(COLOR_MAP).filter(
+      ([, v]) => !v?.naam?.trim() || !/^#[0-9a-fA-F]{6}$/.test(v?.hex ?? ""),
+    );
+    if (ongeldigeMap.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[gantt-export] Ongeldige COLOR_MAP-entries (lege naam of ongeldige hex):",
+        ongeldigeMap.map(([k]) => k),
+      );
+    }
+    // 3) Legenda-namen die afwijken van COLOR_MAP (zou niet mogen, maar valideer expliciet)
+    const mismatch = COLOR_CODES.filter(
+      (code) => gebruikteCodes.has(code) && COLOR_MAP[code].naam !== COLOR_MAP[code].naam.trim(),
+    );
+    if (mismatch.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn("[gantt-export] Statusnamen met whitespace-afwijking:", mismatch);
+    }
+  }
+
   const legendItems: Array<{ hex: string; naam: string; pattern?: boolean }> = COLOR_CODES
     .filter((code) => gebruikteCodes.has(code))
     .map((code) => ({ hex: COLOR_MAP[code].hex, naam: COLOR_MAP[code].naam }));
