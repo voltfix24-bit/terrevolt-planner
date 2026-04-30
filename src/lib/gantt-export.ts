@@ -491,12 +491,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
   .doc-head {
     width: 100%;
     display: flex; justify-content: space-between; align-items: flex-end;
-    border-bottom: 2px solid #004ac6;
+    border-bottom: 2px solid var(--accent);
     padding: 0 0 6px 0;
     margin-bottom: 8px;
   }
   .doc-head .left .title {
-    color: #004ac6;
+    color: var(--accent);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.08em;
