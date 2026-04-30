@@ -292,11 +292,22 @@ export function exportGanttPDF(input: GanttExportInput): void {
   h1 { font-size: 18px; margin: 0 0 2px 0; font-weight: 700; letter-spacing: -0.01em; }
   .sub { font-size: 11px; color: #475569; }
   .meta { font-size: 10px; color: #64748b; text-align: right; }
+  .gantt-scale {
+    width: ${sheetW}px;
+    transform-origin: top left;
+    margin: 0 auto;
+  }
+  @media print {
+    .gantt-scale {
+      transform: scale(${fitScale.toFixed(4)});
+      /* compenseer hoogte na scale zodat onderkant niet overlapt met legend */
+      margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
+    }
+  }
   table.gantt {
     border-collapse: collapse;
     table-layout: fixed;
     width: ${sheetW}px;
-    margin: 0 auto;
   }
   table.gantt th, table.gantt td {
     border: 1px solid #cbd5e1;
