@@ -487,60 +487,55 @@ export default function Overzicht() {
     return m;
   }, [slots]);
 
-  // ====== Fetch all data once ======
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-        supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen").order("created_at", { ascending: true }),
-        supabase.from("project_weken").select("id, project_id, week_nr, positie"),
-        supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
-        supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
-        supabase.from("monteurs").select("id, naam, type, aanwijzing_ms, aanwijzing_ls").eq("actief", true).order("type", { ascending: false }).order("naam", { ascending: true }),
-        supabase.from("cel_monteurs").select("cel_id, monteur_id"),
-        supabase.from("feestdagen").select("datum, naam").in("jaar", [jaar - 1, jaar, jaar + 1]),
-      ]);
-      if (cancelled) return;
-      setProjecten((pRes.data ?? []) as Project[]);
-      setWeken((wRes.data ?? []) as Week[]);
-      setActiviteiten((aRes.data ?? []) as Activiteit[]);
-      setCellen((cRes.data ?? []) as Cel[]);
-      setMonteurs((mRes.data ?? []) as Monteur[]);
-      setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
-      setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
-    })();
-    return () => { cancelled = true; };
-  }, [jaar]);
+  // ====== Fetch all data once (gedeelde fetch voor initial + focus) ======
+  const fetchAllData = useCallback(async (targetJaar: number, signal?: AbortSignal) => {
+    const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
+      supabase
+        .from("projecten")
+        .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen")
+        .order("created_at", { ascending: true }),
+      supabase.from("project_weken").select("id, project_id, week_nr, positie"),
+      supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
+      // Alleen cellen die echt gevuld zijn (kleur_code != null) — lege cellen worden nooit gerenderd op Overzicht.
+      supabase
+        .from("planning_cellen")
+        .select("id, activiteit_id, week_id, dag_index, kleur_code")
+        .not("kleur_code", "is", null),
+      supabase
+        .from("monteurs")
+        .select("id, naam, type, aanwijzing_ms, aanwijzing_ls")
+        .eq("actief", true)
+        .order("type", { ascending: false })
+        .order("naam", { ascending: true }),
+      supabase.from("cel_monteurs").select("cel_id, monteur_id"),
+      supabase
+        .from("feestdagen")
+        .select("datum, naam")
+        .in("jaar", [targetJaar - 1, targetJaar, targetJaar + 1]),
+    ]);
+    if (signal?.aborted) return;
+    setProjecten((pRes.data ?? []) as Project[]);
+    setWeken((wRes.data ?? []) as Week[]);
+    setActiviteiten((aRes.data ?? []) as Activiteit[]);
+    setCellen((cRes.data ?? []) as Cel[]);
+    setMonteurs((mRes.data ?? []) as Monteur[]);
+    setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
+    setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
+  }, []);
 
-  // Re-fetch all data when the window/tab regains focus, so changes made
-  // on other pages (e.g. Plannen) are immediately reflected here.
+  // Initial load + her-fetch wanneer jaar wijzigt
   useEffect(() => {
-    const onFocus = () => {
-      let cancelled = false;
-      (async () => {
-        const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
-          supabase.from("projecten").select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen").order("created_at", { ascending: true }),
-          supabase.from("project_weken").select("id, project_id, week_nr, positie"),
-          supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
-          supabase.from("planning_cellen").select("id, activiteit_id, week_id, dag_index, kleur_code"),
-          supabase.from("monteurs").select("id, naam, type, aanwijzing_ms, aanwijzing_ls").eq("actief", true).order("type", { ascending: false }).order("naam", { ascending: true }),
-          supabase.from("cel_monteurs").select("cel_id, monteur_id"),
-          supabase.from("feestdagen").select("datum, naam").in("jaar", [jaar - 1, jaar, jaar + 1]),
-        ]);
-        if (cancelled) return;
-        setProjecten((pRes.data ?? []) as Project[]);
-        setWeken((wRes.data ?? []) as Week[]);
-        setActiviteiten((aRes.data ?? []) as Activiteit[]);
-        setCellen((cRes.data ?? []) as Cel[]);
-        setMonteurs((mRes.data ?? []) as Monteur[]);
-        setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
-        setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
-      })();
-      return () => { cancelled = true; };
-    };
+    const controller = new AbortController();
+    void fetchAllData(jaar, controller.signal);
+    return () => controller.abort();
+  }, [jaar, fetchAllData]);
+
+  // Re-fetch wanneer het venster/tab focus krijgt (zo zien we wijzigingen vanuit Plannen direct)
+  useEffect(() => {
+    const onFocus = () => { void fetchAllData(jaar); };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [jaar]);
+  }, [jaar, fetchAllData]);
 
   // Maps
   const projectById = useMemo(() => {
