@@ -194,8 +194,13 @@ export function exportGanttPDF(input: GanttExportInput): void {
         const dt = new Date(monday);
         dt.setDate(monday.getDate() + i);
         const isLastOfWeek = i === 4;
+        const isFirstOfWeek = i === 0;
         const feestNaam = feestdagenMap.get(ymd(dt));
-        const cls = ["dag", isLastOfWeek ? "end-wk" : "", feestNaam ? "feestdag-h" : ""].filter(Boolean).join(" ");
+        const cls = ["dag",
+          isFirstOfWeek ? "start-wk" : "",
+          isLastOfWeek ? "end-wk" : "",
+          feestNaam ? "feestdag-h" : "",
+        ].filter(Boolean).join(" ");
         const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
         return `<th class="${cls}"${tip}>${d}</th>`;
       }).join(""),
@@ -227,9 +232,10 @@ export function exportGanttPDF(input: GanttExportInput): void {
               dt.setDate(monday.getDate() + di);
               const feestNaam = feestdagenMap.get(ymd(dt));
               const endCls = isLastOfWeek ? " end-wk" : "";
+              const startCls = di === 0 ? " start-wk" : "";
               const feestCls = feestNaam ? " feestdag" : "";
               const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
-              if (!cel) return `<td class="cell empty-cell${endCls}${feestCls}"${tip}></td>`;
+              if (!cel) return `<td class="cell empty-cell${startCls}${endCls}${feestCls}"${tip}></td>`;
               const colorEntry = cel.kleur_code ? COLOR_MAP[cel.kleur_code] : null;
               const bg = colorEntry?.hex ?? "#cbd5e1";
               const fg = readableTextColor(bg);
@@ -262,7 +268,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
                 ? ` title="${escHtml(feestNaam ? `Feestdag: ${feestNaam} — ${fullLabel}` : fullLabel)}"`
                 : tip;
               // Inner block geeft het corporate "blokje in cel" effect
-              return `<td class="cell${endCls}${feestCls}"${labelTip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
+              return `<td class="cell${startCls}${endCls}${feestCls}"${labelTip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
             }).join(""),
           )
           .join("");
@@ -469,6 +475,23 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 10px;
     overflow: hidden;
   }
+  /* Subtiele dag-gridlines: lichtere haarlijn binnen een week,
+     einde-week-streep (#737686) blijft sterker zodat week-grenzen leesbaar blijven */
+  table.gantt td.cell,
+  table.gantt thead th.dag {
+    border-right: 1px solid #ededf9;
+    border-left: 0;
+  }
+  /* Eerste dag van een week krijgt wel een normale linker-grid (week-scheiding) */
+  table.gantt td.cell.start-wk,
+  table.gantt thead th.dag.start-wk {
+    border-left: 1px solid #c3c6d7;
+  }
+  /* Horizontale rij-grid blijft licht zodat dagblokken visueel "los" staan */
+  table.gantt tbody td.cell {
+    border-top: 1px solid #f0f0fb;
+    border-bottom: 1px solid #f0f0fb;
+  }
   thead th {
     background: #ededf9;
     color: #191b23;
@@ -482,6 +505,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #434655;
+    border-right: 1px solid #c3c6d7;
   }
   thead th.wk {
     padding: 6px 2px;
@@ -489,6 +513,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     letter-spacing: 0.05em;
     color: #434655;
     border-bottom: 1px solid #c3c6d7;
+    border-right: 1px solid #c3c6d7;
   }
   thead th.dag {
     width: ${DAG_W}px;
@@ -505,6 +530,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
       45deg, #e1e2ed, #e1e2ed 3px, #f3f3fe 3px, #f3f3fe 6px
     );
   }
+  /* Activiteit-rij scheiding: zachte horizontale lijn zodat blokjes per rij duidelijk zijn */
+  tr.act-row + tr.act-row td { border-top: 1px solid #f0f0fb; }
 
   /* Project group header — label-cel + lege grid-spacer met identiek raster
      zodat activiteit-blokjes daaronder visueel met de week-kolommen uitlijnen */
