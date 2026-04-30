@@ -916,7 +916,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
         <div class="signatures">
           <div class="sig-block">
             <div class="lbl">Prepared By</div>
-            <div class="name">Project Planning Lead</div>
+            <div class="name">${escHtml(branding.preparedBy)}</div>
           </div>
           <div class="sig-block">
             <div class="lbl">Authorized By</div>
