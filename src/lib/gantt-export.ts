@@ -506,45 +506,73 @@ export function exportGanttPDF(input: GanttExportInput): void {
     );
   }
 
-  /* Project group header */
+  /* Project group header — label-cel + lege grid-spacer met identiek raster
+     zodat activiteit-blokjes daaronder visueel met de week-kolommen uitlijnen */
   tr.proj-row td.proj-cell {
     text-align: left;
     padding: 7px 12px;
     background: #f0f0fb;
     color: #191b23;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
-    border-top: 1px solid #c3c6d7;
+    border-top: 1.5px solid #004ac6;
     border-bottom: 1px solid #c3c6d7;
+    border-right: 1px solid #c3c6d7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${COL_LABEL_W}px;
+    /* Voorkom dat lange projectnamen kolombreedte oprekken */
+    word-break: keep-all;
+  }
+  tr.proj-row td.proj-spacer {
+    background: #f0f0fb;
+    border-top: 1.5px solid #004ac6;
+    border-bottom: 1px solid #c3c6d7;
+    padding: 0;
+    height: ${Math.round(ROW_H * 0.85)}px;
   }
 
   /* Activity row */
   tr.act-row td.act {
     text-align: left;
-    padding: 6px 12px 6px 28px;
+    padding: ${DAG_W >= 22 ? "6px 12px 6px 24px" : "5px 8px 5px 18px"};
     background: #ffffff;
     color: #191b23;
-    font-size: 10.5px;
+    font-size: ${DAG_W >= 22 ? 10.5 : 10}px;
     font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${COL_LABEL_W}px;
   }
 
   td.cell {
     height: ${ROW_H}px;
     background: #ffffff;
-    padding: 3px;
+    padding: ${CELL_PAD}px;
+    /* Cel mag nooit breder worden dan zijn vaste week-kolombreedte */
+    max-width: ${DAG_W}px;
+    min-width: ${DAG_W}px;
+    width: ${DAG_W}px;
   }
   td.cell .block {
     width: 100%;
     height: 100%;
+    max-width: ${BLOCK_INNER_W}px;
     border-radius: 2px;
-    font-size: 8.5px;
+    font-size: ${BLOCK_FS}px;
     font-weight: 700;
     line-height: 1;
-    padding: 2px;
-    word-break: break-word;
+    padding: ${BLOCK_PAD}px;
+    /* Geen wrapping in smalle blokken — overflow wordt afgekapt en zit in title-tooltip */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
   }
   td.cell.empty-cell .block { display: none; }
   td.empty {
