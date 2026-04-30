@@ -297,11 +297,27 @@ export function exportGanttPDF(input: GanttExportInput): void {
     transform-origin: top left;
     margin: 0 auto;
   }
+  /* Schermweergave: standaard fit-to-page zodat preview overeenkomt met print */
+  body[data-scale="fit"] .gantt-scale {
+    transform: scale(${fitScale.toFixed(4)});
+    margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
+  }
+  body[data-scale="none"] .gantt-scale {
+    transform: none;
+  }
+  body[data-scale="standard"] .gantt-scale {
+    transform: scale(${Math.min(1, fitScale * 1.15).toFixed(4)});
+    margin-bottom: ${Math.max(0, (1 - Math.min(1, fitScale * 1.15)) * 100)}px;
+  }
   @media print {
-    .gantt-scale {
+    body[data-scale="fit"] .gantt-scale {
       transform: scale(${fitScale.toFixed(4)});
-      /* compenseer hoogte na scale zodat onderkant niet overlapt met legend */
       margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
+    }
+    body[data-scale="none"] .gantt-scale { transform: none; }
+    body[data-scale="standard"] .gantt-scale {
+      transform: scale(${Math.min(1, fitScale * 1.15).toFixed(4)});
+      margin-bottom: ${Math.max(0, (1 - Math.min(1, fitScale * 1.15)) * 100)}px;
     }
   }
   table.gantt {
