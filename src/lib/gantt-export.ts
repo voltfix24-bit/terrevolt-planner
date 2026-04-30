@@ -51,6 +51,36 @@ export interface GanttWeek {
   jaar: number;
 }
 
+/**
+ * Documentvarianten voor de export. Elk preset bevat consistente bedrijfsnaam,
+ * titelopmaak, accent-kleur en footer-tekst — toegepast op ALLE pagina's
+ * (fixed page-header en page-footer) zodat de corporate stijl overal hetzelfde is.
+ */
+export type GanttDocumentVariant =
+  | "terrevolt"          // Default: blauw accent, "Planning Terrevolt {jaar}"
+  | "internal-memo"      // Donkergrijs accent, compactere titel
+  | "client-deliverable" // Groen accent, formele "Project Schedule"
+  | "custom";            // Volledig vrij in te vullen via documentBranding
+
+export interface GanttDocumentBranding {
+  /** Bedrijfsnaam in titel (default per variant) */
+  bedrijfsnaam?: string;
+  /** Titel-template; ondersteunt placeholders {bedrijf} en {jaar} */
+  titelTemplate?: string;
+  /** Accent-kleur (hex) voor titel, header-onderlijn en project-row top-border */
+  accentKleur?: string;
+  /** Naam-label onder "Prepared By" */
+  preparedBy?: string;
+  /** Naam-label onder "Authorized By" */
+  authorizedBy?: string;
+  /** Prefix voor het Ref-nummer in de page-footer (default "PLAN") */
+  refPrefix?: string;
+  /** Copyright-tekst links in de page-footer; ondersteunt placeholder {jaar} */
+  copyright?: string;
+  /** Toon "Confidential Internal Document" badge in de page-footer */
+  toonConfidential?: boolean;
+}
+
 export interface GanttExportInput {
   titel: string;
   weken: GanttWeek[];
@@ -61,6 +91,72 @@ export interface GanttExportInput {
   monteurWeergave: GanttMonteurWeergave;
   /** Map van YYYY-MM-DD → feestdag-naam. Optioneel. */
   feestdagen?: Map<string, string>;
+  /** Documentvariant — bepaalt de huisstijl op iedere pagina. Default: "terrevolt". */
+  documentVariant?: GanttDocumentVariant;
+  /** Optionele branding-overrides; gecombineerd met de variant-defaults. */
+  documentBranding?: GanttDocumentBranding;
+}
+
+interface ResolvedBranding {
+  bedrijfsnaam: string;
+  titelTemplate: string;
+  accentKleur: string;
+  preparedBy: string;
+  authorizedBy: string;
+  refPrefix: string;
+  copyright: string;
+  toonConfidential: boolean;
+}
+
+const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
+  "terrevolt": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Planning {bedrijf} {jaar}",
+    accentKleur: "#004ac6",
+    preparedBy: "Project Planning Lead",
+    authorizedBy: "Operations Director",
+    refPrefix: "PLAN",
+    copyright: "© {jaar} Terrevolt — Operations Management",
+    toonConfidential: true,
+  },
+  "internal-memo": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Internal Planning Memo — {jaar}",
+    accentKleur: "#434655",
+    preparedBy: "Planning Coordinator",
+    authorizedBy: "Operations Manager",
+    refPrefix: "MEMO",
+    copyright: "© {jaar} Terrevolt — Internal use only",
+    toonConfidential: true,
+  },
+  "client-deliverable": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Project Schedule — {bedrijf} {jaar}",
+    accentKleur: "#15803d",
+    preparedBy: "Project Manager",
+    authorizedBy: "Client Representative",
+    refPrefix: "DEL",
+    copyright: "© {jaar} Terrevolt — Prepared for client review",
+    toonConfidential: false,
+  },
+  "custom": {
+    bedrijfsnaam: "Terrevolt",
+    titelTemplate: "Planning {bedrijf} {jaar}",
+    accentKleur: "#004ac6",
+    preparedBy: "Project Planning Lead",
+    authorizedBy: "Operations Director",
+    refPrefix: "PLAN",
+    copyright: "© {jaar} Terrevolt",
+    toonConfidential: true,
+  },
+};
+
+function resolveBranding(
+  variant: GanttDocumentVariant | undefined,
+  overrides: GanttDocumentBranding | undefined,
+): ResolvedBranding {
+  const base = VARIANT_DEFAULTS[variant ?? "terrevolt"];
+  return { ...base, ...(overrides ?? {}) };
 }
 
 function ymd(d: Date): string {
@@ -100,8 +196,9 @@ function projectLabel(p: GanttProject): string {
 }
 
 export function exportGanttPDF(input: GanttExportInput): void {
-  const { titel, weken, projecten, activiteiten, monteurs, cellen, monteurWeergave, feestdagen } = input;
+  const { titel, weken, projecten, activiteiten, monteurs, cellen, monteurWeergave, feestdagen, documentVariant, documentBranding } = input;
   const feestdagenMap = feestdagen ?? new Map<string, string>();
+  const branding = resolveBranding(documentVariant, documentBranding);
 
   if (weken.length === 0) {
     throw new Error("Geen weken geselecteerd");
@@ -319,6 +416,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
         ? "monteurs als initialen"
         : "monteurs met volledige naam";
 
+  // Render branding-strings (placeholders {bedrijf} en {jaar} invullen)
+  const fillTpl = (tpl: string) =>
+    tpl.replace(/\{bedrijf\}/g, branding.bedrijfsnaam).replace(/\{jaar\}/g, String(jaar));
+  const renderedTitle = fillTpl(branding.titelTemplate);
+  const renderedCopyright = fillTpl(branding.copyright);
+
   const html = `<!doctype html>
 <html lang="nl">
 <head>
@@ -327,6 +430,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <style>
   /* Page margins: top = ruimte voor fixed header (32mm), bottom = ruimte voor fixed footer (18mm).
      Marges zijn iets groter dan header/footer-hoogte zodat er nooit overlap met tabel is. */
+  /* Branding-kleur (variant-driven) — gebruikt door titel, header-line, project-row borders en toolbar */
+  :root { --accent: ${branding.accentKleur}; }
   @page { size: ${paperSize} landscape; margin: 36mm 12mm 22mm 12mm; }
   * { box-sizing: border-box; }
   html, body {
@@ -392,12 +497,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
   .doc-head {
     width: 100%;
     display: flex; justify-content: space-between; align-items: flex-end;
-    border-bottom: 2px solid #004ac6;
+    border-bottom: 2px solid var(--accent);
     padding: 0 0 6px 0;
     margin-bottom: 8px;
   }
   .doc-head .left .title {
-    color: #004ac6;
+    color: var(--accent);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -553,7 +658,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     color: #191b23;
     font-size: 11px;
     font-weight: 600;
-    border-top: 1.5px solid #004ac6;
+    border-top: 1.5px solid var(--accent);
     border-bottom: 1px solid #c3c6d7;
     border-right: 1px solid #c3c6d7;
     white-space: nowrap;
@@ -565,7 +670,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   tr.proj-row td.proj-spacer {
     background: #f0f0fb;
-    border-top: 1.5px solid #004ac6;
+    border-top: 1.5px solid var(--accent);
     border-bottom: 1px solid #c3c6d7;
     padding: 0;
     height: ${Math.round(ROW_H * 0.85)}px;
@@ -710,10 +815,10 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 12px;
   }
   .toolbar button {
-    background: #004ac6; color: #fff; border: 0; padding: 6px 14px;
+    background: var(--accent); color: #fff; border: 0; padding: 6px 14px;
     border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px;
   }
-  .toolbar button:hover { background: #003ea8; }
+  .toolbar button:hover { filter: brightness(0.9); }
   .toolbar label { color: #434655; font-weight: 600; }
   .toolbar select {
     border: 1px solid #c3c6d7; background: #fff; color: #191b23;
@@ -749,7 +854,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
   <div class="page-header">
     <div class="doc-head">
       <div class="left">
-        <div class="title">Planning Terrevolt ${jaar}</div>
+        <div class="title">${escHtml(renderedTitle)}</div>
         <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
       </div>
       <div class="right">
@@ -775,10 +880,10 @@ export function exportGanttPDF(input: GanttExportInput): void {
   <!-- FIXED PAGE FOOTER — compact, herhaalt op iedere geprinte pagina (1 regel) -->
   <div class="page-footer">
     <div class="doc-foot">
-      <div>© ${jaar} Corporate Operations Management System.</div>
+      <div>${escHtml(renderedCopyright)}</div>
       <div>
-        <span class="conf">Confidential Internal Document</span>
-        <span class="ref">Ref: PLAN-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
+        ${branding.toonConfidential ? `<span class="conf">Confidential Internal Document</span>` : ""}
+        <span class="ref">Ref: ${escHtml(branding.refPrefix)}-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
         <span class="ref pageinfo"></span>
       </div>
     </div>
@@ -811,11 +916,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
         <div class="signatures">
           <div class="sig-block">
             <div class="lbl">Prepared By</div>
-            <div class="name">Project Planning Lead</div>
+            <div class="name">${escHtml(branding.preparedBy)}</div>
           </div>
           <div class="sig-block">
             <div class="lbl">Authorized By</div>
-            <div class="name">Operations Director</div>
+            <div class="name">${escHtml(branding.authorizedBy)}</div>
           </div>
         </div>
       </div>
