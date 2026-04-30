@@ -138,15 +138,25 @@ export function exportGanttPDF(input: GanttExportInput): void {
     arr.sort((a, b) => (a.positie ?? 0) - (b.positie ?? 0)),
   );
 
-  // Layout consts (px)
-  const COL_PROJECT_W = 220;
-  const COL_ACT_W = 170;
-  const DAG_W = 30;
+  // Layout consts (px) — bij veel weken automatisch smaller maken zodat alles past
+  const totalDays = weken.length * 5;
+  // Schaal dagbreedte tussen 30 (weinig weken) en 14 (heel veel weken)
+  const DAG_W = weken.length <= 8 ? 30 : weken.length <= 14 ? 24 : weken.length <= 20 ? 19 : 15;
+  const COL_PROJECT_W = weken.length <= 14 ? 220 : 170;
+  const COL_ACT_W = weken.length <= 14 ? 170 : 130;
   const ROW_H = 26;
 
-  const totalDays = weken.length * 5;
   const gridW = totalDays * DAG_W;
   const sheetW = COL_PROJECT_W + COL_ACT_W + gridW;
+
+  // Kies papierformaat: A3 normaal, A2 bij heel brede planningen
+  const paperSize = weken.length <= 16 ? "A3" : "A2";
+  // Beschikbare breedte op pagina (mm) na marges (12mm aan beide kanten)
+  // A3 landscape = 420mm, A2 landscape = 594mm → bruikbaar 396 / 570
+  const pageWmm = paperSize === "A3" ? 396 : 570;
+  // 1mm ≈ 3.7795px. Schaalfactor zodat tabel altijd binnen pagina past.
+  const pagePx = pageWmm * 3.7795;
+  const fitScale = sheetW > pagePx ? pagePx / sheetW : 1;
 
   // Build header rows
   const weekHeader = weken
@@ -267,7 +277,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <meta charset="utf-8" />
 <title>${escHtml(titel)}</title>
 <style>
-  @page { size: A3 landscape; margin: 12mm; }
+  @page { size: ${paperSize} landscape; margin: 12mm; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
@@ -282,11 +292,22 @@ export function exportGanttPDF(input: GanttExportInput): void {
   h1 { font-size: 18px; margin: 0 0 2px 0; font-weight: 700; letter-spacing: -0.01em; }
   .sub { font-size: 11px; color: #475569; }
   .meta { font-size: 10px; color: #64748b; text-align: right; }
+  .gantt-scale {
+    width: ${sheetW}px;
+    transform-origin: top left;
+    margin: 0 auto;
+  }
+  @media print {
+    .gantt-scale {
+      transform: scale(${fitScale.toFixed(4)});
+      /* compenseer hoogte na scale zodat onderkant niet overlapt met legend */
+      margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
+    }
+  }
   table.gantt {
     border-collapse: collapse;
     table-layout: fixed;
     width: ${sheetW}px;
-    margin: 0 auto;
   }
   table.gantt th, table.gantt td {
     border: 1px solid #cbd5e1;
@@ -389,7 +410,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <body>
   <div class="toolbar">
     <button onclick="window.print()">Afdrukken / opslaan als PDF</button>
-    <span class="hint">Tip: kies in de printdialoog "Opslaan als PDF" en A3 liggend voor het beste resultaat.</span>
+    <span class="hint">Tip: kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend voor het beste resultaat. Schakel "Aanpassen aan pagina" / "Schalen: standaard" in.</span>
   </div>
   <div class="wrap">
     <div class="head">
@@ -399,18 +420,20 @@ export function exportGanttPDF(input: GanttExportInput): void {
       </div>
       <div class="meta">Gegenereerd op ${new Date().toLocaleString("nl-NL")}</div>
     </div>
-    <table class="gantt">
-      <thead>
-        <tr>
-          <th rowspan="2" class="proj-h">Project</th>
-          <th rowspan="2" class="act-h">Activiteit</th>
-          ${weekHeader}
-        </tr>
-        <tr>${dagHeader}</tr>
-      </thead>
-      <tbody>${bodyRows}</tbody>
-    </table>
-    <div class="legend">${legend}</div>
+    <div class="gantt-scale">
+      <table class="gantt">
+        <thead>
+          <tr>
+            <th rowspan="2" class="proj-h">Project</th>
+            <th rowspan="2" class="act-h">Activiteit</th>
+            ${weekHeader}
+          </tr>
+          <tr>${dagHeader}</tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+      <div class="legend">${legend}</div>
+    </div>
   </div>
 </body>
 </html>`;
