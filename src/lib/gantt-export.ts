@@ -140,35 +140,42 @@ export function exportGanttPDF(input: GanttExportInput): void {
 
   // Layout consts (px) — bij veel weken automatisch smaller maken zodat alles past
   const totalDays = weken.length * 5;
-  // Schaal dagbreedte tussen 30 (weinig weken) en 14 (heel veel weken)
-  const DAG_W = weken.length <= 8 ? 30 : weken.length <= 14 ? 24 : weken.length <= 20 ? 19 : 15;
-  const COL_PROJECT_W = weken.length <= 14 ? 220 : 170;
-  const COL_ACT_W = weken.length <= 14 ? 170 : 130;
-  const ROW_H = 26;
+  // Schaal dagbreedte tussen 32 (weinig weken) en 14 (heel veel weken)
+  const DAG_W = weken.length <= 6 ? 34 : weken.length <= 10 ? 28 : weken.length <= 14 ? 22 : weken.length <= 20 ? 18 : 14;
+  // Eén gecombineerde "Project & Activity" kolom
+  const COL_LABEL_W = weken.length <= 14 ? 320 : 240;
+  const ROW_H = 30;
 
   const gridW = totalDays * DAG_W;
-  const sheetW = COL_PROJECT_W + COL_ACT_W + gridW;
+  const sheetW = COL_LABEL_W + gridW;
 
   // Kies papierformaat: A3 normaal, A2 bij heel brede planningen
   const paperSize = weken.length <= 16 ? "A3" : "A2";
-  // Beschikbare breedte op pagina (mm) na marges (12mm aan beide kanten)
-  // A3 landscape = 420mm, A2 landscape = 594mm → bruikbaar 396 / 570
   const pageWmm = paperSize === "A3" ? 396 : 570;
-  // 1mm ≈ 3.7795px. Schaalfactor zodat tabel altijd binnen pagina past.
   const pagePx = pageWmm * 3.7795;
   const fitScale = sheetW > pagePx ? pagePx / sheetW : 1;
 
-  // Build header rows
+  // Reporting period (eerste maandag t/m laatste vrijdag)
+  const firstWeek = weken[0];
+  const lastWeek = weken[weken.length - 1];
+  const periodStart = getMondayOfWeek(firstWeek.week_nr, firstWeek.jaar);
+  const periodEnd = new Date(getMondayOfWeek(lastWeek.week_nr, lastWeek.jaar));
+  periodEnd.setDate(periodEnd.getDate() + 4);
+  const fmtLong = (d: Date) =>
+    d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const today = new Date();
+  const todayLabel = today.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const jaar = lastWeek.jaar;
+  const weekRangeLabel =
+    firstWeek.week_nr === lastWeek.week_nr
+      ? `Week ${firstWeek.week_nr}`
+      : `Week ${firstWeek.week_nr}-${lastWeek.week_nr}`;
+
+  // Build header rows — week label boven, dagen eronder
   const weekHeader = weken
-    .map((w) => {
-      const monday = getMondayOfWeek(w.week_nr, w.jaar);
-      const friday = new Date(monday);
-      friday.setDate(monday.getDate() + 4);
-      return `<th colspan="5" class="wk">
-        <div class="wk-nr">Week ${w.week_nr}</div>
-        <div class="wk-rng">${formatDate(monday)} – ${formatDate(friday)}</div>
-      </th>`;
-    })
+    .map(
+      (w) => `<th colspan="5" class="wk">WEEK ${w.week_nr}</th>`,
+    )
     .join("");
 
   const dagHeader = weken
@@ -181,35 +188,24 @@ export function exportGanttPDF(input: GanttExportInput): void {
         const feestNaam = feestdagenMap.get(ymd(dt));
         const cls = ["dag", isLastOfWeek ? "end-wk" : "", feestNaam ? "feestdag-h" : ""].filter(Boolean).join(" ");
         const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
-        const feestRow = feestNaam
-          ? `<div class="dag-feest" title="${escHtml(feestNaam)}">${escHtml(feestNaam.length > 6 ? feestNaam.slice(0, 6) + "…" : feestNaam)}</div>`
-          : "";
-        return `<th class="${cls}"${tip}>
-          <div class="dag-lbl">${d}</div>
-          <div class="dag-dt">${formatDate(dt)}</div>
-          ${feestRow}
-        </th>`;
+        return `<th class="${cls}"${tip}>${d}</th>`;
       }).join(""),
     )
     .join("");
 
-  // Build body rows
+  // Build body rows — corporate stijl: project header rij + activiteit rijen
   let bodyRows = "";
   if (zichtbareProjecten.length === 0) {
-    bodyRows = `<tr><td colspan="${2 + totalDays}" class="empty">Geen geplande activiteiten in de geselecteerde weken.</td></tr>`;
+    bodyRows = `<tr><td colspan="${1 + totalDays}" class="empty">Geen geplande activiteiten in de geselecteerde weken.</td></tr>`;
   } else {
-    zichtbareProjecten.forEach((p, pi) => {
+    zichtbareProjecten.forEach((p) => {
       const acts = actsByProject.get(p.id) ?? [];
       if (acts.length === 0) return;
-      const firstRowClass = pi === 0 ? "" : " new-project";
-      acts.forEach((a, ai) => {
-        const isFirst = ai === 0;
-        const projectCell = isFirst
-          ? `<td rowspan="${acts.length}" class="proj">
-              <div class="proj-title">${escHtml(projectLabel(p))}</div>
-              ${p.wv_naam && (p.case_nummer || p.station_naam) ? `<div class="proj-sub">${escHtml(p.wv_naam)}</div>` : ""}
-            </td>`
-          : "";
+      // Project group-header rij over volle breedte
+      bodyRows += `<tr class="proj-row">
+        <td colspan="${1 + totalDays}" class="proj-cell">${escHtml(projectLabel(p))}</td>
+      </tr>`;
+      acts.forEach((a) => {
         const dayCells = weken
           .map((w) =>
             DAG_LABELS.map((_, di) => {
@@ -237,12 +233,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
                   label = namen.join(", ");
                 }
               }
-              return `<td class="cell filled${endCls}${feestCls}"${tip} style="background:${bg};color:${fg};">${escHtml(label)}</td>`;
+              // Inner block geeft het corporate "blokje in cel" effect
+              return `<td class="cell${endCls}${feestCls}"${tip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
             }).join(""),
           )
           .join("");
-        bodyRows += `<tr class="row${isFirst ? firstRowClass : ""}">
-          ${projectCell}
+        bodyRows += `<tr class="act-row">
           <td class="act">${escHtml(a.naam)}</td>
           ${dayCells}
         </tr>`;
@@ -250,17 +246,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
     });
   }
 
-  // Legend — vereenvoudigd: 3 categorieën + feestdag indicator
-  const legendItems: Array<{ hex: string; naam: string; pattern?: boolean }> = [
+  // Status legend — corporate stijl: 3 hoofdcategorieën
+  const legendItems: Array<{ hex: string; naam: string }> = [
     { hex: "#1d4ed8", naam: "Montage" },
     { hex: "#fdcb35", naam: "Schakelen" },
-    { hex: "#65a30d", naam: "Diverse" },
-    { hex: "#94a3b8", naam: "Feestdag / vrije dag", pattern: true },
+    { hex: "#15803d", naam: "Uitvoering/Transport" },
   ];
   const legend = legendItems
     .map(
       (c) =>
-        `<div class="lg-item"><span class="lg-dot${c.pattern ? " lg-dot-feest" : ""}" style="background:${c.hex}"></span>${escHtml(c.naam)}</div>`,
+        `<div class="lg-item"><span class="lg-dot" style="background:${c.hex}"></span><span class="lg-lbl">${escHtml(c.naam)}</span></div>`,
     )
     .join("");
 
@@ -277,158 +272,289 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <meta charset="utf-8" />
 <title>${escHtml(titel)}</title>
 <style>
-  @page { size: ${paperSize} landscape; margin: 12mm; }
+  @page { size: ${paperSize} landscape; margin: 14mm 14mm 14mm 14mm; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
-    background: #ffffff; color: #0b1220;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif;
+    background: #ffffff; color: #191b23;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     font-size: 11px;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .wrap { padding: 8px 0 24px 0; overflow: hidden; }
-  .head {
-    display: flex; justify-content: space-between; align-items: flex-end;
-    width: ${sheetW}px;
-    margin: 0 0 8px 0;
-    padding: 0 2px;
-  }
-  h1 { font-size: 18px; margin: 0 0 2px 0; font-weight: 700; letter-spacing: -0.01em; }
-  .sub { font-size: 11px; color: #475569; }
-  .meta { font-size: 10px; color: #64748b; text-align: right; }
+  .wrap { padding: 4px 0 24px 0; overflow: hidden; }
   .gantt-scale {
     width: ${sheetW}px;
     transform-origin: top left;
     margin: 0 auto;
   }
-  /* Schermweergave: standaard fit-to-page zodat preview overeenkomt met print */
-  body[data-scale="fit"] .gantt-scale {
-    transform: scale(${fitScale.toFixed(4)});
-    margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
-  }
-  body[data-scale="none"] .gantt-scale {
-    transform: none;
-  }
-  /* "Standaard" = max 1.0, maar nooit groter dan wat past op de pagina (= fitScale) */
+  body[data-scale="fit"] .gantt-scale,
   body[data-scale="standard"] .gantt-scale {
     transform: scale(${fitScale.toFixed(4)});
     margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
   }
+  body[data-scale="none"] .gantt-scale { transform: none; }
   @media print {
-    body[data-scale="fit"] .gantt-scale {
-      transform: scale(${fitScale.toFixed(4)});
-      margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
-    }
-    body[data-scale="none"] .gantt-scale { transform: none; }
+    body[data-scale="fit"] .gantt-scale,
     body[data-scale="standard"] .gantt-scale {
       transform: scale(${fitScale.toFixed(4)});
       margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
     }
+    body[data-scale="none"] .gantt-scale { transform: none; }
   }
+
+  /* ========== Document header ========== */
+  .doc-head {
+    width: ${sheetW}px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid #004ac6;
+    padding: 0 0 8px 0;
+    margin-bottom: 14px;
+  }
+  .doc-head .left .title {
+    color: #004ac6;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .doc-head .left .sub {
+    color: #434655;
+    font-size: 10.5px;
+    margin-top: 2px;
+  }
+  .doc-head .right {
+    text-align: right;
+    color: #434655;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .doc-head .right b { color: #191b23; font-weight: 600; }
+
+  /* ========== Reporting period block ========== */
+  .meta-grid {
+    width: ${sheetW}px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 24px;
+    margin-bottom: 14px;
+  }
+  .meta-grid .lbl {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #737686;
+  }
+  .meta-grid .val {
+    font-size: 12px; color: #191b23; font-weight: 500;
+  }
+  .meta-grid .right { text-align: right; }
+
+  /* ========== Status legend ========== */
+  .legend-row {
+    width: ${sheetW}px;
+    display: flex; align-items: center; gap: 18px;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    font-size: 11px;
+  }
+  .legend-row .lg-title {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #737686;
+    margin-right: 4px;
+  }
+  .lg-item { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-dot {
+    width: 14px; height: 14px; border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.10);
+    display: inline-block;
+  }
+  .lg-lbl { color: #191b23; font-size: 11px; }
+
+  /* ========== Gantt table ========== */
   table.gantt {
     border-collapse: collapse;
     table-layout: fixed;
     width: ${sheetW}px;
+    border: 1px solid #c3c6d7;
   }
   table.gantt th, table.gantt td {
-    border: 1px solid #cbd5e1;
+    border: 1px solid #c3c6d7;
     padding: 0;
     text-align: center;
     vertical-align: middle;
     font-size: 10px;
     overflow: hidden;
   }
-  thead th { background: #f1f5f9; font-weight: 700; color: #0b1220; }
-  thead th.proj-h { width: ${COL_PROJECT_W}px; text-align: left; padding: 4px 8px; }
-  thead th.act-h { width: ${COL_ACT_W}px; text-align: left; padding: 4px 8px; }
-  thead th.wk { padding: 4px 2px; border-bottom: 1px solid #94a3b8; }
-  thead th.wk .wk-nr { font-size: 10px; font-weight: 800; }
-  thead th.wk .wk-rng { font-size: 9px; color: #475569; font-weight: 500; }
-  thead th.dag { width: ${DAG_W}px; padding: 2px 0; background: #f8fafc; }
-  thead th.dag .dag-lbl { font-size: 9px; font-weight: 700; }
-  thead th.dag .dag-dt  { font-size: 8px;  color: #64748b; font-weight: 500; }
-  thead th.dag.end-wk, td.cell.end-wk { border-right: 1.5px solid #475569; }
-
-  td.proj { text-align: left; padding: 4px 8px; vertical-align: top; background: #f8fafc; }
-  td.proj .proj-title { font-weight: 700; font-size: 11px; color: #0b1220; line-height: 1.2; }
-  td.proj .proj-sub   { font-size: 9px; color: #64748b; margin-top: 2px; }
-  td.act { text-align: left; padding: 4px 8px; font-size: 10px; color: #1e293b; background: #ffffff; }
-  tr.new-project td { border-top: 2px solid #475569; }
-
-  td.cell { height: ${ROW_H}px; }
-  td.cell.empty-cell { background: #ffffff; }
-  td.cell.filled {
+  thead th {
+    background: #ededf9;
+    color: #191b23;
+    font-weight: 700;
+  }
+  thead th.label-h {
+    width: ${COL_LABEL_W}px;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #434655;
+  }
+  thead th.wk {
+    padding: 6px 2px;
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    color: #434655;
+    border-bottom: 1px solid #c3c6d7;
+  }
+  thead th.dag {
+    width: ${DAG_W}px;
+    padding: 4px 0;
+    background: #f3f3fe;
     font-size: 9px;
     font-weight: 700;
-    line-height: 1.05;
-    padding: 1px 2px;
-    word-break: break-word;
+    color: #434655;
+    text-transform: uppercase;
   }
-  td.empty {
-    padding: 24px; text-align: center; color: #64748b; font-style: italic;
-    background: #f8fafc;
-  }
-
-  /* Feestdag / vrije dag — diagonale grijze streep over hele kolom */
+  thead th.dag.end-wk, td.cell.end-wk { border-right: 1.5px solid #737686; }
   thead th.dag.feestdag-h {
     background: repeating-linear-gradient(
-      45deg, #e2e8f0, #e2e8f0 3px, #f1f5f9 3px, #f1f5f9 6px
+      45deg, #e1e2ed, #e1e2ed 3px, #f3f3fe 3px, #f3f3fe 6px
     );
   }
-  thead th.dag .dag-feest {
-    font-size: 7px; font-weight: 700; color: #475569;
-    margin-top: 1px; line-height: 1; letter-spacing: 0.02em;
+
+  /* Project group header */
+  tr.proj-row td.proj-cell {
+    text-align: left;
+    padding: 7px 12px;
+    background: #f0f0fb;
+    color: #191b23;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-top: 1px solid #c3c6d7;
+    border-bottom: 1px solid #c3c6d7;
   }
+
+  /* Activity row */
+  tr.act-row td.act {
+    text-align: left;
+    padding: 6px 12px 6px 28px;
+    background: #ffffff;
+    color: #191b23;
+    font-size: 10.5px;
+    font-weight: 400;
+  }
+
+  td.cell {
+    height: ${ROW_H}px;
+    background: #ffffff;
+    padding: 3px;
+  }
+  td.cell .block {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    font-size: 8.5px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px;
+    word-break: break-word;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  td.cell.empty-cell .block { display: none; }
+  td.empty {
+    padding: 24px; text-align: center; color: #737686; font-style: italic;
+    background: #f3f3fe;
+  }
+
   td.cell.feestdag {
     background-image: repeating-linear-gradient(
-      45deg, rgba(100,116,139,0.18), rgba(100,116,139,0.18) 3px,
-      rgba(148,163,184,0.10) 3px, rgba(148,163,184,0.10) 6px
-    );
-  }
-  /* Wanneer er ook een gevulde activiteit op een feestdag staat: stripes bovenop kleur */
-  td.cell.filled.feestdag {
-    background-image: repeating-linear-gradient(
-      45deg, rgba(0,0,0,0.18), rgba(0,0,0,0.18) 3px,
-      rgba(0,0,0,0) 3px, rgba(0,0,0,0) 6px
+      45deg, rgba(115,118,134,0.14), rgba(115,118,134,0.14) 3px,
+      rgba(195,198,215,0.10) 3px, rgba(195,198,215,0.10) 6px
     );
   }
 
-  .legend {
-    margin: 12px 0 0 0;
+  /* ========== Annotations footer ========== */
+  .annotations {
     width: ${sheetW}px;
-    display: flex; flex-wrap: wrap; gap: 8px 14px;
-    font-size: 9px; color: #334155;
-    padding: 8px 2px 0 2px;
-    border-top: 1px solid #cbd5e1;
+    margin-top: 18px;
+    padding: 12px 16px;
+    background: #f3f3fe;
+    border: 1px solid #c3c6d7;
+    border-radius: 4px;
   }
-  .lg-item { display: inline-flex; align-items: center; gap: 4px; }
-  .lg-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.15); display: inline-block; }
-  .lg-dot-feest {
-    background-image: repeating-linear-gradient(
-      45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
-    ) !important;
+  .annotations .a-title {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #737686;
+    margin-bottom: 6px;
+  }
+  .annotations ul { margin: 0; padding-left: 18px; }
+  .annotations li {
+    font-size: 10.5px; color: #191b23;
+    margin: 3px 0; line-height: 1.4;
   }
 
+  /* ========== Signatures ========== */
+  .signatures {
+    width: ${sheetW}px;
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 32px;
+  }
+  .sig-block {
+    border-top: 1px solid #434655;
+    padding-top: 6px;
+  }
+  .sig-block .lbl {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #737686;
+    margin-bottom: 2px;
+  }
+  .sig-block .name {
+    font-size: 11px; color: #191b23; font-weight: 600;
+  }
+
+  /* ========== Document footer ========== */
+  .doc-foot {
+    width: ${sheetW}px;
+    margin-top: 18px;
+    padding-top: 8px;
+    border-top: 1px solid #c3c6d7;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 9px;
+    color: #737686;
+    letter-spacing: 0.05em;
+  }
+  .doc-foot .conf {
+    color: #ba1a1a;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .doc-foot .ref { color: #434655; margin-left: 18px; }
+
+  /* ========== Toolbar (alleen scherm) ========== */
   .toolbar {
     position: sticky; top: 0; z-index: 10;
-    background: #fff; border-bottom: 1px solid #e2e8f0;
+    background: #fff; border-bottom: 1px solid #e1e2ed;
     padding: 8px 12px;
     display: flex; gap: 8px; align-items: center;
     font-size: 12px;
   }
   .toolbar button {
-    background: #0b1220; color: #fff; border: 0; padding: 6px 12px;
-    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;
+    background: #004ac6; color: #fff; border: 0; padding: 6px 14px;
+    border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px;
   }
-  .toolbar button:hover { background: #1e293b; }
-  .toolbar label { color: #334155; font-weight: 600; }
+  .toolbar button:hover { background: #003ea8; }
+  .toolbar label { color: #434655; font-weight: 600; }
   .toolbar select {
-    border: 1px solid #cbd5e1; background: #fff; color: #0b1220;
-    padding: 5px 8px; border-radius: 6px; font-size: 12px; font-weight: 500;
+    border: 1px solid #c3c6d7; background: #fff; color: #191b23;
+    padding: 5px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;
     cursor: pointer;
   }
-  .toolbar .hint { color: #64748b; }
+  .toolbar .hint { color: #737686; }
   @media print {
     .toolbar { display: none; }
     .wrap { padding-top: 0; }
@@ -448,25 +574,72 @@ export function exportGanttPDF(input: GanttExportInput): void {
   </div>
   <div class="wrap">
     <div class="gantt-scale">
-      <div class="head">
-        <div>
-          <h1>${escHtml(titel)}</h1>
+
+      <div class="doc-head">
+        <div class="left">
+          <div class="title">Planning Gantt — ${jaar}</div>
           <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
         </div>
-        <div class="meta"></div>
+        <div class="right">
+          <div><b>Date:</b> ${todayLabel}</div>
+        </div>
       </div>
+
+      <div class="meta-grid">
+        <div>
+          <div class="lbl">Reporting Period</div>
+          <div class="val">${fmtLong(periodStart)} – ${fmtLong(periodEnd)} (${weekRangeLabel})</div>
+        </div>
+        <div class="right">
+          <div class="lbl">Document</div>
+          <div class="val">${escHtml(titel)}</div>
+        </div>
+      </div>
+
+      <div class="legend-row">
+        <span class="lg-title">Status Legend:</span>
+        ${legend}
+      </div>
+
       <table class="gantt">
         <thead>
           <tr>
-            <th rowspan="2" class="proj-h">Project</th>
-            <th rowspan="2" class="act-h">Activiteit</th>
+            <th rowspan="2" class="label-h">Project &amp; Activity</th>
             ${weekHeader}
           </tr>
           <tr>${dagHeader}</tr>
         </thead>
         <tbody>${bodyRows}</tbody>
       </table>
-      <div class="legend">${legend}</div>
+
+      <div class="annotations">
+        <div class="a-title">Planning Annotations</div>
+        <ul>
+          <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
+          <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
+          <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
+        </ul>
+      </div>
+
+      <div class="signatures">
+        <div class="sig-block">
+          <div class="lbl">Prepared By</div>
+          <div class="name">Project Planning Lead</div>
+        </div>
+        <div class="sig-block">
+          <div class="lbl">Authorized By</div>
+          <div class="name">Operations Director</div>
+        </div>
+      </div>
+
+      <div class="doc-foot">
+        <div>© ${jaar} Corporate Operations Management System.</div>
+        <div>
+          <span class="conf">Confidential Internal Document</span>
+          <span class="ref">Ref: PLAN-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </body>
