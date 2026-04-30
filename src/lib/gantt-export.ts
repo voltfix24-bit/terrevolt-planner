@@ -652,7 +652,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     color: #191b23;
     font-size: 11px;
     font-weight: 600;
-    border-top: 1.5px solid #004ac6;
+    border-top: 1.5px solid var(--accent);
     border-bottom: 1px solid #c3c6d7;
     border-right: 1px solid #c3c6d7;
     white-space: nowrap;
