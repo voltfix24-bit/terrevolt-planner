@@ -880,10 +880,10 @@ export function exportGanttPDF(input: GanttExportInput): void {
   <!-- FIXED PAGE FOOTER — compact, herhaalt op iedere geprinte pagina (1 regel) -->
   <div class="page-footer">
     <div class="doc-foot">
-      <div>© ${jaar} Corporate Operations Management System.</div>
+      <div>${escHtml(renderedCopyright)}</div>
       <div>
-        <span class="conf">Confidential Internal Document</span>
-        <span class="ref">Ref: PLAN-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
+        ${branding.toonConfidential ? `<span class="conf">Confidential Internal Document</span>` : ""}
+        <span class="ref">Ref: ${escHtml(branding.refPrefix)}-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
         <span class="ref pageinfo"></span>
       </div>
     </div>
