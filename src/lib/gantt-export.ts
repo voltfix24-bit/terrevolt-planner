@@ -210,9 +210,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
     zichtbareProjecten.forEach((p) => {
       const acts = actsByProject.get(p.id) ?? [];
       if (acts.length === 0) return;
-      // Project group-header rij over volle breedte
+      // Project group-header rij: label-kolom + grid-overspan apart, zodat de
+      // grid-uitlijning gegarandeerd hetzelfde is als bij activiteit-rijen.
       bodyRows += `<tr class="proj-row">
-        <td colspan="${1 + totalDays}" class="proj-cell">${escHtml(projectLabel(p))}</td>
+        <td class="proj-cell">${escHtml(projectLabel(p))}</td>
+        <td colspan="${totalDays}" class="proj-spacer"></td>
       </tr>`;
       acts.forEach((a) => {
         const dayCells = weken
