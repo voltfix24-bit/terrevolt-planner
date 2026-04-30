@@ -325,8 +325,9 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <meta charset="utf-8" />
 <title>${escHtml(titel)}</title>
 <style>
-  /* Royale top/bottom margins zodat fixed header/footer ruimte hebben op elke pagina */
-  @page { size: ${paperSize} landscape; margin: 58mm 14mm 56mm 14mm; }
+  /* Page margins: top = ruimte voor fixed header (32mm), bottom = ruimte voor fixed footer (18mm).
+     Marges zijn iets groter dan header/footer-hoogte zodat er nooit overlap met tabel is. */
+  @page { size: ${paperSize} landscape; margin: 36mm 12mm 22mm 12mm; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
@@ -337,20 +338,25 @@ export function exportGanttPDF(input: GanttExportInput): void {
     print-color-adjust: exact;
   }
 
-  /* ========== Fixed page header (herhaalt op elke pagina bij print) ========== */
+  /* ========== Fixed page header (herhaalt op elke pagina bij print) ==========
+     Hoogte 32mm < page-top-margin 36mm → 4mm safety gap, geen overlap mogelijk. */
   .page-header {
     position: fixed;
-    top: -54mm;
+    top: -34mm;
     left: 0; right: 0;
-    height: 50mm;
+    height: 32mm;
     padding: 0;
+    overflow: hidden;
   }
+  /* Compacte fixed page footer: alleen confidential-line + paginanummer.
+     Hoogte 18mm < page-bottom-margin 22mm → 4mm safety gap. */
   .page-footer {
     position: fixed;
-    bottom: -52mm;
+    bottom: -20mm;
     left: 0; right: 0;
-    height: 48mm;
+    height: 18mm;
     padding: 0;
+    overflow: hidden;
   }
 
   /* Op scherm: laat header/footer in normale flow staan zodat je een preview ziet */
@@ -466,7 +472,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   /* Belangrijk: thead herhaalt op iedere pagina bij print */
   table.gantt thead { display: table-header-group; }
-  table.gantt tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Activiteit-rijen mogen niet midden over een pagina-einde lopen */
+  table.gantt tbody tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Een projectkop mag nooit als laatste rij op een pagina staan zonder activiteiten eronder */
+  table.gantt tr.proj-row { page-break-after: avoid; break-after: avoid; }
+  /* De eerste activiteit-rij van een project blijft bij de projectkop */
+  table.gantt tr.proj-row + tr.act-row { page-break-before: avoid; break-before: avoid; }
   table.gantt th, table.gantt td {
     border: 1px solid #c3c6d7;
     padding: 0;
@@ -614,10 +625,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
     );
   }
 
-  /* ========== Annotations footer ========== */
+  /* ========== End-block (alleen op laatste pagina, na de tabel) ==========
+     Wordt als één geheel bewaard zodat het nooit afgekapt over een page-break valt. */
+  .end-block {
+    margin-top: 14px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
   .annotations {
     width: 100%;
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0;
     padding: 8px 12px;
     background: #f3f3fe;
     border: 1px solid #c3c6d7;
@@ -633,8 +650,6 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 10px; color: #191b23;
     margin: 2px 0; line-height: 1.35;
   }
-
-  /* ========== Signatures ========== */
   .signatures {
     width: 100%;
     margin: 6px 0 0 0;
@@ -655,14 +670,16 @@ export function exportGanttPDF(input: GanttExportInput): void {
     font-size: 10.5px; color: #191b23; font-weight: 600;
   }
 
-  /* ========== Document footer line ========== */
+  /* ========== Compacte fixed page footer (op elke pagina) ==========
+     Slechts 1 regel: confidential + ref + paginanummer. Past binnen 18mm hoogte. */
   .doc-foot {
     width: 100%;
-    margin-top: 8px;
-    padding-top: 6px;
+    height: 100%;
+    padding: 4px 14mm 0 14mm;
+    margin: 0;
     border-top: 1px solid #c3c6d7;
     display: flex; justify-content: space-between; align-items: center;
-    font-size: 9px;
+    font-size: 8.5px;
     color: #737686;
     letter-spacing: 0.05em;
   }
@@ -672,8 +689,17 @@ export function exportGanttPDF(input: GanttExportInput): void {
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  .doc-foot .ref { color: #434655; margin-left: 18px; }
-  .doc-foot .pageinfo { color: #434655; }
+  .doc-foot .ref { color: #434655; margin-left: 14px; }
+  .doc-foot .pageinfo { color: #434655; font-weight: 600; }
+  /* Paginanummer via CSS counter (alleen in print) */
+  @media print {
+    .doc-foot .pageinfo::after {
+      content: "Pagina " counter(page);
+    }
+  }
+  @media screen {
+    .doc-foot .pageinfo::after { content: "Pagina 1"; }
+  }
 
   /* ========== Toolbar (alleen scherm) ========== */
   .toolbar {
@@ -746,36 +772,19 @@ export function exportGanttPDF(input: GanttExportInput): void {
     </div>
   </div>
 
-  <!-- FIXED PAGE FOOTER — herhaalt op elke geprinte pagina -->
+  <!-- FIXED PAGE FOOTER — compact, herhaalt op iedere geprinte pagina (1 regel) -->
   <div class="page-footer">
-    <div class="annotations">
-      <div class="a-title">Planning Annotations</div>
-      <ul>
-        <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
-        <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
-        <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
-      </ul>
-    </div>
-    <div class="signatures">
-      <div class="sig-block">
-        <div class="lbl">Prepared By</div>
-        <div class="name">Project Planning Lead</div>
-      </div>
-      <div class="sig-block">
-        <div class="lbl">Authorized By</div>
-        <div class="name">Operations Director</div>
-      </div>
-    </div>
     <div class="doc-foot">
       <div>© ${jaar} Corporate Operations Management System.</div>
       <div>
         <span class="conf">Confidential Internal Document</span>
         <span class="ref">Ref: PLAN-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
+        <span class="ref pageinfo"></span>
       </div>
     </div>
   </div>
 
-  <!-- MAIN CONTENT — alleen de tabel; thead herhaalt automatisch -->
+  <!-- MAIN CONTENT — tabel; thead herhaalt automatisch op elke pagina -->
   <div class="wrap">
     <div class="gantt-scale">
       <table class="gantt">
@@ -788,6 +797,28 @@ export function exportGanttPDF(input: GanttExportInput): void {
         </thead>
         <tbody>${bodyRows}</tbody>
       </table>
+
+      <!-- END-BLOCK — alleen op laatste pagina (na de tabel), bewaard als één geheel -->
+      <div class="end-block">
+        <div class="annotations">
+          <div class="a-title">Planning Annotations</div>
+          <ul>
+            <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
+            <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
+            <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
+          </ul>
+        </div>
+        <div class="signatures">
+          <div class="sig-block">
+            <div class="lbl">Prepared By</div>
+            <div class="name">Project Planning Lead</div>
+          </div>
+          <div class="sig-block">
+            <div class="lbl">Authorized By</div>
+            <div class="name">Operations Director</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </body>
