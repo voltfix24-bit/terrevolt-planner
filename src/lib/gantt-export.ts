@@ -140,11 +140,11 @@ export function exportGanttPDF(input: GanttExportInput): void {
 
   // Layout consts (px) — bij veel weken automatisch smaller maken zodat alles past
   const totalDays = weken.length * 5;
-  // Schaal dagbreedte tussen 30 (weinig weken) en 14 (heel veel weken)
-  const DAG_W = weken.length <= 8 ? 30 : weken.length <= 14 ? 24 : weken.length <= 20 ? 19 : 15;
-  const COL_PROJECT_W = weken.length <= 14 ? 220 : 170;
-  const COL_ACT_W = weken.length <= 14 ? 170 : 130;
-  const ROW_H = 26;
+  // Schaal dagbreedte tussen 32 (weinig weken) en 14 (heel veel weken)
+  const DAG_W = weken.length <= 6 ? 34 : weken.length <= 10 ? 28 : weken.length <= 14 ? 22 : weken.length <= 20 ? 18 : 14;
+  // Eén gecombineerde "Project & Activity" kolom
+  const COL_LABEL_W = weken.length <= 14 ? 320 : 240;
+  const ROW_H = 30;
 
   const gridW = totalDays * DAG_W;
   const sheetW = COL_PROJECT_W + COL_ACT_W + gridW;
