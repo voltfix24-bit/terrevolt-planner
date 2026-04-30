@@ -664,7 +664,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   tr.proj-row td.proj-spacer {
     background: #f0f0fb;
-    border-top: 1.5px solid #004ac6;
+    border-top: 1.5px solid var(--accent);
     border-bottom: 1px solid #c3c6d7;
     padding: 0;
     height: ${Math.round(ROW_H * 0.85)}px;
