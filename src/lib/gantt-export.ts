@@ -558,14 +558,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
       45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
     ) !important;
   }
-  .lg-lbl { color: #191b23; font-size: 10px; }
   .lg-empty { font-size: 10px; color: #737686; font-style: italic; }
 
-  // Render branding-strings (placeholders {bedrijf} en {jaar} invullen)
-  const fillTpl = (tpl: string) =>
-    tpl.replace(/\{bedrijf\}/g, branding.bedrijfsnaam).replace(/\{jaar\}/g, String(jaar));
-  const renderedTitle = fillTpl(branding.titelTemplate);
-  const renderedCopyright = fillTpl(branding.copyright);
 
   /* ========== Gantt table ========== */
   table.gantt {
