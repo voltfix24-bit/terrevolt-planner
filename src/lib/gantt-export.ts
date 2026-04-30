@@ -410,7 +410,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
 <body>
   <div class="toolbar">
     <button onclick="window.print()">Afdrukken / opslaan als PDF</button>
-    <span class="hint">Tip: kies in de printdialoog "Opslaan als PDF" en A3 liggend voor het beste resultaat.</span>
+    <span class="hint">Tip: kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend voor het beste resultaat. Schakel "Aanpassen aan pagina" / "Schalen: standaard" in.</span>
   </div>
   <div class="wrap">
     <div class="head">
