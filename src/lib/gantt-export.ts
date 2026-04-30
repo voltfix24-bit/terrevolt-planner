@@ -416,6 +416,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
         ? "monteurs als initialen"
         : "monteurs met volledige naam";
 
+  // Render branding-strings (placeholders {bedrijf} en {jaar} invullen)
+  const fillTpl = (tpl: string) =>
+    tpl.replace(/\{bedrijf\}/g, branding.bedrijfsnaam).replace(/\{jaar\}/g, String(jaar));
+  const renderedTitle = fillTpl(branding.titelTemplate);
+  const renderedCopyright = fillTpl(branding.copyright);
+
   const html = `<!doctype html>
 <html lang="nl">
 <head>
