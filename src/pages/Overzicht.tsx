@@ -2755,17 +2755,28 @@ function GanttPrintMenu({
 
   const toggleWeek = (n: number) =>
     setSelWeeks((prev) => {
-      const base = prev.size === 0 ? new Set(beschikbareWeken) : new Set(prev);
+      // start vanaf "alles geselecteerd" als prev leeg is; negeer sentinel-waarden (zoals -1 van "Geen")
+      const base =
+        prev.size === 0
+          ? new Set(beschikbareWeken)
+          : new Set(Array.from(prev).filter((w) => beschikbareWeken.includes(w)));
       if (base.has(n)) base.delete(n);
       else base.add(n);
       if (base.size === beschikbareWeken.length) return new Set();
+      if (base.size === 0) return new Set([-1]); // niets geselecteerd
       return base;
     });
 
   const run = () => {
     setBusy(true);
     try {
-      const gekozenWeken = selWeeks.size === 0 ? beschikbareWeken : Array.from(selWeeks).sort((a, b) => a - b);
+      // Filter sentinel-waarden (-1 = "Geen") en alleen week-nrs die echt bestaan
+      const gekozenWeken =
+        selWeeks.size === 0
+          ? beschikbareWeken
+          : Array.from(selWeeks)
+              .filter((w) => beschikbareWeken.includes(w))
+              .sort((a, b) => a - b);
       if (gekozenWeken.length === 0) {
         toast.error("Geen weken beschikbaar");
         return;
