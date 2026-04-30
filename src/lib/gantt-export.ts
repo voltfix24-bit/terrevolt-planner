@@ -140,11 +140,20 @@ export function exportGanttPDF(input: GanttExportInput): void {
 
   // Layout consts (px) — bij veel weken automatisch smaller maken zodat alles past
   const totalDays = weken.length * 5;
-  // Schaal dagbreedte tussen 32 (weinig weken) en 14 (heel veel weken)
+  // Schaal dagbreedte tussen 34 (weinig weken) en 14 (heel veel weken)
   const DAG_W = weken.length <= 6 ? 34 : weken.length <= 10 ? 28 : weken.length <= 14 ? 22 : weken.length <= 20 ? 18 : 14;
   // Eén gecombineerde "Project & Activity" kolom
   const COL_LABEL_W = weken.length <= 14 ? 320 : 240;
   const ROW_H = 30;
+
+  // Dynamische cel-binnenruimte: bij smalle dagen minder padding zodat block niet wordt
+  // weggedrukt en niet overlapt met de cel-rand.
+  const CELL_PAD = DAG_W >= 28 ? 3 : DAG_W >= 20 ? 2 : 1;
+  const BLOCK_PAD = DAG_W >= 28 ? 2 : DAG_W >= 20 ? 1 : 0;
+  // Block label-font schaalt mee zodat initialen altijd in de kleurblok passen
+  const BLOCK_FS = DAG_W >= 28 ? 9 : DAG_W >= 22 ? 8 : DAG_W >= 18 ? 7 : 6.5;
+  // Effectieve binnenbreedte voor de block (pixels): DAG_W − 2*CELL_PAD − 2px borders
+  const BLOCK_INNER_W = Math.max(6, DAG_W - 2 * CELL_PAD - 2);
 
   const gridW = totalDays * DAG_W;
   const sheetW = COL_LABEL_W + gridW;
