@@ -2760,6 +2760,7 @@ function GanttPrintMenu({
   const [monteurWeergave, setMonteurWeergave] = useState<GanttMonteurWeergave>("initialen");
   // selectie van week-nummers; lege set = alle weken
   const [selWeeks, setSelWeeks] = useState<Set<number>>(new Set());
+  const [toonDetails, setToonDetails] = useState(false);
 
   // Unieke week-nummers uit alle projecten, gesorteerd
   const beschikbareWeken = useMemo(() => {
@@ -2767,6 +2768,51 @@ function GanttPrintMenu({
     weken.forEach((w) => seen.add(w.week_nr));
     return Array.from(seen).sort((a, b) => a - b);
   }, [weken]);
+
+  // Huidig ISO-weeknummer (voor presets)
+  const huidigeWeek = useMemo(() => {
+    const d = new Date();
+    const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNr = (target.getUTCDay() + 6) % 7;
+    target.setUTCDate(target.getUTCDate() - dayNr + 3);
+    const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+    const diff = (target.getTime() - firstThursday.getTime()) / 86400000;
+    return 1 + Math.round((diff - ((firstThursday.getUTCDay() + 6) % 7) + 3) / 7);
+  }, []);
+
+  // Range-selectors: van/tot week (default = volledige beschikbare reeks)
+  const minWeek = beschikbareWeken[0] ?? 1;
+  const maxWeek = beschikbareWeken[beschikbareWeken.length - 1] ?? 52;
+  const huidigeRange = useMemo(() => {
+    if (selWeeks.size === 0) return { van: minWeek, tot: maxWeek };
+    const reeel = Array.from(selWeeks).filter((w) => beschikbareWeken.includes(w));
+    if (reeel.length === 0) return { van: minWeek, tot: minWeek };
+    return { van: Math.min(...reeel), tot: Math.max(...reeel) };
+  }, [selWeeks, beschikbareWeken, minWeek, maxWeek]);
+
+  const zetRange = (van: number, tot: number) => {
+    const lo = Math.min(van, tot);
+    const hi = Math.max(van, tot);
+    const inRange = beschikbareWeken.filter((w) => w >= lo && w <= hi);
+    if (inRange.length === 0) {
+      setSelWeeks(new Set([-1]));
+      return;
+    }
+    if (inRange.length === beschikbareWeken.length) {
+      setSelWeeks(new Set());
+      return;
+    }
+    setSelWeeks(new Set(inRange));
+  };
+
+  const presetVolgende = (n: number) => {
+    const start = beschikbareWeken.find((w) => w >= huidigeWeek) ?? beschikbareWeken[0];
+    if (start === undefined) return;
+    const idx = beschikbareWeken.indexOf(start);
+    const slice = beschikbareWeken.slice(idx, idx + n);
+    if (slice.length === 0) return;
+    zetRange(slice[0], slice[slice.length - 1]);
+  };
 
   const toggleWeek = (n: number) =>
     setSelWeeks((prev) => {
@@ -2936,49 +2982,110 @@ function GanttPrintMenu({
 
         {/* Weken */}
         <div className="px-3 py-2 border-b border-border/60">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weken</span>
-            <div className="flex gap-2 text-[11px]">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Periode</span>
+            <button
+              type="button"
+              onClick={() => setSelWeeks(new Set())}
+              className="text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              Alle weken
+            </button>
+          </div>
+
+          {/* Snelkeuze-presets */}
+          <div className="grid grid-cols-2 gap-1 mb-2">
+            <button
+              type="button"
+              onClick={() => presetVolgende(4)}
+              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+            >
+              Volgende 4 wk
+            </button>
+            <button
+              type="button"
+              onClick={() => presetVolgende(8)}
+              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+            >
+              Volgende 8 wk
+            </button>
+            <button
+              type="button"
+              onClick={() => presetVolgende(12)}
+              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+            >
+              Volgende 12 wk
+            </button>
+            <button
+              type="button"
+              onClick={() => zetRange(huidigeWeek, maxWeek)}
+              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+            >
+              Vanaf nu
+            </button>
+          </div>
+
+          {/* Van / t/m selectors */}
+          <div className="flex items-center gap-2">
+            <label className="flex flex-1 items-center gap-1 text-[11px] text-muted-foreground">
+              Van
+              <select
+                value={huidigeRange.van}
+                onChange={(e) => zetRange(Number(e.target.value), huidigeRange.tot)}
+                className="flex-1 rounded-sm border border-white/15 bg-transparent px-1.5 py-1 text-xs text-foreground"
+              >
+                {beschikbareWeken.map((w) => (
+                  <option key={w} value={w}>Week {w}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-1 items-center gap-1 text-[11px] text-muted-foreground">
+              t/m
+              <select
+                value={huidigeRange.tot}
+                onChange={(e) => zetRange(huidigeRange.van, Number(e.target.value))}
+                className="flex-1 rounded-sm border border-white/15 bg-transparent px-1.5 py-1 text-xs text-foreground"
+              >
+                {beschikbareWeken.map((w) => (
+                  <option key={w} value={w}>Week {w}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {/* Detail-toggles voor losse weken */}
+          {beschikbareWeken.length > 0 && (
+            <div className="mt-2">
               <button
                 type="button"
-                onClick={() => setSelWeeks(new Set())}
-                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setToonDetails((v) => !v)}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
               >
-                Alle
+                {toonDetails ? "Verberg" : "Fijnafstemming per week"}
               </button>
-              <button
-                type="button"
-                onClick={() => setSelWeeks(new Set([-1]))}
-                className="text-muted-foreground hover:text-foreground"
-                title="Geen weken (verberg alles)"
-              >
-                Geen
-              </button>
+              {toonDetails && (
+                <div className="mt-1 max-h-40 overflow-y-auto -mx-1 px-1 border-t border-border/40 pt-1">
+                  {beschikbareWeken.map((wnr) => {
+                    const checked = selWeeks.size === 0 || selWeeks.has(wnr);
+                    return (
+                      <label
+                        key={wnr}
+                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer rounded hover:bg-accent"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleWeek(wnr)}
+                          className="h-3.5 w-3.5 accent-primary"
+                        />
+                        <span>Week {wnr}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-          <div className="max-h-44 overflow-y-auto -mx-1 px-1">
-            {beschikbareWeken.length === 0 ? (
-              <div className="text-[11px] text-muted-foreground py-1">Geen weken in projecten gevonden</div>
-            ) : (
-              beschikbareWeken.map((wnr) => {
-                const checked = selWeeks.size === 0 || selWeeks.has(wnr);
-                return (
-                  <label
-                    key={wnr}
-                    className="flex items-center gap-2 py-1 px-1 text-sm cursor-pointer rounded hover:bg-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleWeek(wnr)}
-                      className="h-3.5 w-3.5 accent-primary"
-                    />
-                    <span>Week {wnr}</span>
-                  </label>
-                );
-              })
-            )}
-          </div>
+          )}
         </div>
 
         <div className="p-1">
