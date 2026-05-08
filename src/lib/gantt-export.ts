@@ -100,7 +100,6 @@ interface ResolvedBranding {
   titelTemplate: string;
   accentKleur: string;
   preparedBy: string;
-  authorizedBy: string;
   refPrefix: string;
   copyright: string;
   toonConfidential: boolean;
