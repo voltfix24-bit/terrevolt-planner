@@ -3032,10 +3032,10 @@ function GanttPrintMenu({
               <select
                 value={huidigeRange.van}
                 onChange={(e) => zetRange(Number(e.target.value), huidigeRange.tot)}
-                className="flex-1 rounded-sm border border-white/15 bg-transparent px-1.5 py-1 text-xs text-foreground"
+                className="flex-1 rounded-sm border border-white/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
               >
                 {beschikbareWeken.map((w) => (
-                  <option key={w} value={w}>Week {w}</option>
+                  <option key={w} value={w} className="bg-popover text-popover-foreground">Week {w}</option>
                 ))}
               </select>
             </label>
@@ -3044,10 +3044,10 @@ function GanttPrintMenu({
               <select
                 value={huidigeRange.tot}
                 onChange={(e) => zetRange(huidigeRange.van, Number(e.target.value))}
-                className="flex-1 rounded-sm border border-white/15 bg-transparent px-1.5 py-1 text-xs text-foreground"
+                className="flex-1 rounded-sm border border-white/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
               >
                 {beschikbareWeken.map((w) => (
-                  <option key={w} value={w}>Week {w}</option>
+                  <option key={w} value={w} className="bg-popover text-popover-foreground">Week {w}</option>
                 ))}
               </select>
             </label>
