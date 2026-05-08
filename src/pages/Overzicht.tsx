@@ -912,6 +912,128 @@ export default function Overzicht() {
     navigate(`/projecten/${id}#concept-planning`);
   };
 
+  // ====== Drag-shift project planning (op project-balk) ======
+  const [drag, setDrag] = useState<{ projectId: string; dx: number } | null>(null);
+  const dragMovedRef = useRef(false);
+
+  // Verschuif (week_nr,dag_index) met N dagen (5 werkdagen per week, wrap 1..52).
+  const shiftDay = (week_nr: number, dag_index: number, deltaDays: number) => {
+    const total = (week_nr - 1) * 5 + dag_index + deltaDays;
+    const newWeekRaw = Math.floor(total / 5) + 1;
+    const newDag = ((total % 5) + 5) % 5;
+    const newWeek = ((((newWeekRaw - 1) % 52) + 52) % 52) + 1;
+    return { week_nr: newWeek, dag_index: newDag };
+  };
+
+  const shiftProjectPlanning = useCallback(
+    async (projectId: string, deltaDays: number) => {
+      if (deltaDays === 0) return;
+      const acts = activiteitenByProject.get(projectId) ?? [];
+      const actIds = new Set(acts.map((a) => a.id));
+      const projectCellen = cellen.filter(
+        (c) => c.activiteit_id && actIds.has(c.activiteit_id),
+      );
+      if (projectCellen.length === 0) {
+        toast.info("Geen planning om te verschuiven");
+        return;
+      }
+
+      const weekIdByNr = new Map<number, string>();
+      let maxPos = -1;
+      for (const w of weken) {
+        if (w.project_id === projectId) {
+          weekIdByNr.set(w.week_nr, w.id);
+          if (w.positie > maxPos) maxPos = w.positie;
+        }
+      }
+
+      const updates: { id: string; week_nr: number; dag_index: number }[] = [];
+      const needed = new Set<number>();
+      for (const c of projectCellen) {
+        if (!c.week_id) continue;
+        const w = weekById.get(c.week_id);
+        if (!w) continue;
+        const n = shiftDay(w.week_nr, c.dag_index, deltaDays);
+        updates.push({ id: c.id, ...n });
+        if (!weekIdByNr.has(n.week_nr)) needed.add(n.week_nr);
+      }
+
+      if (needed.size > 0) {
+        const teMaken = [...needed]
+          .sort((a, b) => a - b)
+          .map((wn, i) => ({
+            project_id: projectId,
+            week_nr: wn,
+            positie: maxPos + 1 + i,
+          }));
+        const { data: ingev, error: e1 } = await supabase
+          .from("project_weken")
+          .insert(teMaken)
+          .select("id, week_nr");
+        if (e1) {
+          toast.error("Aanmaken weken mislukt");
+          return;
+        }
+        (ingev ?? []).forEach((w) =>
+          weekIdByNr.set(w.week_nr as number, w.id as string),
+        );
+      }
+
+      const results = await Promise.all(
+        updates.map((u) =>
+          supabase
+            .from("planning_cellen")
+            .update({
+              week_id: weekIdByNr.get(u.week_nr)!,
+              dag_index: u.dag_index,
+            })
+            .eq("id", u.id),
+        ),
+      );
+      const failed = results.filter((r) => r.error).length;
+      if (failed > 0) {
+        toast.error(`${failed} update(s) mislukt — ververs de pagina`);
+      } else {
+        toast.success(
+          `Planning ${deltaDays > 0 ? "+" : ""}${deltaDays} dag verschoven`,
+        );
+      }
+      await fetchAllData(jaar);
+    },
+    [activiteitenByProject, cellen, weken, weekById, fetchAllData, jaar],
+  );
+
+  const startProjectDrag = (e: React.MouseEvent, projectId: string) => {
+    if (e.button !== 0) return;
+    if (scale !== "maand") {
+      // Alleen op maand-schaal (1 cel = 1 dag) is dag-precisie zinvol.
+      return;
+    }
+    e.preventDefault();
+    dragMovedRef.current = false;
+    const startX = e.clientX;
+    const localCellW = CELL_W_BY_SCALE.maand;
+    setDrag({ projectId, dx: 0 });
+
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      if (Math.abs(dx) > 3) dragMovedRef.current = true;
+      setDrag({ projectId, dx });
+    };
+    const onUp = (ev: MouseEvent) => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      const dx = ev.clientX - startX;
+      setDrag(null);
+      const days = Math.round(dx / localCellW);
+      if (Math.abs(days) >= 1) {
+        void shiftProjectPlanning(projectId, days);
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   // ====== Monteur segments (consecutive slots same project) ======
   type MonteurSeg = { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean };
   const monteurSegments = useCallback(
