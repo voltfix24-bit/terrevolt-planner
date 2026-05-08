@@ -934,7 +934,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
       <table class="gantt">
         <thead>
           <tr>
-            <th rowspan="2" class="label-h">Project &amp; Activity</th>
+            <th rowspan="2" class="label-h">Project &amp; activiteit</th>
             ${weekHeader}
           </tr>
           <tr>${dagHeader}</tr>
