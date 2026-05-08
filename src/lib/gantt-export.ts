@@ -897,12 +897,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
         <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
       </div>
       <div class="right">
-        <div><b>Date:</b> ${todayLabel}</div>
+        <div><b>Datum:</b> ${todayLabel}</div>
       </div>
     </div>
     <div class="meta-grid">
       <div>
-        <div class="lbl">Reporting Period</div>
+        <div class="lbl">Rapportageperiode</div>
         <div class="val">${fmtLong(periodStart)} – ${fmtLong(periodEnd)} (${weekRangeLabel})</div>
       </div>
       <div class="right">
@@ -911,7 +911,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
       </div>
     </div>
     <div class="legend-row">
-      <span class="lg-title">Status Legend:</span>
+      <span class="lg-title">Statuslegenda:</span>
       ${legend}
     </div>
   </div>
