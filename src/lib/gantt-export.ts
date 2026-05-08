@@ -59,7 +59,7 @@ export interface GanttWeek {
 export type GanttDocumentVariant =
   | "terrevolt"          // Default: blauw accent, "Planning Terrevolt {jaar}"
   | "internal-memo"      // Donkergrijs accent, compactere titel
-  | "client-deliverable" // Groen accent, formele "Project Schedule"
+  | "client-deliverable" // Groen accent, formele "Projectplanning"
   | "custom";            // Volledig vrij in te vullen via documentBranding
 
 export interface GanttDocumentBranding {
@@ -113,38 +113,38 @@ const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
     bedrijfsnaam: "Terrevolt",
     titelTemplate: "Planning {bedrijf} {jaar}",
     accentKleur: "#004ac6",
-    preparedBy: "Project Planning Lead",
-    authorizedBy: "Operations Director",
+    preparedBy: "Hoofd Projectplanning",
+    authorizedBy: "Operationeel Directeur",
     refPrefix: "PLAN",
     copyright: "© {jaar} Terrevolt — Operations Management",
     toonConfidential: true,
   },
   "internal-memo": {
     bedrijfsnaam: "Terrevolt",
-    titelTemplate: "Internal Planning Memo — {jaar}",
+    titelTemplate: "Interne Planningsmemo — {jaar}",
     accentKleur: "#434655",
-    preparedBy: "Planning Coordinator",
-    authorizedBy: "Operations Manager",
+    preparedBy: "Planningscoördinator",
+    authorizedBy: "Operationeel Manager",
     refPrefix: "MEMO",
-    copyright: "© {jaar} Terrevolt — Internal use only",
+    copyright: "© {jaar} Terrevolt — Uitsluitend voor intern gebruik",
     toonConfidential: true,
   },
   "client-deliverable": {
     bedrijfsnaam: "Terrevolt",
-    titelTemplate: "Project Schedule — {bedrijf} {jaar}",
+    titelTemplate: "Projectplanning — {bedrijf} {jaar}",
     accentKleur: "#15803d",
-    preparedBy: "Project Manager",
-    authorizedBy: "Client Representative",
+    preparedBy: "Projectmanager",
+    authorizedBy: "Vertegenwoordiger Opdrachtgever",
     refPrefix: "DEL",
-    copyright: "© {jaar} Terrevolt — Prepared for client review",
+    copyright: "© {jaar} Terrevolt — Opgesteld voor klantbeoordeling",
     toonConfidential: false,
   },
   "custom": {
     bedrijfsnaam: "Terrevolt",
     titelTemplate: "Planning {bedrijf} {jaar}",
     accentKleur: "#004ac6",
-    preparedBy: "Project Planning Lead",
-    authorizedBy: "Operations Director",
+    preparedBy: "Hoofd Projectplanning",
+    authorizedBy: "Operationeel Directeur",
     refPrefix: "PLAN",
     copyright: "© {jaar} Terrevolt",
     toonConfidential: true,
@@ -268,9 +268,9 @@ export function exportGanttPDF(input: GanttExportInput): void {
   const periodEnd = new Date(getMondayOfWeek(lastWeek.week_nr, lastWeek.jaar));
   periodEnd.setDate(periodEnd.getDate() + 4);
   const fmtLong = (d: Date) =>
-    d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    d.toLocaleDateString("nl-NL", { year: "numeric", month: "long", day: "numeric" });
   const today = new Date();
-  const todayLabel = today.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const todayLabel = today.toLocaleDateString("nl-NL", { year: "numeric", month: "short", day: "numeric" });
   const jaar = lastWeek.jaar;
   const weekRangeLabel =
     firstWeek.week_nr === lastWeek.week_nr
@@ -897,12 +897,12 @@ export function exportGanttPDF(input: GanttExportInput): void {
         <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
       </div>
       <div class="right">
-        <div><b>Date:</b> ${todayLabel}</div>
+        <div><b>Datum:</b> ${todayLabel}</div>
       </div>
     </div>
     <div class="meta-grid">
       <div>
-        <div class="lbl">Reporting Period</div>
+        <div class="lbl">Rapportageperiode</div>
         <div class="val">${fmtLong(periodStart)} – ${fmtLong(periodEnd)} (${weekRangeLabel})</div>
       </div>
       <div class="right">
@@ -911,7 +911,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
       </div>
     </div>
     <div class="legend-row">
-      <span class="lg-title">Status Legend:</span>
+      <span class="lg-title">Statuslegenda:</span>
       ${legend}
     </div>
   </div>
@@ -921,7 +921,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     <div class="doc-foot">
       <div>${escHtml(renderedCopyright)}</div>
       <div>
-        ${branding.toonConfidential ? `<span class="conf">Confidential Internal Document</span>` : ""}
+        ${branding.toonConfidential ? `<span class="conf">Vertrouwelijk intern document</span>` : ""}
         <span class="ref">Ref: ${escHtml(branding.refPrefix)}-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
         <span class="ref pageinfo"></span>
       </div>
@@ -934,7 +934,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
       <table class="gantt">
         <thead>
           <tr>
-            <th rowspan="2" class="label-h">Project &amp; Activity</th>
+            <th rowspan="2" class="label-h">Project &amp; activiteit</th>
             ${weekHeader}
           </tr>
           <tr>${dagHeader}</tr>
@@ -945,20 +945,20 @@ export function exportGanttPDF(input: GanttExportInput): void {
       <!-- END-BLOCK — alleen op laatste pagina (na de tabel), bewaard als één geheel -->
       <div class="end-block">
         <div class="annotations">
-          <div class="a-title">Planning Annotations</div>
+          <div class="a-title">Toelichting op de planning</div>
           <ul>
-            <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
-            <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
-            <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
+            <li>Planning gebaseerd op een operationele cyclus van ${weken.length} ${weken.length === 1 ? "week" : "weken"} (${weekRangeLabel} ${jaar}).</li>
+            <li>De planning toont ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "actief project" : "actieve projecten"} met toegewezen activiteiten in de geselecteerde periode.</li>
+            <li>Inzet van resources is per cel weergegeven; de planning is bedoeld om de projectvolgorde en capaciteitsplanning inzichtelijk te maken.</li>
           </ul>
         </div>
         <div class="signatures">
           <div class="sig-block">
-            <div class="lbl">Prepared By</div>
+            <div class="lbl">Opgesteld door</div>
             <div class="name">${escHtml(branding.preparedBy)}</div>
           </div>
           <div class="sig-block">
-            <div class="lbl">Authorized By</div>
+            <div class="lbl">Geautoriseerd door</div>
             <div class="name">${escHtml(branding.authorizedBy)}</div>
           </div>
         </div>
