@@ -2760,6 +2760,7 @@ function GanttPrintMenu({
   const [monteurWeergave, setMonteurWeergave] = useState<GanttMonteurWeergave>("initialen");
   // selectie van week-nummers; lege set = alle weken
   const [selWeeks, setSelWeeks] = useState<Set<number>>(new Set());
+  const [toonDetails, setToonDetails] = useState(false);
 
   // Unieke week-nummers uit alle projecten, gesorteerd
   const beschikbareWeken = useMemo(() => {
@@ -2767,6 +2768,51 @@ function GanttPrintMenu({
     weken.forEach((w) => seen.add(w.week_nr));
     return Array.from(seen).sort((a, b) => a - b);
   }, [weken]);
+
+  // Huidig ISO-weeknummer (voor presets)
+  const huidigeWeek = useMemo(() => {
+    const d = new Date();
+    const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNr = (target.getUTCDay() + 6) % 7;
+    target.setUTCDate(target.getUTCDate() - dayNr + 3);
+    const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+    const diff = (target.getTime() - firstThursday.getTime()) / 86400000;
+    return 1 + Math.round((diff - ((firstThursday.getUTCDay() + 6) % 7) + 3) / 7);
+  }, []);
+
+  // Range-selectors: van/tot week (default = volledige beschikbare reeks)
+  const minWeek = beschikbareWeken[0] ?? 1;
+  const maxWeek = beschikbareWeken[beschikbareWeken.length - 1] ?? 52;
+  const huidigeRange = useMemo(() => {
+    if (selWeeks.size === 0) return { van: minWeek, tot: maxWeek };
+    const reeel = Array.from(selWeeks).filter((w) => beschikbareWeken.includes(w));
+    if (reeel.length === 0) return { van: minWeek, tot: minWeek };
+    return { van: Math.min(...reeel), tot: Math.max(...reeel) };
+  }, [selWeeks, beschikbareWeken, minWeek, maxWeek]);
+
+  const zetRange = (van: number, tot: number) => {
+    const lo = Math.min(van, tot);
+    const hi = Math.max(van, tot);
+    const inRange = beschikbareWeken.filter((w) => w >= lo && w <= hi);
+    if (inRange.length === 0) {
+      setSelWeeks(new Set([-1]));
+      return;
+    }
+    if (inRange.length === beschikbareWeken.length) {
+      setSelWeeks(new Set());
+      return;
+    }
+    setSelWeeks(new Set(inRange));
+  };
+
+  const presetVolgende = (n: number) => {
+    const start = beschikbareWeken.find((w) => w >= huidigeWeek) ?? beschikbareWeken[0];
+    if (start === undefined) return;
+    const idx = beschikbareWeken.indexOf(start);
+    const slice = beschikbareWeken.slice(idx, idx + n);
+    if (slice.length === 0) return;
+    zetRange(slice[0], slice[slice.length - 1]);
+  };
 
   const toggleWeek = (n: number) =>
     setSelWeeks((prev) => {
