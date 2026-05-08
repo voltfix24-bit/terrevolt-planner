@@ -5,10 +5,10 @@ export interface ColorEntry {
 
 export const COLOR_MAP: Record<string, ColorEntry> = {
   c1: { hex: "#00642f", naam: "Uitgevoerd" },
-  c2: { hex: "#fdcb35", naam: "In uitvoering" },
-  c3: { hex: "#1a4a2e", naam: "Ingepland" },
+  c2: { hex: "#fdcb35", naam: "Schakeldagen" },
+  c3: { hex: "#1a4a2e", naam: "Diverse" },
   c4: { hex: "#0f766e", naam: "Schakelen" },
-  c5: { hex: "#1d4ed8", naam: "Montage" },
+  c5: { hex: "#1d4ed8", naam: "Montagedagen" },
   c6: { hex: "#dc2626", naam: "Blokkade" },
   c7: { hex: "#9333ea", naam: "Transport" },
   c8: { hex: "#ea580c", naam: "Bouwkunde" },
