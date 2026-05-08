@@ -927,14 +927,8 @@ export function exportGanttPDF(input: GanttExportInput): void {
       <div class="end-block">
         <div class="signatures">
           <div class="sig-block">
-            <div class="lbl">Opgesteld door</div>
-            <div class="name">${escHtml(branding.preparedBy)}</div>
-          </div>
-        </div>
-      </div>
-          <div class="sig-block">
-            <div class="lbl">Opgesteld door</div>
-            <div class="name">${escHtml(branding.preparedBy)}</div>
+            <span class="lbl">OPGESTELD DOOR</span>
+            <span class="name">${escHtml(branding.preparedBy)}</span>
           </div>
         </div>
       </div>
