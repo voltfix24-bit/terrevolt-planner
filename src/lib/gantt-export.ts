@@ -945,20 +945,20 @@ export function exportGanttPDF(input: GanttExportInput): void {
       <!-- END-BLOCK — alleen op laatste pagina (na de tabel), bewaard als één geheel -->
       <div class="end-block">
         <div class="annotations">
-          <div class="a-title">Planning Annotations</div>
+          <div class="a-title">Toelichting op de planning</div>
           <ul>
-            <li>Planning data based on ${weken.length}-week operational cycle (${weekRangeLabel} ${jaar}).</li>
-            <li>Schedule reflects ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "active project" : "active projects"} with assigned activities in the selected period.</li>
-            <li>Resource allocation indicated per cell; schedule is for visualization of project sequence and capacity planning.</li>
+            <li>Planning gebaseerd op een operationele cyclus van ${weken.length} ${weken.length === 1 ? "week" : "weken"} (${weekRangeLabel} ${jaar}).</li>
+            <li>De planning toont ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "actief project" : "actieve projecten"} met toegewezen activiteiten in de geselecteerde periode.</li>
+            <li>Inzet van resources is per cel weergegeven; de planning is bedoeld om de projectvolgorde en capaciteitsplanning inzichtelijk te maken.</li>
           </ul>
         </div>
         <div class="signatures">
           <div class="sig-block">
-            <div class="lbl">Prepared By</div>
+            <div class="lbl">Opgesteld door</div>
             <div class="name">${escHtml(branding.preparedBy)}</div>
           </div>
           <div class="sig-block">
-            <div class="lbl">Authorized By</div>
+            <div class="lbl">Geautoriseerd door</div>
             <div class="name">${escHtml(branding.authorizedBy)}</div>
           </div>
         </div>
