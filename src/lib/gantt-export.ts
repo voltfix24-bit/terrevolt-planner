@@ -69,10 +69,8 @@ export interface GanttDocumentBranding {
   titelTemplate?: string;
   /** Accent-kleur (hex) voor titel, header-onderlijn en project-row top-border */
   accentKleur?: string;
-  /** Naam-label onder "Prepared By" */
+  /** Naam-label onder "Opgesteld door" */
   preparedBy?: string;
-  /** Naam-label onder "Authorized By" */
-  authorizedBy?: string;
   /** Prefix voor het Ref-nummer in de page-footer (default "PLAN") */
   refPrefix?: string;
   /** Copyright-tekst links in de page-footer; ondersteunt placeholder {jaar} */
