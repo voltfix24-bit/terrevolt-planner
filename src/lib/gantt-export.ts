@@ -771,25 +771,18 @@ export function exportGanttPDF(input: GanttExportInput): void {
   }
   .signatures {
     width: 100%;
-    margin: 6px 0 0 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 32px;
-  }
-    width: 100%;
-    margin: 6px 0 0 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 32px;
+    margin: 10px 0 0 0;
   }
   .sig-block {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
     border-top: 1px solid #434655;
     padding-top: 4px;
   }
   .sig-block .lbl {
     font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: #737686;
-    margin-bottom: 1px;
   }
   .sig-block .name {
     font-size: 10.5px; color: #191b23; font-weight: 600;
