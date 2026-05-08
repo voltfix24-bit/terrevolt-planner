@@ -2210,110 +2210,164 @@ export default function Overzicht() {
                   <div key={p.id}>
                     {/* Project bar row */}
                     <div
-                      onClick={() => navigateToProject(p.id)}
-                      className="relative cursor-pointer hover:bg-white/[0.02]"
+                      onClick={(e) => {
+                        if (dragMovedRef.current) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          dragMovedRef.current = false;
+                          return;
+                        }
+                        navigateToProject(p.id);
+                      }}
+                      onMouseDown={(e) => startProjectDrag(e, p.id)}
+                      className="relative hover:bg-white/[0.02]"
                       style={{
                         width: totalGridWidth,
                         height: ROW_H_PROJECT,
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        cursor: scale === "maand" ? "grab" : "pointer",
+                        userSelect: "none",
                       }}
+                      title={
+                        scale === "maand"
+                          ? "Klik = open project · Sleep horizontaal = hele planning verschuiven (1 dag)"
+                          : undefined
+                      }
                     >
                       <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_PROJECT} />
-                      {segs.map((s, i) => {
-                        const isJaar = scale === "jaar";
-                        // Jaar: pill spans the full month column(s); other
-                        // scales keep the original 2px inset.
-                        const left = s.startSlot * cellW + (isJaar ? 3 : 2);
-                        const width =
-                          (s.endSlot - s.startSlot + 1) * cellW -
-                          (isJaar ? 6 : 4);
-                        const segHasConflict =
-                          !!conflictSet &&
-                          [...Array(s.endSlot - s.startSlot + 1)].some((_, off) =>
-                            conflictSet.has(s.startSlot + off),
-                          );
-                        const pillTop = isJaar
-                          ? 11
-                          : (ROW_H_PROJECT - PILL_H_PROJECT) / 2;
-                        const pillHeight = isJaar
-                          ? ROW_H_PROJECT - 22
-                          : PILL_H_PROJECT;
-                        const isConcept = p.status === "concept" && !segHasConflict;
-                        const pillBg = segHasConflict
-                          ? "#ef4444"
-                          : isConcept
-                            ? "transparent"
-                            : isJaar
-                              ? "rgba(254,179,0,0.8)"
-                              : sc.bg;
+                      {(() => {
+                        const isDragging = drag?.projectId === p.id;
+                        const dragDx = isDragging ? drag!.dx : 0;
+                        const snappedDays =
+                          isDragging && scale === "maand"
+                            ? Math.round(dragDx / CELL_W_BY_SCALE.maand)
+                            : 0;
+                        const snappedPx = snappedDays * (scale === "maand" ? CELL_W_BY_SCALE.maand : 0);
                         return (
-                          <div
-                            key={i}
-                            className="absolute flex items-center justify-center px-2"
-                            style={{
-                              left, width,
-                              top: pillTop,
-                              height: pillHeight,
-                              background: pillBg,
-                              opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.8,
-                              borderRadius: 4,
-                              border: isConcept ? "2px dashed rgba(255,255,255,0.15)" : undefined,
-                              color: segHasConflict
-                                ? "#ffffff"
-                                : isConcept
-                                  ? "rgba(255,255,255,0.4)"
-                                  : isJaar
-                                    ? "#0a1a30"
-                                    : sc.text,
-                              fontSize: isConcept ? 9 : 10,
-                              fontWeight: 700,
-                              letterSpacing: isConcept ? "0.1em" : undefined,
-                              textTransform: isConcept ? "uppercase" : undefined,
-                              overflow: "hidden", whiteSpace: "nowrap",
-                              boxShadow: segHasConflict
-                                ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
-                                : undefined,
-                            }}
-                            title={segHasConflict ? "Conflict: monteur is dubbel ingepland" : undefined}
-                          >
-                            {segHasConflict && (
-                              <span
-                                className="mr-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
-                                style={{ background: "rgba(0,0,0,0.25)", fontSize: 9 }}
+                          <>
+                            <div
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                transform: `translateX(${isDragging ? snappedPx : 0}px)`,
+                                transition: isDragging ? "none" : "transform 120ms ease-out",
+                                pointerEvents: "none",
+                              }}
+                            >
+                              {segs.map((s, i) => {
+                                const isJaar = scale === "jaar";
+                                const left = s.startSlot * cellW + (isJaar ? 3 : 2);
+                                const width =
+                                  (s.endSlot - s.startSlot + 1) * cellW -
+                                  (isJaar ? 6 : 4);
+                                const segHasConflict =
+                                  !!conflictSet &&
+                                  [...Array(s.endSlot - s.startSlot + 1)].some((_, off) =>
+                                    conflictSet.has(s.startSlot + off),
+                                  );
+                                const pillTop = isJaar
+                                  ? 11
+                                  : (ROW_H_PROJECT - PILL_H_PROJECT) / 2;
+                                const pillHeight = isJaar
+                                  ? ROW_H_PROJECT - 22
+                                  : PILL_H_PROJECT;
+                                const isConcept = p.status === "concept" && !segHasConflict;
+                                const pillBg = segHasConflict
+                                  ? "#ef4444"
+                                  : isConcept
+                                    ? "transparent"
+                                    : isJaar
+                                      ? "rgba(254,179,0,0.8)"
+                                      : sc.bg;
+                                return (
+                                  <div
+                                    key={i}
+                                    className="absolute flex items-center justify-center px-2"
+                                    style={{
+                                      left, width,
+                                      top: pillTop,
+                                      height: pillHeight,
+                                      background: pillBg,
+                                      opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.8,
+                                      borderRadius: 4,
+                                      border: isConcept ? "2px dashed rgba(255,255,255,0.15)" : undefined,
+                                      color: segHasConflict
+                                        ? "#ffffff"
+                                        : isConcept
+                                          ? "rgba(255,255,255,0.4)"
+                                          : isJaar
+                                            ? "#0a1a30"
+                                            : sc.text,
+                                      fontSize: isConcept ? 9 : 10,
+                                      fontWeight: 700,
+                                      letterSpacing: isConcept ? "0.1em" : undefined,
+                                      textTransform: isConcept ? "uppercase" : undefined,
+                                      overflow: "hidden", whiteSpace: "nowrap",
+                                      boxShadow: segHasConflict
+                                        ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
+                                        : undefined,
+                                    }}
+                                    title={segHasConflict ? "Conflict: monteur is dubbel ingepland" : undefined}
+                                  >
+                                    {segHasConflict && (
+                                      <span
+                                        className="mr-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full"
+                                        style={{ background: "rgba(0,0,0,0.25)", fontSize: 9 }}
+                                      >
+                                        !
+                                      </span>
+                                    )}
+                                    {isConcept
+                                      ? (width > 60 ? "CONCEPT" : "")
+                                      : (width > (isJaar ? 50 : 80) && (p.case_nummer ?? ""))}
+                                  </div>
+                                );
+                              })}
+                              {/* Standalone conflict markers (no status bar covers them) */}
+                              {conflictSet && [...conflictSet]
+                                .filter((sl) => !segs.some((s) => sl >= s.startSlot && sl <= s.endSlot))
+                                .map((sl) => (
+                                  <div
+                                    key={`cf-${sl}`}
+                                    className="absolute flex items-center justify-center"
+                                    style={{
+                                      left: sl * cellW + 2,
+                                      width: cellW - 4,
+                                      top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
+                                      height: PILL_H_PROJECT,
+                                      background: "#ef4444",
+                                      opacity: 0.95,
+                                      borderRadius: 4,
+                                      color: "#ffffff",
+                                      fontSize: 11, fontWeight: 700,
+                                      boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
+                                    }}
+                                    title="Conflict: monteur is dubbel ingepland"
+                                  >
+                                    !
+                                  </div>
+                                ))}
+                            </div>
+                            {isDragging && Math.abs(snappedDays) >= 1 && (
+                              <div
+                                className="absolute pointer-events-none"
+                                style={{
+                                  top: 4,
+                                  right: 8,
+                                  background: "rgba(0,0,0,0.7)",
+                                  color: "#fff",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  padding: "2px 8px",
+                                  borderRadius: 4,
+                                }}
                               >
-                                !
-                              </span>
+                                {snappedDays > 0 ? `+${snappedDays}` : snappedDays} dag
+                              </div>
                             )}
-                            {isConcept
-                              ? (width > 60 ? "CONCEPT" : "")
-                              : (width > (isJaar ? 50 : 80) && (p.case_nummer ?? ""))}
-                          </div>
+                          </>
                         );
-                      })}
-                      {/* Standalone conflict markers (no status bar covers them) */}
-                      {conflictSet && [...conflictSet]
-                        .filter((sl) => !segs.some((s) => sl >= s.startSlot && sl <= s.endSlot))
-                        .map((sl) => (
-                          <div
-                            key={`cf-${sl}`}
-                            className="absolute flex items-center justify-center"
-                            style={{
-                              left: sl * cellW + 2,
-                              width: cellW - 4,
-                              top: (ROW_H_PROJECT - PILL_H_PROJECT) / 2,
-                              height: PILL_H_PROJECT,
-                              background: "#ef4444",
-                              opacity: 0.95,
-                              borderRadius: 4,
-                              color: "#ffffff",
-                              fontSize: 11, fontWeight: 700,
-                              boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
-                            }}
-                            title="Conflict: monteur is dubbel ingepland"
-                          >
-                            !
-                          </div>
-                        ))}
+                      })()}
                     </div>
 
                     {/* Activiteit cell rows — only for THIS project's activiteiten */}
