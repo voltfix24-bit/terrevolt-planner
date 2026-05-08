@@ -59,7 +59,7 @@ export interface GanttWeek {
 export type GanttDocumentVariant =
   | "terrevolt"          // Default: blauw accent, "Planning Terrevolt {jaar}"
   | "internal-memo"      // Donkergrijs accent, compactere titel
-  | "client-deliverable" // Groen accent, formele "Project Schedule"
+  | "client-deliverable" // Groen accent, formele "Projectplanning"
   | "custom";            // Volledig vrij in te vullen via documentBranding
 
 export interface GanttDocumentBranding {
