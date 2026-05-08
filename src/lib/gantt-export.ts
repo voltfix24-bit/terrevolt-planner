@@ -69,10 +69,8 @@ export interface GanttDocumentBranding {
   titelTemplate?: string;
   /** Accent-kleur (hex) voor titel, header-onderlijn en project-row top-border */
   accentKleur?: string;
-  /** Naam-label onder "Prepared By" */
+  /** Naam-label onder "Opgesteld door" */
   preparedBy?: string;
-  /** Naam-label onder "Authorized By" */
-  authorizedBy?: string;
   /** Prefix voor het Ref-nummer in de page-footer (default "PLAN") */
   refPrefix?: string;
   /** Copyright-tekst links in de page-footer; ondersteunt placeholder {jaar} */
@@ -102,7 +100,6 @@ interface ResolvedBranding {
   titelTemplate: string;
   accentKleur: string;
   preparedBy: string;
-  authorizedBy: string;
   refPrefix: string;
   copyright: string;
   toonConfidential: boolean;
@@ -114,7 +111,6 @@ const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
     titelTemplate: "Planning {bedrijf} {jaar}",
     accentKleur: "#004ac6",
     preparedBy: "Hoofd Projectplanning",
-    authorizedBy: "Operationeel Directeur",
     refPrefix: "PLAN",
     copyright: "© {jaar} Terrevolt — Operations Management",
     toonConfidential: true,
@@ -124,7 +120,6 @@ const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
     titelTemplate: "Interne Planningsmemo — {jaar}",
     accentKleur: "#434655",
     preparedBy: "Planningscoördinator",
-    authorizedBy: "Operationeel Manager",
     refPrefix: "MEMO",
     copyright: "© {jaar} Terrevolt — Uitsluitend voor intern gebruik",
     toonConfidential: true,
@@ -134,7 +129,6 @@ const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
     titelTemplate: "Projectplanning — {bedrijf} {jaar}",
     accentKleur: "#15803d",
     preparedBy: "Projectmanager",
-    authorizedBy: "Vertegenwoordiger Opdrachtgever",
     refPrefix: "DEL",
     copyright: "© {jaar} Terrevolt — Opgesteld voor klantbeoordeling",
     toonConfidential: false,
@@ -144,7 +138,6 @@ const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
     titelTemplate: "Planning {bedrijf} {jaar}",
     accentKleur: "#004ac6",
     preparedBy: "Hoofd Projectplanning",
-    authorizedBy: "Operationeel Directeur",
     refPrefix: "PLAN",
     copyright: "© {jaar} Terrevolt",
     toonConfidential: true,
