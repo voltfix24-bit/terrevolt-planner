@@ -769,25 +769,13 @@ export function exportGanttPDF(input: GanttExportInput): void {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  .annotations {
-    width: 100%;
-    margin: 0 0 10px 0;
-    padding: 8px 12px;
-    background: #f3f3fe;
-    border: 1px solid #c3c6d7;
-    border-radius: 4px;
-  }
-  .annotations .a-title {
-    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #737686;
-    margin-bottom: 4px;
-  }
-  .annotations ul { margin: 0; padding-left: 18px; }
-  .annotations li {
-    font-size: 10px; color: #191b23;
-    margin: 2px 0; line-height: 1.35;
-  }
   .signatures {
+    width: 100%;
+    margin: 6px 0 0 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 32px;
+  }
     width: 100%;
     margin: 6px 0 0 0;
     display: grid;
