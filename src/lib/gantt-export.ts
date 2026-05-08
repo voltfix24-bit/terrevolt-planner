@@ -268,9 +268,9 @@ export function exportGanttPDF(input: GanttExportInput): void {
   const periodEnd = new Date(getMondayOfWeek(lastWeek.week_nr, lastWeek.jaar));
   periodEnd.setDate(periodEnd.getDate() + 4);
   const fmtLong = (d: Date) =>
-    d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    d.toLocaleDateString("nl-NL", { year: "numeric", month: "long", day: "numeric" });
   const today = new Date();
-  const todayLabel = today.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  const todayLabel = today.toLocaleDateString("nl-NL", { year: "numeric", month: "short", day: "numeric" });
   const jaar = lastWeek.jaar;
   const weekRangeLabel =
     firstWeek.week_nr === lastWeek.week_nr
