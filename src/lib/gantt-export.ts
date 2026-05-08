@@ -921,7 +921,7 @@ export function exportGanttPDF(input: GanttExportInput): void {
     <div class="doc-foot">
       <div>${escHtml(renderedCopyright)}</div>
       <div>
-        ${branding.toonConfidential ? `<span class="conf">Confidential Internal Document</span>` : ""}
+        ${branding.toonConfidential ? `<span class="conf">Vertrouwelijk intern document</span>` : ""}
         <span class="ref">Ref: ${escHtml(branding.refPrefix)}-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
         <span class="ref pageinfo"></span>
       </div>
