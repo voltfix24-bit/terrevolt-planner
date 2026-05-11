@@ -284,6 +284,7 @@ export default function Overzicht() {
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
   const [celMonteurs, setCelMonteurs] = useState<CelMonteur[]>([]);
   const [feestdagen, setFeestdagen] = useState<{ datum: string; naam: string }[]>([]);
+  const [afwezigheid, setAfwezigheid] = useState<{ monteur_id: string; datum_van: string; datum_tot: string; type: string; omschrijving: string | null }[]>([]);
 
   const [medewerkersOpen, setMedewerkersOpen] = useState(true);
   const [schakelOpen, setSchakelOpen] = useState(true);
@@ -489,7 +490,7 @@ export default function Overzicht() {
 
   // ====== Fetch all data once (gedeelde fetch voor initial + focus) ======
   const fetchAllData = useCallback(async (targetJaar: number, signal?: AbortSignal) => {
-    const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
+    const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes, afwRes] = await Promise.all([
       supabase
         .from("projecten")
         .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen")
@@ -512,6 +513,9 @@ export default function Overzicht() {
         .from("feestdagen")
         .select("datum, naam")
         .in("jaar", [targetJaar - 1, targetJaar, targetJaar + 1]),
+      supabase
+        .from("monteur_afwezigheid")
+        .select("monteur_id, datum_van, datum_tot, type, omschrijving"),
     ]);
     if (signal?.aborted) return;
     setProjecten((pRes.data ?? []) as Project[]);
@@ -521,6 +525,7 @@ export default function Overzicht() {
     setMonteurs((mRes.data ?? []) as Monteur[]);
     setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
     setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
+    setAfwezigheid((afwRes.data ?? []) as { monteur_id: string; datum_van: string; datum_tot: string; type: string; omschrijving: string | null }[]);
   }, []);
 
   // Initial load + her-fetch wanneer jaar wijzigt
@@ -612,19 +617,58 @@ export default function Overzicht() {
   }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds]);
 
   // dayKey → Set<monteurId> double-booked on that day
-  const dayConflictMonteurs = useMemo(() => {
-    const m = new Map<string, Set<string>>();
+  // dayKey → monteurId → reden ("dubbel" | "verlof")
+  // Merge dubbele inplanning + verlof-conflicten in één map.
+  const dayConflictReasons = useMemo(() => {
+    const m = new Map<string, Map<string, "dubbel" | "verlof">>();
+    // 1) Dubbel ingepland (≥2 projecten op dezelfde dag)
     for (const [mid, byDay] of monteurDayProjects.entries()) {
       for (const [k, projs] of byDay.entries()) {
         if (projs.size > 1) {
-          let set = m.get(k);
-          if (!set) { set = new Set(); m.set(k, set); }
-          set.add(mid);
+          let inner = m.get(k);
+          if (!inner) { inner = new Map(); m.set(k, inner); }
+          inner.set(mid, "dubbel");
+        }
+      }
+    }
+    // 2) Ingepland op een verlofdag van die monteur
+    if (afwezigheid.length) {
+      for (const [mid, byDay] of monteurDayProjects.entries()) {
+        const periods = afwezigheid.filter((a) => a.monteur_id === mid);
+        if (!periods.length) continue;
+        for (const k of byDay.keys()) {
+          // k = "weekNr-dagIndex"
+          const [wnrStr, dagStr] = k.split("-");
+          const wnr = Number(wnrStr);
+          const dag = Number(dagStr);
+          const monday = getMondayOfWeek(wnr, jaar);
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + dag);
+          const y = d.getFullYear();
+          const mo = String(d.getMonth() + 1).padStart(2, "0");
+          const da = String(d.getDate()).padStart(2, "0");
+          const ymd = `${y}-${mo}-${da}`;
+          const onLeave = periods.some((p) => ymd >= p.datum_van && ymd <= p.datum_tot);
+          if (onLeave) {
+            let inner = m.get(k);
+            if (!inner) { inner = new Map(); m.set(k, inner); }
+            // verlof overschrijft dubbel niet
+            if (!inner.has(mid)) inner.set(mid, "verlof");
+          }
         }
       }
     }
     return m;
-  }, [monteurDayProjects]);
+  }, [monteurDayProjects, afwezigheid, jaar]);
+
+  // dayKey → Set<monteurId> met conflict (dubbel of verlof) — backwards-compat
+  const dayConflictMonteurs = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const [k, inner] of dayConflictReasons.entries()) {
+      m.set(k, new Set(inner.keys()));
+    }
+    return m;
+  }, [dayConflictReasons]);
 
   // project_id → dayKey → activiteit_id → cel
   const projectDayActivities = useMemo(() => {
@@ -2307,7 +2351,7 @@ export default function Overzicht() {
                                         ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
                                         : undefined,
                                     }}
-                                    title={segHasConflict ? "Conflict: monteur is dubbel ingepland" : undefined}
+                                    title={segHasConflict ? "Conflict: monteur dubbel ingepland of op verlof" : undefined}
                                   >
                                     {segHasConflict && (
                                       <span
@@ -2342,7 +2386,7 @@ export default function Overzicht() {
                                       fontSize: 11, fontWeight: 700,
                                       boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
                                     }}
-                                    title="Conflict: monteur is dubbel ingepland"
+                                    title="Conflict: monteur dubbel ingepland of op verlof"
                                   >
                                     !
                                   </div>
@@ -2388,6 +2432,7 @@ export default function Overzicht() {
                             monteurIdsByCel={monteurIdsByCel}
                             monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
                             dayConflictMonteurs={dayConflictMonteurs}
+                            dayConflictReasons={dayConflictReasons}
                             slots={slots}
                             cellW={cellW}
                             totalGridWidth={totalGridWidth}
@@ -2746,6 +2791,7 @@ function ActiviteitCellsRow({
   monteurIdsByCel,
   monteurById,
   dayConflictMonteurs,
+  dayConflictReasons,
   slots,
   cellW,
   totalGridWidth,
@@ -2758,6 +2804,7 @@ function ActiviteitCellsRow({
   monteurIdsByCel: Map<string, string[]>;
   monteurById: Map<string, Monteur>;
   dayConflictMonteurs: Map<string, Set<string>>;
+  dayConflictReasons: Map<string, Map<string, "dubbel" | "verlof">>;
   slots: Slot[];
   cellW: number;
   totalGridWidth: number;
@@ -2785,6 +2832,7 @@ function ActiviteitCellsRow({
         let aggMonteurIds = new Set<string>();
         let hasConflict = false;
         const conflictMids: string[] = [];
+        const conflictReasonsByMid = new Map<string, "dubbel" | "verlof">();
 
         for (const p of s.pairs) {
           const cel = dayCelMap?.get(dayKey(p.wnr, p.dag));
@@ -2792,12 +2840,17 @@ function ActiviteitCellsRow({
           if (cel.kleur_code && !firstColorHex) firstColorHex = colorHexFor(cel.kleur_code);
           const mids = monteurIdsByCel.get(cel.id) ?? [];
           for (const mid of mids) aggMonteurIds.add(mid);
-          const cs = dayConflictMonteurs.get(dayKey(p.wnr, p.dag));
-          if (cs) {
+          const reasons = dayConflictReasons.get(dayKey(p.wnr, p.dag));
+          if (reasons) {
             for (const mid of mids) {
-              if (cs.has(mid)) {
+              const r = reasons.get(mid);
+              if (r) {
                 hasConflict = true;
                 if (!conflictMids.includes(mid)) conflictMids.push(mid);
+                // verlof prio over dubbel als beide voorkomen op verschillende dagen
+                if (!conflictReasonsByMid.has(mid) || r === "verlof") {
+                  conflictReasonsByMid.set(mid, r);
+                }
               }
             }
           }
@@ -2840,8 +2893,12 @@ function ActiviteitCellsRow({
             title={
               hasConflict
                 ? `Conflict: ${conflictMids
-                    .map((mid) => monteurById.get(mid)?.naam ?? "?")
-                    .join(", ")} dubbel ingepland`
+                    .map((mid) => {
+                      const naam = monteurById.get(mid)?.naam ?? "?";
+                      const r = conflictReasonsByMid.get(mid);
+                      return `${naam} (${r === "verlof" ? "verlof" : "dubbel ingepland"})`;
+                    })
+                    .join(", ")}`
                 : undefined
             }
           >
