@@ -490,7 +490,7 @@ export default function Overzicht() {
 
   // ====== Fetch all data once (gedeelde fetch voor initial + focus) ======
   const fetchAllData = useCallback(async (targetJaar: number, signal?: AbortSignal) => {
-    const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes] = await Promise.all([
+    const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes, afwRes] = await Promise.all([
       supabase
         .from("projecten")
         .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen")
@@ -513,6 +513,9 @@ export default function Overzicht() {
         .from("feestdagen")
         .select("datum, naam")
         .in("jaar", [targetJaar - 1, targetJaar, targetJaar + 1]),
+      supabase
+        .from("monteur_afwezigheid")
+        .select("monteur_id, datum_van, datum_tot, type, omschrijving"),
     ]);
     if (signal?.aborted) return;
     setProjecten((pRes.data ?? []) as Project[]);
@@ -522,6 +525,7 @@ export default function Overzicht() {
     setMonteurs((mRes.data ?? []) as Monteur[]);
     setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
     setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
+    setAfwezigheid((afwRes.data ?? []) as typeof afwezigheid);
   }, []);
 
   // Initial load + her-fetch wanneer jaar wijzigt
