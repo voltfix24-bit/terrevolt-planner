@@ -142,6 +142,7 @@ interface Monteur {
   type: string;
   aanwijzing_ms: string | null;
   aanwijzing_ls: string | null;
+  werkdagen: number[] | null;
 }
 
 interface CelMonteur {
@@ -504,7 +505,7 @@ export default function Overzicht() {
         .not("kleur_code", "is", null),
       supabase
         .from("monteurs")
-        .select("id, naam, type, aanwijzing_ms, aanwijzing_ls")
+        .select("id, naam, type, aanwijzing_ms, aanwijzing_ls, werkdagen")
         .eq("actief", true)
         .order("type", { ascending: false })
         .order("naam", { ascending: true }),
@@ -617,10 +618,10 @@ export default function Overzicht() {
   }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds]);
 
   // dayKey → Set<monteurId> double-booked on that day
-  // dayKey → monteurId → reden ("dubbel" | "verlof")
+  // dayKey → monteurId → reden ("dubbel" | "verlof" | "vrije_dag")
   // Merge dubbele inplanning + verlof-conflicten in één map.
   const dayConflictReasons = useMemo(() => {
-    const m = new Map<string, Map<string, "dubbel" | "verlof">>();
+    const m = new Map<string, Map<string, "dubbel" | "verlof" | "vrije_dag">>();
     // 1) Dubbel ingepland (≥2 projecten op dezelfde dag)
     for (const [mid, byDay] of monteurDayProjects.entries()) {
       for (const [k, projs] of byDay.entries()) {
@@ -631,35 +632,39 @@ export default function Overzicht() {
         }
       }
     }
-    // 2) Ingepland op een verlofdag van die monteur
-    if (afwezigheid.length) {
-      for (const [mid, byDay] of monteurDayProjects.entries()) {
-        const periods = afwezigheid.filter((a) => a.monteur_id === mid);
-        if (!periods.length) continue;
-        for (const k of byDay.keys()) {
-          // k = "weekNr-dagIndex"
-          const [wnrStr, dagStr] = k.split("-");
-          const wnr = Number(wnrStr);
-          const dag = Number(dagStr);
-          const monday = getMondayOfWeek(wnr, jaar);
-          const d = new Date(monday);
-          d.setDate(monday.getDate() + dag);
-          const y = d.getFullYear();
-          const mo = String(d.getMonth() + 1).padStart(2, "0");
-          const da = String(d.getDate()).padStart(2, "0");
-          const ymd = `${y}-${mo}-${da}`;
-          const onLeave = periods.some((p) => ymd >= p.datum_van && ymd <= p.datum_tot);
-          if (onLeave) {
-            let inner = m.get(k);
-            if (!inner) { inner = new Map(); m.set(k, inner); }
-            // verlof overschrijft dubbel niet
-            if (!inner.has(mid)) inner.set(mid, "verlof");
+    // 2) Ingepland op een verlofdag van die monteur, of op een vaste vrije dag
+    const monteurMap = new Map(monteurs.map((mm) => [mm.id, mm]));
+    for (const [mid, byDay] of monteurDayProjects.entries()) {
+      const periods = afwezigheid.filter((a) => a.monteur_id === mid);
+      const mont = monteurMap.get(mid);
+      const wd = mont?.werkdagen && mont.werkdagen.length ? mont.werkdagen : [1, 2, 3, 4, 5];
+      for (const k of byDay.keys()) {
+        // k = "weekNr-dagIndex"
+        const [wnrStr, dagStr] = k.split("-");
+        const wnr = Number(wnrStr);
+        const dag = Number(dagStr);
+        const monday = getMondayOfWeek(wnr, jaar);
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + dag);
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        const ymd = `${y}-${mo}-${da}`;
+        const onLeave = periods.length ? periods.some((p) => ymd >= p.datum_van && ymd <= p.datum_tot) : false;
+        const werkdagNr = dag + 1; // 0=MA → 1
+        const isVrijeDag = !wd.includes(werkdagNr);
+        if (onLeave || isVrijeDag) {
+          let inner = m.get(k);
+          if (!inner) { inner = new Map(); m.set(k, inner); }
+          // dubbel niet overschrijven; verlof prioriteit boven vrije_dag
+          if (!inner.has(mid)) {
+            inner.set(mid, onLeave ? "verlof" : "vrije_dag");
           }
         }
       }
     }
     return m;
-  }, [monteurDayProjects, afwezigheid, jaar]);
+  }, [monteurDayProjects, afwezigheid, monteurs, jaar]);
 
   // dayKey → Set<monteurId> met conflict (dubbel of verlof) — backwards-compat
   const dayConflictMonteurs = useMemo(() => {
@@ -2351,7 +2356,7 @@ export default function Overzicht() {
                                         ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
                                         : undefined,
                                     }}
-                                    title={segHasConflict ? "Conflict: monteur dubbel ingepland of op verlof" : undefined}
+                                    title={segHasConflict ? "Conflict: monteur dubbel ingepland, op verlof of vrije dag" : undefined}
                                   >
                                     {segHasConflict && (
                                       <span
@@ -2386,7 +2391,7 @@ export default function Overzicht() {
                                       fontSize: 11, fontWeight: 700,
                                       boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
                                     }}
-                                    title="Conflict: monteur dubbel ingepland of op verlof"
+                                    title="Conflict: monteur dubbel ingepland, op verlof of vrije dag"
                                   >
                                     !
                                   </div>
@@ -2804,7 +2809,7 @@ function ActiviteitCellsRow({
   monteurIdsByCel: Map<string, string[]>;
   monteurById: Map<string, Monteur>;
   dayConflictMonteurs: Map<string, Set<string>>;
-  dayConflictReasons: Map<string, Map<string, "dubbel" | "verlof">>;
+  dayConflictReasons: Map<string, Map<string, "dubbel" | "verlof" | "vrije_dag">>;
   slots: Slot[];
   cellW: number;
   totalGridWidth: number;
@@ -2832,7 +2837,7 @@ function ActiviteitCellsRow({
         let aggMonteurIds = new Set<string>();
         let hasConflict = false;
         const conflictMids: string[] = [];
-        const conflictReasonsByMid = new Map<string, "dubbel" | "verlof">();
+        const conflictReasonsByMid = new Map<string, "dubbel" | "verlof" | "vrije_dag">();
 
         for (const p of s.pairs) {
           const cel = dayCelMap?.get(dayKey(p.wnr, p.dag));
@@ -2896,7 +2901,7 @@ function ActiviteitCellsRow({
                     .map((mid) => {
                       const naam = monteurById.get(mid)?.naam ?? "?";
                       const r = conflictReasonsByMid.get(mid);
-                      return `${naam} (${r === "verlof" ? "verlof" : "dubbel ingepland"})`;
+                      return `${naam} (${r === "verlof" ? "verlof" : r === "vrije_dag" ? "vrije dag" : "dubbel ingepland"})`;
                     })
                     .join(", ")}`
                 : undefined
