@@ -618,10 +618,10 @@ export default function Overzicht() {
   }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds]);
 
   // dayKey → Set<monteurId> double-booked on that day
-  // dayKey → monteurId → reden ("dubbel" | "verlof")
+  // dayKey → monteurId → reden ("dubbel" | "verlof" | "vrije_dag")
   // Merge dubbele inplanning + verlof-conflicten in één map.
   const dayConflictReasons = useMemo(() => {
-    const m = new Map<string, Map<string, "dubbel" | "verlof">>();
+    const m = new Map<string, Map<string, "dubbel" | "verlof" | "vrije_dag">>();
     // 1) Dubbel ingepland (≥2 projecten op dezelfde dag)
     for (const [mid, byDay] of monteurDayProjects.entries()) {
       for (const [k, projs] of byDay.entries()) {
@@ -2805,7 +2805,7 @@ function ActiviteitCellsRow({
   monteurIdsByCel: Map<string, string[]>;
   monteurById: Map<string, Monteur>;
   dayConflictMonteurs: Map<string, Set<string>>;
-  dayConflictReasons: Map<string, Map<string, "dubbel" | "verlof">>;
+  dayConflictReasons: Map<string, Map<string, "dubbel" | "verlof" | "vrije_dag">>;
   slots: Slot[];
   cellW: number;
   totalGridWidth: number;
@@ -2833,7 +2833,7 @@ function ActiviteitCellsRow({
         let aggMonteurIds = new Set<string>();
         let hasConflict = false;
         const conflictMids: string[] = [];
-        const conflictReasonsByMid = new Map<string, "dubbel" | "verlof">();
+        const conflictReasonsByMid = new Map<string, "dubbel" | "verlof" | "vrije_dag">();
 
         for (const p of s.pairs) {
           const cel = dayCelMap?.get(dayKey(p.wnr, p.dag));
