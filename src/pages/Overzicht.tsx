@@ -617,19 +617,58 @@ export default function Overzicht() {
   }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds]);
 
   // dayKey → Set<monteurId> double-booked on that day
-  const dayConflictMonteurs = useMemo(() => {
-    const m = new Map<string, Set<string>>();
+  // dayKey → monteurId → reden ("dubbel" | "verlof")
+  // Merge dubbele inplanning + verlof-conflicten in één map.
+  const dayConflictReasons = useMemo(() => {
+    const m = new Map<string, Map<string, "dubbel" | "verlof">>();
+    // 1) Dubbel ingepland (≥2 projecten op dezelfde dag)
     for (const [mid, byDay] of monteurDayProjects.entries()) {
       for (const [k, projs] of byDay.entries()) {
         if (projs.size > 1) {
-          let set = m.get(k);
-          if (!set) { set = new Set(); m.set(k, set); }
-          set.add(mid);
+          let inner = m.get(k);
+          if (!inner) { inner = new Map(); m.set(k, inner); }
+          inner.set(mid, "dubbel");
+        }
+      }
+    }
+    // 2) Ingepland op een verlofdag van die monteur
+    if (afwezigheid.length) {
+      for (const [mid, byDay] of monteurDayProjects.entries()) {
+        const periods = afwezigheid.filter((a) => a.monteur_id === mid);
+        if (!periods.length) continue;
+        for (const k of byDay.keys()) {
+          // k = "weekNr-dagIndex"
+          const [wnrStr, dagStr] = k.split("-");
+          const wnr = Number(wnrStr);
+          const dag = Number(dagStr);
+          const monday = getMondayOfWeek(wnr, jaar);
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + dag);
+          const y = d.getFullYear();
+          const mo = String(d.getMonth() + 1).padStart(2, "0");
+          const da = String(d.getDate()).padStart(2, "0");
+          const ymd = `${y}-${mo}-${da}`;
+          const onLeave = periods.some((p) => ymd >= p.datum_van && ymd <= p.datum_tot);
+          if (onLeave) {
+            let inner = m.get(k);
+            if (!inner) { inner = new Map(); m.set(k, inner); }
+            // verlof overschrijft dubbel niet
+            if (!inner.has(mid)) inner.set(mid, "verlof");
+          }
         }
       }
     }
     return m;
-  }, [monteurDayProjects]);
+  }, [monteurDayProjects, afwezigheid, jaar]);
+
+  // dayKey → Set<monteurId> met conflict (dubbel of verlof) — backwards-compat
+  const dayConflictMonteurs = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const [k, inner] of dayConflictReasons.entries()) {
+      m.set(k, new Set(inner.keys()));
+    }
+    return m;
+  }, [dayConflictReasons]);
 
   // project_id → dayKey → activiteit_id → cel
   const projectDayActivities = useMemo(() => {
