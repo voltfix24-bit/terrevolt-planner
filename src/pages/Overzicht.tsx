@@ -142,6 +142,7 @@ interface Monteur {
   type: string;
   aanwijzing_ms: string | null;
   aanwijzing_ls: string | null;
+  werkdagen: number[] | null;
 }
 
 interface CelMonteur {
