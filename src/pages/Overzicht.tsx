@@ -2832,6 +2832,7 @@ function ActiviteitCellsRow({
         let aggMonteurIds = new Set<string>();
         let hasConflict = false;
         const conflictMids: string[] = [];
+        const conflictReasonsByMid = new Map<string, "dubbel" | "verlof">();
 
         for (const p of s.pairs) {
           const cel = dayCelMap?.get(dayKey(p.wnr, p.dag));
@@ -2839,12 +2840,17 @@ function ActiviteitCellsRow({
           if (cel.kleur_code && !firstColorHex) firstColorHex = colorHexFor(cel.kleur_code);
           const mids = monteurIdsByCel.get(cel.id) ?? [];
           for (const mid of mids) aggMonteurIds.add(mid);
-          const cs = dayConflictMonteurs.get(dayKey(p.wnr, p.dag));
-          if (cs) {
+          const reasons = dayConflictReasons.get(dayKey(p.wnr, p.dag));
+          if (reasons) {
             for (const mid of mids) {
-              if (cs.has(mid)) {
+              const r = reasons.get(mid);
+              if (r) {
                 hasConflict = true;
                 if (!conflictMids.includes(mid)) conflictMids.push(mid);
+                // verlof prio over dubbel als beide voorkomen op verschillende dagen
+                if (!conflictReasonsByMid.has(mid) || r === "verlof") {
+                  conflictReasonsByMid.set(mid, r);
+                }
               }
             }
           }
