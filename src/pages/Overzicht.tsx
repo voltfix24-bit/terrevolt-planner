@@ -2791,6 +2791,7 @@ function ActiviteitCellsRow({
   monteurIdsByCel,
   monteurById,
   dayConflictMonteurs,
+  dayConflictReasons,
   slots,
   cellW,
   totalGridWidth,
@@ -2803,6 +2804,7 @@ function ActiviteitCellsRow({
   monteurIdsByCel: Map<string, string[]>;
   monteurById: Map<string, Monteur>;
   dayConflictMonteurs: Map<string, Set<string>>;
+  dayConflictReasons: Map<string, Map<string, "dubbel" | "verlof">>;
   slots: Slot[];
   cellW: number;
   totalGridWidth: number;
