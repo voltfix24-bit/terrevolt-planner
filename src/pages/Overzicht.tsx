@@ -2356,7 +2356,7 @@ export default function Overzicht() {
                                         ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
                                         : undefined,
                                     }}
-                                    title={segHasConflict ? "Conflict: monteur dubbel ingepland of op verlof" : undefined}
+                                    title={segHasConflict ? "Conflict: monteur dubbel ingepland, op verlof of vrije dag" : undefined}
                                   >
                                     {segHasConflict && (
                                       <span
@@ -2391,7 +2391,7 @@ export default function Overzicht() {
                                       fontSize: 11, fontWeight: 700,
                                       boxShadow: "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)",
                                     }}
-                                    title="Conflict: monteur dubbel ingepland of op verlof"
+                                    title="Conflict: monteur dubbel ingepland, op verlof of vrije dag"
                                   >
                                     !
                                   </div>
