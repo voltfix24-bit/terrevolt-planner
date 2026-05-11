@@ -2901,7 +2901,7 @@ function ActiviteitCellsRow({
                     .map((mid) => {
                       const naam = monteurById.get(mid)?.naam ?? "?";
                       const r = conflictReasonsByMid.get(mid);
-                      return `${naam} (${r === "verlof" ? "verlof" : "dubbel ingepland"})`;
+                      return `${naam} (${r === "verlof" ? "verlof" : r === "vrije_dag" ? "vrije dag" : "dubbel ingepland"})`;
                     })
                     .join(", ")}`
                 : undefined
