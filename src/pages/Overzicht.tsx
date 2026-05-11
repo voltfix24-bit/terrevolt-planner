@@ -632,35 +632,39 @@ export default function Overzicht() {
         }
       }
     }
-    // 2) Ingepland op een verlofdag van die monteur
-    if (afwezigheid.length) {
-      for (const [mid, byDay] of monteurDayProjects.entries()) {
-        const periods = afwezigheid.filter((a) => a.monteur_id === mid);
-        if (!periods.length) continue;
-        for (const k of byDay.keys()) {
-          // k = "weekNr-dagIndex"
-          const [wnrStr, dagStr] = k.split("-");
-          const wnr = Number(wnrStr);
-          const dag = Number(dagStr);
-          const monday = getMondayOfWeek(wnr, jaar);
-          const d = new Date(monday);
-          d.setDate(monday.getDate() + dag);
-          const y = d.getFullYear();
-          const mo = String(d.getMonth() + 1).padStart(2, "0");
-          const da = String(d.getDate()).padStart(2, "0");
-          const ymd = `${y}-${mo}-${da}`;
-          const onLeave = periods.some((p) => ymd >= p.datum_van && ymd <= p.datum_tot);
-          if (onLeave) {
-            let inner = m.get(k);
-            if (!inner) { inner = new Map(); m.set(k, inner); }
-            // verlof overschrijft dubbel niet
-            if (!inner.has(mid)) inner.set(mid, "verlof");
+    // 2) Ingepland op een verlofdag van die monteur, of op een vaste vrije dag
+    const monteurMap = new Map(monteurs.map((mm) => [mm.id, mm]));
+    for (const [mid, byDay] of monteurDayProjects.entries()) {
+      const periods = afwezigheid.filter((a) => a.monteur_id === mid);
+      const mont = monteurMap.get(mid);
+      const wd = mont?.werkdagen && mont.werkdagen.length ? mont.werkdagen : [1, 2, 3, 4, 5];
+      for (const k of byDay.keys()) {
+        // k = "weekNr-dagIndex"
+        const [wnrStr, dagStr] = k.split("-");
+        const wnr = Number(wnrStr);
+        const dag = Number(dagStr);
+        const monday = getMondayOfWeek(wnr, jaar);
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + dag);
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        const ymd = `${y}-${mo}-${da}`;
+        const onLeave = periods.length ? periods.some((p) => ymd >= p.datum_van && ymd <= p.datum_tot) : false;
+        const werkdagNr = dag + 1; // 0=MA → 1
+        const isVrijeDag = !wd.includes(werkdagNr);
+        if (onLeave || isVrijeDag) {
+          let inner = m.get(k);
+          if (!inner) { inner = new Map(); m.set(k, inner); }
+          // dubbel niet overschrijven; verlof prioriteit boven vrije_dag
+          if (!inner.has(mid)) {
+            inner.set(mid, onLeave ? "verlof" : "vrije_dag");
           }
         }
       }
     }
     return m;
-  }, [monteurDayProjects, afwezigheid, jaar]);
+  }, [monteurDayProjects, afwezigheid, monteurs, jaar]);
 
   // dayKey → Set<monteurId> met conflict (dubbel of verlof) — backwards-compat
   const dayConflictMonteurs = useMemo(() => {
