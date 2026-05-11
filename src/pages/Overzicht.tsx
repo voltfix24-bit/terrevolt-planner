@@ -2893,8 +2893,12 @@ function ActiviteitCellsRow({
             title={
               hasConflict
                 ? `Conflict: ${conflictMids
-                    .map((mid) => monteurById.get(mid)?.naam ?? "?")
-                    .join(", ")} dubbel ingepland`
+                    .map((mid) => {
+                      const naam = monteurById.get(mid)?.naam ?? "?";
+                      const r = conflictReasonsByMid.get(mid);
+                      return `${naam} (${r === "verlof" ? "verlof" : "dubbel ingepland"})`;
+                    })
+                    .join(", ")}`
                 : undefined
             }
           >
