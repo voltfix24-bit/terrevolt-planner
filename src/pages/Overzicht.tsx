@@ -525,7 +525,7 @@ export default function Overzicht() {
     setMonteurs((mRes.data ?? []) as Monteur[]);
     setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
     setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
-    setAfwezigheid((afwRes.data ?? []) as typeof afwezigheid);
+    setAfwezigheid((afwRes.data ?? []) as { monteur_id: string; datum_van: string; datum_tot: string; type: string; omschrijving: string | null }[]);
   }, []);
 
   // Initial load + her-fetch wanneer jaar wijzigt
