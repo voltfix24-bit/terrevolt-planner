@@ -2432,6 +2432,7 @@ export default function Overzicht() {
                             monteurIdsByCel={monteurIdsByCel}
                             monteurById={new Map(monteurs.map((mm) => [mm.id, mm]))}
                             dayConflictMonteurs={dayConflictMonteurs}
+                            dayConflictReasons={dayConflictReasons}
                             slots={slots}
                             cellW={cellW}
                             totalGridWidth={totalGridWidth}
