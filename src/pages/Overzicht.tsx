@@ -284,6 +284,7 @@ export default function Overzicht() {
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
   const [celMonteurs, setCelMonteurs] = useState<CelMonteur[]>([]);
   const [feestdagen, setFeestdagen] = useState<{ datum: string; naam: string }[]>([]);
+  const [afwezigheid, setAfwezigheid] = useState<{ monteur_id: string; datum_van: string; datum_tot: string; type: string; omschrijving: string | null }[]>([]);
 
   const [medewerkersOpen, setMedewerkersOpen] = useState(true);
   const [schakelOpen, setSchakelOpen] = useState(true);
