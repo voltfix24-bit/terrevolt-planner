@@ -505,7 +505,7 @@ export default function Overzicht() {
         .not("kleur_code", "is", null),
       supabase
         .from("monteurs")
-        .select("id, naam, type, aanwijzing_ms, aanwijzing_ls")
+        .select("id, naam, type, aanwijzing_ms, aanwijzing_ls, werkdagen")
         .eq("actief", true)
         .order("type", { ascending: false })
         .order("naam", { ascending: true }),
