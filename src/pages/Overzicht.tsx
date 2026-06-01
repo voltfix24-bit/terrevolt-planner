@@ -1627,7 +1627,7 @@ export default function Overzicht() {
           <button
             type="button"
             onClick={shiftRight}
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
             title="Volgende periode"
           >
             <ChevronsRight className="h-4 w-4" />
@@ -1639,12 +1639,12 @@ export default function Overzicht() {
               setJaar(iso.year);
               setStartWeek(iso.week);
             }}
-            className="flex h-7 items-center justify-center rounded px-3 text-xs font-semibold transition-colors"
+            className="flex h-7 items-center justify-center rounded px-2 md:px-3 text-xs font-semibold transition-colors"
             style={{
               background: "rgba(63,255,139,0.12)",
               color: "#3fff8b",
               border: "1px solid rgba(63,255,139,0.2)",
-              marginLeft: 8,
+              marginLeft: 4,
             }}
             title="Ga naar huidige week"
           >
