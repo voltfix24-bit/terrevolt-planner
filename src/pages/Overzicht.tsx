@@ -799,12 +799,18 @@ export default function Overzicht() {
   }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus]);
 
   const schakelMonteurs = useMemo(
-    () => monteurs.filter((m) => m.type === "schakelmonteur"),
-    [monteurs],
+    () =>
+      monteurs.filter(
+        (m) => m.type === "schakelmonteur" && (!filterMonteurId || m.id === filterMonteurId),
+      ),
+    [monteurs, filterMonteurId],
   );
   const montageMonteurs = useMemo(
-    () => monteurs.filter((m) => m.type === "montagemonteur"),
-    [monteurs],
+    () =>
+      monteurs.filter(
+        (m) => m.type === "montagemonteur" && (!filterMonteurId || m.id === filterMonteurId),
+      ),
+    [monteurs, filterMonteurId],
   );
 
   // ====== Aggregate to slot level ======
