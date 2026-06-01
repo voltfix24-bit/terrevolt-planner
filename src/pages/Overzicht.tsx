@@ -1595,11 +1595,11 @@ export default function Overzicht() {
           background: "rgba(10,26,48,0.6)",
         }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           <button
             type="button"
             onClick={shiftLeft}
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
             title="Vorige periode"
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -1612,9 +1612,10 @@ export default function Overzicht() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-sm font-semibold text-foreground tabular-nums min-w-[140px] text-center">
+          <span className="text-xs md:text-sm font-semibold text-foreground tabular-nums min-w-[110px] md:min-w-[140px] text-center">
             {navigatorLabel}
           </span>
+
           <button
             type="button"
             onClick={() => shiftWeek(1)}
