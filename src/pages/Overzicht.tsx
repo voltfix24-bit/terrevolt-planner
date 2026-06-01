@@ -299,7 +299,9 @@ export default function Overzicht() {
   const [montageOpen, setMontageOpen] = useState(true);
   const [projectenOpen, setProjectenOpen] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
   const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
 
   // Mobile filter panel
