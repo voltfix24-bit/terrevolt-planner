@@ -1677,7 +1677,7 @@ export default function Overzicht() {
           onClick={() => shiftWeek(-1)}
           title="Eén week terug"
           aria-label="Eén week terug"
-          className="group absolute top-1/2 -translate-y-1/2 z-40 flex items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
+          className="group hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
           style={{
             left: -16,
             width: 36,
