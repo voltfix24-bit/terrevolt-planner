@@ -51,7 +51,7 @@ export function AppLayout() {
         />
       )}
 
-      <main className="md:ml-[220px] min-h-screen pt-12 md:pt-0">
+      <main className="md:ml-[220px] min-h-screen pt-12 md:pt-0 overflow-x-hidden">
         <div className="w-full px-3 py-3 md:px-6 md:py-6">
           <Outlet />
         </div>
