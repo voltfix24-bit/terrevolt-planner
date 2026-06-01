@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PanelLeftClose, PanelLeftOpen, Printer } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PanelLeftClose, PanelLeftOpen, Printer, SlidersHorizontal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   exportGanttPDF,
@@ -294,6 +301,19 @@ export default function Overzicht() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
+
+  // Mobile filter panel
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterProjectId, setFilterProjectId] = useState<string>("");
+  const [filterMonteurId, setFilterMonteurId] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
+  const activeFilterCount =
+    (filterProjectId ? 1 : 0) + (filterMonteurId ? 1 : 0) + (filterStatus ? 1 : 0);
+  const clearFilters = () => {
+    setFilterProjectId("");
+    setFilterMonteurId("");
+    setFilterStatus("");
+  };
 
   // Scroll sync between sticky header and vertically-scrolling body
   const headerScrollRef = useRef<HTMLDivElement>(null);
@@ -765,21 +785,32 @@ export default function Overzicht() {
       if (inDateRange(p.gsu_datum) || inDateRange(p.geu_datum)) return 1;
       return 2;
     };
-    return [...projecten].sort((a, b) => {
+    const sorted = [...projecten].sort((a, b) => {
       const ta = tier(a);
       const tb = tier(b);
       if (ta !== tb) return ta - tb;
       return 0;
     });
-  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet, visibleDateRange]);
+    return sorted.filter((p) => {
+      if (filterProjectId && p.id !== filterProjectId) return false;
+      if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
+      return true;
+    });
+  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus]);
 
   const schakelMonteurs = useMemo(
-    () => monteurs.filter((m) => m.type === "schakelmonteur"),
-    [monteurs],
+    () =>
+      monteurs.filter(
+        (m) => m.type === "schakelmonteur" && (!filterMonteurId || m.id === filterMonteurId),
+      ),
+    [monteurs, filterMonteurId],
   );
   const montageMonteurs = useMemo(
-    () => monteurs.filter((m) => m.type === "montagemonteur"),
-    [monteurs],
+    () =>
+      monteurs.filter(
+        (m) => m.type === "montagemonteur" && (!filterMonteurId || m.id === filterMonteurId),
+      ),
+    [monteurs, filterMonteurId],
   );
 
   // ====== Aggregate to slot level ======
@@ -1391,6 +1422,133 @@ export default function Overzicht() {
           Overzicht
         </h1>
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Mobile-only filter button */}
+          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                className="md:hidden relative flex items-center gap-1.5 rounded-md border px-2.5 h-8 text-xs font-semibold"
+                style={{
+                  borderColor: activeFilterCount > 0 ? "rgba(63,255,139,0.4)" : "rgba(255,255,255,0.12)",
+                  background: activeFilterCount > 0 ? "rgba(63,255,139,0.12)" : "rgba(255,255,255,0.04)",
+                  color: activeFilterCount > 0 ? "#3fff8b" : "rgba(255,255,255,0.85)",
+                }}
+                aria-label="Filters openen"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span
+                    className="ml-0.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums"
+                    style={{
+                      minWidth: 16, height: 16, padding: "0 4px",
+                      background: "#3fff8b", color: "#0a1a30",
+                    }}
+                  >
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </SheetTrigger>
+            <SheetContent
+              side="bottom"
+              className="border-t"
+              style={{
+                backgroundColor: "rgba(10, 26, 48, 0.98)",
+                borderColor: "rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.9)",
+                maxHeight: "80vh",
+              }}
+            >
+              <SheetHeader>
+                <SheetTitle style={{ color: "rgba(255,255,255,0.95)" }}>
+                  Planning filteren
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 flex flex-col gap-4">
+                <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">
+                  Project
+                  <select
+                    value={filterProjectId}
+                    onChange={(e) => setFilterProjectId(e.target.value)}
+                    className="h-10 rounded-md border bg-white/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                  >
+                    <option value="">Alle projecten</option>
+                    {[...projecten]
+                      .sort((a, b) =>
+                        (a.case_nummer ?? a.station_naam ?? "").localeCompare(
+                          b.case_nummer ?? b.station_naam ?? "",
+                        ),
+                      )
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {(p.case_nummer ? p.case_nummer + " · " : "") +
+                            (p.station_naam ?? "—")}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">
+                  Monteur
+                  <select
+                    value={filterMonteurId}
+                    onChange={(e) => setFilterMonteurId(e.target.value)}
+                    className="h-10 rounded-md border bg-white/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                  >
+                    <option value="">Alle monteurs</option>
+                    {[...monteurs]
+                      .sort((a, b) => a.naam.localeCompare(b.naam))
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.naam} ({m.type === "schakelmonteur" ? "Schakel" : "Montage"})
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">
+                  Status
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="h-10 rounded-md border bg-white/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                  >
+                    <option value="">Alle statussen</option>
+                    <option value="concept">Concept</option>
+                    <option value="gepland">Gepland</option>
+                    <option value="in_uitvoering">In uitvoering</option>
+                    <option value="afgerond">Afgerond</option>
+                  </select>
+                </label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    disabled={activeFilterCount === 0}
+                    className="flex-1 h-10 rounded-md border text-sm font-semibold disabled:opacity-40"
+                    style={{
+                      borderColor: "rgba(255,255,255,0.12)",
+                      background: "rgba(255,255,255,0.04)",
+                      color: "rgba(255,255,255,0.85)",
+                    }}
+                  >
+                    Wissen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen(false)}
+                    className="flex-1 h-10 rounded-md text-sm font-bold"
+                    style={{ background: "#3fff8b", color: "#0a1a30" }}
+                  >
+                    Toepassen
+                  </button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+
           <GanttPrintMenu
             projecten={projecten}
             weken={weken}
@@ -1401,6 +1559,7 @@ export default function Overzicht() {
             jaar={jaar}
             feestdagen={feestdagMap}
           />
+
           <div
             className="flex items-center gap-2"
             style={{
