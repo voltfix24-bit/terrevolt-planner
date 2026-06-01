@@ -1428,7 +1428,7 @@ export default function Overzicht() {
 
       {/* Navigator + scale selector */}
       <div
-        className="mb-3 flex items-center justify-between rounded-lg border px-3 py-2"
+        className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
         style={{
           borderColor: "rgba(255,255,255,0.08)",
           background: "rgba(10,26,48,0.6)",
