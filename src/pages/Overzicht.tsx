@@ -1386,11 +1386,11 @@ export default function Overzicht() {
         }
       `}</style>
       {/* Page header */}
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-display text-xl md:text-3xl font-bold tracking-tight text-foreground">
           Overzicht
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <GanttPrintMenu
             projecten={projecten}
             weken={weken}
@@ -1407,10 +1407,11 @@ export default function Overzicht() {
               background: "rgba(63,255,139,0.15)",
               border: "1px solid rgba(63,255,139,0.3)",
               color: "#3fff8b",
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 700,
-              padding: "6px 14px",
+              padding: "5px 10px",
               borderRadius: 999,
+              whiteSpace: "nowrap",
             }}
           >
             <span
@@ -1420,7 +1421,7 @@ export default function Overzicht() {
                 boxShadow: "0 0 6px rgba(63,255,139,0.6)",
               }}
             />
-            {teamCapPct}% TEAM CAP.
+            {teamCapPct}% CAP.
           </div>
         </div>
       </div>
