@@ -302,6 +302,19 @@ export default function Overzicht() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
 
+  // Mobile filter panel
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterProjectId, setFilterProjectId] = useState<string>("");
+  const [filterMonteurId, setFilterMonteurId] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
+  const activeFilterCount =
+    (filterProjectId ? 1 : 0) + (filterMonteurId ? 1 : 0) + (filterStatus ? 1 : 0);
+  const clearFilters = () => {
+    setFilterProjectId("");
+    setFilterMonteurId("");
+    setFilterStatus("");
+  };
+
   // Scroll sync between sticky header and vertically-scrolling body
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
