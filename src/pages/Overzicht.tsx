@@ -785,13 +785,18 @@ export default function Overzicht() {
       if (inDateRange(p.gsu_datum) || inDateRange(p.geu_datum)) return 1;
       return 2;
     };
-    return [...projecten].sort((a, b) => {
+    const sorted = [...projecten].sort((a, b) => {
       const ta = tier(a);
       const tb = tier(b);
       if (ta !== tb) return ta - tb;
       return 0;
     });
-  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet, visibleDateRange]);
+    return sorted.filter((p) => {
+      if (filterProjectId && p.id !== filterProjectId) return false;
+      if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
+      return true;
+    });
+  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus]);
 
   const schakelMonteurs = useMemo(
     () => monteurs.filter((m) => m.type === "schakelmonteur"),
