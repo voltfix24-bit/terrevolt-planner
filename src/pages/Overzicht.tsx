@@ -299,7 +299,9 @@ export default function Overzicht() {
   const [montageOpen, setMontageOpen] = useState(true);
   const [projectenOpen, setProjectenOpen] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
   const sidebarW = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
 
   // Mobile filter panel
@@ -1593,11 +1595,11 @@ export default function Overzicht() {
           background: "rgba(10,26,48,0.6)",
         }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           <button
             type="button"
             onClick={shiftLeft}
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
             title="Vorige periode"
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -1610,9 +1612,10 @@ export default function Overzicht() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-sm font-semibold text-foreground tabular-nums min-w-[140px] text-center">
+          <span className="text-xs md:text-sm font-semibold text-foreground tabular-nums min-w-[110px] md:min-w-[140px] text-center">
             {navigatorLabel}
           </span>
+
           <button
             type="button"
             onClick={() => shiftWeek(1)}
@@ -1624,7 +1627,7 @@ export default function Overzicht() {
           <button
             type="button"
             onClick={shiftRight}
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
             title="Volgende periode"
           >
             <ChevronsRight className="h-4 w-4" />
@@ -1636,12 +1639,12 @@ export default function Overzicht() {
               setJaar(iso.year);
               setStartWeek(iso.week);
             }}
-            className="flex h-7 items-center justify-center rounded px-3 text-xs font-semibold transition-colors"
+            className="flex h-7 items-center justify-center rounded px-2 md:px-3 text-xs font-semibold transition-colors"
             style={{
               background: "rgba(63,255,139,0.12)",
               color: "#3fff8b",
               border: "1px solid rgba(63,255,139,0.2)",
-              marginLeft: 8,
+              marginLeft: 4,
             }}
             title="Ga naar huidige week"
           >
@@ -1675,7 +1678,7 @@ export default function Overzicht() {
           onClick={() => shiftWeek(-1)}
           title="Eén week terug"
           aria-label="Eén week terug"
-          className="group absolute top-1/2 -translate-y-1/2 z-40 flex items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
+          className="group hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
           style={{
             left: -16,
             width: 36,
@@ -1694,7 +1697,7 @@ export default function Overzicht() {
           onClick={() => shiftWeek(1)}
           title="Eén week vooruit"
           aria-label="Eén week vooruit"
-          className="group absolute top-1/2 -translate-y-1/2 z-40 flex items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
+          className="group hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 items-center justify-center rounded-full border shadow-lg transition-all hover:scale-110"
           style={{
             right: -16,
             width: 36,

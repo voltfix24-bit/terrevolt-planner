@@ -31,9 +31,12 @@ export function AppLayout() {
       </div>
 
       {/* Sidebar wrapper: slide on mobile, static on desktop */}
+      {/* Sidebar wrapper: slide on mobile, static on desktop.
+          Explicit width is required so -translate-x-full actually moves it off-screen on mobile,
+          because the child <AppSidebar /> is position:fixed and contributes no intrinsic width. */}
       <div
         className={[
-          "fixed inset-y-0 left-0 z-50 transition-transform md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-[220px] transition-transform md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
@@ -48,7 +51,7 @@ export function AppLayout() {
         />
       )}
 
-      <main className="md:ml-[220px] min-h-screen pt-12 md:pt-0">
+      <main className="md:ml-[220px] min-h-screen pt-12 md:pt-0 overflow-x-hidden">
         <div className="w-full px-3 py-3 md:px-6 md:py-6">
           <Outlet />
         </div>
