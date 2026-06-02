@@ -2097,15 +2097,15 @@ export default function Overzicht() {
                             >
                               {p.case_nummer && (
                                 <span
+                                  className="text-primary"
                                   style={{
                                     fontSize: 9,
                                     fontWeight: 700,
                                     letterSpacing: "0.08em",
                                     padding: "1px 5px",
                                     borderRadius: 3,
-                                    background: "rgba(63,255,139,0.10)",
-                                    color: "#3fff8b",
-                                    border: "1px solid rgba(63,255,139,0.22)",
+                                    background: "hsl(var(--primary) / 0.10)",
+                                    border: "1px solid hsl(var(--primary) / 0.22)",
                                     fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                                     whiteSpace: "nowrap",
                                     fontVariantNumeric: "tabular-nums",
@@ -2123,10 +2123,10 @@ export default function Overzicht() {
                             </div>
                             {/* Station naam — primary identifier */}
                             <p
+                              className="text-foreground"
                               style={{
                                 fontSize: 13,
                                 fontWeight: 600,
-                                color: "white",
                                 fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
