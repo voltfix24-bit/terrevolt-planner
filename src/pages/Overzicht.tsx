@@ -2489,7 +2489,7 @@ export default function Overzicht() {
                                   : isConcept
                                     ? "transparent"
                                     : isJaar
-                                      ? "rgba(254,179,0,0.8)"
+                                      ? "var(--status-gepland-bg)"
                                       : sc.bg;
                                 return (
                                   <div
@@ -2500,15 +2500,15 @@ export default function Overzicht() {
                                       top: pillTop,
                                       height: pillHeight,
                                       background: pillBg,
-                                      opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.8,
+                                      opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.85,
                                       borderRadius: 4,
                                       border: isConcept ? "2px dashed rgb(var(--fg-rgb) / 0.15)" : undefined,
                                       color: segHasConflict
                                         ? "#ffffff"
                                         : isConcept
-                                          ? "rgb(var(--fg-rgb) / 0.4)"
+                                          ? "rgb(var(--fg-rgb) / 0.55)"
                                           : isJaar
-                                            ? "var(--surface-solid)"
+                                            ? "var(--status-gepland-fg)"
                                             : sc.text,
                                       fontSize: isConcept ? 9 : 10,
                                       fontWeight: 700,
