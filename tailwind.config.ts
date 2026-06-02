@@ -16,6 +16,9 @@ export default {
         display: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
+        /* Theme-aware white/surface helpers — keep alpha syntax (bg-fg/[0.06]) */
+        fg: "rgb(var(--fg-rgb) / <alpha-value>)",
+        surface: "rgb(var(--surface-rgb) / <alpha-value>)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
