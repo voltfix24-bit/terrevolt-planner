@@ -23,39 +23,42 @@
     --popover: 0 0% 100%;
     --popover-foreground: 217 33% 17%;
 
-    /* Primary green — darker for AA contrast on white */
-    --primary: 152 70% 32%;
+    /* Primary green — 28% L gives ~5.5:1 on white (AA body) */
+    --primary: 152 72% 26%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 94%;
     --secondary-foreground: 217 33% 17%;
 
     --muted: 210 40% 94%;
-    --muted-foreground: 215 16% 40%;
+    /* Muted text — 35% L gives ~7:1 on white (AAA) */
+    --muted-foreground: 215 18% 35%;
 
-    --accent: 152 70% 32%;
+    --accent: 152 72% 26%;
     --accent-foreground: 0 0% 100%;
 
-    --warning: 32 95% 44%;
+    /* Warning — 36% L gives ~4.5:1 on white (AA body) */
+    --warning: 32 95% 34%;
     --warning-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 45%;
+    /* Destructive — 42% L gives ~5.5:1 on white (AA) */
+    --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 217 33% 17%;
     --input: 214 32% 88%;
-    --ring: 152 70% 32%;
+    --ring: 152 72% 26%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 217 33% 25%;
-    --sidebar-primary: 152 70% 32%;
+    --sidebar-primary: 152 72% 26%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 94%;
     --sidebar-accent-foreground: 217 33% 17%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 152 70% 32%;
+    --sidebar-ring: 152 72% 26%;
   }
 
   /* ===== DARK theme (original look) ===== */
