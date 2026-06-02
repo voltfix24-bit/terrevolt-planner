@@ -213,9 +213,9 @@ function getCurrentISOWeek(): { week: number; year: number } {
 function statusColor(status: Status | null): { bg: string; text: string; label: string } {
   switch (status) {
     case "gepland":
-      return { bg: "#feb300", text: "var(--surface-solid)", label: "Gepland" };
+      return { bg: "var(--status-gepland-bg)", text: "var(--status-gepland-fg)", label: "Gepland" };
     case "in_uitvoering":
-      return { bg: "#3fff8b", text: "var(--surface-solid)", label: "In uitvoering" };
+      return { bg: "var(--status-uitvoering-bg)", text: "var(--status-uitvoering-fg)", label: "In uitvoering" };
     case "afgerond":
       return { bg: "rgb(var(--fg-rgb) / 0.15)", text: "rgb(var(--fg-rgb) / 0.6)", label: "Afgerond" };
     case "concept":
@@ -226,8 +226,8 @@ function statusColor(status: Status | null): { bg: string; text: string; label: 
 
 function msBadgeStyle(ms: string | null): React.CSSProperties | null {
   if (!ms) return null;
-  if (ms === "AVP") return { background: "#3fff8b", color: "var(--surface-solid)" };
-  if (ms === "VP") return { background: "#7cc1ff", color: "var(--surface-solid)" };
+  if (ms === "AVP") return { background: "var(--ms-avp-bg)", color: "var(--ms-avp-fg)" };
+  if (ms === "VP") return { background: "var(--ms-vp-bg)", color: "var(--ms-vp-fg)" };
   if (ms === "VOP") return { background: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
   return { background: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
 }
