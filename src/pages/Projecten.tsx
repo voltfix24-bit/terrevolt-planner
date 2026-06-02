@@ -75,9 +75,9 @@ const statusLabel = (s: Status | null) =>
     : "Concept";
 
 const statusStyle = (s: Status | null): React.CSSProperties => {
-  if (s === "gepland") return { backgroundColor: "#feb300", color: "#0a1a30" };
-  if (s === "in_uitvoering") return { backgroundColor: "#3fff8b", color: "#0a1a30" };
-  return { backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" };
+  if (s === "gepland") return { backgroundColor: "#feb300", color: "var(--surface-solid)" };
+  if (s === "in_uitvoering") return { backgroundColor: "#3fff8b", color: "var(--surface-solid)" };
+  return { backgroundColor: "rgb(var(--fg-rgb) / 0.08)", color: "rgb(var(--fg-rgb) / 0.6)" };
 };
 
 const lsLabel = (s: string | null): string | null => {
@@ -221,7 +221,7 @@ const Projecten = () => {
                 "rounded-md px-3.5 py-1.5 text-xs font-display font-semibold tracking-wide transition-all",
                 statusFilter === f.key
                   ? "bg-primary text-primary-foreground"
-                  : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                  : "bg-fg/[0.04] text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground",
               ].join(" ")}
             >
               {f.label}
@@ -234,7 +234,7 @@ const Projecten = () => {
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
             placeholder="Zoek op casenummer, station, straat, postcode of plaats"
-            className="rounded-md border-white/10 bg-white/[0.04] pl-9 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary"
+            className="rounded-md border-fg/10 bg-fg/[0.04] pl-9 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary"
           />
         </div>
       </div>
@@ -271,7 +271,7 @@ const Projecten = () => {
               <div
                 key={p.id}
                 onClick={() => openProject(p)}
-                className="surface-card group relative cursor-pointer rounded-lg p-5 transition-all hover:border-primary/30 hover:bg-white/[0.04]"
+                className="surface-card group relative cursor-pointer rounded-lg p-5 transition-all hover:border-primary/30 hover:bg-fg/[0.04]"
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -339,7 +339,7 @@ const Projecten = () => {
                   </div>
                 )}
 
-                <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3">
+                <div className="mt-4 flex items-center justify-between border-t border-fg/5 pt-3">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -356,7 +356,7 @@ const Projecten = () => {
                         e.stopPropagation();
                         navigate(`/projecten/${p.id}/dossier`);
                       }}
-                      className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-display font-semibold text-foreground/85 transition-colors hover:bg-white/[0.07]"
+                      className="inline-flex items-center gap-1 rounded-md border border-fg/10 bg-fg/[0.03] px-2.5 py-1 text-[11px] font-display font-semibold text-foreground/85 transition-colors hover:bg-fg/[0.07]"
                       title="Open dossier"
                     >
                       <FileText className="h-3.5 w-3.5" /> Dossier

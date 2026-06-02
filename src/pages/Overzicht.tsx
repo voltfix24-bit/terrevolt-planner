@@ -40,9 +40,9 @@ const PILL_H_MONTEUR = 26;
 const PILL_H_PROJECT = 22;
 
 // Border tokens — applied to EVERY cell so the raster is always visible
-const BORDER_CELL_RIGHT = "1px solid rgba(255,255,255,0.06)";
-const BORDER_CELL_BOTTOM = "1px solid rgba(255,255,255,0.04)";
-const BORDER_GROUP_RIGHT = "1px solid rgba(255,255,255,0.12)";
+const BORDER_CELL_RIGHT = "1px solid rgb(var(--fg-rgb) / 0.06)";
+const BORDER_CELL_BOTTOM = "1px solid rgb(var(--fg-rgb) / 0.04)";
+const BORDER_GROUP_RIGHT = "1px solid rgb(var(--fg-rgb) / 0.12)";
 const BG_CURRENT_GROUP = "rgba(63,255,139,0.02)";
 const BG_TODAY = "rgba(63,255,139,0.04)";
 
@@ -213,23 +213,23 @@ function getCurrentISOWeek(): { week: number; year: number } {
 function statusColor(status: Status | null): { bg: string; text: string; label: string } {
   switch (status) {
     case "gepland":
-      return { bg: "#feb300", text: "#0a1a30", label: "Gepland" };
+      return { bg: "#feb300", text: "var(--surface-solid)", label: "Gepland" };
     case "in_uitvoering":
-      return { bg: "#3fff8b", text: "#0a1a30", label: "In uitvoering" };
+      return { bg: "#3fff8b", text: "var(--surface-solid)", label: "In uitvoering" };
     case "afgerond":
-      return { bg: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.6)", label: "Afgerond" };
+      return { bg: "rgb(var(--fg-rgb) / 0.15)", text: "rgb(var(--fg-rgb) / 0.6)", label: "Afgerond" };
     case "concept":
     default:
-      return { bg: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.7)", label: "Concept" };
+      return { bg: "rgb(var(--fg-rgb) / 0.15)", text: "rgb(var(--fg-rgb) / 0.7)", label: "Concept" };
   }
 }
 
 function msBadgeStyle(ms: string | null): React.CSSProperties | null {
   if (!ms) return null;
-  if (ms === "AVP") return { background: "#3fff8b", color: "#0a1a30" };
-  if (ms === "VP") return { background: "#7cc1ff", color: "#0a1a30" };
-  if (ms === "VOP") return { background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" };
-  return { background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" };
+  if (ms === "AVP") return { background: "#3fff8b", color: "var(--surface-solid)" };
+  if (ms === "VP") return { background: "#7cc1ff", color: "var(--surface-solid)" };
+  if (ms === "VOP") return { background: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
+  return { background: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
 }
 
 function colorHexFor(code: string): string {
@@ -1411,7 +1411,7 @@ export default function Overzicht() {
         .overzicht-scroll::-webkit-scrollbar { height: 4px; width: 4px; }
         .overzicht-scroll::-webkit-scrollbar-track { background: transparent; }
         .overzicht-scroll::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.1);
+          background: rgb(var(--fg-rgb) / 0.1);
           border-radius: 10px;
         }
         .overzicht-scroll::-webkit-scrollbar-thumb:hover {
@@ -1431,9 +1431,9 @@ export default function Overzicht() {
                 type="button"
                 className="md:hidden relative flex items-center gap-1.5 rounded-md border px-2.5 h-8 text-xs font-semibold"
                 style={{
-                  borderColor: activeFilterCount > 0 ? "rgba(63,255,139,0.4)" : "rgba(255,255,255,0.12)",
-                  background: activeFilterCount > 0 ? "rgba(63,255,139,0.12)" : "rgba(255,255,255,0.04)",
-                  color: activeFilterCount > 0 ? "#3fff8b" : "rgba(255,255,255,0.85)",
+                  borderColor: activeFilterCount > 0 ? "rgba(63,255,139,0.4)" : "rgb(var(--fg-rgb) / 0.12)",
+                  background: activeFilterCount > 0 ? "rgba(63,255,139,0.12)" : "rgb(var(--fg-rgb) / 0.04)",
+                  color: activeFilterCount > 0 ? "#3fff8b" : "rgb(var(--fg-rgb) / 0.85)",
                 }}
                 aria-label="Filters openen"
               >
@@ -1444,7 +1444,7 @@ export default function Overzicht() {
                     className="ml-0.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums"
                     style={{
                       minWidth: 16, height: 16, padding: "0 4px",
-                      background: "#3fff8b", color: "#0a1a30",
+                      background: "#3fff8b", color: "var(--surface-solid)",
                     }}
                   >
                     {activeFilterCount}
@@ -1456,14 +1456,14 @@ export default function Overzicht() {
               side="bottom"
               className="border-t"
               style={{
-                backgroundColor: "rgba(10, 26, 48, 0.98)",
-                borderColor: "rgba(255,255,255,0.1)",
-                color: "rgba(255,255,255,0.9)",
+                backgroundColor: "rgb(var(--surface-rgb) / 0.98)",
+                borderColor: "rgb(var(--fg-rgb) / 0.1)",
+                color: "rgb(var(--fg-rgb) / 0.9)",
                 maxHeight: "80vh",
               }}
             >
               <SheetHeader>
-                <SheetTitle style={{ color: "rgba(255,255,255,0.95)" }}>
+                <SheetTitle style={{ color: "rgb(var(--fg-rgb) / 0.95)" }}>
                   Planning filteren
                 </SheetTitle>
               </SheetHeader>
@@ -1473,8 +1473,8 @@ export default function Overzicht() {
                   <select
                     value={filterProjectId}
                     onChange={(e) => setFilterProjectId(e.target.value)}
-                    className="h-10 rounded-md border bg-white/[0.04] px-3 text-sm text-foreground"
-                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                    className="h-10 rounded-md border bg-fg/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgb(var(--fg-rgb) / 0.12)" }}
                   >
                     <option value="">Alle projecten</option>
                     {[...projecten]
@@ -1496,8 +1496,8 @@ export default function Overzicht() {
                   <select
                     value={filterMonteurId}
                     onChange={(e) => setFilterMonteurId(e.target.value)}
-                    className="h-10 rounded-md border bg-white/[0.04] px-3 text-sm text-foreground"
-                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                    className="h-10 rounded-md border bg-fg/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgb(var(--fg-rgb) / 0.12)" }}
                   >
                     <option value="">Alle monteurs</option>
                     {[...monteurs]
@@ -1514,8 +1514,8 @@ export default function Overzicht() {
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="h-10 rounded-md border bg-white/[0.04] px-3 text-sm text-foreground"
-                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                    className="h-10 rounded-md border bg-fg/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgb(var(--fg-rgb) / 0.12)" }}
                   >
                     <option value="">Alle statussen</option>
                     <option value="concept">Concept</option>
@@ -1531,9 +1531,9 @@ export default function Overzicht() {
                     disabled={activeFilterCount === 0}
                     className="flex-1 h-10 rounded-md border text-sm font-semibold disabled:opacity-40"
                     style={{
-                      borderColor: "rgba(255,255,255,0.12)",
-                      background: "rgba(255,255,255,0.04)",
-                      color: "rgba(255,255,255,0.85)",
+                      borderColor: "rgb(var(--fg-rgb) / 0.12)",
+                      background: "rgb(var(--fg-rgb) / 0.04)",
+                      color: "rgb(var(--fg-rgb) / 0.85)",
                     }}
                   >
                     Wissen
@@ -1542,7 +1542,7 @@ export default function Overzicht() {
                     type="button"
                     onClick={() => setFiltersOpen(false)}
                     className="flex-1 h-10 rounded-md text-sm font-bold"
-                    style={{ background: "#3fff8b", color: "#0a1a30" }}
+                    style={{ background: "#3fff8b", color: "var(--surface-solid)" }}
                   >
                     Toepassen
                   </button>
@@ -1591,15 +1591,15 @@ export default function Overzicht() {
       <div
         className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
         style={{
-          borderColor: "rgba(255,255,255,0.08)",
-          background: "rgba(10,26,48,0.6)",
+          borderColor: "rgb(var(--fg-rgb) / 0.08)",
+          background: "rgb(var(--surface-rgb) / 0.6)",
         }}
       >
         <div className="flex items-center gap-1 md:gap-2">
           <button
             type="button"
             onClick={shiftLeft}
-            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-fg/[0.06] text-muted-foreground hover:text-foreground"
             title="Vorige periode"
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -1607,7 +1607,7 @@ export default function Overzicht() {
           <button
             type="button"
             onClick={() => shiftWeek(-1)}
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded hover:bg-fg/[0.06] text-muted-foreground hover:text-foreground"
             title="Eén week terug"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -1619,7 +1619,7 @@ export default function Overzicht() {
           <button
             type="button"
             onClick={() => shiftWeek(1)}
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded hover:bg-fg/[0.06] text-muted-foreground hover:text-foreground"
             title="Eén week vooruit"
           >
             <ChevronRight className="h-4 w-4" />
@@ -1627,7 +1627,7 @@ export default function Overzicht() {
           <button
             type="button"
             onClick={shiftRight}
-            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-white/[0.06] text-muted-foreground hover:text-foreground"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded hover:bg-fg/[0.06] text-muted-foreground hover:text-foreground"
             title="Volgende periode"
           >
             <ChevronsRight className="h-4 w-4" />
@@ -1651,7 +1651,7 @@ export default function Overzicht() {
             Vandaag
           </button>
         </div>
-        <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] p-0.5">
+        <div className="flex items-center gap-1 rounded-md border border-fg/10 bg-fg/[0.03] p-0.5">
           {SCALE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -1661,7 +1661,7 @@ export default function Overzicht() {
                 "rounded px-3 h-7 text-xs font-semibold transition-colors",
                 scale === opt.value
                   ? "bg-primary/20 text-primary"
-                  : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+                  : "text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground",
               ].join(" ")}
             >
               {opt.label}
@@ -1683,11 +1683,11 @@ export default function Overzicht() {
             left: -16,
             width: 36,
             height: 36,
-            borderColor: "rgba(255,255,255,0.12)",
-            background: "rgba(10,26,48,0.92)",
+            borderColor: "rgb(var(--fg-rgb) / 0.12)",
+            background: "rgb(var(--surface-rgb) / 0.92)",
             backdropFilter: "blur(8px)",
             WebkitBackdropFilter: "blur(8px)",
-            color: "rgba(255,255,255,0.85)",
+            color: "rgb(var(--fg-rgb) / 0.85)",
           }}
         >
           <ChevronLeft className="h-5 w-5" />
@@ -1702,11 +1702,11 @@ export default function Overzicht() {
             right: -16,
             width: 36,
             height: 36,
-            borderColor: "rgba(255,255,255,0.12)",
-            background: "rgba(10,26,48,0.92)",
+            borderColor: "rgb(var(--fg-rgb) / 0.12)",
+            background: "rgb(var(--surface-rgb) / 0.92)",
             backdropFilter: "blur(8px)",
             WebkitBackdropFilter: "blur(8px)",
-            color: "rgba(255,255,255,0.85)",
+            color: "rgb(var(--fg-rgb) / 0.85)",
           }}
         >
           <ChevronRight className="h-5 w-5" />
@@ -1715,8 +1715,8 @@ export default function Overzicht() {
         id="overzicht-grid-root"
         className="rounded-lg border"
         style={{
-          borderColor: "rgba(255,255,255,0.08)",
-          background: "rgba(10,26,48,0.4)",
+          borderColor: "rgb(var(--fg-rgb) / 0.08)",
+          background: "rgb(var(--surface-rgb) / 0.4)",
           height: "calc(100vh - 200px)",
           minHeight: 400,
           display: "flex",
@@ -1730,8 +1730,8 @@ export default function Overzicht() {
             flexShrink: 0,
             display: "flex",
             zIndex: 30,
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
+            borderBottom: "1px solid rgb(var(--fg-rgb) / 0.06)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
           }}
@@ -1742,7 +1742,7 @@ export default function Overzicht() {
               width: sidebarW,
               flexShrink: 0,
               height: HEADER_H,
-              borderRight: "1px solid rgba(255,255,255,0.08)",
+              borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
               transition: "width 0.2s ease",
             }}
           />
@@ -1781,12 +1781,12 @@ export default function Overzicht() {
             <button
               type="button"
               onClick={() => setMedewerkersOpen((o) => !o)}
-              className="flex w-full items-center gap-2 px-3 hover:bg-white/[0.04]"
+              className="flex w-full items-center gap-2 px-3 hover:bg-fg/[0.04]"
               style={{
                 height: 32,
-                borderRight: "1px solid rgba(255,255,255,0.08)",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.02)",
+                borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                borderBottom: "1px solid rgb(var(--fg-rgb) / 0.06)",
+                background: "rgb(var(--fg-rgb) / 0.02)",
               }}
             >
               <ChevronRight
@@ -1817,13 +1817,13 @@ export default function Overzicht() {
                 <button
                   type="button"
                   onClick={() => setSchakelOpen((o) => !o)}
-                  className="flex w-full items-center gap-2 hover:bg-white/[0.04]"
+                  className="flex w-full items-center gap-2 hover:bg-fg/[0.04]"
                   style={{
                     height: 28,
                     paddingLeft: 16,
-                    borderRight: "1px solid rgba(255,255,255,0.08)",
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
+                    borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                    borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
+                    background: "rgb(var(--fg-rgb) / 0.02)",
                   }}
                 >
                   <ChevronRight
@@ -1864,13 +1864,13 @@ export default function Overzicht() {
                 <button
                   type="button"
                   onClick={() => setMontageOpen((o) => !o)}
-                  className="flex w-full items-center gap-2 hover:bg-white/[0.04]"
+                  className="flex w-full items-center gap-2 hover:bg-fg/[0.04]"
                   style={{
                     height: 28,
                     paddingLeft: 16,
-                    borderRight: "1px solid rgba(255,255,255,0.08)",
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
+                    borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                    borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
+                    background: "rgb(var(--fg-rgb) / 0.02)",
                   }}
                 >
                   <ChevronRight
@@ -1910,8 +1910,8 @@ export default function Overzicht() {
                 <div
                   style={{
                     padding: "16px 12px",
-                    borderRight: "1px solid rgba(255,255,255,0.08)",
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                    borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
                   }}
                   className="text-xs italic text-muted-foreground"
                 >
@@ -1925,8 +1925,8 @@ export default function Overzicht() {
               style={{
                 height: 8,
                 background: "transparent",
-                borderRight: "1px solid rgba(255,255,255,0.08)",
-                borderTop: "2px solid rgba(255,255,255,0.06)",
+                borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                borderTop: "2px solid rgb(var(--fg-rgb) / 0.06)",
                 marginTop: 4,
               }}
             />
@@ -1950,15 +1950,15 @@ export default function Overzicht() {
                     height: 32,
                     paddingLeft: 12,
                     paddingTop: 4,
-                    borderRight: "1px solid rgba(255,255,255,0.08)",
-                    borderBottom: "1px solid rgba(255,255,255,0.06)",
-                    background: "rgba(255,255,255,0.03)",
+                    borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                    borderBottom: "1px solid rgb(var(--fg-rgb) / 0.06)",
+                    background: "rgb(var(--fg-rgb) / 0.03)",
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => setProjectenOpen((o) => !o)}
-                    className="flex flex-1 items-center gap-2 hover:bg-white/[0.05]"
+                    className="flex flex-1 items-center gap-2 hover:bg-fg/[0.05]"
                     style={{ height: "100%", marginLeft: -12, paddingLeft: 12 }}
                   >
                     <ChevronRight
@@ -1985,11 +1985,11 @@ export default function Overzicht() {
                       onClick={toggleAllProjects}
                       className="text-[10px] font-semibold transition-colors hover:text-foreground"
                       style={{
-                        color: "rgba(255,255,255,0.4)",
+                        color: "rgb(var(--fg-rgb) / 0.4)",
                         padding: "2px 8px",
                         borderRadius: 4,
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgb(var(--fg-rgb) / 0.1)",
+                        background: "rgb(var(--fg-rgb) / 0.03)",
                         marginRight: 12,
                       }}
                       title={allExpanded ? "Alles inklappen" : "Alles uitklappen"}
@@ -2013,7 +2013,7 @@ export default function Overzicht() {
                 <div
                   style={{
                     padding: "16px 12px",
-                    borderRight: "1px solid rgba(255,255,255,0.08)",
+                    borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
                   }}
                   className="text-xs italic text-muted-foreground"
                 >
@@ -2031,19 +2031,19 @@ export default function Overzicht() {
                     <div
                       onClick={() => navigateToProject(p.id)}
                       title={`${p.case_nummer ?? "—"}${p.station_naam ? ` — ${p.station_naam}` : ""}`}
-                      className="group relative flex cursor-pointer items-center gap-1.5 pr-2 hover:bg-white/[0.03]"
+                      className="group relative flex cursor-pointer items-center gap-1.5 pr-2 hover:bg-fg/[0.03]"
                       style={{
                         height: ROW_H_PROJECT,
                         paddingLeft: 12,
-                        borderRight: "1px solid rgba(255,255,255,0.08)",
-                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                        borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
                         borderLeft: (() => {
                           switch (p.status) {
                             case "gepland": return "3px solid #feb300";
                             case "in_uitvoering": return "3px solid #3fff8b";
-                            case "afgerond": return "3px solid rgba(255,255,255,0.3)";
+                            case "afgerond": return "3px solid rgb(var(--fg-rgb) / 0.3)";
                             case "concept":
-                            default: return "3px dashed rgba(255,255,255,0.2)";
+                            default: return "3px dashed rgb(var(--fg-rgb) / 0.2)";
                           }
                         })(),
                       }}
@@ -2075,7 +2075,7 @@ export default function Overzicht() {
                               e.stopPropagation();
                               toggleExpand(p.id);
                             }}
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-white/[0.08]"
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded hover:bg-fg/[0.08]"
                           >
                             <ChevronRight
                               className="h-3 w-3 text-muted-foreground"
@@ -2159,17 +2159,17 @@ export default function Overzicht() {
                                       gap: 3,
                                       fontSize: 9.5,
                                       fontWeight: 600,
-                                      color: "rgba(255,255,255,0.55)",
+                                      color: "rgb(var(--fg-rgb) / 0.55)",
                                       fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                                       whiteSpace: "nowrap",
                                       letterSpacing: "0.02em",
                                       fontVariantNumeric: "tabular-nums",
                                     }}
                                   >
-                                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}>GSU</span>
+                                    <span style={{ color: "rgb(var(--fg-rgb) / 0.35)", fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}>GSU</span>
                                     <span>{formatDateShort(p.gsu_datum)}</span>
-                                    <span style={{ color: "rgba(255,255,255,0.25)" }}>→</span>
-                                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}>GEU</span>
+                                    <span style={{ color: "rgb(var(--fg-rgb) / 0.25)" }}>→</span>
+                                    <span style={{ color: "rgb(var(--fg-rgb) / 0.35)", fontSize: 8, fontWeight: 700, letterSpacing: "0.06em" }}>GEU</span>
                                     <span>{formatDateShort(p.geu_datum)}</span>
                                   </span>
                                 )}
@@ -2233,21 +2233,21 @@ export default function Overzicht() {
                             ? "#feb300"
                             : a.capaciteit_type === "montage"
                               ? "#378add"
-                              : "rgba(255,255,255,0.2)";
+                              : "rgb(var(--fg-rgb) / 0.2)";
                         const isLastAct = ai === acts.length - 1;
                         return (
                           <div
                             key={a.id}
                             onClick={() => navigateToProject(p.id)}
-                            className="flex cursor-pointer items-center gap-2 pr-2 hover:bg-white/[0.03]"
+                            className="flex cursor-pointer items-center gap-2 pr-2 hover:bg-fg/[0.03]"
                             style={{
                               paddingLeft: 20,
                               height: ROW_H_ACTIVITEIT,
-                              borderRight: "1px solid rgba(255,255,255,0.08)",
+                              borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
                               borderBottom: isLastAct
-                                ? "2px solid rgba(255,255,255,0.06)"
-                                : "1px solid rgba(255,255,255,0.03)",
-                              background: "rgba(255,255,255,0.015)",
+                                ? "2px solid rgb(var(--fg-rgb) / 0.06)"
+                                : "1px solid rgb(var(--fg-rgb) / 0.03)",
+                              background: "rgb(var(--fg-rgb) / 0.015)",
                             }}
                           >
                             <span
@@ -2273,8 +2273,8 @@ export default function Overzicht() {
                           height: 8,
                           width: "100%",
                           boxSizing: "border-box",
-                          background: "rgba(255,255,255,0.02)",
-                          borderRight: "1px solid rgba(255,255,255,0.08)",
+                          background: "rgb(var(--fg-rgb) / 0.02)",
+                          borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
                         }}
                       />
                     )}
@@ -2297,8 +2297,8 @@ export default function Overzicht() {
               style={{
                 height: 32,
                 width: totalGridWidth,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.02)",
+                borderBottom: "1px solid rgb(var(--fg-rgb) / 0.06)",
+                background: "rgb(var(--fg-rgb) / 0.02)",
               }}
             />
 
@@ -2314,8 +2314,8 @@ export default function Overzicht() {
                 <div
                   style={{
                     height: 28, width: totalGridWidth,
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
+                    borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
+                    background: "rgb(var(--fg-rgb) / 0.02)",
                   }}
                 />
               )}
@@ -2346,8 +2346,8 @@ export default function Overzicht() {
                 <div
                   style={{
                     height: 28, width: totalGridWidth,
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                    background: "rgba(255,255,255,0.02)",
+                    borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
+                    background: "rgb(var(--fg-rgb) / 0.02)",
                   }}
                 />
               )}
@@ -2385,7 +2385,7 @@ export default function Overzicht() {
                 height: 8,
                 width: totalGridWidth,
                 background: "transparent",
-                borderTop: "2px solid rgba(255,255,255,0.06)",
+                borderTop: "2px solid rgb(var(--fg-rgb) / 0.06)",
                 marginTop: 4,
               }}
             />
@@ -2395,8 +2395,8 @@ export default function Overzicht() {
               style={{
                 height: 32, width: totalGridWidth,
                 paddingTop: 4,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
+                borderBottom: "1px solid rgb(var(--fg-rgb) / 0.06)",
+                background: "rgb(var(--fg-rgb) / 0.03)",
               }}
             />
 
@@ -2432,11 +2432,11 @@ export default function Overzicht() {
                         navigateToProject(p.id);
                       }}
                       onMouseDown={(e) => startProjectDrag(e, p.id)}
-                      className="relative hover:bg-white/[0.02]"
+                      className="relative hover:bg-fg/[0.02]"
                       style={{
                         width: totalGridWidth,
                         height: ROW_H_PROJECT,
-                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
                         cursor: scale === "maand" ? "grab" : "pointer",
                         userSelect: "none",
                       }}
@@ -2502,13 +2502,13 @@ export default function Overzicht() {
                                       background: pillBg,
                                       opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.8,
                                       borderRadius: 4,
-                                      border: isConcept ? "2px dashed rgba(255,255,255,0.15)" : undefined,
+                                      border: isConcept ? "2px dashed rgb(var(--fg-rgb) / 0.15)" : undefined,
                                       color: segHasConflict
                                         ? "#ffffff"
                                         : isConcept
-                                          ? "rgba(255,255,255,0.4)"
+                                          ? "rgb(var(--fg-rgb) / 0.4)"
                                           : isJaar
-                                            ? "#0a1a30"
+                                            ? "var(--surface-solid)"
                                             : sc.text,
                                       fontSize: isConcept ? 9 : 10,
                                       fontWeight: 700,
@@ -2619,7 +2619,7 @@ export default function Overzicht() {
                           width: totalGridWidth,
                           height: 8,
                           boxSizing: "border-box",
-                          background: "rgba(255,255,255,0.02)",
+                          background: "rgb(var(--fg-rgb) / 0.02)",
                         }}
                       />
                     )}
@@ -2688,8 +2688,8 @@ function MonteurSidebarRow({
         paddingLeft: collapsed ? 0 : 12,
         paddingRight: collapsed ? 0 : 12,
         justifyContent: collapsed ? "center" : undefined,
-        borderRight: "1px solid rgba(255,255,255,0.08)",
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
+        borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
+        borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
       }}
     >
       <div
@@ -2905,7 +2905,7 @@ function MonteurCellsRow({
                 bottom: 8,
                 height: ROW_H_MONTEUR - 16,
                 background: isConcept ? "rgba(63,255,139,0.08)" : "rgba(63,255,139,0.85)",
-                color: isConcept ? "#3fff8b" : "#0a1a30",
+                color: isConcept ? "#3fff8b" : "var(--surface-solid)",
                 fontSize: 9,
                 fontWeight: 700,
                 borderRadius: 4,
@@ -2936,7 +2936,7 @@ function MonteurCellsRow({
               left: left + 2, width: width - 4,
               top: topPad, height: PILL_H_MONTEUR,
               background: isConcept ? "rgba(63,255,139,0.08)" : "rgba(63,255,139,0.85)",
-              color: isConcept ? "#3fff8b" : "#0a1a30",
+              color: isConcept ? "#3fff8b" : "var(--surface-solid)",
               fontSize: 9, fontWeight: 700,
               borderRadius: 4,
               border: isConcept ? "1.5px dashed rgba(63,255,139,0.7)" : undefined,
@@ -2983,14 +2983,14 @@ function ActiviteitCellsRow({
   return (
     <div
       onClick={onClick}
-      className="flex cursor-pointer hover:bg-white/[0.03]"
+      className="flex cursor-pointer hover:bg-fg/[0.03]"
       style={{
         width: totalGridWidth,
         height: ROW_H_ACTIVITEIT,
         borderBottom: isLastRow
-          ? "2px solid rgba(255,255,255,0.06)"
-          : "1px solid rgba(255,255,255,0.03)",
-        background: "rgba(255,255,255,0.015)",
+          ? "2px solid rgb(var(--fg-rgb) / 0.06)"
+          : "1px solid rgb(var(--fg-rgb) / 0.03)",
+        background: "rgb(var(--fg-rgb) / 0.015)",
         opacity,
       }}
     >
@@ -3095,9 +3095,9 @@ function ActiviteitCellsRow({
                         style={{
                           width: 16, height: 16,
                           background: isS ? "#feb300" : "#378add",
-                          color: isS ? "#0a1a30" : "#fff",
+                          color: isS ? "var(--surface-solid)" : "#fff",
                           fontSize: 6, fontWeight: 700,
-                          border: "1px solid rgba(10,26,48,0.5)",
+                          border: "1px solid rgb(var(--surface-rgb) / 0.5)",
                           marginLeft: idx === 0 ? 0 : -4,
                         }}
                         title={m.naam}
@@ -3111,10 +3111,10 @@ function ActiviteitCellsRow({
                       className="flex items-center justify-center rounded-full"
                       style={{
                         width: 16, height: 16,
-                        background: "rgba(255,255,255,0.2)",
+                        background: "rgb(var(--fg-rgb) / 0.2)",
                         color: "#fff",
                         fontSize: 6, fontWeight: 700,
-                        border: "1px solid rgba(10,26,48,0.5)",
+                        border: "1px solid rgb(var(--surface-rgb) / 0.5)",
                         marginLeft: -4,
                       }}
                       title={`+${monteurIds.length - 2} meer`}
@@ -3332,7 +3332,7 @@ function GanttPrintMenu({
         <button
           type="button"
           disabled={busy}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-white/15 bg-transparent px-3 text-sm text-foreground hover:bg-white/[0.06] disabled:opacity-50"
+          className="flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-3 text-sm text-foreground hover:bg-fg/[0.06] disabled:opacity-50"
         >
           <Printer className="h-4 w-4" />
           <span className="font-display font-semibold">Gantt printen</span>
@@ -3372,7 +3372,7 @@ function GanttPrintMenu({
                   "rounded-sm px-2 py-1.5 text-xs font-medium border transition-colors",
                   monteurWeergave === opt
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-transparent text-foreground border-white/15 hover:bg-white/[0.06]",
+                    : "bg-transparent text-foreground border-fg/15 hover:bg-fg/[0.06]",
                 ].join(" ")}
               >
                 {opt === "geen" ? "Geen" : opt === "initialen" ? "Initialen" : "Namen"}
@@ -3399,28 +3399,28 @@ function GanttPrintMenu({
             <button
               type="button"
               onClick={() => presetVolgende(4)}
-              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
             >
               Volgende 4 wk
             </button>
             <button
               type="button"
               onClick={() => presetVolgende(8)}
-              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
             >
               Volgende 8 wk
             </button>
             <button
               type="button"
               onClick={() => presetVolgende(12)}
-              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
             >
               Volgende 12 wk
             </button>
             <button
               type="button"
               onClick={() => zetRange(huidigeWeek, maxWeek)}
-              className="rounded-sm border border-white/15 px-2 py-1 text-[11px] hover:bg-white/[0.06]"
+              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
             >
               Vanaf nu
             </button>
@@ -3433,7 +3433,7 @@ function GanttPrintMenu({
               <select
                 value={huidigeRange.van}
                 onChange={(e) => zetRange(Number(e.target.value), huidigeRange.tot)}
-                className="flex-1 rounded-sm border border-white/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
+                className="flex-1 rounded-sm border border-fg/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
               >
                 {beschikbareWeken.map((w) => (
                   <option key={w} value={w} className="bg-popover text-popover-foreground">Week {w}</option>
@@ -3445,7 +3445,7 @@ function GanttPrintMenu({
               <select
                 value={huidigeRange.tot}
                 onChange={(e) => zetRange(huidigeRange.van, Number(e.target.value))}
-                className="flex-1 rounded-sm border border-white/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
+                className="flex-1 rounded-sm border border-fg/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
               >
                 {beschikbareWeken.map((w) => (
                   <option key={w} value={w} className="bg-popover text-popover-foreground">Week {w}</option>

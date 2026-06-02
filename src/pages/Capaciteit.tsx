@@ -94,16 +94,16 @@ const WEEKDAG_NUMS = [1, 2, 3, 4, 5] as const;
 const AANWIJZINGEN: Aanwijzing[] = ["VOP", "VP", "AVP"];
 
 const aanwijzingStyle = (a: Aanwijzing | null): React.CSSProperties => {
-  if (a === "AVP") return { backgroundColor: "#3fff8b", color: "#0a1a30" };
-  if (a === "VP") return { backgroundColor: "#7cc1ff", color: "#0a1a30" };
-  if (a === "VOP") return { backgroundColor: "#cbd5e1", color: "#0a1a30" };
-  return { backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" };
+  if (a === "AVP") return { backgroundColor: "#3fff8b", color: "var(--surface-solid)" };
+  if (a === "VP") return { backgroundColor: "#7cc1ff", color: "var(--surface-solid)" };
+  if (a === "VOP") return { backgroundColor: "#cbd5e1", color: "var(--surface-solid)" };
+  return { backgroundColor: "rgb(var(--fg-rgb) / 0.06)", color: "rgb(var(--fg-rgb) / 0.5)" };
 };
 
 const typeStyle = (t: MonteurType): React.CSSProperties =>
   t === "schakelmonteur"
-    ? { backgroundColor: "#feb300", color: "#0a1a30" }
-    : { backgroundColor: "#378add", color: "#0a1a30" };
+    ? { backgroundColor: "#feb300", color: "var(--surface-solid)" }
+    : { backgroundColor: "#378add", color: "var(--surface-solid)" };
 
 const typeLabel = (t: MonteurType) =>
   t === "schakelmonteur" ? "Schakelmonteur" : "Montagemonteur";
@@ -307,7 +307,7 @@ const Capaciteit = () => {
         "rounded-md px-3.5 py-1.5 text-xs font-display font-semibold tracking-wide transition-all",
         active
           ? "bg-primary text-primary-foreground shadow-[0_0_0_1px_hsl(var(--primary))]"
-          : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+          : "bg-fg/[0.04] text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground",
       ].join(" ")}
     >
       {children}
@@ -329,7 +329,7 @@ const Capaciteit = () => {
       </div>
 
       {/* Tab navigation */}
-      <div className="mb-6 flex items-center gap-1 border-b border-white/10">
+      <div className="mb-6 flex items-center gap-1 border-b border-fg/10">
         {(
           [
             { id: "monteurs", label: "Monteurs" },
@@ -400,8 +400,8 @@ const Capaciteit = () => {
                   {zichtbaar.map((m) => (
                     <tr
                       key={m.id}
-                      className="group border-b transition-colors hover:bg-white/[0.04]"
-                      style={{ borderColor: "rgba(255,255,255,0.06)" }}
+                      className="group border-b transition-colors hover:bg-fg/[0.04]"
+                      style={{ borderColor: "rgb(var(--fg-rgb) / 0.06)" }}
                     >
                       <td className="px-4 py-3.5">
                         <div className="font-display font-semibold text-foreground">
@@ -449,7 +449,7 @@ const Capaciteit = () => {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => openEdit(m)}
-                            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
                             aria-label="Wijzigen"
                             title="Wijzigen"
                           >
@@ -458,7 +458,7 @@ const Capaciteit = () => {
                           <button
                             onClick={() => toggleActief(m)}
                             className={[
-                              "rounded-md p-2 transition-colors hover:bg-white/[0.06]",
+                              "rounded-md p-2 transition-colors hover:bg-fg/[0.06]",
                               m.actief
                                 ? "text-primary hover:text-primary"
                                 : "text-muted-foreground hover:text-foreground",
@@ -499,8 +499,8 @@ const Capaciteit = () => {
         <DialogContent
           className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -511,7 +511,7 @@ const Capaciteit = () => {
             </h2>
             <button
               onClick={() => setModalOpen(false)}
-              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
               Annuleren
@@ -527,7 +527,7 @@ const Capaciteit = () => {
                 value={naam}
                 onChange={(e) => setNaam(e.target.value)}
                 placeholder="Bijv. Hassan"
-                className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+                className="rounded-md border-fg/10 bg-fg/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
               />
             </div>
 
@@ -545,7 +545,7 @@ const Capaciteit = () => {
                       "flex-1 rounded-md px-4 py-2.5 text-sm font-display font-semibold transition-all",
                       type === t
                         ? "bg-primary text-primary-foreground"
-                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                        : "bg-fg/[0.04] text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground",
                     ].join(" ")}
                   >
                     {typeLabel(t)}
@@ -588,7 +588,7 @@ const Capaciteit = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-md bg-white/[0.03] px-4 py-3">
+            <div className="flex items-center justify-between rounded-md bg-fg/[0.03] px-4 py-3">
               <div>
                 <div className="font-display text-sm font-semibold text-foreground">
                   Actief
@@ -665,8 +665,8 @@ const DAG_FULL = ["MA", "DI", "WO", "DO", "VR"] as const;
 const TIMELINE_SCROLL_STYLES = `
   .tijdlijn-scroll::-webkit-scrollbar { height: 4px; }
   .tijdlijn-scroll::-webkit-scrollbar-track { background: transparent; }
-  .tijdlijn-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
-  .tijdlijn-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+  .tijdlijn-scroll::-webkit-scrollbar-thumb { background: rgb(var(--fg-rgb) / 0.15); border-radius: 2px; }
+  .tijdlijn-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--fg-rgb) / 0.25); }
 `;
 
 const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
@@ -943,7 +943,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => shiftBy(-1)}
-              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
               aria-label="Vorige week"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -953,7 +953,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
             </div>
             <button
               onClick={() => shiftBy(1)}
-              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
               aria-label="Volgende week"
             >
               <ChevronRight className="h-4 w-4" />
@@ -973,7 +973,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
                       "rounded-md px-3 py-1.5 text-xs font-display font-semibold transition-all",
                       active
                         ? "bg-primary text-primary-foreground"
-                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                        : "bg-fg/[0.04] text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground",
                     ].join(" ")}
                   >
                     {n} weken
@@ -987,13 +987,13 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
         {/* Grid */}
         <div className="surface-card overflow-hidden">
           {/* Header */}
-          <div className="flex border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <div className="flex border-b" style={{ borderColor: "rgb(var(--fg-rgb) / 0.08)" }}>
             <div
               className="shrink-0"
               style={{
                 width: SIDEBAR_W,
                 minWidth: SIDEBAR_W,
-                borderRight: "1px solid rgba(255,255,255,0.08)",
+                borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
               }}
             />
             <div
@@ -1010,7 +1010,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
                       className="flex items-center justify-center border-l py-1.5 font-display text-xs font-bold text-foreground"
                       style={{
                         width: 5 * CELL_W,
-                        borderColor: "rgba(255,255,255,0.08)",
+                        borderColor: "rgb(var(--fg-rgb) / 0.08)",
                       }}
                     >
                       Week {w.week}
@@ -1025,11 +1025,11 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
                       className="flex flex-col items-center justify-center border-l py-1"
                       style={{
                         width: CELL_W,
-                        borderColor: "rgba(255,255,255,0.06)",
+                        borderColor: "rgb(var(--fg-rgb) / 0.06)",
                         borderRight:
                           d.dayIdx === 4
-                            ? "1px solid rgba(255,255,255,0.12)"
-                            : "1px solid rgba(255,255,255,0.04)",
+                            ? "1px solid rgb(var(--fg-rgb) / 0.12)"
+                            : "1px solid rgb(var(--fg-rgb) / 0.04)",
                       }}
                     >
                       <div className="font-display text-[10px] font-bold text-foreground">
@@ -1152,8 +1152,8 @@ const MonteurRow = memo(function MonteurRow({
             key: `v-${i}`,
             title: `${meta.dayLabel} ${meta.dateLabel}`,
             borderRight: meta.isWeekEnd
-              ? "1px solid rgba(255,255,255,0.12)"
-              : "1px solid rgba(255,255,255,0.04)",
+              ? "1px solid rgb(var(--fg-rgb) / 0.12)"
+              : "1px solid rgb(var(--fg-rgb) / 0.04)",
           });
           i++;
           continue;
@@ -1163,8 +1163,8 @@ const MonteurRow = memo(function MonteurRow({
             kind: "conflict",
             key: `c-${i}`,
             borderRight: meta.isWeekEnd
-              ? "1px solid rgba(255,255,255,0.12)"
-              : "1px solid rgba(255,255,255,0.04)",
+              ? "1px solid rgb(var(--fg-rgb) / 0.12)"
+              : "1px solid rgb(var(--fg-rgb) / 0.04)",
             projectIds: slot.projectIds,
           });
           i++;
@@ -1191,8 +1191,8 @@ const MonteurRow = memo(function MonteurRow({
           label: blockWidth > 80 ? fullLabel : fullLabel.slice(0, 6),
           projectId: pid,
           borderRight: lastIdx(span)
-            ? "1px solid rgba(255,255,255,0.12)"
-            : "1px solid rgba(255,255,255,0.04)",
+            ? "1px solid rgb(var(--fg-rgb) / 0.12)"
+            : "1px solid rgb(var(--fg-rgb) / 0.04)",
         });
         i += span;
       }
@@ -1202,8 +1202,8 @@ const MonteurRow = memo(function MonteurRow({
 
   return (
     <div
-      className="flex border-b transition-colors hover:bg-white/[0.04]"
-      style={{ borderColor: "rgba(255,255,255,0.06)", height: CELL_H }}
+      className="flex border-b transition-colors hover:bg-fg/[0.04]"
+      style={{ borderColor: "rgb(var(--fg-rgb) / 0.06)", height: CELL_H }}
     >
       <div
         className="sticky left-0 z-10 flex items-center px-3"
@@ -1211,7 +1211,7 @@ const MonteurRow = memo(function MonteurRow({
           width: SIDEBAR_W,
           minWidth: SIDEBAR_W,
           backgroundColor: "hsl(var(--card))",
-          borderRight: "1px solid rgba(255,255,255,0.08)",
+          borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
         }}
       >
         <div className="truncate font-display text-sm font-semibold text-foreground">
@@ -1277,7 +1277,7 @@ const MonteurRow = memo(function MonteurRow({
                       width: it.blockWidth,
                       height: BLOCK_H,
                       backgroundColor: "#3fff8b",
-                      color: "#0a1a30",
+                      color: "var(--surface-solid)",
                       borderRadius: 6,
                       display: "flex",
                       alignItems: "center",
@@ -1305,8 +1305,8 @@ const GroupLabel = ({ label }: { label: string }) => (
   <div
     className="sticky left-0 z-10 px-3 py-1.5 text-[10px] font-display font-bold uppercase tracking-wider text-muted-foreground"
     style={{
-      backgroundColor: "rgba(255,255,255,0.02)",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
+      backgroundColor: "rgb(var(--fg-rgb) / 0.02)",
+      borderBottom: "1px solid rgb(var(--fg-rgb) / 0.06)",
     }}
   >
     {label}
@@ -1343,7 +1343,7 @@ const ConflictBlock = memo(function ConflictBlock({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="font-display font-bold text-white transition-opacity hover:opacity-80"
+          className="font-display font-bold text-fg transition-opacity hover:opacity-80"
           style={{
             width: 46,
             height: BLOCK_H,
@@ -1370,7 +1370,7 @@ const ConflictBlock = memo(function ConflictBlock({
               <button
                 key={id}
                 onClick={() => handleNavigate(id)}
-                className="rounded-md px-2 py-1.5 text-left text-sm font-display font-semibold text-foreground transition-colors hover:bg-white/[0.06]"
+                className="rounded-md px-2 py-1.5 text-left text-sm font-display font-semibold text-foreground transition-colors hover:bg-fg/[0.06]"
               >
                 {p?.case_nummer ?? id.slice(0, 8)}
               </button>
@@ -1480,7 +1480,7 @@ const FeestdagenSection = () => {
 
   return (
     <div className="surface-card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-fg/10 px-6 py-4">
         <div className="flex items-center gap-3">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           <h3 className="font-display text-base font-bold tracking-tight text-foreground">
@@ -1489,10 +1489,10 @@ const FeestdagenSection = () => {
           <select
             value={jaar}
             onChange={(e) => setJaar(parseInt(e.target.value, 10))}
-            className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-display font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="rounded-md border border-fg/10 bg-fg/[0.04] px-2.5 py-1 text-xs font-display font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {JAREN.map((j) => (
-              <option key={j} value={j} className="bg-[#0a1a30]">
+              <option key={j} value={j} className="bg-[var(--surface-solid)]">
                 {j}
               </option>
             ))}
@@ -1519,7 +1519,7 @@ const FeestdagenSection = () => {
           {items.map((f) => (
             <li
               key={f.id}
-              className="group flex items-center justify-between px-6 py-3 transition-colors hover:bg-white/[0.03]"
+              className="group flex items-center justify-between px-6 py-3 transition-colors hover:bg-fg/[0.03]"
             >
               <div className="flex min-w-0 items-center gap-4">
                 <span className="min-w-[150px] font-display text-sm font-semibold text-foreground">
@@ -1544,8 +1544,8 @@ const FeestdagenSection = () => {
         <DialogContent
           className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -1556,7 +1556,7 @@ const FeestdagenSection = () => {
             </h2>
             <button
               onClick={() => setModalOpen(false)}
-              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
               Annuleren
@@ -1571,7 +1571,7 @@ const FeestdagenSection = () => {
                 type="date"
                 value={datum}
                 onChange={(e) => setDatum(e.target.value)}
-                className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
+                className="rounded-md border-fg/10 bg-fg/[0.04] text-foreground focus-visible:ring-primary"
               />
             </div>
             <div className="space-y-2">
@@ -1582,7 +1582,7 @@ const FeestdagenSection = () => {
                 value={naam}
                 onChange={(e) => setNaam(e.target.value)}
                 placeholder="Bijv. Koningsdag"
-                className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+                className="rounded-md border-fg/10 bg-fg/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
               />
             </div>
             <div className="text-xs text-muted-foreground">
@@ -1606,8 +1606,8 @@ const FeestdagenSection = () => {
         <DialogContent
           className="max-w-sm gap-0 border-0 p-6 [&>button]:hidden"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -1622,13 +1622,13 @@ const FeestdagenSection = () => {
             <Button
               variant="outline"
               onClick={() => setConfirmDel(null)}
-              className="flex-1 border-white/10 bg-white/[0.04] text-foreground hover:bg-white/[0.08]"
+              className="flex-1 border-fg/10 bg-fg/[0.04] text-foreground hover:bg-fg/[0.08]"
             >
               Annuleren
             </Button>
             <Button
               onClick={handleDelete}
-              className="flex-1 bg-red-500 text-white hover:bg-red-600"
+              className="flex-1 bg-red-500 text-fg hover:bg-red-600"
             >
               Verwijderen
             </Button>
@@ -1685,7 +1685,7 @@ const MonteurBeschikbaarheidSection = ({
 
   return (
     <div className="surface-card overflow-hidden">
-      <div className="border-b border-white/10 px-6 py-4">
+      <div className="border-b border-fg/10 px-6 py-4">
         <h3 className="font-display text-base font-bold tracking-tight text-foreground">
           Beschikbaarheid per monteur
         </h3>
@@ -1783,7 +1783,7 @@ const MonteurCard = ({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-fg/[0.03]"
       >
         <div className="flex min-w-0 items-center gap-3">
           <div
@@ -1805,10 +1805,10 @@ const MonteurCard = ({
                     className="inline-flex h-4 min-w-[20px] items-center justify-center rounded text-[9px] font-display font-bold"
                     style={
                       on
-                        ? { backgroundColor: "rgba(63,255,139,0.85)", color: "#0a1a30" }
+                        ? { backgroundColor: "rgba(63,255,139,0.85)", color: "var(--surface-solid)" }
                         : {
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "rgba(255,255,255,0.35)",
+                            border: "1px solid rgb(var(--fg-rgb) / 0.12)",
+                            color: "rgb(var(--fg-rgb) / 0.35)",
                           }
                     }
                   >
@@ -1837,7 +1837,7 @@ const MonteurCard = ({
       </button>
 
       {expanded && (
-        <div className="space-y-6 border-t border-white/[0.06] bg-white/[0.015] px-6 py-5">
+        <div className="space-y-6 border-t border-fg/[0.06] bg-fg/[0.015] px-6 py-5">
           {/* Werkdagen */}
           <div>
             <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1859,14 +1859,14 @@ const MonteurCard = ({
                             backgroundColor: flashing
                               ? "rgba(63,255,139,1)"
                               : "rgba(63,255,139,0.85)",
-                            color: "#0a1a30",
+                            color: "var(--surface-solid)",
                             boxShadow: flashing
                               ? "0 0 0 3px rgba(63,255,139,0.35)"
                               : "none",
                           }
                         : {
-                            border: "1px solid rgba(255,255,255,0.14)",
-                            color: "rgba(255,255,255,0.55)",
+                            border: "1px solid rgb(var(--fg-rgb) / 0.14)",
+                            color: "rgb(var(--fg-rgb) / 0.55)",
                             backgroundColor: "transparent",
                           }
                     }
@@ -1888,7 +1888,7 @@ const MonteurCard = ({
                 onClick={() => setAddOpen(true)}
                 size="sm"
                 variant="outline"
-                className="h-7 border-white/10 bg-white/[0.04] text-xs font-display font-semibold text-foreground hover:bg-white/[0.08]"
+                className="h-7 border-fg/10 bg-fg/[0.04] text-xs font-display font-semibold text-foreground hover:bg-fg/[0.08]"
               >
                 <Plus className="mr-1 h-3 w-3" strokeWidth={2.5} />
                 Toevoegen
@@ -1905,14 +1905,14 @@ const MonteurCard = ({
                   return (
                     <li
                       key={a.id}
-                      className="group flex items-center justify-between gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                      className="group flex items-center justify-between gap-3 rounded-md bg-fg/[0.03] px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <span
                           className="inline-flex shrink-0 items-center rounded px-2 py-0.5 text-[10px] font-display font-bold uppercase tracking-wider"
                           style={{
                             backgroundColor: def?.color ?? "#9ca3af",
-                            color: "#0a1a30",
+                            color: "var(--surface-solid)",
                           }}
                         >
                           {def?.label ?? a.type}
@@ -1954,8 +1954,8 @@ const MonteurCard = ({
         <DialogContent
           className="max-w-sm gap-0 border-0 p-6 [&>button]:hidden"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -1972,13 +1972,13 @@ const MonteurCard = ({
             <Button
               variant="outline"
               onClick={() => setConfirmDel(null)}
-              className="flex-1 border-white/10 bg-white/[0.04] text-foreground hover:bg-white/[0.08]"
+              className="flex-1 border-fg/10 bg-fg/[0.04] text-foreground hover:bg-fg/[0.08]"
             >
               Annuleren
             </Button>
             <Button
               onClick={handleDeleteAfw}
-              className="flex-1 bg-red-500 text-white hover:bg-red-600"
+              className="flex-1 bg-red-500 text-fg hover:bg-red-600"
             >
               Verwijderen
             </Button>
@@ -2063,8 +2063,8 @@ const AfwezigheidModal = ({
       <DialogContent
         className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
         style={{
-          backgroundColor: "rgba(10, 26, 48, 0.95)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+          border: "1px solid rgb(var(--fg-rgb) / 0.08)",
           borderRadius: "12px",
           backdropFilter: "blur(18px)",
         }}
@@ -2078,7 +2078,7 @@ const AfwezigheidModal = ({
           </div>
           <button
             onClick={() => onOpenChange(false)}
-            className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
             Annuleren
@@ -2100,10 +2100,10 @@ const AfwezigheidModal = ({
                     className="rounded-md px-3 py-1.5 text-xs font-display font-bold tracking-wide transition-all"
                     style={
                       active
-                        ? { backgroundColor: t.color, color: "#0a1a30" }
+                        ? { backgroundColor: t.color, color: "var(--surface-solid)" }
                         : {
-                            border: "1px solid rgba(255,255,255,0.14)",
-                            color: "rgba(255,255,255,0.6)",
+                            border: "1px solid rgb(var(--fg-rgb) / 0.14)",
+                            color: "rgb(var(--fg-rgb) / 0.6)",
                             backgroundColor: "transparent",
                           }
                     }
@@ -2124,7 +2124,7 @@ const AfwezigheidModal = ({
                 type="date"
                 value={van}
                 onChange={(e) => setVan(e.target.value)}
-                className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary"
+                className="rounded-md border-fg/10 bg-fg/[0.04] text-foreground focus-visible:ring-primary"
               />
             </div>
             <div className="space-y-2">
@@ -2137,7 +2137,7 @@ const AfwezigheidModal = ({
                 min={van}
                 disabled={type === "vrije_dag"}
                 onChange={(e) => setTot(e.target.value)}
-                className="rounded-md border-white/10 bg-white/[0.04] text-foreground focus-visible:ring-primary disabled:opacity-50"
+                className="rounded-md border-fg/10 bg-fg/[0.04] text-foreground focus-visible:ring-primary disabled:opacity-50"
               />
             </div>
           </div>
@@ -2150,7 +2150,7 @@ const AfwezigheidModal = ({
               value={omschrijving}
               onChange={(e) => setOmschrijving(e.target.value)}
               placeholder="bijv. Zomervakantie"
-              className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
+              className="rounded-md border-fg/10 bg-fg/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary"
             />
           </div>
         </div>
@@ -2371,8 +2371,8 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
               {ploegen.map((p) => (
                 <tr
                   key={p.id}
-                  className="group border-b transition-colors hover:bg-white/[0.04]"
-                  style={{ borderColor: "rgba(255,255,255,0.06)" }}
+                  className="group border-b transition-colors hover:bg-fg/[0.04]"
+                  style={{ borderColor: "rgb(var(--fg-rgb) / 0.06)" }}
                 >
                   <td className="px-4 py-3.5">
                     <div className="font-display font-semibold text-foreground">
@@ -2405,8 +2405,8 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
                             key={mid}
                             className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold"
                             style={{
-                              backgroundColor: "rgba(255,255,255,0.06)",
-                              color: "rgba(255,255,255,0.85)",
+                              backgroundColor: "rgb(var(--fg-rgb) / 0.06)",
+                              color: "rgb(var(--fg-rgb) / 0.85)",
                             }}
                           >
                             {m.naam}
@@ -2419,7 +2419,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => openEdit(p)}
-                        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
                         title="Wijzigen"
                       >
                         <Edit2 className="h-4 w-4" />
@@ -2444,8 +2444,8 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
         <DialogContent
           className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -2456,7 +2456,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
             </h2>
             <button
               onClick={() => setModalOpen(false)}
-              className="-mr-2 -mt-1 rounded-md p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+              className="-mr-2 -mt-1 rounded-md p-1 text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -2494,7 +2494,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
                       "flex-1 rounded-md px-3 py-2 text-xs font-display font-semibold tracking-wide transition-all",
                       type === t
                         ? "shadow-[0_0_0_1px_hsl(var(--primary))]"
-                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                        : "bg-fg/[0.04] text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground",
                     ].join(" ")}
                     style={type === t ? typeStyle(t) : undefined}
                   >
@@ -2509,7 +2509,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
                 Monteurs ({selMonteurs.length})
               </Label>
               {eligibleMonteurs.length === 0 ? (
-                <div className="rounded-md bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground">
+                <div className="rounded-md bg-fg/[0.03] px-3 py-2 text-xs text-muted-foreground">
                   Geen actieve {typeLabel(type).toLowerCase()}s beschikbaar
                 </div>
               ) : (
@@ -2525,7 +2525,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
                           "rounded-md border px-2.5 py-1 text-xs font-display font-semibold transition-colors",
                           active
                             ? "border-primary bg-primary/15 text-foreground"
-                            : "border-white/10 bg-white/[0.02] text-muted-foreground hover:bg-white/[0.06]",
+                            : "border-fg/10 bg-fg/[0.02] text-muted-foreground hover:bg-fg/[0.06]",
                         ].join(" ")}
                       >
                         {m.naam}
@@ -2536,7 +2536,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
               )}
             </div>
 
-            <label className="flex items-center justify-between gap-3 rounded-md bg-white/[0.03] px-3 py-2.5">
+            <label className="flex items-center justify-between gap-3 rounded-md bg-fg/[0.03] px-3 py-2.5">
               <span className="text-sm text-foreground">Ploeg is actief</span>
               <Switch
                 checked={actief}
@@ -2546,7 +2546,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-fg/[0.06] px-6 py-4">
             <Button variant="ghost" onClick={() => setModalOpen(false)}>
               Annuleren
             </Button>

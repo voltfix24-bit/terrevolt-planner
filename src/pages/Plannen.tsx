@@ -1609,13 +1609,13 @@ const Plannen = () => {
         <div
           className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 flex-col gap-2 rounded-xl border px-3 py-2 shadow-lg"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            borderColor: "rgba(255,255,255,0.15)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            borderColor: "rgb(var(--fg-rgb) / 0.15)",
             backdropFilter: "blur(8px)",
             minWidth: 480,
           }}
         >
-          <div className="flex items-center justify-between gap-3 border-b pb-1.5" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <div className="flex items-center justify-between gap-3 border-b pb-1.5" style={{ borderColor: "rgb(var(--fg-rgb) / 0.08)" }}>
             <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
               Selectiegroepen — Shift-klik = nieuwe groep · Ctrl/Cmd-klik = aan actieve groep · Esc = wis alles
             </span>
@@ -1624,7 +1624,7 @@ const Plannen = () => {
                 clearSelection();
                 setGroupNames({});
               }}
-              className="rounded-md border border-white/15 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-white/[0.08]"
+              className="rounded-md border border-fg/15 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-fg/[0.08]"
             >
               Wis alles
             </button>
@@ -1636,7 +1636,7 @@ const Plannen = () => {
               <div key={idx} className="flex items-center gap-2">
                 <span
                   className="inline-flex h-5 w-5 items-center justify-center rounded-full font-display text-[10px] font-bold"
-                  style={{ backgroundColor: c, color: "#0a1a30" }}
+                  style={{ backgroundColor: c, color: "var(--surface-solid)" }}
                   title={`Groep ${idx + 1}`}
                 >
                   {idx + 1}
@@ -1649,32 +1649,32 @@ const Plannen = () => {
                 <span className="font-display text-[10px] font-semibold text-muted-foreground">
                   · {g.length} cel{g.length === 1 ? "" : "len"}
                 </span>
-                <div className="ml-2 flex items-center gap-1 rounded-md border border-white/15 p-0.5">
+                <div className="ml-2 flex items-center gap-1 rounded-md border border-fg/15 p-0.5">
                   <button
                     onClick={() => shiftGroup(idx, -5)}
                     title="Verschuif 1 week terug"
-                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-fg/[0.1]"
                   >
                     −1 wk
                   </button>
                   <button
                     onClick={() => shiftGroup(idx, -1)}
                     title="Verschuif 1 dag terug"
-                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-fg/[0.1]"
                   >
                     −1 dag
                   </button>
                   <button
                     onClick={() => shiftGroup(idx, 1)}
                     title="Verschuif 1 dag vooruit"
-                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-fg/[0.1]"
                   >
                     +1 dag
                   </button>
                   <button
                     onClick={() => shiftGroup(idx, 5)}
                     title="Verschuif 1 week vooruit"
-                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-white/[0.1]"
+                    className="rounded px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-fg/[0.1]"
                   >
                     +1 wk
                   </button>
@@ -1682,7 +1682,7 @@ const Plannen = () => {
                 <button
                   onClick={() => removeGroup(idx)}
                   title="Deselecteer deze groep"
-                  className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/15 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                  className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-fg/15 text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -1695,15 +1695,15 @@ const Plannen = () => {
       <div
         className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b px-8 py-3"
         style={{
-          backgroundColor: "rgba(10, 26, 48, 0.85)",
-          borderColor: "rgba(255,255,255,0.08)",
+          backgroundColor: "rgb(var(--surface-rgb) / 0.85)",
+          borderColor: "rgb(var(--fg-rgb) / 0.08)",
           backdropFilter: "blur(14px)",
         }}
       >
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/")}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
             title="Terug naar projecten"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -1715,7 +1715,7 @@ const Plannen = () => {
             {project.station_naam || ""}
           </div>
           {project.tijdelijke_situatie && project.tijdelijke_situatie !== "geen" && (
-            <span className="inline-flex items-center rounded-md border border-white/15 px-2 py-0.5 text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="inline-flex items-center rounded-md border border-fg/15 px-2 py-0.5 text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
               {project.tijdelijke_situatie}
             </span>
           )}
@@ -1748,11 +1748,11 @@ const Plannen = () => {
                     ? "#3fff8b"
                     : project.status === "gepland"
                     ? "#feb300"
-                    : "rgba(255,255,255,0.08)",
+                    : "rgb(var(--fg-rgb) / 0.08)",
                 color:
                   project.status === "in_uitvoering" || project.status === "gepland"
-                    ? "#0a1a30"
-                    : "rgba(255,255,255,0.6)",
+                    ? "var(--surface-solid)"
+                    : "rgb(var(--fg-rgb) / 0.6)",
               }}
             >
               {project.status === "in_uitvoering"
@@ -1772,10 +1772,10 @@ const Plannen = () => {
             disabled={history.length === 0}
             title="Ongedaan maken (Ctrl+Z)"
             className={[
-              "flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent",
+              "flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent",
               history.length === 0
                 ? "cursor-not-allowed opacity-30"
-                : "text-foreground hover:bg-white/[0.06]",
+                : "text-foreground hover:bg-fg/[0.06]",
             ].join(" ")}
           >
             <Undo2 className="h-4 w-4" />
@@ -1784,7 +1784,7 @@ const Plannen = () => {
             type="button"
             onClick={() => setHistoryOpen(true)}
             title="Geschiedenis"
-            className="flex h-8 items-center justify-center rounded-md border border-white/15 bg-transparent px-2 text-foreground hover:bg-white/[0.06]"
+            className="flex h-8 items-center justify-center rounded-md border border-fg/15 bg-transparent px-2 text-foreground hover:bg-fg/[0.06]"
           >
             <History className="h-4 w-4" />
             {history.length > 0 && (
@@ -1800,7 +1800,7 @@ const Plannen = () => {
             style={{
               width: 1,
               height: 20,
-              backgroundColor: "rgba(255,255,255,0.08)",
+              backgroundColor: "rgb(var(--fg-rgb) / 0.08)",
               marginInline: 2,
             }}
           />
@@ -1808,7 +1808,7 @@ const Plannen = () => {
             type="button"
             onClick={() => setWeekModalOpen(true)}
             title="Weken beheren"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
           >
             <CalendarDays className="h-4 w-4" />
           </button>
@@ -1816,7 +1816,7 @@ const Plannen = () => {
             type="button"
             onClick={() => window.print()}
             title="Afdrukken"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-transparent text-foreground hover:bg-white/[0.06]"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
           >
             <Printer className="h-4 w-4" />
           </button>
@@ -1830,13 +1830,13 @@ const Plannen = () => {
           style={{ padding: 0 }}
         >
           {/* Header row */}
-          <div className="flex border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <div className="flex border-b" style={{ borderColor: "rgb(var(--fg-rgb) / 0.06)" }}>
             <div
               className="shrink-0 px-4 flex items-center"
               style={{
                 width: SIDEBAR_W,
                 height: HEADER_H,
-                borderRight: "1px solid rgba(255,255,255,0.06)",
+                borderRight: "1px solid rgb(var(--fg-rgb) / 0.06)",
               }}
             >
               <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-primary/80">
@@ -1867,7 +1867,7 @@ const Plannen = () => {
             {/* Sidebar (frozen) */}
             <div
               className="shrink-0"
-              style={{ width: SIDEBAR_W, borderRight: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ width: SIDEBAR_W, borderRight: "1px solid rgb(var(--fg-rgb) / 0.06)" }}
             >
               <DndContext
                 sensors={sensors}
@@ -1887,12 +1887,12 @@ const Plannen = () => {
               {/* Add activiteit */}
               <div style={{ minHeight: CELL_H }}>
                 {showAddActiviteit ? (
-                  <div className="px-3 py-2 space-y-2 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                  <div className="px-3 py-2 space-y-2 border-t" style={{ borderColor: "rgb(var(--fg-rgb) / 0.06)" }}>
                     <Select onValueChange={addActiviteitFromType}>
-                      <SelectTrigger className="h-8 rounded-md border-white/10 bg-white/[0.04] text-xs">
+                      <SelectTrigger className="h-8 rounded-md border-fg/10 bg-fg/[0.04] text-xs">
                         <SelectValue placeholder="Kies activiteit…" />
                       </SelectTrigger>
-                      <SelectContent className="border-white/10 bg-[#0a1a30] text-foreground">
+                      <SelectContent className="border-fg/10 bg-[var(--surface-solid)] text-foreground">
                         {activiteitTypes.map((t) => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.naam}
@@ -1910,7 +1910,7 @@ const Plannen = () => {
                 ) : (
                   <button
                     onClick={() => setShowAddActiviteit(true)}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs font-display font-semibold text-primary/80 hover:bg-white/[0.04] hover:text-primary"
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs font-display font-semibold text-primary/80 hover:bg-fg/[0.04] hover:text-primary"
                   >
                     <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
                     Activiteit toevoegen
@@ -1921,7 +1921,7 @@ const Plannen = () => {
               {/* Opmerkingen label */}
               <div
                 className="px-4 flex items-center border-t"
-                style={{ height: CELL_H, borderColor: "rgba(255,255,255,0.06)" }}
+                style={{ height: CELL_H, borderColor: "rgb(var(--fg-rgb) / 0.06)" }}
               >
                 <span className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-primary/80">
                   Opmerkingen
@@ -1971,7 +1971,7 @@ const Plannen = () => {
                     style={{
                       width: totalGridWidth,
                       height: CELL_H,
-                      borderColor: "rgba(255,255,255,0.06)",
+                      borderColor: "rgb(var(--fg-rgb) / 0.06)",
                     }}
                   >
                     {weken.map((w) => (
@@ -1994,8 +1994,8 @@ const Plannen = () => {
         style={{
           marginTop: 8,
           padding: "10px 16px",
-          background: "rgba(10, 26, 48, 0.6)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "rgb(var(--surface-rgb) / 0.6)",
+          border: "1px solid rgb(var(--fg-rgb) / 0.08)",
           borderRadius: 12,
           display: "flex",
           alignItems: "center",
@@ -2038,7 +2038,7 @@ const Plannen = () => {
           style={{
             width: 1,
             height: 20,
-            backgroundColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--fg-rgb) / 0.08)",
             marginLeft: 4,
             marginRight: 4,
             display: "inline-block",
@@ -2057,15 +2057,15 @@ const Plannen = () => {
           ingeplandeMonteurs.map((m) => {
             const isSchakel = m.type === "schakelmonteur";
             const avatarBg = isSchakel ? "#feb300" : "#378add";
-            const avatarColor = isSchakel ? "#0a1a30" : "#ffffff";
+            const avatarColor = isSchakel ? "var(--surface-solid)" : "#ffffff";
             const isConcept = project?.status === "concept";
             const accent = isSchakel ? "254,179,0" : "55,138,221";
             const ms = m.aanwijzing_ms;
             let msStyle: React.CSSProperties | null = null;
-            if (ms === "AVP") msStyle = { backgroundColor: "#3fff8b", color: "#0a1a30" };
-            else if (ms === "VP") msStyle = { backgroundColor: "#7cc1ff", color: "#0a1a30" };
+            if (ms === "AVP") msStyle = { backgroundColor: "#3fff8b", color: "var(--surface-solid)" };
+            else if (ms === "VP") msStyle = { backgroundColor: "#7cc1ff", color: "var(--surface-solid)" };
             else if (ms === "VOP")
-              msStyle = { backgroundColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" };
+              msStyle = { backgroundColor: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
             return (
               <div
                 key={m.id}
@@ -2076,10 +2076,10 @@ const Plannen = () => {
                   gap: 6,
                   background: isConcept
                     ? `rgba(${accent},0.06)`
-                    : "rgba(255,255,255,0.04)",
+                    : "rgb(var(--fg-rgb) / 0.04)",
                   border: isConcept
                     ? `1.5px dashed rgba(${accent},0.7)`
-                    : "1px solid rgba(255,255,255,0.08)",
+                    : "1px solid rgb(var(--fg-rgb) / 0.08)",
                   borderRadius: 8,
                   padding: "4px 10px 4px 4px",
                   cursor: "default",
@@ -2160,7 +2160,7 @@ const Plannen = () => {
             style={{
               width: 1,
               height: 20,
-              backgroundColor: "rgba(255,255,255,0.08)",
+              backgroundColor: "rgb(var(--fg-rgb) / 0.08)",
               display: "inline-block",
             }}
           />
@@ -2210,7 +2210,7 @@ const Plannen = () => {
                 width: 14,
                 height: 10,
                 borderRadius: 3,
-                border: "1.5px dashed rgba(255,255,255,0.55)",
+                border: "1.5px dashed rgb(var(--fg-rgb) / 0.55)",
                 background: "transparent",
                 display: "inline-block",
               }}
@@ -2267,8 +2267,8 @@ const Plannen = () => {
         <DialogContent
           className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -2279,7 +2279,7 @@ const Plannen = () => {
             </h2>
             <button
               onClick={() => setWeekModalOpen(false)}
-              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" /> Sluiten
             </button>
@@ -2291,7 +2291,7 @@ const Plannen = () => {
             {weken.map((w, i) => (
               <div
                 key={w.id}
-                className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                className="flex items-center gap-3 rounded-md bg-fg/[0.03] px-3 py-2"
               >
                 <span className="font-display text-xs uppercase tracking-wider text-muted-foreground w-12">
                   Pos {i + 1}
@@ -2303,7 +2303,7 @@ const Plannen = () => {
                   max={53}
                   value={w.week_nr}
                   onChange={(e) => setWeekNr(w.id, parseInt(e.target.value) || 1)}
-                  className="h-8 w-20 rounded-md border-white/10 bg-white/[0.04] text-foreground"
+                  className="h-8 w-20 rounded-md border-fg/10 bg-fg/[0.04] text-foreground"
                 />
               </div>
             ))}
@@ -2349,7 +2349,7 @@ const WeekHeader = memo(function WeekHeader({
       className="shrink-0 flex flex-col"
       style={{
         width: dayWidth,
-        borderRight: "1px solid rgba(255,255,255,0.06)",
+        borderRight: "1px solid rgb(var(--fg-rgb) / 0.06)",
         backgroundColor: isCurrentWeek ? "rgba(63,255,139,0.04)" : undefined,
       }}
     >
@@ -2383,7 +2383,7 @@ const WeekHeader = memo(function WeekHeader({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="center"
-          className="border-white/10 bg-[#0a1a30] text-foreground max-h-72 overflow-y-auto"
+          className="border-fg/10 bg-[var(--surface-solid)] text-foreground max-h-72 overflow-y-auto"
         >
           {Array.from({ length: 53 }, (_, i) => i + 1).map((n) => (
             <DropdownMenuItem
@@ -2407,7 +2407,7 @@ const WeekHeader = memo(function WeekHeader({
               style={{
                 width: CELL_W,
                 borderRight:
-                  i < 4 ? "1px solid rgba(255,255,255,0.04)" : undefined,
+                  i < 4 ? "1px solid rgb(var(--fg-rgb) / 0.04)" : undefined,
               }}
             >
               <div className="font-display text-[10px] font-bold tracking-wider text-foreground/80">
@@ -2430,7 +2430,7 @@ const SidebarRow = ({ a, onRemove }: { a: Activiteit; onRemove: () => void }) =>
     transition,
     opacity: isDragging ? 0.6 : 1,
     height: CELL_H,
-    borderTop: "1px solid rgba(255,255,255,0.06)",
+    borderTop: "1px solid rgb(var(--fg-rgb) / 0.06)",
   };
   return (
     <div
@@ -2532,7 +2532,7 @@ const GridRow = memo(function GridRow({
       className="flex"
       style={{
         height: CELL_H,
-        borderTop: "1px solid rgba(255,255,255,0.06)",
+        borderTop: "1px solid rgb(var(--fg-rgb) / 0.06)",
       }}
     >
       {weken.map((w, wi) => {
@@ -2649,7 +2649,7 @@ const GroupNameEditor = ({
         type="button"
         onClick={() => setEditing(true)}
         title="Hernoem groep"
-        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground"
       >
         <Pencil className="h-3 w-3" />
       </button>
@@ -2667,7 +2667,7 @@ const MonteurAvatar = ({
   overlapPx = 5,
   borderWidth = 1.5,
   borderColor = "rgba(0,0,0,0.3)",
-  overflowBg = "rgba(255,255,255,0.2)",
+  overflowBg = "rgb(var(--fg-rgb) / 0.2)",
 }: {
   naam?: string;
   type?: "schakelmonteur" | "montagemonteur";
@@ -2687,7 +2687,7 @@ const MonteurAvatar = ({
     label = `+${overflow}`;
   } else if (type === "schakelmonteur") {
     bg = "#feb300";
-    color = "#0a1a30";
+    color = "var(--surface-solid)";
     label = initialen(naam ?? "");
   } else {
     bg = "#378add";
@@ -2987,7 +2987,7 @@ const CellBox = memo(function CellBox({
       }}
       className={[
         "group relative shrink-0 transition-all",
-        showHoverPlus ? "hover:bg-white/[0.03]" : "",
+        showHoverPlus ? "hover:bg-fg/[0.03]" : "",
         draggable ? "cursor-grab active:cursor-grabbing" : "",
       ].join(" ")}
       style={{
@@ -3002,12 +3002,12 @@ const CellBox = memo(function CellBox({
           : isCurrentWeek
           ? "rgba(63,255,139,0.02)"
           : "transparent",
-        borderTop: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
-        borderRight: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
-        borderBottom: filled ? "none" : "1px solid rgba(255,255,255,0.06)",
+        borderTop: filled ? "none" : "1px solid rgb(var(--fg-rgb) / 0.06)",
+        borderRight: filled ? "none" : "1px solid rgb(var(--fg-rgb) / 0.06)",
+        borderBottom: filled ? "none" : "1px solid rgb(var(--fg-rgb) / 0.06)",
         borderLeft: filled
           ? `3px solid ${kleur}`
-          : "1px solid rgba(255,255,255,0.06)",
+          : "1px solid rgb(var(--fg-rgb) / 0.06)",
         outline: isDragOver
           ? "2px dashed rgba(63,255,139,0.9)"
           : inFillRange
@@ -3054,7 +3054,7 @@ const CellBox = memo(function CellBox({
               overlapPx={8}
               borderWidth={2}
               borderColor="rgba(0,0,0,0.4)"
-              overflowBg="rgba(255,255,255,0.15)"
+              overflowBg="rgb(var(--fg-rgb) / 0.15)"
             />
           )}
         </div>
@@ -3062,7 +3062,7 @@ const CellBox = memo(function CellBox({
       {showHoverPlus && (
         <span
           className="pointer-events-none absolute inset-0 flex items-center justify-center text-[16px] opacity-0 transition-opacity group-hover:opacity-100"
-          style={{ color: "rgba(255,255,255,0.2)" }}
+          style={{ color: "rgb(var(--fg-rgb) / 0.2)" }}
         >
           +
         </span>
@@ -3087,7 +3087,7 @@ const CellBox = memo(function CellBox({
             height: 16,
             borderRadius: "50%",
             backgroundColor: groupColorHex,
-            color: "#0a1a30",
+            color: "var(--surface-solid)",
             fontSize: 9,
             border: "1.5px solid rgba(0,0,0,0.55)",
             boxShadow: `0 0 6px ${hexToRgba(groupColorHex, 0.9)}`,
@@ -3105,7 +3105,7 @@ const CellBox = memo(function CellBox({
             width: 14,
             height: 14,
             backgroundColor: "#feb300",
-            color: "#0a1a30",
+            color: "var(--surface-solid)",
           }}
         >
           !
@@ -3195,7 +3195,7 @@ const OpmerkingCell = ({
       className="shrink-0 px-1 py-1"
       style={{
         width: CELL_W * 5,
-        borderRight: "1px solid rgba(255,255,255,0.06)",
+        borderRight: "1px solid rgb(var(--fg-rgb) / 0.06)",
       }}
     >
       <input
@@ -3205,7 +3205,7 @@ const OpmerkingCell = ({
           if (val !== (week.opmerking ?? "")) onSave(val);
         }}
         placeholder={`Opmerking week ${week.week_nr}…`}
-        className="h-7 w-full rounded-sm bg-transparent px-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:bg-white/[0.04] focus:outline-none"
+        className="h-7 w-full rounded-sm bg-transparent px-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:bg-fg/[0.04] focus:outline-none"
       />
     </div>
   );
@@ -3348,8 +3348,8 @@ const CelModal = ({
       <DialogContent
         className="max-w-lg gap-0 border-0 p-0 [&>button]:hidden"
         style={{
-          backgroundColor: "rgba(10, 26, 48, 0.95)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+          border: "1px solid rgb(var(--fg-rgb) / 0.08)",
           borderRadius: "12px",
           backdropFilter: "blur(18px)",
         }}
@@ -3365,7 +3365,7 @@ const CelModal = ({
           </div>
           <button
             onClick={onClose}
-            className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" /> Sluiten
           </button>
@@ -3400,7 +3400,7 @@ const CelModal = ({
                   className={[
                     "relative h-9 w-9 rounded-full transition-transform hover:scale-110",
                     cel.kleur_code === code
-                      ? "ring-2 ring-white ring-offset-2 ring-offset-[#0a1a30]"
+                      ? "ring-2 ring-white ring-offset-2 ring-offset-[var(--surface-solid)]"
                       : "",
                   ].join(" ")}
                   style={{ backgroundColor: COLOR_MAP[code].hex }}
@@ -3465,7 +3465,7 @@ const CelModal = ({
                           className="shrink-0 rounded-md px-2.5 py-1 text-[11px] font-display font-bold transition-colors"
                           style={{
                             background: "#3fff8b",
-                            color: "#030e20",
+                            color: "var(--app-bg)",
                           }}
                         >
                           Sync vanuit template
@@ -3478,7 +3478,7 @@ const CelModal = ({
 
               <div className="space-y-1.5">
                 {assigned.length === 0 && (
-                  <div className="rounded-md bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground">
+                  <div className="rounded-md bg-fg/[0.03] px-3 py-2 text-xs text-muted-foreground">
                     Nog geen monteurs toegewezen
                   </div>
                 )}
@@ -3501,7 +3501,7 @@ const CelModal = ({
                   return (
                     <div
                       key={m.id}
-                      className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                      className="flex items-center gap-3 rounded-md bg-fg/[0.03] px-3 py-2"
                       style={
                         onbeschikbaar
                           ? { border: "1px solid rgba(220,38,38,0.45)" }
@@ -3569,13 +3569,13 @@ const CelModal = ({
               {(eligibleMonteurs.length > 0 || eligiblePloegen.length > 0) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 px-3 py-2 text-xs font-display font-semibold text-muted-foreground hover:bg-white/[0.04] hover:text-foreground">
+                    <button className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-fg/15 px-3 py-2 text-xs font-display font-semibold text-muted-foreground hover:bg-fg/[0.04] hover:text-foreground">
                       <Plus className="h-3.5 w-3.5" /> Monteur of ploeg toevoegen
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="start"
-                    className="w-[360px] border-white/10 bg-[#0a1a30] text-foreground max-h-80 overflow-y-auto"
+                    className="w-[360px] border-fg/10 bg-[var(--surface-solid)] text-foreground max-h-80 overflow-y-auto"
                   >
                     {eligiblePloegen.length > 0 && (
                       <>
@@ -3599,7 +3599,7 @@ const CelModal = ({
                               style={{
                                 backgroundColor:
                                   ploeg.type === "schakelmonteur" ? "#feb300" : "#378add",
-                                color: "#0a1a30",
+                                color: "var(--surface-solid)",
                               }}
                             >
                               {ploeg.type === "schakelmonteur" ? "Schakel" : "Montage"}
@@ -3661,7 +3661,7 @@ const CelModal = ({
                                   style={{
                                     backgroundColor:
                                       m.type === "schakelmonteur" ? "#feb300" : "#378add",
-                                    color: "#0a1a30",
+                                    color: "var(--surface-solid)",
                                   }}
                                 >
                                   {m.type === "schakelmonteur" ? "Schakel" : "Montage"}
@@ -3729,7 +3729,7 @@ const CelModal = ({
               }}
               rows={2}
               placeholder="Notitie voor deze cel…"
-              className="rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary resize-none"
+              className="rounded-md border-fg/10 bg-fg/[0.04] text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-primary resize-none"
             />
           </div>
         </div>
@@ -3737,7 +3737,7 @@ const CelModal = ({
         <div className="flex justify-end px-6 pb-6">
           <Button
             onClick={onClose}
-            className="rounded-md bg-white/[0.06] text-foreground hover:bg-white/[0.1] font-display font-semibold"
+            className="rounded-md bg-fg/[0.06] text-foreground hover:bg-fg/[0.1] font-display font-semibold"
           >
             Sluiten
           </Button>
@@ -3750,9 +3750,9 @@ const CelModal = ({
 /* ----------------------------- helpers ----------------------------- */
 
 const aanwijzingPillStyle = (a: Aanwijzing): React.CSSProperties => {
-  if (a === "AVP") return { backgroundColor: "#3fff8b", color: "#0a1a30" };
-  if (a === "VP") return { backgroundColor: "#7cc1ff", color: "#0a1a30" };
-  return { backgroundColor: "#cbd5e1", color: "#0a1a30" };
+  if (a === "AVP") return { backgroundColor: "#3fff8b", color: "var(--surface-solid)" };
+  if (a === "VP") return { backgroundColor: "#7cc1ff", color: "var(--surface-solid)" };
+  return { backgroundColor: "#cbd5e1", color: "var(--surface-solid)" };
 };
 
 const rankAanwijzing = (a: Aanwijzing | null): number =>
@@ -3837,8 +3837,8 @@ const HistoryPanel = ({
         top: 52,
         width: 320,
         height: "calc(100vh - 52px)",
-        backgroundColor: "rgba(10, 26, 48, 0.97)",
-        borderLeft: "1px solid rgba(255,255,255,0.08)",
+        backgroundColor: "rgb(var(--surface-rgb) / 0.97)",
+        borderLeft: "1px solid rgb(var(--fg-rgb) / 0.08)",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
         zIndex: 40,
@@ -3847,8 +3847,8 @@ const HistoryPanel = ({
       <div
         className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
         style={{
-          backgroundColor: "rgba(10, 26, 48, 0.97)",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          backgroundColor: "rgb(var(--surface-rgb) / 0.97)",
+          borderBottom: "1px solid rgb(var(--fg-rgb) / 0.08)",
         }}
       >
         <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
@@ -3863,7 +3863,7 @@ const HistoryPanel = ({
               "rounded-md px-2 py-1 text-[11px] font-display font-semibold",
               history.length === 0
                 ? "cursor-not-allowed text-muted-foreground/40"
-                : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+                : "text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground",
             ].join(" ")}
           >
             Wissen
@@ -3871,7 +3871,7 @@ const HistoryPanel = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+            className="rounded-md p-1 text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -3887,7 +3887,7 @@ const HistoryPanel = ({
           {reversed.map(({ entry, idx }) => (
             <div
               key={idx}
-              className="group flex items-start gap-2 rounded-md px-2 py-2 hover:bg-white/[0.04]"
+              className="group flex items-start gap-2 rounded-md px-2 py-2 hover:bg-fg/[0.04]"
             >
               <span
                 className="mt-1 inline-block shrink-0 rounded-full"

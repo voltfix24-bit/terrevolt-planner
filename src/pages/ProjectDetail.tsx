@@ -63,7 +63,7 @@ const STATE_STYLES: Record<SectionState, { dot: string; label: string; ring: str
   empty: {
     dot: "bg-muted-foreground/40",
     label: "Niet gestart",
-    ring: "border-white/10",
+    ring: "border-fg/10",
     accent: "bg-muted-foreground/40",
   },
   partial: {
@@ -160,7 +160,7 @@ const SubBlock: React.FC<{
   <div
     className={cn(
       "rounded-md border px-3 py-2",
-      muted ? "border-white/[0.04] bg-white/[0.008]" : "border-white/5 bg-white/[0.015]",
+      muted ? "border-fg/[0.04] bg-fg/[0.008]" : "border-fg/5 bg-fg/[0.015]",
     )}
   >
     <div className="mb-2 flex items-center gap-1.5">
@@ -225,7 +225,7 @@ const OptionPicker: React.FC<OptionPickerProps> = ({
               sz,
               active
                 ? "border-primary bg-primary text-primary-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_-2px_hsl(var(--primary)/0.4)]"
-                : "border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:border-white/20 hover:bg-white/[0.06] hover:text-foreground",
+                : "border-fg/[0.08] bg-fg/[0.03] text-muted-foreground hover:border-fg/20 hover:bg-fg/[0.06] hover:text-foreground",
             ].join(" ")}
           >
             {o.label}
@@ -261,7 +261,7 @@ const ChoiceCardGroup: React.FC<{
             "group rounded-lg border px-3 py-2.5 text-left transition-all",
             active
               ? "border-primary/60 bg-primary/[0.08] shadow-[0_0_0_1px_hsl(var(--primary)/0.35),0_4px_18px_-8px_hsl(var(--primary)/0.4)]"
-              : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]",
+              : "border-fg/[0.08] bg-fg/[0.02] hover:border-fg/20 hover:bg-fg/[0.05]",
           )}
         >
           <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ const ChoiceCardGroup: React.FC<{
                 "flex h-6 w-6 items-center justify-center rounded-md border text-[11px] font-display font-bold",
                 active
                   ? "border-primary/60 bg-primary text-primary-foreground"
-                  : "border-white/10 bg-white/[0.03] text-muted-foreground",
+                  : "border-fg/10 bg-fg/[0.03] text-muted-foreground",
               )}
             >
               {o.icon ?? o.label.charAt(0)}
@@ -331,7 +331,7 @@ const ExecutionRangePicker: React.FC<{
             type="button"
             variant="outline"
             className={cn(
-              "justify-start gap-2 border-white/10 bg-white/[0.03] text-left font-normal hover:bg-white/[0.07]",
+              "justify-start gap-2 border-fg/10 bg-fg/[0.03] text-left font-normal hover:bg-fg/[0.07]",
               compact ? "h-8 px-2.5" : "h-9 px-3",
               !hasBoth && "text-muted-foreground",
             )}
@@ -407,7 +407,7 @@ const TemplatePicker: React.FC<{
           value={value ?? ""}
           onValueChange={(v) => onChange(v)}
         >
-          <SelectTrigger className="h-8 flex-1 border-white/10 bg-white/[0.03] text-[12.5px]">
+          <SelectTrigger className="h-8 flex-1 border-fg/10 bg-fg/[0.03] text-[12.5px]">
             <SelectValue placeholder="Kies template…" />
           </SelectTrigger>
           <SelectContent>
@@ -438,7 +438,7 @@ const TemplatePicker: React.FC<{
             setLoading(false);
             setShowAll(true);
           }}
-          className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-white/[0.07] hover:text-foreground"
+          className="rounded-md border border-fg/10 bg-fg/[0.03] px-2.5 py-1.5 text-[10.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-fg/[0.07] hover:text-foreground"
         >
           {loading ? "Laden…" : showAll ? "Filter op situatie" : "Toon alle"}
         </button>
@@ -975,7 +975,7 @@ const ProjectDetail = () => {
           <div className="flex min-w-0 items-start gap-2.5">
             <button
               onClick={() => navigate("/projecten")}
-              className="mt-0.5 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="mt-0.5 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
               title="Terug naar cases"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -988,7 +988,7 @@ const ProjectDetail = () => {
                 <h1 className="truncate font-display text-lg font-bold tracking-tight text-foreground">
                   {(get<string>("station_naam") as string) || "Nieuwe case"}
                 </h1>
-                <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="rounded border border-fg/10 bg-fg/[0.04] px-1.5 py-0.5 text-[9.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
                   {(get<string>("status") as string) || "concept"}
                 </span>
               </div>
@@ -1006,13 +1006,13 @@ const ProjectDetail = () => {
                 {overallProgress}%
               </span>
             </div>
-            <div className="flex items-center gap-1.5 rounded border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 rounded border border-fg/[0.06] bg-fg/[0.02] px-2 py-1 text-[11px] text-muted-foreground">
               <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse text-primary" : "text-emerald-400/80"}`} />
               {saving ? "Opslaan…" : "Autosave aan"}
             </div>
             <button
               onClick={() => navigate(`/projecten/${id}/dossier`)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11.5px] font-display font-semibold text-foreground/85 transition-colors hover:bg-white/[0.07]"
+              className="inline-flex items-center gap-1.5 rounded-md border border-fg/10 bg-fg/[0.03] px-3 py-1.5 text-[11.5px] font-display font-semibold text-foreground/85 transition-colors hover:bg-fg/[0.07]"
               title="Open project dossier"
             >
               <FileText className="h-3.5 w-3.5" /> Dossier
@@ -1058,7 +1058,7 @@ const ProjectDetail = () => {
             {summaryChips.map((c) => (
               <span
                 key={c.label}
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-white/[0.025] px-1.5 py-0.5 text-[10.5px]"
+                className="inline-flex items-center gap-1.5 rounded-md border border-fg/[0.08] bg-fg/[0.025] px-1.5 py-0.5 text-[10.5px]"
               >
                 <span className="font-display font-semibold uppercase tracking-wider text-muted-foreground">
                   {c.label}
@@ -1076,7 +1076,7 @@ const ProjectDetail = () => {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         {/* Left intake nav */}
         <aside className="lg:sticky lg:top-3 lg:w-[224px] lg:shrink-0">
-          <div className="surface-card rounded-lg border border-white/10 p-2">
+          <div className="surface-card rounded-lg border border-fg/10 p-2">
             <div className="mb-1.5 px-1.5 pt-0.5">
               <div className="font-display text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 Case intake
@@ -1098,7 +1098,7 @@ const ProjectDetail = () => {
                       "group relative flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-all",
                       isActive
                         ? "bg-primary/[0.08] ring-1 ring-primary/30"
-                        : "hover:bg-white/[0.04]",
+                        : "hover:bg-fg/[0.04]",
                     )}
                   >
                     {/* status dot or icon */}
@@ -1111,7 +1111,7 @@ const ProjectDetail = () => {
                             ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
                             : isActive
                               ? "border-primary bg-primary text-primary-foreground"
-                              : "border-white/10 bg-white/[0.03] text-muted-foreground",
+                              : "border-fg/10 bg-fg/[0.03] text-muted-foreground",
                       )}
                     >
                       {item.soon ? (
@@ -1134,7 +1134,7 @@ const ProjectDetail = () => {
                           {item.label}
                         </span>
                         {item.soon && (
-                          <span className="rounded border border-white/10 bg-white/[0.04] px-1 py-0 text-[8.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <span className="rounded border border-fg/10 bg-fg/[0.04] px-1 py-0 text-[8.5px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Soon
                           </span>
                         )}
@@ -1145,7 +1145,7 @@ const ProjectDetail = () => {
                         </span>
                         {c && (
                           <>
-                            <span className="h-[2.5px] flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                            <span className="h-[2.5px] flex-1 overflow-hidden rounded-full bg-fg/[0.06]">
                               <span
                                 className={cn(
                                   "block h-full rounded-full transition-all",
@@ -1171,7 +1171,7 @@ const ProjectDetail = () => {
             </nav>
 
             {/* Mini live summary */}
-            <div className="mt-3 border-t border-white/[0.06] pt-2">
+            <div className="mt-3 border-t border-fg/[0.06] pt-2">
               <div className="mb-1.5 px-1.5 font-display text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 Live samenvatting
               </div>
@@ -1318,7 +1318,7 @@ const ProjectDetail = () => {
 
             <SubBlock title="A2. Projectrandvoorwaarden">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2.5">
+                <div className="rounded border border-fg/[0.06] bg-fg/[0.015] px-3 py-2.5">
                   <Field label="Bouwkundige werkzaamheden benodigd?" inline>
                     <OptionPicker
                       value={get<string>("bouwkundig_benodigd")}
@@ -1353,7 +1353,7 @@ const ProjectDetail = () => {
                   )}
                 </div>
 
-                <div className="rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2.5">
+                <div className="rounded border border-fg/[0.06] bg-fg/[0.015] px-3 py-2.5">
                   <Field label="Asbestsanering benodigd?" inline>
                     <OptionPicker
                       value={get<string>("asbest_benodigd")}
@@ -1514,7 +1514,7 @@ const ProjectDetail = () => {
 
             <SubBlock title="B5. Kabels huidig">
               {/* MS-kabels group */}
-              <div className="rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2.5">
+              <div className="rounded border border-fg/[0.06] bg-fg/[0.015] px-3 py-2.5">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-foreground/80">
                     MS-kabels
@@ -1591,7 +1591,7 @@ const ProjectDetail = () => {
               </div>
 
               {/* LS-kabels group */}
-              <div className="rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2.5">
+              <div className="rounded border border-fg/[0.06] bg-fg/[0.015] px-3 py-2.5">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-foreground/80">
                     LS-kabels
@@ -2146,7 +2146,7 @@ const ProjectDetail = () => {
           {/* ============================================ */}
           <section
             id="concept-planning"
-            className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-white/10 px-4 py-3.5"
+            className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-fg/10 px-4 py-3.5"
           >
             <div className="absolute left-0 top-0 h-full w-[3px] bg-primary/50" />
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -2177,7 +2177,7 @@ const ProjectDetail = () => {
           {/* ============================================ */}
           <section
             id="archief"
-            className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-white/10 px-4 py-3.5"
+            className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-fg/10 px-4 py-3.5"
           >
             <div className="absolute left-0 top-0 h-full w-[3px] bg-muted-foreground/30" />
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -2190,7 +2190,7 @@ const ProjectDetail = () => {
                   · Documenten, oplevering & historie
                 </span>
               </div>
-              <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="rounded border border-fg/10 bg-fg/[0.04] px-1.5 py-0.5 text-[9.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
                 Binnenkort
               </span>
             </div>

@@ -62,7 +62,7 @@ export const LookupBeheer: React.FC<Props> = ({ table, title, description, place
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-lg border border-fg/10 bg-fg/[0.03] p-4">
       <div className="mb-3">
         <h3 className="font-display text-sm font-bold tracking-tight text-foreground">{title}</h3>
         {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
@@ -94,7 +94,7 @@ export const LookupBeheer: React.FC<Props> = ({ table, title, description, place
           {items.map((it) => (
             <li
               key={it.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-white/5 bg-white/[0.02] px-3 py-2"
+              className="flex items-center justify-between gap-2 rounded-md border border-fg/5 bg-fg/[0.02] px-3 py-2"
             >
               <span className="text-sm text-foreground">{it.naam}</span>
               <button

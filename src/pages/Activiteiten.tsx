@@ -88,13 +88,13 @@ const capLabel = (c: CapType | null) =>
 const capAccent = (c: CapType | null): string => {
   if (c === "montage") return "#378add";
   if (c === "schakel") return "#feb300";
-  return "rgba(255,255,255,0.2)";
+  return "rgb(var(--fg-rgb) / 0.2)";
 };
 
 const capIconBg = (c: CapType | null): { bg: string; color: string } => {
   if (c === "montage") return { bg: "rgba(55,138,221,0.12)", color: "#378add" };
   if (c === "schakel") return { bg: "rgba(254,179,0,0.12)", color: "#feb300" };
-  return { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" };
+  return { bg: "rgb(var(--fg-rgb) / 0.06)", color: "rgb(var(--fg-rgb) / 0.5)" };
 };
 
 const capBadgeStyle = (c: CapType | null): React.CSSProperties => {
@@ -103,8 +103,8 @@ const capBadgeStyle = (c: CapType | null): React.CSSProperties => {
   if (c === "schakel")
     return { background: "rgba(254,179,0,0.15)", color: "#feb300" };
   return {
-    background: "rgba(255,255,255,0.06)",
-    color: "rgba(255,255,255,0.55)",
+    background: "rgb(var(--fg-rgb) / 0.06)",
+    color: "rgb(var(--fg-rgb) / 0.55)",
   };
 };
 
@@ -354,7 +354,7 @@ const Activiteiten = () => {
           className="flex items-center gap-2 rounded-lg transition-colors hover:brightness-110"
           style={{
             background: "#3fff8b",
-            color: "#030e20",
+            color: "var(--app-bg)",
             fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
             fontWeight: 700,
             padding: "10px 20px",
@@ -382,11 +382,11 @@ const Activiteiten = () => {
                   fontSize: 13,
                   fontWeight: 600,
                   fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
-                  background: active ? "#3fff8b" : "rgba(255,255,255,0.05)",
-                  color: active ? "#030e20" : "rgba(255,255,255,0.55)",
+                  background: active ? "#3fff8b" : "rgb(var(--fg-rgb) / 0.05)",
+                  color: active ? "var(--app-bg)" : "rgb(var(--fg-rgb) / 0.55)",
                   border: active
                     ? "1px solid #3fff8b"
-                    : "1px solid rgba(255,255,255,0.1)",
+                    : "1px solid rgb(var(--fg-rgb) / 0.1)",
                 }}
               >
                 {opt.label}
@@ -398,7 +398,7 @@ const Activiteiten = () => {
         <div className="relative w-full sm:w-72">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ width: 16, height: 16, color: "rgba(255,255,255,0.4)" }}
+            style={{ width: 16, height: 16, color: "rgb(var(--fg-rgb) / 0.4)" }}
           />
           <input
             type="text"
@@ -407,8 +407,8 @@ const Activiteiten = () => {
             placeholder="Zoek op naam..."
             className="w-full transition-colors focus:outline-none"
             style={{
-              background: "rgba(10,26,48,0.6)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgb(var(--surface-rgb) / 0.6)",
+              border: "1px solid rgb(var(--fg-rgb) / 0.1)",
               borderRadius: 8,
               padding: "10px 16px 10px 40px",
               color: "#ffffff",
@@ -417,7 +417,7 @@ const Activiteiten = () => {
             }}
             onFocus={(e) => (e.currentTarget.style.borderColor = "#3fff8b")}
             onBlur={(e) =>
-              (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")
+              (e.currentTarget.style.borderColor = "rgb(var(--fg-rgb) / 0.1)")
             }
           />
         </div>
@@ -427,10 +427,10 @@ const Activiteiten = () => {
         <div
           className="px-6 py-16 text-center text-sm"
           style={{
-            background: "rgba(10,26,48,0.6)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgb(var(--surface-rgb) / 0.6)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: 12,
-            color: "rgba(255,255,255,0.5)",
+            color: "rgb(var(--fg-rgb) / 0.5)",
           }}
         >
           Laden…
@@ -439,8 +439,8 @@ const Activiteiten = () => {
         <div
           className="flex flex-col items-center justify-center px-6 py-20 text-center"
           style={{
-            background: "rgba(10,26,48,0.6)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgb(var(--surface-rgb) / 0.6)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: 12,
           }}
         >
@@ -465,7 +465,7 @@ const Activiteiten = () => {
           </h3>
           <p
             className="mt-1.5 max-w-sm text-sm"
-            style={{ color: "rgba(255,255,255,0.5)" }}
+            style={{ color: "rgb(var(--fg-rgb) / 0.5)" }}
           >
             Voeg activiteiten toe om ze in projecten te kunnen plannen
           </p>
@@ -475,7 +475,7 @@ const Activiteiten = () => {
             className="mt-6 flex items-center gap-2 rounded-lg transition-colors hover:brightness-110"
             style={{
               background: "#3fff8b",
-              color: "#030e20",
+              color: "var(--app-bg)",
               fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
               fontWeight: 700,
               padding: "10px 20px",
@@ -490,10 +490,10 @@ const Activiteiten = () => {
         <div
           className="px-6 py-12 text-center text-sm"
           style={{
-            background: "rgba(10,26,48,0.6)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgb(var(--surface-rgb) / 0.6)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: 12,
-            color: "rgba(255,255,255,0.5)",
+            color: "rgb(var(--fg-rgb) / 0.5)",
           }}
         >
           Geen activiteiten gevonden voor deze filter.
@@ -544,7 +544,7 @@ const Activiteiten = () => {
               maxWidth: "100vw",
               height: "100vh",
               background: "rgba(8, 18, 38, 0.97)",
-              borderLeft: "1px solid rgba(255,255,255,0.1)",
+              borderLeft: "1px solid rgb(var(--fg-rgb) / 0.1)",
               backdropFilter: "blur(16px)",
               WebkitBackdropFilter: "blur(16px)",
               zIndex: 50,
@@ -566,7 +566,7 @@ const Activiteiten = () => {
               className="flex items-center gap-3"
               style={{
                 padding: "24px 32px",
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
+                borderBottom: "1px solid rgb(var(--fg-rgb) / 0.08)",
               }}
             >
               <div
@@ -591,8 +591,8 @@ const Activiteiten = () => {
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="rounded-md p-1.5 transition-colors hover:bg-white/[0.06]"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                className="rounded-md p-1.5 transition-colors hover:bg-fg/[0.06]"
+                style={{ color: "rgb(var(--fg-rgb) / 0.5)" }}
                 aria-label="Sluiten"
               >
                 <X className="h-4 w-4" />
@@ -613,9 +613,9 @@ const Activiteiten = () => {
                 placeholder="bijv. Schakelen/Montage MS"
                 className="w-full transition-colors focus:outline-none"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: "rgb(var(--fg-rgb) / 0.03)",
                   border: "none",
-                  borderBottom: "1px solid rgba(255,255,255,0.15)",
+                  borderBottom: "1px solid rgb(var(--fg-rgb) / 0.15)",
                   padding: "12px 4px",
                   color: "#ffffff",
                   fontSize: 15,
@@ -626,7 +626,7 @@ const Activiteiten = () => {
                 }
                 onBlur={(e) =>
                   (e.currentTarget.style.borderBottom =
-                    "1px solid rgba(255,255,255,0.15)")
+                    "1px solid rgb(var(--fg-rgb) / 0.15)")
                 }
               />
 
@@ -651,11 +651,11 @@ const Activiteiten = () => {
                             "Manrope, ui-sans-serif, system-ui, sans-serif",
                           background: active
                             ? "rgba(63,255,139,0.15)"
-                            : "rgba(255,255,255,0.04)",
+                            : "rgb(var(--fg-rgb) / 0.04)",
                           border: active
                             ? "1px solid #3fff8b"
-                            : "1px solid rgba(255,255,255,0.1)",
-                          color: active ? "#3fff8b" : "rgba(255,255,255,0.6)",
+                            : "1px solid rgb(var(--fg-rgb) / 0.1)",
+                          color: active ? "#3fff8b" : "rgb(var(--fg-rgb) / 0.6)",
                         }}
                       >
                         {capLabel(c)}
@@ -748,18 +748,18 @@ const Activiteiten = () => {
               className="flex items-center gap-3"
               style={{
                 padding: "20px 32px",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
+                borderTop: "1px solid rgb(var(--fg-rgb) / 0.08)",
               }}
             >
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="rounded-lg transition-colors hover:bg-white/[0.06]"
+                className="rounded-lg transition-colors hover:bg-fg/[0.06]"
                 style={{
                   padding: "10px 16px",
                   background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "rgba(255,255,255,0.7)",
+                  border: "1px solid rgb(var(--fg-rgb) / 0.12)",
+                  color: "rgb(var(--fg-rgb) / 0.7)",
                   fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                   fontWeight: 600,
                   fontSize: 13,
@@ -775,7 +775,7 @@ const Activiteiten = () => {
                 style={{
                   padding: "10px 16px",
                   background: "#3fff8b",
-                  color: "#030e20",
+                  color: "var(--app-bg)",
                   fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                   fontWeight: 700,
                   fontSize: 14,
@@ -795,8 +795,8 @@ const Activiteiten = () => {
       >
         <AlertDialogContent
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -811,7 +811,7 @@ const Activiteiten = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-md border-white/10 bg-transparent text-foreground hover:bg-white/[0.06]">
+            <AlertDialogCancel className="rounded-md border-fg/10 bg-transparent text-foreground hover:bg-fg/[0.06]">
               Annuleren
             </AlertDialogCancel>
             <AlertDialogAction
@@ -837,7 +837,7 @@ const DrawerLabel = ({ children }: { children: React.ReactNode }) => (
       fontSize: 10,
       letterSpacing: "0.12em",
       textTransform: "uppercase",
-      color: "rgba(255,255,255,0.4)",
+      color: "rgb(var(--fg-rgb) / 0.4)",
       marginBottom: 10,
     }}
   >
@@ -862,7 +862,7 @@ const PersonInput = ({
     <div
       style={{
         fontSize: 11,
-        color: "rgba(255,255,255,0.5)",
+        color: "rgb(var(--fg-rgb) / 0.5)",
         marginBottom: 6,
         fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
       }}
@@ -877,8 +877,8 @@ const PersonInput = ({
       onChange={(e) => onChange(Math.max(min, parseInt(e.target.value) || min))}
       className="w-full text-center transition-colors focus:outline-none"
       style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "rgb(var(--fg-rgb) / 0.04)",
+        border: "1px solid rgb(var(--fg-rgb) / 0.1)",
         borderRadius: 8,
         padding: "10px 8px",
         color: "#3fff8b",
@@ -888,7 +888,7 @@ const PersonInput = ({
       }}
       onFocus={(e) => (e.currentTarget.style.borderColor = "#3fff8b")}
       onBlur={(e) =>
-        (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")
+        (e.currentTarget.style.borderColor = "rgb(var(--fg-rgb) / 0.1)")
       }
     />
   </div>
@@ -907,7 +907,7 @@ const KwalRow = ({
     <div
       style={{
         fontSize: 11,
-        color: "rgba(255,255,255,0.5)",
+        color: "rgb(var(--fg-rgb) / 0.5)",
         marginBottom: 6,
         fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
       }}
@@ -931,11 +931,11 @@ const KwalRow = ({
               fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
               background: active
                 ? "rgba(63,255,139,0.15)"
-                : "rgba(255,255,255,0.04)",
+                : "rgb(var(--fg-rgb) / 0.04)",
               border: active
                 ? "1px solid #3fff8b"
-                : "1px solid rgba(255,255,255,0.1)",
-              color: active ? "#3fff8b" : "rgba(255,255,255,0.6)",
+                : "1px solid rgb(var(--fg-rgb) / 0.1)",
+              color: active ? "#3fff8b" : "rgb(var(--fg-rgb) / 0.6)",
             }}
           >
             {a}
@@ -981,8 +981,8 @@ const ActiviteitCard = ({
       ref={setNodeRef}
       style={{
         ...style,
-        background: "rgba(10,26,48,0.6)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "rgb(var(--surface-rgb) / 0.6)",
+        border: "1px solid rgb(var(--fg-rgb) / 0.08)",
         borderRadius: 12,
         padding: "16px 20px",
         marginBottom: 8,
@@ -994,7 +994,7 @@ const ActiviteitCard = ({
         (e.currentTarget.style.borderColor = "rgba(63,255,139,0.25)")
       }
       onMouseLeave={(e) =>
-        (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")
+        (e.currentTarget.style.borderColor = "rgb(var(--fg-rgb) / 0.08)")
       }
     >
       {/* Left accent bar */}
@@ -1058,7 +1058,7 @@ const ActiviteitCard = ({
             <span
               style={{
                 fontSize: 12,
-                color: "rgba(255,255,255,0.5)",
+                color: "rgb(var(--fg-rgb) / 0.5)",
                 fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
               }}
             >
@@ -1112,7 +1112,7 @@ const ActiviteitCard = ({
               fontWeight: 700,
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.35)",
+              color: "rgb(var(--fg-rgb) / 0.35)",
               fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
             }}
           >
@@ -1125,9 +1125,9 @@ const ActiviteitCard = ({
                 fontWeight: 600,
                 padding: "3px 8px",
                 borderRadius: 6,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "rgba(255,255,255,0.7)",
+                background: "rgb(var(--fg-rgb) / 0.04)",
+                border: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                color: "rgb(var(--fg-rgb) / 0.7)",
                 fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
               }}
             >
@@ -1140,9 +1140,9 @@ const ActiviteitCard = ({
                   fontWeight: 600,
                   padding: "3px 8px",
                   borderRadius: 6,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.7)",
+                  background: "rgb(var(--fg-rgb) / 0.04)",
+                  border: "1px solid rgb(var(--fg-rgb) / 0.08)",
+                  color: "rgb(var(--fg-rgb) / 0.7)",
                   fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                 }}
               >
@@ -1163,8 +1163,8 @@ const ActiviteitCard = ({
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none rounded-md p-2 transition-colors hover:bg-white/[0.06] active:cursor-grabbing"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          className="cursor-grab touch-none rounded-md p-2 transition-colors hover:bg-fg/[0.06] active:cursor-grabbing"
+          style={{ color: "rgb(var(--fg-rgb) / 0.4)" }}
           aria-label="Versleep"
         >
           <GripVertical className="h-4 w-4" />
@@ -1172,8 +1172,8 @@ const ActiviteitCard = ({
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-md p-2 transition-colors hover:bg-white/[0.06] hover:text-white"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          className="rounded-md p-2 transition-colors hover:bg-fg/[0.06] hover:text-fg"
+          style={{ color: "rgb(var(--fg-rgb) / 0.4)" }}
           aria-label="Wijzigen"
         >
           <Pencil className="h-4 w-4" />
@@ -1181,8 +1181,8 @@ const ActiviteitCard = ({
         <button
           type="button"
           onClick={onDuplicate}
-          className="rounded-md p-2 transition-colors hover:bg-white/[0.06] hover:text-white"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          className="rounded-md p-2 transition-colors hover:bg-fg/[0.06] hover:text-fg"
+          style={{ color: "rgb(var(--fg-rgb) / 0.4)" }}
           aria-label="Dupliceren"
         >
           <Copy className="h-4 w-4" />
@@ -1191,10 +1191,10 @@ const ActiviteitCard = ({
           type="button"
           onClick={onDelete}
           className="rounded-md p-2 transition-colors hover:bg-destructive/15"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          style={{ color: "rgb(var(--fg-rgb) / 0.4)" }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
           onMouseLeave={(e) =>
-            (e.currentTarget.style.color = "rgba(255,255,255,0.4)")
+            (e.currentTarget.style.color = "rgb(var(--fg-rgb) / 0.4)")
           }
           aria-label="Verwijderen"
         >

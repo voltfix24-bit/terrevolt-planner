@@ -395,7 +395,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2 rounded-md border border-white/10 bg-white/[0.02] p-2.5">
+      <div className="flex flex-wrap items-end gap-2 rounded-md border border-fg/10 bg-fg/[0.02] p-2.5">
         <div className="flex-1 min-w-[180px]">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Uitrollen vanaf weeknr
@@ -473,7 +473,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
               +1w
               <ArrowRight className="h-3 w-3" />
             </Button>
-            <div className="mx-1 h-5 w-px bg-white/10" />
+            <div className="mx-1 h-5 w-px bg-fg/10" />
             <Input
               type="number"
               min={1}
@@ -493,7 +493,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
               <Copy className="h-3 w-3" />
               Kopieer
             </Button>
-            <div className="mx-1 h-5 w-px bg-white/10" />
+            <div className="mx-1 h-5 w-px bg-fg/10" />
             <Button
               size="sm"
               variant="ghost"
@@ -520,7 +520,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
       )}
 
       {grouped.length === 0 && (
-        <div className="rounded-md border border-dashed border-white/10 p-4 text-center text-sm text-muted-foreground">
+        <div className="rounded-md border border-dashed border-fg/10 p-4 text-center text-sm text-muted-foreground">
           Nog geen concept-planning. Voeg een dag toe om te beginnen.
         </div>
       )}
@@ -529,7 +529,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
         {grouped.map(([offset, dagCellen]) => (
           <div
             key={offset}
-            className="rounded-md border border-white/10 bg-white/[0.02] p-2"
+            className="rounded-md border border-fg/10 bg-fg/[0.02] p-2"
           >
             <div className="mb-1.5 flex items-center justify-between">
               <span className="font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
@@ -616,7 +616,7 @@ const ConceptCelRow: React.FC<{
       className={`rounded border p-2 space-y-1.5 transition-colors ${
         selected
           ? "border-primary bg-primary/10"
-          : "border-white/5 bg-white/[0.02]"
+          : "border-fg/5 bg-fg/[0.02]"
       }`}
     >
       <div className="flex flex-wrap items-center gap-1.5">
@@ -632,7 +632,7 @@ const ConceptCelRow: React.FC<{
           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border transition-colors ${
             selected
               ? "border-primary bg-primary text-primary-foreground"
-              : "border-white/10 text-muted-foreground/60 hover:border-white/30 hover:text-foreground"
+              : "border-fg/10 text-muted-foreground/60 hover:border-fg/30 hover:text-foreground"
           }`}
           title="Klik om te selecteren · shift-klik = bereik · ctrl/cmd-klik = toggle"
         >
@@ -731,12 +731,12 @@ const ConceptCelRow: React.FC<{
               className={`rounded px-1.5 py-0.5 text-[10px] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                 active
                   ? "bg-primary/20 text-foreground hover:bg-primary/30 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.5)]"
-                  : "bg-white/[0.02] text-muted-foreground hover:bg-white/[0.10] hover:text-foreground"
+                  : "bg-fg/[0.02] text-muted-foreground hover:bg-fg/[0.10] hover:text-foreground"
               }`}
               style={{
                 border: active
                   ? "1.5px dashed rgba(63,255,139,0.7)"
-                  : "1.5px dashed rgba(255,255,255,0.18)",
+                  : "1.5px dashed rgb(var(--fg-rgb) / 0.18)",
               }}
               title={`${m.naam}${active ? " — concept-reservering" : ""}`}
               aria-pressed={active}

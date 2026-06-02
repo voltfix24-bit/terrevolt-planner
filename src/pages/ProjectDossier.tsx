@@ -108,7 +108,7 @@ const valOr = (v: unknown, fallback = "—"): string => {
 };
 
 const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
-  concept: { label: "Concept", cls: "border-muted-foreground/30 bg-white/[0.03] text-muted-foreground" },
+  concept: { label: "Concept", cls: "border-muted-foreground/30 bg-fg/[0.03] text-muted-foreground" },
   gepland: { label: "Gepland", cls: "border-sky-400/30 bg-sky-400/[0.08] text-sky-300" },
   in_uitvoering: {
     label: "In Uitvoering",
@@ -156,7 +156,7 @@ const Card: React.FC<{
   return (
     <section
       className={cn(
-        "surface-card relative overflow-hidden rounded-lg border border-white/[0.06] px-5 py-4",
+        "surface-card relative overflow-hidden rounded-lg border border-fg/[0.06] px-5 py-4",
         className,
       )}
     >
@@ -164,7 +164,7 @@ const Card: React.FC<{
       <header className="mb-3.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {Icon && (
-            <div className={cn("flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.04]", iconCls)}>
+            <div className={cn("flex h-6 w-6 items-center justify-center rounded-md bg-fg/[0.04]", iconCls)}>
               <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
             </div>
           )}
@@ -207,7 +207,7 @@ const SubBlock: React.FC<{
   icon?: React.ElementType;
   children: React.ReactNode;
 }> = ({ title, icon: Icon, children }) => (
-  <div className="rounded-md border border-white/[0.05] bg-white/[0.012] px-3 py-2.5">
+  <div className="rounded-md border border-fg/[0.05] bg-fg/[0.012] px-3 py-2.5">
     <div className="mb-2 flex items-center gap-1.5">
       {Icon && <Icon className="h-3 w-3 text-primary/80" />}
       <div className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-primary/90">
@@ -224,11 +224,11 @@ const Pill: React.FC<{
   mono?: boolean;
 }> = ({ children, tone = "default", mono }) => {
   const cls = {
-    default: "border-white/10 bg-white/[0.04] text-foreground/85",
+    default: "border-fg/10 bg-fg/[0.04] text-foreground/85",
     primary: "border-primary/30 bg-primary/[0.10] text-primary",
     warning: "border-amber-400/30 bg-amber-400/[0.08] text-amber-300",
     danger: "border-rose-400/30 bg-rose-400/[0.08] text-rose-300",
-    muted: "border-white/[0.06] bg-white/[0.02] text-muted-foreground",
+    muted: "border-fg/[0.06] bg-fg/[0.02] text-muted-foreground",
   }[tone];
   return (
     <span
@@ -495,7 +495,7 @@ const ProjectDossier = () => {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => navigate("/projecten")}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
             title="Terug naar cases"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -514,7 +514,7 @@ const ProjectDossier = () => {
             variant="outline"
             size="sm"
             onClick={() => navigate(`/projecten/${id}`)}
-            className="h-8 gap-1.5 border-white/10 bg-white/[0.03] text-[12px] hover:bg-white/[0.06]"
+            className="h-8 gap-1.5 border-fg/10 bg-fg/[0.03] text-[12px] hover:bg-fg/[0.06]"
           >
             <Pencil className="h-3.5 w-3.5" /> Bewerk intake
           </Button>
@@ -543,7 +543,7 @@ const ProjectDossier = () => {
                 toast.error("Sta popups toe om te printen");
               }
             }}
-            className="h-8 gap-1.5 border-white/10 bg-white/[0.03] text-[12px] hover:bg-white/[0.06]"
+            className="h-8 gap-1.5 border-fg/10 bg-fg/[0.03] text-[12px] hover:bg-fg/[0.06]"
           >
             <Printer className="h-3.5 w-3.5" /> Print
           </Button>
@@ -582,7 +582,7 @@ const ProjectDossier = () => {
       {/* ============================================ */}
       {/* DOSSIER HEADER                                */}
       {/* ============================================ */}
-      <div className="surface-card relative overflow-hidden rounded-lg border border-white/[0.06] px-5 py-4">
+      <div className="surface-card relative overflow-hidden rounded-lg border border-fg/[0.06] px-5 py-4">
         <div className="absolute left-0 top-0 h-full w-[3px] bg-gradient-to-b from-primary to-primary/10" />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -610,14 +610,14 @@ const ProjectDossier = () => {
                 <Building2 className="h-3 w-3" /> Klant:{" "}
                 <span className="text-foreground/85">{opdrachtgeverNaam}</span>
               </span>
-              <span className="text-white/15">|</span>
+              <span className="text-fg/15">|</span>
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-3 w-3" /> Perceel:{" "}
                 <span className="text-foreground/85">{perceelNaam}</span>
               </span>
               {get<string>("wv_naam") && (
                 <>
-                  <span className="text-white/15">|</span>
+                  <span className="text-fg/15">|</span>
                   <span className="inline-flex items-center gap-1">
                     <HardHat className="h-3 w-3" /> WV:{" "}
                     <span className="text-foreground/85">{get<string>("wv_naam")}</span>
@@ -679,7 +679,7 @@ const ProjectDossier = () => {
           <div
             key={item.label}
             className={cn(
-              "surface-card flex flex-col gap-1 rounded-lg border border-white/[0.06] px-3 py-2.5",
+              "surface-card flex flex-col gap-1 rounded-lg border border-fg/[0.06] px-3 py-2.5",
               item.highlight && "border-amber-400/25 bg-amber-400/[0.03]",
             )}
           >
@@ -740,7 +740,7 @@ const ProjectDossier = () => {
             </div>
 
             {get<string>("notities") && (
-              <div className="mt-3 rounded-md border border-white/[0.05] bg-white/[0.012] px-3 py-2">
+              <div className="mt-3 rounded-md border border-fg/[0.05] bg-fg/[0.012] px-3 py-2">
                 <div className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   Notities
                 </div>
@@ -806,7 +806,7 @@ const ProjectDossier = () => {
               </SubBlock>
             </div>
 
-            <div className="mt-3 flex items-center justify-between rounded-md border border-white/[0.05] bg-white/[0.012] px-3 py-2">
+            <div className="mt-3 flex items-center justify-between rounded-md border border-fg/[0.05] bg-fg/[0.012] px-3 py-2">
               <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Hergebruik kabels
               </div>
@@ -955,7 +955,7 @@ const ProjectDossier = () => {
                     <li
                       key={i}
                       className={cn(
-                        "relative rounded-md border border-white/[0.05] bg-white/[0.015] py-2 pl-4 pr-3 before:absolute before:left-0 before:top-2 before:h-[calc(100%-1rem)] before:w-[3px] before:rounded-r-sm",
+                        "relative rounded-md border border-fg/[0.05] bg-fg/[0.015] py-2 pl-4 pr-3 before:absolute before:left-0 before:top-2 before:h-[calc(100%-1rem)] before:w-[3px] before:rounded-r-sm",
                         accent,
                       )}
                     >
@@ -975,14 +975,14 @@ const ProjectDossier = () => {
               <div className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Toegang & dependencies
               </div>
-              <div className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-white/[0.012] px-3 py-2 text-[12px]">
+              <div className="flex items-center gap-2 rounded-md border border-fg/[0.05] bg-fg/[0.012] px-3 py-2 text-[12px]">
                 <KeyRound className="h-3.5 w-3.5 text-primary/80" />
                 <span className="text-muted-foreground">Sleutelbeheer:</span>
                 <span className="ml-auto text-foreground/85">
                   {valOr(get("wv_naam"), "Via WV")}
                 </span>
               </div>
-              <div className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-white/[0.012] px-3 py-2 text-[12px]">
+              <div className="flex items-center gap-2 rounded-md border border-fg/[0.05] bg-fg/[0.012] px-3 py-2 text-[12px]">
                 <MapPin className="h-3.5 w-3.5 text-primary/80" />
                 <span className="text-muted-foreground">Bereikbaarheid:</span>
                 <span className="ml-auto truncate text-foreground/85">
@@ -1075,7 +1075,7 @@ const ProjectDossier = () => {
         <div>TerreVolt BV © {new Date().getFullYear()} · Project dossier systeem</div>
         <div className="flex items-center gap-3">
           <span>Case {valOr(get("case_nummer"))}</span>
-          <span className="text-white/15">|</span>
+          <span className="text-fg/15">|</span>
           <span>Confidential</span>
         </div>
       </div>
@@ -1101,7 +1101,7 @@ const ProjectDossier = () => {
 };
 
 const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
-  <div className="flex items-center justify-between gap-3 rounded-md border border-white/[0.05] bg-white/[0.012] px-3 py-1.5">
+  <div className="flex items-center justify-between gap-3 rounded-md border border-fg/[0.05] bg-fg/[0.012] px-3 py-1.5">
     <div className="text-[12px] text-muted-foreground">{label}</div>
     <div>{value}</div>
   </div>
@@ -1131,7 +1131,7 @@ const DocumentList: React.FC<{ items: TekeningRow[]; compact?: boolean }> = ({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-white/[0.08] bg-white/[0.01] px-3 py-3 text-[12px] text-muted-foreground">
+      <div className="rounded-md border border-dashed border-fg/[0.08] bg-fg/[0.01] px-3 py-3 text-[12px] text-muted-foreground">
         Geen documenten beschikbaar.
       </div>
     );
@@ -1143,7 +1143,7 @@ const DocumentList: React.FC<{ items: TekeningRow[]; compact?: boolean }> = ({
         {items.map((it) => (
           <li
             key={it.id}
-            className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-white/[0.012] px-2.5 py-1.5"
+            className="flex items-center gap-2 rounded-md border border-fg/[0.05] bg-fg/[0.012] px-2.5 py-1.5"
           >
             <FileText className="h-3.5 w-3.5 text-primary/80" />
             <div className="min-w-0 flex-1 truncate text-[12px] text-foreground/85">
@@ -1155,7 +1155,7 @@ const DocumentList: React.FC<{ items: TekeningRow[]; compact?: boolean }> = ({
             <button
               onClick={() => open(it)}
               disabled={busy === it.id}
-              className="rounded p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+              className="rounded p-1 text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground"
               title="Openen"
             >
               <Eye className="h-3.5 w-3.5" />
@@ -1167,10 +1167,10 @@ const DocumentList: React.FC<{ items: TekeningRow[]; compact?: boolean }> = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-white/[0.05]">
+    <div className="overflow-hidden rounded-md border border-fg/[0.05]">
       <table className="w-full text-[12px]">
         <thead>
-          <tr className="border-b border-white/[0.05] bg-white/[0.02] text-left">
+          <tr className="border-b border-fg/[0.05] bg-fg/[0.02] text-left">
             <th className="px-3 py-2 font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               Document
             </th>
@@ -1192,7 +1192,7 @@ const DocumentList: React.FC<{ items: TekeningRow[]; compact?: boolean }> = ({
           {items.map((it) => (
             <tr
               key={it.id}
-              className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02]"
+              className="border-b border-fg/[0.04] last:border-0 hover:bg-fg/[0.02]"
             >
               <td className="px-3 py-2">
                 <div className="flex items-center gap-2">
@@ -1222,14 +1222,14 @@ const DocumentList: React.FC<{ items: TekeningRow[]; compact?: boolean }> = ({
                 <div className="flex items-center justify-end gap-1">
                   <button
                     onClick={() => open(it)}
-                    className="rounded p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+                    className="rounded p-1 text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground"
                     title="Bekijken"
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => open(it)}
-                    className="rounded p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+                    className="rounded p-1 text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground"
                     title="Downloaden"
                   >
                     <Download className="h-3.5 w-3.5" />
