@@ -59,6 +59,21 @@
     --sidebar-accent-foreground: 217 33% 17%;
     --sidebar-border: 217 33% 17%;
     --sidebar-ring: 152 72% 26%;
+
+    /* Status / badge colors — light theme: darker, readable on white */
+    --status-gepland-bg: #b87800;       /* amber-700 */
+    --status-gepland-fg: #ffffff;
+    --status-uitvoering-bg: #1f7a3a;    /* deep green */
+    --status-uitvoering-fg: #ffffff;
+    --ms-avp-bg: #1f7a3a;
+    --ms-avp-fg: #ffffff;
+    --ms-vp-bg: #2563a6;                /* deep blue */
+    --ms-vp-fg: #ffffff;
+    --schakel-bg: #b87800;
+    --schakel-fg: #ffffff;
+    --monteur-bg: #1d4ed8;
+    --monteur-fg: #ffffff;
+    --warning-soft-text: #b87800;
   }
 
   /* ===== DARK theme (original look) ===== */
