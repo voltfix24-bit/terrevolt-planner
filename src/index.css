@@ -5,46 +5,88 @@
 /* TerreVolt Planner design system. All colors in HSL. */
 
 @layer base {
+  /* ===== Default = LIGHT theme ===== */
   :root {
-    /* Background #030e20 */
+    /* Custom raw-channel vars consumed by inline styles via rgb(var(...) / alpha) */
+    --fg-rgb: 15 23 42;            /* slate-900 — primary text/border channel on light */
+    --surface-rgb: 255 255 255;    /* white — panel base */
+    --app-bg: #f1f5f9;             /* slate-100 — page background */
+    --surface-solid: #ffffff;      /* solid panel fill (replaces #0a1a30) */
+
+    /* shadcn HSL tokens */
+    --background: 210 40% 98%;
+    --foreground: 217 33% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 217 33% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 33% 17%;
+
+    /* Primary green — darker for AA contrast on white */
+    --primary: 152 70% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 217 33% 17%;
+
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 40%;
+
+    --accent: 152 70% 32%;
+    --accent-foreground: 0 0% 100%;
+
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 214 32% 88%;
+    --ring: 152 70% 32%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 217 33% 25%;
+    --sidebar-primary: 152 70% 32%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 94%;
+    --sidebar-accent-foreground: 217 33% 17%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 152 70% 32%;
+  }
+
+  /* ===== DARK theme (original look) ===== */
+  [data-theme="dark"] {
+    --fg-rgb: 255 255 255;
+    --surface-rgb: 10 26 48;
+    --app-bg: #030e20;
+    --surface-solid: #0a1a30;
+
     --background: 217 82% 7%;
     --foreground: 210 40% 98%;
-
-    /* Surface card rgba(10,26,48,0.7) approximated in HSL */
     --card: 215 65% 11%;
     --card-foreground: 210 40% 98%;
-
     --popover: 215 65% 11%;
     --popover-foreground: 210 40% 98%;
-
-    /* Primary accent #3fff8b */
     --primary: 140 100% 62%;
     --primary-foreground: 217 82% 7%;
-
     --secondary: 215 40% 16%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 215 35% 14%;
     --muted-foreground: 215 20% 70%;
-
     --accent: 140 100% 62%;
     --accent-foreground: 217 82% 7%;
-
-    /* Warning #feb300 */
     --warning: 42 100% 50%;
     --warning-foreground: 217 82% 7%;
-
-    /* Danger #ef4444 */
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 0 0% 100%;
     --input: 215 40% 16%;
     --ring: 140 100% 62%;
 
-    --radius: 0.75rem;
-
-    /* Sidebar */
     --sidebar-background: 217 82% 7%;
     --sidebar-foreground: 210 40% 90%;
     --sidebar-primary: 140 100% 62%;
@@ -53,28 +95,6 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 0 0% 100%;
     --sidebar-ring: 140 100% 62%;
-  }
-
-  .dark {
-    --background: 217 82% 7%;
-    --foreground: 210 40% 98%;
-    --card: 215 65% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 215 65% 11%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 140 100% 62%;
-    --primary-foreground: 217 82% 7%;
-    --secondary: 215 40% 16%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 215 35% 14%;
-    --muted-foreground: 215 20% 70%;
-    --accent: 140 100% 62%;
-    --accent-foreground: 217 82% 7%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 100%;
-    --input: 215 40% 16%;
-    --ring: 140 100% 62%;
   }
 }
 
@@ -88,9 +108,10 @@
   }
 
   body {
-    background-color: #030e20;
+    background-color: var(--app-bg);
     @apply text-foreground font-sans antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition: background-color 0.2s ease;
   }
 
   h1, h2, h3, h4, h5, h6, .font-display {
@@ -101,8 +122,8 @@
 
 @layer components {
   .surface-card {
-    background-color: rgba(10, 26, 48, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgb(var(--surface-rgb) / 0.7);
+    border: 1px solid rgb(var(--fg-rgb) / 0.08);
     border-radius: 12px;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
