@@ -2201,9 +2201,9 @@ export default function Overzicht() {
                                       letterSpacing: "0.04em",
                                       padding: "1px 4px",
                                       borderRadius: 3,
-                                      background: "rgba(255,90,90,0.10)",
-                                      color: "rgba(255,140,140,0.9)",
-                                      border: "1px solid rgba(255,90,90,0.25)",
+                                      background: "hsl(var(--destructive) / 0.12)",
+                                      color: "hsl(var(--destructive))",
+                                      border: "1px solid hsl(var(--destructive) / 0.35)",
                                       whiteSpace: "nowrap",
                                       fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                                     }}
