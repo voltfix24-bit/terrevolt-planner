@@ -2056,14 +2056,14 @@ const Plannen = () => {
         ) : (
           ingeplandeMonteurs.map((m) => {
             const isSchakel = m.type === "schakelmonteur";
-            const avatarBg = isSchakel ? "#feb300" : "#378add";
-            const avatarColor = isSchakel ? "var(--surface-solid)" : "#ffffff";
+            const avatarBg = isSchakel ? "var(--schakel-bg)" : "var(--monteur-bg)";
+            const avatarColor = isSchakel ? "var(--schakel-fg)" : "var(--monteur-fg)";
             const isConcept = project?.status === "concept";
             const accent = isSchakel ? "254,179,0" : "55,138,221";
             const ms = m.aanwijzing_ms;
             let msStyle: React.CSSProperties | null = null;
-            if (ms === "AVP") msStyle = { backgroundColor: "#3fff8b", color: "var(--surface-solid)" };
-            else if (ms === "VP") msStyle = { backgroundColor: "#7cc1ff", color: "var(--surface-solid)" };
+            if (ms === "AVP") msStyle = { backgroundColor: "var(--ms-avp-bg)", color: "var(--ms-avp-fg)" };
+            else if (ms === "VP") msStyle = { backgroundColor: "var(--ms-vp-bg)", color: "var(--ms-vp-fg)" };
             else if (ms === "VOP")
               msStyle = { backgroundColor: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
             return (
