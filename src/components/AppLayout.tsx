@@ -20,7 +20,11 @@ export function AppLayout() {
   const sidebarW = collapsed ? 64 : 220;
 
   return (
-    <div className="min-h-screen w-full" style={{ backgroundColor: "var(--app-bg)" }}>
+    <div
+      className="min-h-screen w-full"
+      style={{ backgroundColor: "var(--app-bg)", ["--nav-w" as string]: `${sidebarW}px` }}
+    >
+
       {/* Mobile top bar */}
       <div
         className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-12 border-b"
