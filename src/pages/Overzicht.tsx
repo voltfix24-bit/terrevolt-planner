@@ -350,25 +350,35 @@ export default function Overzicht() {
   );
   useEffect(() => {
     const onResize = () => setViewportW(window.innerWidth);
+    const onNav = () => setViewportW((w) => w + (Math.random() < 0.5 ? 0.0001 : -0.0001));
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("nav-resize", onNav);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("nav-resize", onNav);
+    };
   }, []);
 
   // Auto-fit number of weeks/slots to the available horizontal width so
   // the grid always fills the viewport (no empty whitespace after last col).
   const availableGridWidth = useMemo(() => {
     const sidebarPx = sidebarCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
-    const appSidebar = 220; // left nav sidebar
-    const beschikbaarColumnPx = 0; // (was 100px) right BESCHIKBAAR column removed
-    const padding = 80;
-    return Math.max(400, viewportW - appSidebar - sidebarPx - beschikbaarColumnPx - padding);
+    // Read actual nav width from CSS variable set by AppLayout (collapsed=64, expanded=220)
+    let appSidebar = 220;
+    if (typeof window !== "undefined") {
+      const navVar = getComputedStyle(document.documentElement).getPropertyValue("--nav-w").trim();
+      const parsed = parseInt(navVar, 10);
+      if (!Number.isNaN(parsed) && parsed > 0) appSidebar = parsed;
+    }
+    const padding = 48;
+    return Math.max(400, viewportW - appSidebar - sidebarPx - padding);
   }, [viewportW, sidebarCollapsed]);
 
-  // For "maand": each week = 5 days × cellW. Min 4, max 12 weeks.
+  // For "maand": each week = 5 days × cellW. Min 4, max 26 weeks.
   const weeksToShow = useMemo(() => {
     if (scale !== "maand") return 5;
     const weekPx = DAYS_PER_WEEK * CELL_W_BY_SCALE.maand;
-    return Math.max(4, Math.min(12, Math.floor(availableGridWidth / weekPx) - 1));
+    return Math.max(4, Math.min(26, Math.floor(availableGridWidth / weekPx)));
   }, [scale, availableGridWidth]);
 
   // For "kwartaal": each slot = cellW. Min 8, max 26 weeks.
