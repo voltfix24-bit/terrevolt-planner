@@ -84,8 +84,7 @@ export function AppLayout() {
       )}
 
       <main
-        className="min-h-screen pt-12 md:pt-0 overflow-x-hidden transition-[margin] duration-200"
-        style={{ marginLeft: typeof window !== "undefined" && window.innerWidth >= 768 ? sidebarW : 0 }}
+        className="min-h-screen pt-12 md:pt-0 overflow-x-hidden transition-[margin] duration-200 md:ml-[var(--nav-w)]"
       >
         <div className="w-full px-3 py-3 md:px-6 md:py-6">
           <Outlet />
