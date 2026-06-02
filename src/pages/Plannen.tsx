@@ -3445,12 +3445,12 @@ const CelModal = ({
                       <div
                         className="flex items-start justify-between gap-3 rounded-md px-3 py-2"
                         style={{
-                          background: "rgba(255,176,32,0.08)",
-                          border: "1px solid rgba(255,176,32,0.25)",
+                          background: "hsl(var(--warning) / 0.12)",
+                          border: "1px solid hsl(var(--warning) / 0.35)",
                         }}
                       >
                         <div className="text-[11px] leading-snug text-foreground/90">
-                          <div className="font-display font-semibold text-[#ffb020]">
+                          <div className="font-display font-semibold text-warning">
                             Wijkt af van template
                           </div>
                           <div className="text-muted-foreground">
