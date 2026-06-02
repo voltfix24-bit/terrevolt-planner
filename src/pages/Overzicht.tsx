@@ -1651,23 +1651,25 @@ export default function Overzicht() {
             Vandaag
           </button>
         </div>
-        <div className="flex items-center gap-1 rounded-md border border-fg/10 bg-fg/[0.03] p-0.5">
-          {SCALE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onScaleChange(opt.value)}
-              className={[
-                "rounded px-3 h-7 text-xs font-semibold transition-colors",
-                scale === opt.value
-                  ? "bg-primary/20 text-primary"
-                  : "text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground",
-              ].join(" ")}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={() => setSidebarCollapsed((v) => !v)}
+          className="hidden md:flex h-7 items-center gap-1.5 rounded-md border border-fg/10 bg-fg/[0.03] px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
+          title={sidebarCollapsed ? "Projectkolom uitklappen" : "Projectkolom inklappen voor meer weken"}
+          aria-label={sidebarCollapsed ? "Projectkolom uitklappen" : "Projectkolom inklappen"}
+        >
+          {sidebarCollapsed ? (
+            <>
+              <PanelLeftOpen className="h-3.5 w-3.5" />
+              <span>Projecten tonen</span>
+            </>
+          ) : (
+            <>
+              <PanelLeftClose className="h-3.5 w-3.5" />
+              <span>Meer weken</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Main grid container — sticky header + scrollable body */}
