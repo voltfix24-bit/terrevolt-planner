@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, Settings, Users, Zap } from "lucide-react";
+import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, Moon, Settings, Sun, Users, Zap } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 
 const navItems = [
   { to: "/overzicht", label: "Overzicht", icon: LayoutDashboard },
@@ -12,8 +13,8 @@ const navItems = [
 
 export function AppSidebar() {
   const { pathname } = useLocation();
+  const { theme, toggle } = useTheme();
 
-  // Treat "/" as overzicht (root redirects there) and match nested routes by prefix.
   const isItemActive = (to: string) => {
     if (to === "/overzicht" && pathname === "/") return true;
     if (pathname === to) return true;
@@ -24,8 +25,8 @@ export function AppSidebar() {
     <aside
       className="fixed left-0 top-0 z-30 flex h-screen w-[220px] flex-col border-r"
       style={{
-        backgroundColor: "rgba(10, 26, 48, 0.7)",
-        borderColor: "rgba(255, 255, 255, 0.08)",
+        backgroundColor: "rgb(var(--surface-rgb) / 0.7)",
+        borderColor: "rgb(var(--fg-rgb) / 0.08)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
       }}
@@ -41,7 +42,7 @@ export function AppSidebar() {
         </div>
       </div>
 
-      <div className="mx-4 mb-3 h-px bg-white/[0.06]" />
+      <div className="mx-4 mb-3 h-px bg-fg/[0.06]" />
 
       {/* Nav */}
       <nav className="flex-1 px-3">
@@ -56,7 +57,7 @@ export function AppSidebar() {
                     "group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                     active
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+                      : "text-muted-foreground hover:bg-fg/[0.04] hover:text-foreground",
                   ].join(" ")}
                 >
                   <span
@@ -76,6 +77,25 @@ export function AppSidebar() {
           })}
         </ul>
       </nav>
+
+      {/* Theme toggle */}
+      <div className="px-3 pb-2">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={theme === "dark" ? "Schakel naar licht thema" : "Schakel naar donker thema"}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-fg/[0.04] hover:text-foreground"
+        >
+          {theme === "dark" ? (
+            <Sun className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          ) : (
+            <Moon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          )}
+          <span className="font-display tracking-tight">
+            {theme === "dark" ? "Licht thema" : "Donker thema"}
+          </span>
+        </button>
+      </div>
 
       {/* Footer */}
       <div className="px-5 py-4 text-[11px] text-muted-foreground">
