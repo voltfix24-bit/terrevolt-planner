@@ -2112,7 +2112,7 @@ const Plannen = () => {
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: isConcept ? avatarBg : "#ffffff",
+                    color: isConcept ? avatarBg : "hsl(var(--foreground))",
                   }}
                 >
                   {m.naam}
