@@ -4,6 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/AppLayout";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Auth from "./pages/Auth";
 import Projecten from "./pages/Projecten";
 import ProjectDetail from "./pages/ProjectDetail";
 import ProjectDossier from "./pages/ProjectDossier";
@@ -22,21 +25,26 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Navigate to="/overzicht" replace />} />
-            <Route path="/overzicht" element={<Overzicht />} />
-            <Route path="/projecten" element={<Projecten />} />
-            <Route path="/projecten/:id" element={<ProjectDetail />} />
-            <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
-            <Route path="/plannen" element={<Plannen />} />
-            <Route path="/activiteiten" element={<Activiteiten />} />
-            <Route path="/capaciteit" element={<Capaciteit />} />
-            <Route path="/instellingen" element={<Instellingen />} />
-          </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Navigate to="/overzicht" replace />} />
+                <Route path="/overzicht" element={<Overzicht />} />
+                <Route path="/projecten" element={<Projecten />} />
+                <Route path="/projecten/:id" element={<ProjectDetail />} />
+                <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
+                <Route path="/plannen" element={<Plannen />} />
+                <Route path="/activiteiten" element={<Activiteiten />} />
+                <Route path="/capaciteit" element={<Capaciteit />} />
+                <Route path="/instellingen" element={<Instellingen />} />
+              </Route>
+            </Route>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
