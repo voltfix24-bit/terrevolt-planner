@@ -3111,8 +3111,8 @@ function ActiviteitCellsRow({
                       className="flex items-center justify-center rounded-full"
                       style={{
                         width: 16, height: 16,
-                        background: "rgb(var(--fg-rgb) / 0.2)",
-                        color: "#fff",
+                        background: "rgb(var(--fg-rgb) / 0.55)",
+                        color: "var(--surface-solid)",
                         fontSize: 6, fontWeight: 700,
                         border: "1px solid rgb(var(--surface-rgb) / 0.5)",
                         marginLeft: -4,
