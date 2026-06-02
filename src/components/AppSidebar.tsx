@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, Moon, Settings, Sun, Users, Zap } from "lucide-react";
+import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, LogOut, Moon, Settings, Sun, Users, Zap } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/hooks/use-auth";
 
 const navItems = [
   { to: "/overzicht", label: "Overzicht", icon: LayoutDashboard },
@@ -18,6 +19,7 @@ interface AppSidebarProps {
 export function AppSidebar({ collapsed = false }: AppSidebarProps) {
   const { pathname } = useLocation();
   const { theme, toggle } = useTheme();
+  const { signOut, user } = useAuth();
 
   const isItemActive = (to: string) => {
     if (to === "/overzicht" && pathname === "/") return true;
@@ -114,9 +116,27 @@ export function AppSidebar({ collapsed = false }: AppSidebarProps) {
         </button>
       </div>
 
+      {/* Sign out */}
+      <div className={collapsed ? "px-2 pb-2" : "px-3 pb-2"}>
+        <button
+          type="button"
+          onClick={() => signOut()}
+          aria-label="Uitloggen"
+          title={collapsed ? "Uitloggen" : undefined}
+          className={[
+            "flex w-full items-center rounded-md text-sm font-medium text-muted-foreground transition-colors hover:bg-fg/[0.04] hover:text-foreground",
+            collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
+          ].join(" ")}
+        >
+          <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          {!collapsed && <span className="font-display tracking-tight">Uitloggen</span>}
+        </button>
+      </div>
+
       {/* Footer */}
       {!collapsed && (
         <div className="px-5 py-4 text-[11px] text-muted-foreground">
+          <div className="truncate">{user?.email}</div>
           <div>v0.1 · 2026</div>
         </div>
       )}
