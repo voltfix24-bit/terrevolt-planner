@@ -350,8 +350,13 @@ export default function Overzicht() {
   );
   useEffect(() => {
     const onResize = () => setViewportW(window.innerWidth);
+    const onNav = () => setViewportW((w) => w + (Math.random() < 0.5 ? 0.0001 : -0.0001));
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("nav-resize", onNav);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("nav-resize", onNav);
+    };
   }, []);
 
   // Auto-fit number of weeks/slots to the available horizontal width so
