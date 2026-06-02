@@ -213,9 +213,9 @@ function getCurrentISOWeek(): { week: number; year: number } {
 function statusColor(status: Status | null): { bg: string; text: string; label: string } {
   switch (status) {
     case "gepland":
-      return { bg: "#feb300", text: "var(--surface-solid)", label: "Gepland" };
+      return { bg: "var(--status-gepland-bg)", text: "var(--status-gepland-fg)", label: "Gepland" };
     case "in_uitvoering":
-      return { bg: "#3fff8b", text: "var(--surface-solid)", label: "In uitvoering" };
+      return { bg: "var(--status-uitvoering-bg)", text: "var(--status-uitvoering-fg)", label: "In uitvoering" };
     case "afgerond":
       return { bg: "rgb(var(--fg-rgb) / 0.15)", text: "rgb(var(--fg-rgb) / 0.6)", label: "Afgerond" };
     case "concept":
@@ -226,8 +226,8 @@ function statusColor(status: Status | null): { bg: string; text: string; label: 
 
 function msBadgeStyle(ms: string | null): React.CSSProperties | null {
   if (!ms) return null;
-  if (ms === "AVP") return { background: "#3fff8b", color: "var(--surface-solid)" };
-  if (ms === "VP") return { background: "#7cc1ff", color: "var(--surface-solid)" };
+  if (ms === "AVP") return { background: "var(--ms-avp-bg)", color: "var(--ms-avp-fg)" };
+  if (ms === "VP") return { background: "var(--ms-vp-bg)", color: "var(--ms-vp-fg)" };
   if (ms === "VOP") return { background: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
   return { background: "rgb(var(--fg-rgb) / 0.15)", color: "rgb(var(--fg-rgb) / 0.7)" };
 }
@@ -2201,9 +2201,9 @@ export default function Overzicht() {
                                       letterSpacing: "0.04em",
                                       padding: "1px 4px",
                                       borderRadius: 3,
-                                      background: "rgba(255,90,90,0.10)",
-                                      color: "rgba(255,140,140,0.9)",
-                                      border: "1px solid rgba(255,90,90,0.25)",
+                                      background: "hsl(var(--destructive) / 0.12)",
+                                      color: "hsl(var(--destructive))",
+                                      border: "1px solid hsl(var(--destructive) / 0.35)",
                                       whiteSpace: "nowrap",
                                       fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif",
                                     }}
@@ -2489,7 +2489,7 @@ export default function Overzicht() {
                                   : isConcept
                                     ? "transparent"
                                     : isJaar
-                                      ? "rgba(254,179,0,0.8)"
+                                      ? "var(--status-gepland-bg)"
                                       : sc.bg;
                                 return (
                                   <div
@@ -2500,15 +2500,15 @@ export default function Overzicht() {
                                       top: pillTop,
                                       height: pillHeight,
                                       background: pillBg,
-                                      opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.8,
+                                      opacity: segHasConflict ? 0.95 : isConcept ? 1 : isJaar ? 1 : 0.85,
                                       borderRadius: 4,
                                       border: isConcept ? "2px dashed rgb(var(--fg-rgb) / 0.15)" : undefined,
                                       color: segHasConflict
                                         ? "#ffffff"
                                         : isConcept
-                                          ? "rgb(var(--fg-rgb) / 0.4)"
+                                          ? "rgb(var(--fg-rgb) / 0.55)"
                                           : isJaar
-                                            ? "var(--surface-solid)"
+                                            ? "var(--status-gepland-fg)"
                                             : sc.text,
                                       fontSize: isConcept ? 9 : 10,
                                       fontWeight: 700,
@@ -3094,8 +3094,8 @@ function ActiviteitCellsRow({
                         className="flex items-center justify-center rounded-full"
                         style={{
                           width: 16, height: 16,
-                          background: isS ? "#feb300" : "#378add",
-                          color: isS ? "var(--surface-solid)" : "#fff",
+                          background: isS ? "var(--schakel-bg)" : "var(--monteur-bg)",
+                          color: isS ? "var(--schakel-fg)" : "var(--monteur-fg)",
                           fontSize: 6, fontWeight: 700,
                           border: "1px solid rgb(var(--surface-rgb) / 0.5)",
                           marginLeft: idx === 0 ? 0 : -4,
@@ -3111,8 +3111,8 @@ function ActiviteitCellsRow({
                       className="flex items-center justify-center rounded-full"
                       style={{
                         width: 16, height: 16,
-                        background: "rgb(var(--fg-rgb) / 0.2)",
-                        color: "#fff",
+                        background: "rgb(var(--fg-rgb) / 0.55)",
+                        color: "var(--surface-solid)",
                         fontSize: 6, fontWeight: 700,
                         border: "1px solid rgb(var(--surface-rgb) / 0.5)",
                         marginLeft: -4,
