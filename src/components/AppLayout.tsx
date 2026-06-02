@@ -15,6 +15,7 @@ export function AppLayout() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
+    window.dispatchEvent(new Event("nav-resize"));
   }, [collapsed]);
 
   const sidebarW = collapsed ? 64 : 220;
