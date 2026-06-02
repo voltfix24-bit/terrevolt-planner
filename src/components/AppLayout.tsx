@@ -7,13 +7,13 @@ export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen w-full" style={{ backgroundColor: "#030e20" }}>
+    <div className="min-h-screen w-full" style={{ backgroundColor: "var(--app-bg)" }}>
       {/* Mobile top bar */}
       <div
         className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-12 border-b"
         style={{
-          backgroundColor: "rgba(10, 26, 48, 0.85)",
-          borderColor: "rgba(255, 255, 255, 0.08)",
+          backgroundColor: "rgb(var(--surface-rgb) / 0.85)",
+          borderColor: "rgb(var(--fg-rgb) / 0.08)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
         }}
@@ -21,7 +21,7 @@ export function AppLayout() {
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-white/[0.06]"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-fg/[0.06]"
           aria-label={mobileOpen ? "Menu sluiten" : "Menu openen"}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

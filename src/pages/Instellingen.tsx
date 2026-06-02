@@ -60,8 +60,8 @@ const TYPE_LABEL: Record<TemplateType, string> = {
 const TYPE_BADGE_STYLE: Record<TemplateType, string> = {
   NSA: "bg-[#feb300] text-[#1a1200]",
   provisorium: "bg-[#378add] text-[#0a1428]",
-  compact: "bg-[#0f766e] text-white",
-  custom: "bg-white/10 text-muted-foreground",
+  compact: "bg-[#0f766e] text-fg",
+  custom: "bg-fg/10 text-muted-foreground",
 };
 
 const KOPPELING: { type: TemplateType; namen: string[] }[] = [
@@ -111,7 +111,7 @@ const KOPPELING: { type: TemplateType; namen: string[] }[] = [
 
 // ---------- shared classes ----------
 const inputCls =
-  "rounded-md border-white/10 bg-white/[0.04] text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary";
+  "rounded-md border-fg/10 bg-fg/[0.04] text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary";
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="space-y-1.5">
@@ -439,7 +439,7 @@ const Instellingen = () => {
               return (
                 <div
                   key={t.id}
-                  className="rounded-lg border border-white/10 bg-white/[0.03] p-4 hover:bg-white/[0.05] transition-colors"
+                  className="rounded-lg border border-fg/10 bg-fg/[0.03] p-4 hover:bg-fg/[0.05] transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-wrap">
@@ -463,7 +463,7 @@ const Instellingen = () => {
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => openEdit(t)}
-                        className="rounded-md p-2 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground transition-colors"
+                        className="rounded-md p-2 text-muted-foreground hover:bg-fg/[0.06] hover:text-foreground transition-colors"
                         title="Wijzigen"
                       >
                         <Pencil className="h-4 w-4" />
@@ -495,7 +495,7 @@ const Instellingen = () => {
                       linked.map((a) => (
                         <span
                           key={a.id}
-                          className="inline-flex items-center rounded-md bg-white/[0.06] px-2 py-0.5 text-[11px] text-foreground/85"
+                          className="inline-flex items-center rounded-md bg-fg/[0.06] px-2 py-0.5 text-[11px] text-foreground/85"
                         >
                           {a.naam}
                         </span>
@@ -532,7 +532,7 @@ const Instellingen = () => {
 
         {dataOpen && (
           <div className="mt-5 space-y-3">
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+            <div className="rounded-lg border border-fg/10 bg-fg/[0.03] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
@@ -554,7 +554,7 @@ const Instellingen = () => {
               </div>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+            <div className="rounded-lg border border-fg/10 bg-fg/[0.03] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
@@ -579,7 +579,7 @@ const Instellingen = () => {
       </section>
 
       {/* Lookup beheer voor project intake */}
-      <section className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-6">
+      <section className="mt-6 rounded-xl border border-fg/10 bg-fg/[0.02] p-6">
         <div className="mb-4">
           <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
             Project intake — beheer
@@ -609,8 +609,8 @@ const Instellingen = () => {
         <DialogContent
           className="max-w-[640px] gap-0 border-0 p-0 [&>button]:hidden"
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -621,7 +621,7 @@ const Instellingen = () => {
             </h2>
             <button
               onClick={() => setModalOpen(false)}
-              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+              className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" /> Annuleren
             </button>
@@ -652,7 +652,7 @@ const Instellingen = () => {
                           "rounded-md px-4 py-3 text-sm font-display font-bold tracking-tight transition-all",
                           type === c
                             ? "bg-primary text-primary-foreground"
-                            : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08] hover:text-foreground",
+                            : "bg-fg/[0.04] text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground",
                           disabled ? "opacity-40 cursor-not-allowed" : "",
                         ].join(" ")}
                       >
@@ -694,7 +694,7 @@ const Instellingen = () => {
                         onDragStart={() => onDragStart(idx)}
                         onDragOver={(e) => onDragOver(e, idx)}
                         onDragEnd={onDragEnd}
-                        className="flex items-center gap-2 rounded-md border-l-2 border-primary bg-white/[0.04] px-2 py-1.5 cursor-move hover:bg-white/[0.07] transition-colors"
+                        className="flex items-center gap-2 rounded-md border-l-2 border-primary bg-fg/[0.04] px-2 py-1.5 cursor-move hover:bg-fg/[0.07] transition-colors"
                       >
                         <GripVertical className="h-3.5 w-3.5 text-muted-foreground/60" />
                         <span className="text-[10px] font-mono text-muted-foreground/60 w-5">
@@ -702,14 +702,14 @@ const Instellingen = () => {
                         </span>
                         <span className="flex-1 text-sm text-foreground">{a.naam}</span>
                         {a.capaciteit_type && (
-                          <span className="rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <span className="rounded-sm bg-fg/[0.06] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                             {a.capaciteit_type}
                           </span>
                         )}
                         <button
                           type="button"
                           onClick={() => toggleActiviteit(a.id)}
-                          className="rounded p-1 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                          className="rounded p-1 text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -719,7 +719,7 @@ const Instellingen = () => {
                 )}
 
                 {/* Available */}
-                <div className="rounded-md border border-white/10 bg-white/[0.02] p-2 space-y-1 max-h-[280px] overflow-y-auto">
+                <div className="rounded-md border border-fg/10 bg-fg/[0.02] p-2 space-y-1 max-h-[280px] overflow-y-auto">
                   <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
                     Beschikbaar
                   </div>
@@ -733,14 +733,14 @@ const Instellingen = () => {
                         key={a.id}
                         type="button"
                         onClick={() => toggleActiviteit(a.id)}
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-white/[0.06] transition-colors"
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-fg/[0.06] transition-colors"
                       >
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-white/15">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-fg/15">
                           {/* unchecked */}
                         </div>
                         <span className="flex-1 text-sm text-foreground/90">{a.naam}</span>
                         {a.capaciteit_type && (
-                          <span className="rounded-sm bg-white/[0.06] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <span className="rounded-sm bg-fg/[0.06] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                             {a.capaciteit_type}
                           </span>
                         )}
@@ -778,8 +778,8 @@ const Instellingen = () => {
       >
         <AlertDialogContent
           style={{
-            backgroundColor: "rgba(10, 26, 48, 0.95)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
+            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
             borderRadius: "12px",
             backdropFilter: "blur(18px)",
           }}
@@ -794,7 +794,7 @@ const Instellingen = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-md border-white/10 bg-transparent text-foreground hover:bg-white/[0.06]">
+            <AlertDialogCancel className="rounded-md border-fg/10 bg-transparent text-foreground hover:bg-fg/[0.06]">
               Annuleren
             </AlertDialogCancel>
             <AlertDialogAction
