@@ -1332,6 +1332,87 @@ const Plannen = () => {
     [weken, loadAll]
   );
 
+  // Toggle een specifiek weeknummer (toevoegen of verwijderen).
+  // Weken worden gesorteerd op week_nr en posities worden opnieuw genummerd.
+  const toggleWeekNr = useCallback(
+    async (week_nr: number) => {
+      if (!projectId) return;
+      const existing = weken.find((w) => w.week_nr === week_nr);
+      if (existing) {
+        // Verwijderen
+        const next = weken.filter((w) => w.id !== existing.id);
+        setWeken(next);
+        const { error } = await supabase
+          .from("project_weken")
+          .delete()
+          .eq("id", existing.id);
+        if (error) {
+          toast.error("Week verwijderen mislukt");
+          loadAll();
+          return;
+        }
+        // Hernummer posities
+        const fixes = next
+          .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+          .filter(Boolean) as { id: string; positie: number }[];
+        if (fixes.length > 0) {
+          await Promise.all(
+            fixes.map((f) =>
+              supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
+            ),
+          );
+          setWeken((prev) =>
+            prev.map((w) => {
+              const f = fixes.find((x) => x.id === w.id);
+              return f ? { ...w, positie: f.positie } : w;
+            }),
+          );
+        }
+      } else {
+        // Toevoegen op chronologische positie (sorteer op week_nr)
+        const inserted = [...weken, { week_nr } as Week].sort(
+          (a, b) => a.week_nr - b.week_nr,
+        );
+        const insertIdx = inserted.findIndex((w) => w.week_nr === week_nr);
+        const { data, error } = await supabase
+          .from("project_weken")
+          .insert({
+            project_id: projectId,
+            week_nr,
+            positie: insertIdx,
+            opmerking: "",
+          })
+          .select()
+          .single();
+        if (error || !data) {
+          toast.error("Week toevoegen mislukt");
+          return;
+        }
+        const newWeek = data as Week;
+        const next = [...weken, newWeek].sort((a, b) => a.week_nr - b.week_nr);
+        setWeken(next);
+        // Hernummer posities
+        const fixes = next
+          .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+          .filter(Boolean) as { id: string; positie: number }[];
+        if (fixes.length > 0) {
+          await Promise.all(
+            fixes.map((f) =>
+              supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
+            ),
+          );
+          setWeken((prev) =>
+            prev.map((w) => {
+              const f = fixes.find((x) => x.id === w.id);
+              return f ? { ...w, positie: f.positie } : w;
+            }),
+          );
+        }
+      }
+    },
+    [projectId, weken, loadAll],
+  );
+
   /* ----------------------------- activiteit ops ----------------------------- */
   const addActiviteitFromType = useCallback(
     async (typeId: string) => {
