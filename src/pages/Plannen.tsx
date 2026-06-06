@@ -611,6 +611,70 @@ const Plannen = () => {
       }
     }
 
+    // Top-up: als GSU/GEU bekend zijn en er weken ontbreken tussen die datums,
+    // dan automatisch aanvullen. Dit dekt het geval waarbij eerder al was geseed
+    // (bv. 1 fallback-week) vóórdat de uitvoeringsperiode was ingevuld.
+    if (
+      effectiveWeeks.length > 0 &&
+      proj?.gsu_datum &&
+      proj?.geu_datum &&
+      !seedingProjectsRef.current.has(projectId)
+    ) {
+      const candidates = enumerateISOWeeks(proj.gsu_datum, proj.geu_datum);
+      const existingWn = new Set(effectiveWeeks.map((w) => w.week_nr));
+      const missing = candidates.filter((c) => !existingWn.has(c.week_nr));
+      if (missing.length > 0) {
+        seedingProjectsRef.current.add(projectId);
+        try {
+          const inserts = missing.map((c) => ({
+            project_id: projectId,
+            week_nr: c.week_nr,
+            positie: 0,
+            opmerking: "",
+          }));
+          const { error: topupErr } = await supabase.from("project_weken").insert(inserts);
+          if (topupErr) {
+            console.warn("[plannen] week-topup insert error:", topupErr.message);
+          }
+          const { data: afterRows } = await supabase
+            .from("project_weken")
+            .select("*")
+            .eq("project_id", projectId)
+            .order("positie", { ascending: true });
+          let finalWeeks = ((afterRows ?? []) as Week[]).slice();
+          // Hercomputeer posities op basis van chronologische volgorde van candidates,
+          // onbekende week_nrs achteraan op week_nr volgorde.
+          const wnOrder = new Map<number, number>();
+          candidates.forEach((c, i) => wnOrder.set(c.week_nr, i));
+          finalWeeks.sort((a, b) => {
+            const ai = wnOrder.has(a.week_nr) ? wnOrder.get(a.week_nr)! : 9999 + a.week_nr;
+            const bi = wnOrder.has(b.week_nr) ? wnOrder.get(b.week_nr)! : 9999 + b.week_nr;
+            return ai - bi;
+          });
+          const fixes = finalWeeks
+            .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+            .filter(Boolean) as { id: string; positie: number }[];
+          if (fixes.length > 0) {
+            await Promise.all(
+              fixes.map((p) =>
+                supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
+              ),
+            );
+            finalWeeks = finalWeeks.map((w, i) => ({ ...w, positie: i }));
+          }
+          effectiveWeeks = finalWeeks;
+          setWeken(effectiveWeeks);
+          toast.success(
+            `${missing.length} ontbrekende ${missing.length === 1 ? "week" : "weken"} toegevoegd op basis van uitvoeringsperiode`,
+          );
+        } finally {
+          seedingProjectsRef.current.delete(projectId);
+        }
+      }
+    }
+
+
+
     // load cells for these weeks
     if (effectiveWeeks.length > 0) {
       const weekIds = effectiveWeeks.map((w) => w.id);
