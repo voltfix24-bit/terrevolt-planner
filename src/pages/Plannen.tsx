@@ -2346,7 +2346,7 @@ const Plannen = () => {
       {/* Week mgmt modal */}
       <Dialog open={weekModalOpen} onOpenChange={setWeekModalOpen}>
         <DialogContent
-          className="max-w-md gap-0 border-0 p-0 [&>button]:hidden"
+          className="max-w-2xl gap-0 border-0 p-0 [&>button]:hidden"
           style={{
             backgroundColor: "rgb(var(--surface-rgb) / 0.95)",
             border: "1px solid rgb(var(--fg-rgb) / 0.08)",
@@ -2355,9 +2355,14 @@ const Plannen = () => {
           }}
         >
           <div className="flex items-start justify-between px-6 pt-6">
-            <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
-              Weken beheren
-            </h2>
+            <div>
+              <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
+                Weken kiezen
+              </h2>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Klik op één of meerdere weken om ze toe te voegen of te verwijderen. Scroll voor alle weken van het jaar.
+              </p>
+            </div>
             <button
               onClick={() => setWeekModalOpen(false)}
               className="-mr-2 -mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
@@ -2365,46 +2370,55 @@ const Plannen = () => {
               <X className="h-3.5 w-3.5" /> Sluiten
             </button>
           </div>
-          <div className="space-y-3 px-6 py-6 max-h-[60vh] overflow-y-auto">
-            {weken.length === 0 && (
-              <div className="text-sm text-muted-foreground">Nog geen weken.</div>
-            )}
-            {weken.map((w, i) => (
-              <div
-                key={w.id}
-                className="flex items-center gap-3 rounded-md bg-fg/[0.03] px-3 py-2"
-              >
-                <span className="font-display text-xs uppercase tracking-wider text-muted-foreground w-12">
-                  Pos {i + 1}
-                </span>
-                <Label className="font-display text-xs text-muted-foreground">Week</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={53}
-                  value={w.week_nr}
-                  onChange={(e) => setWeekNr(w.id, parseInt(e.target.value) || 1)}
-                  className="h-8 w-20 rounded-md border-fg/10 bg-fg/[0.04] text-foreground"
-                />
+          <div className="px-6 py-5 space-y-4">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>
+                Jaar <span className="text-foreground font-semibold">{project.jaar ?? new Date().getFullYear()}</span>
+              </span>
+              <span>
+                {weken.length} {weken.length === 1 ? "week" : "weken"} geselecteerd
+              </span>
+            </div>
+            <div className="max-h-[55vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
+                {Array.from({ length: 53 }, (_, i) => i + 1).map((nr) => {
+                  const selected = weken.some((w) => w.week_nr === nr);
+                  const monday = getMondayOfWeek(nr, project.jaar ?? new Date().getFullYear());
+                  const isNow = nr === CURRENT_WEEK && (project.jaar ?? new Date().getFullYear()) === CURRENT_YEAR;
+                  return (
+                    <button
+                      key={nr}
+                      type="button"
+                      onClick={() => toggleWeekNr(nr)}
+                      className={[
+                        "group flex flex-col items-start gap-0.5 rounded-md border px-2.5 py-2 text-left transition-all",
+                        selected
+                          ? "border-primary/60 bg-primary/15 text-foreground"
+                          : "border-fg/10 bg-fg/[0.03] text-muted-foreground hover:border-fg/25 hover:bg-fg/[0.07] hover:text-foreground",
+                      ].join(" ")}
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <span className="font-display text-xs font-bold tracking-wide">
+                          W{nr}
+                        </span>
+                        {selected && <Check className="h-3 w-3 text-primary" />}
+                        {!selected && isNow && (
+                          <span
+                            className="rounded-full px-1.5 text-[8px] font-bold"
+                            style={{ background: "rgba(63,255,139,0.2)", color: "#3fff8b" }}
+                          >
+                            Nu
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] opacity-80">{formatDate(monday)}</span>
+                    </button>
+                  );
+                })}
               </div>
-            ))}
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={addWeek}
-                className="flex-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-display font-bold"
-              >
-                <Plus className="mr-1 h-4 w-4" /> Week toevoegen rechts
-              </Button>
-              <Button
-                onClick={removeLastWeek}
-                variant="outline"
-                disabled={weken.length === 0}
-                className="rounded-md border-destructive/40 bg-transparent text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="mr-1 h-4 w-4" /> Laatste
-              </Button>
             </div>
           </div>
+
         </DialogContent>
       </Dialog>
     </div>
