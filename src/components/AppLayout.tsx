@@ -46,7 +46,7 @@ export function AppLayout() {
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
         <div className="font-display text-sm font-bold tracking-tight">TerreVolt Planner</div>
-        <div className="w-9" />
+        <UndoButton />
       </div>
 
       {/* Sidebar wrapper: slide on mobile, static on desktop. */}
