@@ -12,8 +12,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Hanken Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Hanken Grotesk', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         /* Theme-aware white/surface helpers — keep alpha syntax (bg-fg/[0.06]) */
