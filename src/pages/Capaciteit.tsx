@@ -496,6 +496,10 @@ const Capaciteit = () => {
         />
       )}
 
+      {tab === "vrije-dagen" && <VrijeDagenExport monteurs={monteurs} />}
+
+
+
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent
