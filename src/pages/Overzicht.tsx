@@ -1049,7 +1049,7 @@ export default function Overzicht() {
       }
 
       const project = projecten.find((p) => p.id === projectId);
-      const naam = project?.naam ?? "project";
+      const naam = project?.station_naam ?? project?.case_nummer ?? "project";
       const ok = await confirmShift({
         title: `Hele planning van "${naam}" verschuiven?`,
         description: `${projectCellen.length} planning-cellen worden ${Math.abs(deltaDays)} dag${Math.abs(deltaDays) === 1 ? "" : "en"} ${deltaDays > 0 ? "vooruit" : "terug"} verschoven. Dit kun je daarna ongedaan maken met de Undo-knop.`,
