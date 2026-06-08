@@ -2427,6 +2427,7 @@ export default function Overzicht() {
                     key={m.id}
                     monteur={m}
                     segments={monteurSegments(m.id)}
+                    verlofSegments={verlofSegmentsByMonteur.get(m.id) ?? []}
                     projectById={projectById}
                     slots={slots}
                     cellW={cellW}
