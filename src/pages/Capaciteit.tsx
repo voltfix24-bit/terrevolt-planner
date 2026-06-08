@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { VrijeDagenExport } from "@/components/VrijeDagenExport";
 
 // Cast for tables not yet in generated types (feestdagen, monteur_afwezigheid)
 // and for monteurs.werkdagen column added in migration.
@@ -173,7 +174,7 @@ const Capaciteit = () => {
   const [editing, setEditing] = useState<Monteur | null>(null);
 
   // tabs
-  const [tab, setTab] = useState<"monteurs" | "ploegen" | "tijdlijn" | "beschikbaarheid">("monteurs");
+  const [tab, setTab] = useState<"monteurs" | "ploegen" | "tijdlijn" | "beschikbaarheid" | "vrije-dagen">("monteurs");
 
   // form state
   const [naam, setNaam] = useState("");
@@ -336,6 +337,7 @@ const Capaciteit = () => {
             { id: "ploegen", label: "Ploegen" },
             { id: "tijdlijn", label: "Tijdlijn" },
             { id: "beschikbaarheid", label: "Beschikbaarheid" },
+            { id: "vrije-dagen", label: "Vrije dagen" },
           ] as const
         ).map((t) => {
           const active = tab === t.id;
@@ -493,6 +495,10 @@ const Capaciteit = () => {
           }
         />
       )}
+
+      {tab === "vrije-dagen" && <VrijeDagenExport monteurs={monteurs} />}
+
+
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
