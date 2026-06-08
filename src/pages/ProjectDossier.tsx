@@ -916,8 +916,8 @@ const ProjectDossier = () => {
               </SubBlock>
             </div>
 
-            <div className="mt-3 flex items-center justify-between rounded-md border border-emerald-400/15 bg-emerald-400/[0.04] px-3 py-2">
-              <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-emerald-300/90">
+            <div className="mt-3 flex items-center justify-between rounded-md border border-primary/15 bg-primary/[0.04] px-3 py-2">
+              <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary/90">
                 Opleverdossier
               </div>
               <Pill tone="primary">{valOr(get("def_opleverdossier"))}</Pill>
