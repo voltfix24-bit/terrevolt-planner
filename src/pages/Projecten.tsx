@@ -76,7 +76,7 @@ const statusLabel = (s: Status | null) =>
 
 const statusStyle = (s: Status | null): React.CSSProperties => {
   if (s === "gepland") return { backgroundColor: "#feb300", color: "var(--surface-solid)" };
-  if (s === "in_uitvoering") return { backgroundColor: "#3fff8b", color: "var(--surface-solid)" };
+  if (s === "in_uitvoering") return { backgroundColor: "#10b981", color: "var(--surface-solid)" };
   return { backgroundColor: "rgb(var(--fg-rgb) / 0.08)", color: "rgb(var(--fg-rgb) / 0.6)" };
 };
 

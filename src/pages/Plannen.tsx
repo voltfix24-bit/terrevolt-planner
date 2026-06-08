@@ -1890,7 +1890,7 @@ const Plannen = () => {
               style={{
                 backgroundColor:
                   project.status === "in_uitvoering"
-                    ? "#3fff8b"
+                    ? "#10b981"
                     : project.status === "gepland"
                     ? "#feb300"
                     : "rgb(var(--fg-rgb) / 0.08)",
@@ -2157,7 +2157,7 @@ const Plannen = () => {
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.1em",
-              color: "rgba(63,255,139,0.6)",
+              color: "rgba(16,185,129,0.6)",
             }}
           >
             Ingeplande monteurs
@@ -2169,8 +2169,8 @@ const Plannen = () => {
               fontWeight: 700,
               padding: "1px 8px",
               borderRadius: 999,
-              backgroundColor: "rgba(63,255,139,0.15)",
-              color: "#3fff8b",
+              backgroundColor: "rgba(16,185,129,0.15)",
+              color: "#10b981",
             }}
           >
             {ingeplandeMonteurs.length}
@@ -2469,7 +2469,7 @@ const Plannen = () => {
                         {!selected && isNow && (
                           <span
                             className="rounded-full px-1.5 text-[8px] font-bold"
-                            style={{ background: "rgba(63,255,139,0.2)", color: "#3fff8b" }}
+                            style={{ background: "rgba(16,185,129,0.2)", color: "#10b981" }}
                           >
                             Nu
                           </span>
@@ -2509,7 +2509,7 @@ const WeekHeader = memo(function WeekHeader({
       style={{
         width: dayWidth,
         borderRight: "1px solid rgb(var(--fg-rgb) / 0.06)",
-        backgroundColor: isCurrentWeek ? "rgba(63,255,139,0.04)" : undefined,
+        backgroundColor: isCurrentWeek ? "rgba(16,185,129,0.04)" : undefined,
       }}
     >
       <DropdownMenu>
@@ -2519,14 +2519,14 @@ const WeekHeader = memo(function WeekHeader({
               "flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-display font-bold uppercase tracking-wider hover:text-foreground",
               isCurrentWeek ? "" : "text-muted-foreground",
             ].join(" ")}
-            style={isCurrentWeek ? { color: "#3fff8b" } : undefined}
+            style={isCurrentWeek ? { color: "#10b981" } : undefined}
           >
             Week {week.week_nr}
             {isCurrentWeek && (
               <span
                 style={{
-                  background: "rgba(63,255,139,0.2)",
-                  color: "#3fff8b",
+                  background: "rgba(16,185,129,0.2)",
+                  color: "#10b981",
                   fontSize: "9px",
                   fontWeight: 700,
                   padding: "1px 6px",
@@ -3153,13 +3153,13 @@ const CellBox = memo(function CellBox({
         width: CELL_W,
         height: CELL_H,
         backgroundColor: isDragOver
-          ? "rgba(63,255,139,0.18)"
+          ? "rgba(16,185,129,0.18)"
           : inFillRange
-          ? hexToRgba(kleur ?? "#3fff8b", filled ? 0.55 : 0.22)
+          ? hexToRgba(kleur ?? "#10b981", filled ? 0.55 : 0.22)
           : filled
           ? hexToRgba(kleur!, isHighlighted || isSelected ? 0.55 : 0.35)
           : isCurrentWeek
-          ? "rgba(63,255,139,0.02)"
+          ? "rgba(16,185,129,0.02)"
           : "transparent",
         borderTop: filled ? "none" : "1px solid rgb(var(--fg-rgb) / 0.06)",
         borderRight: filled ? "none" : "1px solid rgb(var(--fg-rgb) / 0.06)",
@@ -3168,9 +3168,9 @@ const CellBox = memo(function CellBox({
           ? `3px solid ${kleur}`
           : "1px solid rgb(var(--fg-rgb) / 0.06)",
         outline: isDragOver
-          ? "2px dashed rgba(63,255,139,0.9)"
+          ? "2px dashed rgba(16,185,129,0.9)"
           : inFillRange
-          ? "1px dashed rgba(63,255,139,0.85)"
+          ? "1px dashed rgba(16,185,129,0.85)"
           : isSelected
           ? `3px solid ${groupColorHex ?? "#38bdf8"}`
           : filled && !voldoet
@@ -3326,7 +3326,7 @@ const CellBox = memo(function CellBox({
             bottom: -3,
             width: 10,
             height: 10,
-            backgroundColor: "#3fff8b",
+            backgroundColor: "#10b981",
             border: "1.5px solid rgba(0,0,0,0.6)",
             cursor: "ew-resize",
             zIndex: 5,
@@ -3623,7 +3623,7 @@ const CelModal = ({
                           onClick={onSyncFromTemplate}
                           className="shrink-0 rounded-md px-2.5 py-1 text-[11px] font-display font-bold transition-colors"
                           style={{
-                            background: "#3fff8b",
+                            background: "#10b981",
                             color: "var(--app-bg)",
                           }}
                         >
@@ -3857,9 +3857,9 @@ const CelModal = ({
                 style={
                   check.voldoet
                     ? {
-                        backgroundColor: "rgba(63,255,139,0.12)",
-                        color: "#3fff8b",
-                        border: "1px solid rgba(63,255,139,0.25)",
+                        backgroundColor: "rgba(16,185,129,0.12)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16,185,129,0.25)",
                       }
                     : {
                         backgroundColor: "rgba(254,179,0,0.12)",
@@ -3909,7 +3909,7 @@ const CelModal = ({
 /* ----------------------------- helpers ----------------------------- */
 
 const aanwijzingPillStyle = (a: Aanwijzing): React.CSSProperties => {
-  if (a === "AVP") return { backgroundColor: "#3fff8b", color: "var(--surface-solid)" };
+  if (a === "AVP") return { backgroundColor: "#10b981", color: "var(--surface-solid)" };
   if (a === "VP") return { backgroundColor: "#7cc1ff", color: "var(--surface-solid)" };
   return { backgroundColor: "#cbd5e1", color: "var(--surface-solid)" };
 };
@@ -3925,7 +3925,7 @@ const dotColor = (type: HistoryEntry["type"]): string => {
   switch (type) {
     case "cel_created":
     case "monteur_added":
-      return "#3fff8b";
+      return "#10b981";
     case "cel_deleted":
     case "monteur_removed":
       return "#ef4444";
