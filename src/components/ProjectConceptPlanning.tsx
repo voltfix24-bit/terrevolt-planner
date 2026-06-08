@@ -30,6 +30,8 @@ import {
   dagOffsetLabel,
   type ConceptCel,
 } from "@/lib/concept-planning";
+import { useConfirm, describeShift } from "@/components/ConfirmDialog";
+import { setAuditLabel } from "@/lib/audit";
 
 interface Monteur {
   id: string;
@@ -45,6 +47,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
   projectId,
 }) => {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [cellen, setCellen] = useState<ConceptCel[]>([]);
   const [activiteiten, setActiviteiten] = useState<ProjectActiviteit[]>([]);
   const [monteurs, setMonteurs] = useState<Monteur[]>([]);
@@ -215,7 +218,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
 
   const removeSelection = async () => {
     if (selected.size === 0) return;
-    if (!confirm(`${selected.size} activiteit(en) verwijderen?`)) return;
+    if (!window.confirm(`${selected.size} activiteit(en) verwijderen?`)) return;
     const ids = Array.from(selected);
     setCellen((prev) => prev.filter((c) => !selected.has(c.id)));
     clearSelection();
@@ -256,6 +259,9 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
       toast.error("Kan niet vóór D1 verschuiven");
       return;
     }
+    const ok = await confirm(describeShift(delta, sel.length, "activiteit"));
+    if (!ok) return;
+    await setAuditLabel(`Concept-planning: ${sel.length}× ${delta > 0 ? "+" : ""}${delta} dag`);
     // Optimistic update
     setCellen((prev) =>
       prev.map((c) =>

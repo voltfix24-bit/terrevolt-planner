@@ -56,6 +56,48 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: number
+          label: string | null
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          row_id: string | null
+          table_name: string
+          undone: boolean
+          undone_at: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: number
+          label?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          row_id?: string | null
+          table_name: string
+          undone?: boolean
+          undone_at?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: number
+          label?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          row_id?: string | null
+          table_name?: string
+          undone?: boolean
+          undone_at?: string | null
+        }
+        Relationships: []
+      }
       cel_monteurs: {
         Row: {
           cel_id: string | null
@@ -850,7 +892,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      set_audit_label: { Args: { p_label: string }; Returns: undefined }
+      undo_batch: {
+        Args: { p_batch_id?: string }
+        Returns: {
+          batch: string
+          undone_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

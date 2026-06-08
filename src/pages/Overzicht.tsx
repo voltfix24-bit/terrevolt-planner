@@ -27,6 +27,8 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { useConfirm, describeShift } from "@/components/ConfirmDialog";
+import { setAuditLabel } from "@/lib/audit";
 
 // ============== Constants ==============
 const SIDEBAR_W = 260;
@@ -294,6 +296,7 @@ function firstWeekOfQuarter(q: number, jaar: number): number {
 // ============== Page ==============
 export default function Overzicht() {
   const navigate = useNavigate();
+  const confirmShift = useConfirm();
 
   const initialIso = useMemo(() => getCurrentISOWeek(), []);
   const [jaar, setJaar] = useState<number>(initialIso.year);
@@ -1045,6 +1048,18 @@ export default function Overzicht() {
         return;
       }
 
+      const project = projecten.find((p) => p.id === projectId);
+      const naam = project?.station_naam ?? project?.case_nummer ?? "project";
+      const ok = await confirmShift({
+        title: `Hele planning van "${naam}" verschuiven?`,
+        description: `${projectCellen.length} planning-cellen worden ${Math.abs(deltaDays)} dag${Math.abs(deltaDays) === 1 ? "" : "en"} ${deltaDays > 0 ? "vooruit" : "terug"} verschoven. Dit kun je daarna ongedaan maken met de Undo-knop.`,
+        confirmText: "Verschuiven",
+        destructive: true,
+      });
+      if (!ok) return;
+      await setAuditLabel(`Project "${naam}": ${deltaDays > 0 ? "+" : ""}${deltaDays} dag`);
+
+
       const weekIdByNr = new Map<number, string>();
       let maxPos = -1;
       for (const w of weken) {
@@ -1107,7 +1122,7 @@ export default function Overzicht() {
       }
       await fetchAllData(jaar);
     },
-    [activiteitenByProject, cellen, weken, weekById, fetchAllData, jaar],
+    [activiteitenByProject, cellen, weken, weekById, fetchAllData, jaar, projecten, confirmShift],
   );
 
   const startProjectDrag = (e: React.MouseEvent, projectId: string) => {

@@ -69,6 +69,8 @@ import {
   shortReason,
 } from "@/lib/monteur-beschikbaarheid";
 import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
+import { useConfirm, describeShift } from "@/components/ConfirmDialog";
+import { setAuditLabel } from "@/lib/audit";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -214,6 +216,7 @@ const groupColor = (idx: number): string => GROUP_COLORS[idx % GROUP_COLORS.leng
 
 const Plannen = () => {
   const navigate = useNavigate();
+  const confirmShift = useConfirm();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project");
 
@@ -904,6 +907,19 @@ const Plannen = () => {
       const src = sourceCel as Cel;
       if (src.week_id === targetWeekId && src.dag_index === targetDagIndex) return;
 
+      // Bevestiging: 1 cel verplaatsen
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      const srcWi = weekIndexById.get(src.week_id);
+      const tgtWi = weekIndexById.get(targetWeekId);
+      if (srcWi != null && tgtWi != null) {
+        const delta = tgtWi * 5 + targetDagIndex - (srcWi * 5 + src.dag_index);
+        if (delta !== 0) {
+          const ok = await confirmShift(describeShift(delta, 1, "cel"));
+          if (!ok) return;
+          await setAuditLabel(`Sleep cel: ${delta > 0 ? "+" : ""}${delta} dag`);
+        }
+      }
+
       const targetKey = cellKey(src.activiteit_id, targetWeekId, targetDagIndex);
       const targetCel = cellen.get(targetKey);
 
@@ -948,7 +964,7 @@ const Plannen = () => {
         loadAll();
       }
     },
-    [cellen, celMonteurs, loadAll]
+    [cellen, celMonteurs, loadAll, weken, confirmShift]
   );
 
   // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
@@ -1079,9 +1095,13 @@ const Plannen = () => {
       const targetWi = weekIndexById.get(targetWeekId);
       if (anchorWi == null || targetWi == null) return;
       const delta = targetWi * 5 + targetDagIndex - (anchorWi * 5 + a.dag_index);
+      if (delta === 0) return;
+      const ok = await confirmShift(describeShift(delta, sourceCelIds.length, "cel"));
+      if (!ok) return;
+      await setAuditLabel(`Sleep: ${sourceCelIds.length}× ${delta > 0 ? "+" : ""}${delta} dag`);
       await moveCellsByDelta(sourceCelIds, delta);
     },
-    [cellen, weken, moveCellsByDelta]
+    [cellen, weken, moveCellsByDelta, confirmShift]
   );
 
   // Excel-style fill handle: kopieer kleur + notitie + monteurs van bron-cel naar
@@ -1209,9 +1229,13 @@ const Plannen = () => {
     async (groupIdx: number, deltaSlots: number) => {
       const g = selectedGroups[groupIdx];
       if (!g || g.length === 0) return;
+      const days = deltaSlots; // 1 slot = 1 dag
+      const ok = await confirmShift(describeShift(days, g.length, "cel"));
+      if (!ok) return;
+      await setAuditLabel(`Planning: ${g.length}× ${days > 0 ? "+" : ""}${days} dag`);
       await moveCellsByDelta(g, deltaSlots);
     },
-    [selectedGroups, moveCellsByDelta]
+    [selectedGroups, moveCellsByDelta, confirmShift]
   );
 
   /* ----------------------------- undo / history ----------------------------- */

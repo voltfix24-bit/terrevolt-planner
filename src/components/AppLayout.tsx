@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
+import { UndoButton } from "./UndoButton";
 
 const STORAGE_KEY = "terrevolt-nav-collapsed";
 
@@ -45,7 +46,7 @@ export function AppLayout() {
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
         <div className="font-display text-sm font-bold tracking-tight">TerreVolt Planner</div>
-        <div className="w-9" />
+        <UndoButton />
       </div>
 
       {/* Sidebar wrapper: slide on mobile, static on desktop. */}
@@ -75,6 +76,11 @@ export function AppLayout() {
       >
         {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
       </button>
+
+      {/* Floating Undo button (desktop) */}
+      <div className="hidden md:block fixed top-4 right-4 z-[55]">
+        <UndoButton />
+      </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (
