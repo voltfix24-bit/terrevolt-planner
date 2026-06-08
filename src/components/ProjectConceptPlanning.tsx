@@ -259,6 +259,9 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
       toast.error("Kan niet vóór D1 verschuiven");
       return;
     }
+    const ok = await confirm(describeShift(delta, sel.length, "activiteit"));
+    if (!ok) return;
+    await setAuditLabel(`Concept-planning: ${sel.length}× ${delta > 0 ? "+" : ""}${delta} dag`);
     // Optimistic update
     setCellen((prev) =>
       prev.map((c) =>
