@@ -907,6 +907,19 @@ const Plannen = () => {
       const src = sourceCel as Cel;
       if (src.week_id === targetWeekId && src.dag_index === targetDagIndex) return;
 
+      // Bevestiging: 1 cel verplaatsen
+      const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
+      const srcWi = weekIndexById.get(src.week_id);
+      const tgtWi = weekIndexById.get(targetWeekId);
+      if (srcWi != null && tgtWi != null) {
+        const delta = tgtWi * 5 + targetDagIndex - (srcWi * 5 + src.dag_index);
+        if (delta !== 0) {
+          const ok = await confirmShift(describeShift(delta, 1, "cel"));
+          if (!ok) return;
+          await setAuditLabel(`Sleep cel: ${delta > 0 ? "+" : ""}${delta} dag`);
+        }
+      }
+
       const targetKey = cellKey(src.activiteit_id, targetWeekId, targetDagIndex);
       const targetCel = cellen.get(targetKey);
 
