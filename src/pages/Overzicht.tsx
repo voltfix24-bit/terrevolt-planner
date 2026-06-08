@@ -2922,7 +2922,69 @@ function MonteurCellsRow({
       {/* Background raster */}
       <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_MONTEUR} />
 
-      {/* Segment overlays */}
+      {/* Verlof / afwezigheid — diagonale arcering achter de planning */}
+      {verlofSegments.map((v, i) => {
+        const left = v.startSlot * cellW + 1;
+        const width = (v.endSlot - v.startSlot + 1) * cellW - 2;
+        const typeLabel = Array.from(new Set(v.items.map((it) => it.type))).join(" / ");
+        const detail = v.items
+          .map((it) => (it.omschrijving ? `${it.type} — ${it.omschrijving}` : it.type))
+          .join("\n");
+        return (
+          <div
+            key={`verlof-bg-${i}`}
+            className="absolute pointer-events-none"
+            style={{
+              left,
+              width,
+              top: 2,
+              bottom: 2,
+              background:
+                "repeating-linear-gradient(135deg, rgba(245,158,11,0.18) 0 6px, rgba(245,158,11,0.05) 6px 12px)",
+              border: "1px solid rgba(245,158,11,0.45)",
+              borderRadius: 4,
+            }}
+            title={`${monteur.naam} — ${typeLabel}\n${detail}`}
+          />
+        );
+      })}
+
+      {/* Verlof — labelbalkje onderaan met tekst */}
+      {verlofSegments.map((v, i) => {
+        const left = v.startSlot * cellW + 1;
+        const width = (v.endSlot - v.startSlot + 1) * cellW - 2;
+        const typeLabel = Array.from(new Set(v.items.map((it) => it.type))).join(" / ");
+        const detail = v.items
+          .map((it) => (it.omschrijving ? `${it.type} — ${it.omschrijving}` : it.type))
+          .join("\n");
+        return (
+          <div
+            key={`verlof-lbl-${i}`}
+            className="absolute flex items-center justify-center"
+            style={{
+              left,
+              width,
+              bottom: 2,
+              height: 12,
+              background: "rgba(245,158,11,0.85)",
+              color: "#1a1a1a",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              borderRadius: 3,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              padding: "0 4px",
+              zIndex: 2,
+            }}
+            title={`${monteur.naam} — ${typeLabel}\n${detail}`}
+          >
+            {width > 28 ? typeLabel : "•"}
+          </div>
+        );
+      })}
+
       {segments.map((s, i) => {
         const left = s.startSlot * cellW;
         const width = (s.endSlot - s.startSlot + 1) * cellW;
