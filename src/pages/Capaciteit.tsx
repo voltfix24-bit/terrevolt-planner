@@ -174,7 +174,7 @@ const Capaciteit = () => {
   const [editing, setEditing] = useState<Monteur | null>(null);
 
   // tabs
-  const [tab, setTab] = useState<"monteurs" | "ploegen" | "tijdlijn" | "beschikbaarheid">("monteurs");
+  const [tab, setTab] = useState<"monteurs" | "ploegen" | "tijdlijn" | "beschikbaarheid" | "vrije-dagen">("monteurs");
 
   // form state
   const [naam, setNaam] = useState("");
