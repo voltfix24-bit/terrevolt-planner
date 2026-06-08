@@ -77,6 +77,11 @@ export function AppLayout() {
         {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
       </button>
 
+      {/* Floating Undo button (desktop) */}
+      <div className="hidden md:block fixed top-4 right-4 z-[55]">
+        <UndoButton />
+      </div>
+
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
