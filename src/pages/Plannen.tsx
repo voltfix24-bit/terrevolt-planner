@@ -964,7 +964,7 @@ const Plannen = () => {
         loadAll();
       }
     },
-    [cellen, celMonteurs, loadAll]
+    [cellen, celMonteurs, loadAll, weken, confirmShift]
   );
 
   // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
