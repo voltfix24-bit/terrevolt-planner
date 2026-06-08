@@ -73,16 +73,16 @@ const STATE_STYLES: Record<SectionState, { dot: string; label: string; ring: str
     accent: "bg-amber-400",
   },
   complete: {
-    dot: "bg-emerald-400",
+    dot: "bg-primary",
     label: "Compleet",
-    ring: "border-emerald-400/30",
-    accent: "bg-emerald-400",
+    ring: "border-primary/30",
+    accent: "bg-primary",
   },
 };
 
 const StateIcon: React.FC<{ state: SectionState; className?: string }> = ({ state, className }) => {
   if (state === "complete")
-    return <CheckCircle2 className={`h-3.5 w-3.5 text-emerald-400 ${className ?? ""}`} />;
+    return <CheckCircle2 className={`h-3.5 w-3.5 text-primary ${className ?? ""}`} />;
   if (state === "partial")
     return <AlertCircle className={`h-3.5 w-3.5 text-amber-400 ${className ?? ""}`} />;
   return <Circle className={`h-3.5 w-3.5 text-muted-foreground/50 ${className ?? ""}`} />;
