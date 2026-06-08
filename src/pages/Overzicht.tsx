@@ -27,6 +27,8 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { useConfirm, describeShift } from "@/components/ConfirmDialog";
+import { setAuditLabel } from "@/lib/audit";
 
 // ============== Constants ==============
 const SIDEBAR_W = 260;
