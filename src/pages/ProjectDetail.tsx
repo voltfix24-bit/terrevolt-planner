@@ -1150,7 +1150,7 @@ const ProjectDetail = () => {
                                 className={cn(
                                   "block h-full rounded-full transition-all",
                                   isComplete
-                                    ? "bg-emerald-400/80"
+                                    ? "bg-primary/80"
                                     : c.state === "partial"
                                       ? "bg-amber-400/70"
                                       : "bg-muted-foreground/30",
