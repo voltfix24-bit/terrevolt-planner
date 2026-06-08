@@ -210,6 +210,21 @@ function getCurrentISOWeek(): { week: number; year: number } {
   return { week, year: target.getUTCFullYear() };
 }
 
+function isoWeekOf(d: Date): { week: number; year: number } {
+  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+  const firstDayNr = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNr + 3);
+  const week =
+    1 +
+    Math.round(
+      (target.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000),
+    );
+  return { week, year: target.getUTCFullYear() };
+}
+
 function statusColor(status: Status | null): { bg: string; text: string; label: string } {
   switch (status) {
     case "gepland":
@@ -1171,6 +1186,74 @@ export default function Overzicht() {
     },
     [monteurSlotProjects, monteurSlotDubbel, slots.length],
   );
+
+
+
+  // ====== Verlof / afwezigheid segments per monteur (voor verlofbalk) ======
+  type VerlofItem = { type: string; omschrijving: string | null };
+  type VerlofSeg = { startSlot: number; endSlot: number; items: VerlofItem[] };
+  const verlofSegmentsByMonteur = useMemo(() => {
+    const result = new Map<string, VerlofSeg[]>();
+    const bySlotPerMonteur = new Map<string, Map<number, VerlofItem[]>>();
+    for (const a of afwezigheid) {
+      if (!a.datum_van || !a.datum_tot) continue;
+      const start = new Date(a.datum_van + "T00:00:00");
+      const end = new Date(a.datum_tot + "T00:00:00");
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) continue;
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        const dow = (cursor.getDay() + 6) % 7; // 0=MA..6=ZO
+        if (dow <= 4) {
+          const { week } = isoWeekOf(cursor);
+          const idx = dayKeyToSlot.get(`${week}-${dow}`);
+          if (idx !== undefined) {
+            let perMid = bySlotPerMonteur.get(a.monteur_id);
+            if (!perMid) {
+              perMid = new Map();
+              bySlotPerMonteur.set(a.monteur_id, perMid);
+            }
+            const existing = perMid.get(idx) ?? [];
+            if (
+              !existing.some(
+                (it) => it.type === a.type && it.omschrijving === a.omschrijving,
+              )
+            ) {
+              existing.push({ type: a.type, omschrijving: a.omschrijving });
+            }
+            perMid.set(idx, existing);
+          }
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+    for (const [mid, perSlot] of bySlotPerMonteur) {
+      const sorted = [...perSlot.keys()].sort((x, y) => x - y);
+      const segs: VerlofSeg[] = [];
+      let cur: VerlofSeg | null = null;
+      for (const idx of sorted) {
+        const items = perSlot.get(idx)!;
+        if (cur && cur.endSlot === idx - 1) {
+          cur.endSlot = idx;
+          for (const it of items) {
+            if (
+              !cur.items.some(
+                (c) => c.type === it.type && c.omschrijving === it.omschrijving,
+              )
+            ) {
+              cur.items.push(it);
+            }
+          }
+        } else {
+          if (cur) segs.push(cur);
+          cur = { startSlot: idx, endSlot: idx, items: [...items] };
+        }
+      }
+      if (cur) segs.push(cur);
+      result.set(mid, segs);
+    }
+    return result;
+  }, [afwezigheid, dayKeyToSlot]);
+
 
   // ====== Project bar segments (consecutive filled slots) ======
   const projectSegments = useCallback(
@@ -2344,6 +2427,7 @@ export default function Overzicht() {
                     key={m.id}
                     monteur={m}
                     segments={monteurSegments(m.id)}
+                    verlofSegments={verlofSegmentsByMonteur.get(m.id) ?? []}
                     projectById={projectById}
                     slots={slots}
                     cellW={cellW}
@@ -2376,6 +2460,7 @@ export default function Overzicht() {
                     key={m.id}
                     monteur={m}
                     segments={monteurSegments(m.id)}
+                    verlofSegments={verlofSegmentsByMonteur.get(m.id) ?? []}
                     projectById={projectById}
                     slots={slots}
                     cellW={cellW}
@@ -2804,6 +2889,7 @@ function EmptyCellsRow({
 function MonteurCellsRow({
   monteur,
   segments,
+  verlofSegments,
   projectById,
   slots,
   cellW,
@@ -2814,6 +2900,7 @@ function MonteurCellsRow({
 }: {
   monteur: Monteur;
   segments: { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean }[];
+  verlofSegments: { startSlot: number; endSlot: number; items: { type: string; omschrijving: string | null }[] }[];
   projectById: Map<string, Project>;
   slots: Slot[];
   cellW: number;
@@ -2835,7 +2922,69 @@ function MonteurCellsRow({
       {/* Background raster */}
       <EmptyCellsRow slots={slots} cellW={cellW} rowHeight={ROW_H_MONTEUR} />
 
-      {/* Segment overlays */}
+      {/* Verlof / afwezigheid — diagonale arcering achter de planning */}
+      {verlofSegments.map((v, i) => {
+        const left = v.startSlot * cellW + 1;
+        const width = (v.endSlot - v.startSlot + 1) * cellW - 2;
+        const typeLabel = Array.from(new Set(v.items.map((it) => it.type))).join(" / ");
+        const detail = v.items
+          .map((it) => (it.omschrijving ? `${it.type} — ${it.omschrijving}` : it.type))
+          .join("\n");
+        return (
+          <div
+            key={`verlof-bg-${i}`}
+            className="absolute pointer-events-none"
+            style={{
+              left,
+              width,
+              top: 2,
+              bottom: 2,
+              background:
+                "repeating-linear-gradient(135deg, rgba(245,158,11,0.18) 0 6px, rgba(245,158,11,0.05) 6px 12px)",
+              border: "1px solid rgba(245,158,11,0.45)",
+              borderRadius: 4,
+            }}
+            title={`${monteur.naam} — ${typeLabel}\n${detail}`}
+          />
+        );
+      })}
+
+      {/* Verlof — labelbalkje onderaan met tekst */}
+      {verlofSegments.map((v, i) => {
+        const left = v.startSlot * cellW + 1;
+        const width = (v.endSlot - v.startSlot + 1) * cellW - 2;
+        const typeLabel = Array.from(new Set(v.items.map((it) => it.type))).join(" / ");
+        const detail = v.items
+          .map((it) => (it.omschrijving ? `${it.type} — ${it.omschrijving}` : it.type))
+          .join("\n");
+        return (
+          <div
+            key={`verlof-lbl-${i}`}
+            className="absolute flex items-center justify-center"
+            style={{
+              left,
+              width,
+              bottom: 2,
+              height: 12,
+              background: "rgba(245,158,11,0.85)",
+              color: "#1a1a1a",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              borderRadius: 3,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              padding: "0 4px",
+              zIndex: 2,
+            }}
+            title={`${monteur.naam} — ${typeLabel}\n${detail}`}
+          >
+            {width > 28 ? typeLabel : "•"}
+          </div>
+        );
+      })}
+
       {segments.map((s, i) => {
         const left = s.startSlot * cellW;
         const width = (s.endSlot - s.startSlot + 1) * cellW;
