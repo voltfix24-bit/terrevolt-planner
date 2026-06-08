@@ -216,6 +216,7 @@ const groupColor = (idx: number): string => GROUP_COLORS[idx % GROUP_COLORS.leng
 
 const Plannen = () => {
   const navigate = useNavigate();
+  const confirmShift = useConfirm();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project");
 
