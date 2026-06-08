@@ -1254,6 +1254,113 @@ export default function Overzicht() {
     return result;
   }, [afwezigheid, dayKeyToSlot]);
 
+  // ====== Verlof-conflicten: ingeplande activiteiten op verlofdagen ======
+  type VerlofConflict = {
+    projectId: string;
+    projectLabel: string;
+    items: {
+      activiteitId: string;
+      activiteitNaam: string;
+      monteurId: string;
+      monteurNaam: string;
+      datum: Date;
+      verlofType: string;
+      verlofOmschrijving: string | null;
+    }[];
+    eersteDatum: Date;
+  };
+  const verlofConflicten = useMemo<VerlofConflict[]>(() => {
+    if (!afwezigheid.length || !cellen.length) return [];
+    const monteurMap = new Map(monteurs.map((m) => [m.id, m]));
+    // per (project, activiteit, monteur) → earliest conflict entry
+    const earliest = new Map<
+      string,
+      {
+        projectId: string;
+        activiteitId: string;
+        activiteitNaam: string;
+        monteurId: string;
+        monteurNaam: string;
+        datum: Date;
+        verlofType: string;
+        verlofOmschrijving: string | null;
+      }
+    >();
+    for (const c of cellen) {
+      const w = c.week_id ? weekById.get(c.week_id) : undefined;
+      if (!w) continue;
+      if (visibleWeekNrSet.size && !visibleWeekNrSet.has(w.week_nr)) continue;
+      const act = c.activiteit_id ? activiteitById.get(c.activiteit_id) : undefined;
+      if (!act || !act.project_id) continue;
+      const mids = monteurIdsByCel.get(c.id) ?? [];
+      if (!mids.length) continue;
+      const monday = getMondayOfWeek(w.week_nr, jaar);
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + c.dag_index);
+      const y = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      const ymd = `${y}-${mo}-${da}`;
+      for (const mid of mids) {
+        const leave = afwezigheid.find(
+          (a) => a.monteur_id === mid && ymd >= a.datum_van && ymd <= a.datum_tot,
+        );
+        if (!leave) continue;
+        const key = `${act.project_id}|${act.id}|${mid}`;
+        const existing = earliest.get(key);
+        if (!existing || d < existing.datum) {
+          earliest.set(key, {
+            projectId: act.project_id,
+            activiteitId: act.id,
+            activiteitNaam: act.naam,
+            monteurId: mid,
+            monteurNaam: monteurMap.get(mid)?.naam ?? "?",
+            datum: new Date(d),
+            verlofType: leave.type,
+            verlofOmschrijving: leave.omschrijving,
+          });
+        }
+      }
+    }
+    const byProject = new Map<string, VerlofConflict>();
+    for (const e of earliest.values()) {
+      const p = projectById.get(e.projectId);
+      const label =
+        (p?.case_nummer ? p.case_nummer + " · " : "") +
+        (p?.station_naam ?? "—");
+      let bucket = byProject.get(e.projectId);
+      if (!bucket) {
+        bucket = {
+          projectId: e.projectId,
+          projectLabel: label,
+          items: [],
+          eersteDatum: e.datum,
+        };
+        byProject.set(e.projectId, bucket);
+      }
+      bucket.items.push(e);
+      if (e.datum < bucket.eersteDatum) bucket.eersteDatum = e.datum;
+    }
+    const out = [...byProject.values()];
+    for (const b of out) b.items.sort((x, y) => x.datum.getTime() - y.datum.getTime());
+    out.sort((a, b) => a.eersteDatum.getTime() - b.eersteDatum.getTime());
+    return out;
+  }, [
+    afwezigheid,
+    cellen,
+    monteurIdsByCel,
+    weekById,
+    activiteitById,
+    projectById,
+    monteurs,
+    visibleWeekNrSet,
+    jaar,
+  ]);
+
+  const [verlofWaarschuwingOpen, setVerlofWaarschuwingOpen] = useState(true);
+
+
+
 
   // ====== Project bar segments (consecutive filled slots) ======
   const projectSegments = useCallback(
