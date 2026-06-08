@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/AppLayout";
 import { AuthProvider } from "@/hooks/use-auth";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import Projecten from "./pages/Projecten";
 import ProjectDetail from "./pages/ProjectDetail";
 import ProjectDossier from "./pages/ProjectDossier";
