@@ -116,7 +116,7 @@ const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
   },
   afgerond: {
     label: "Afgerond",
-    cls: "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300",
+    cls: "border-primary/30 bg-primary/[0.08] text-primary",
   },
 };
 
@@ -142,14 +142,14 @@ const Card: React.FC<{
   const accent = {
     default: "from-primary/70 to-primary/10",
     temp: "from-amber-400/80 to-amber-400/10",
-    final: "from-emerald-400/80 to-emerald-400/10",
+    final: "from-primary/80 to-primary/10",
     critical: "from-rose-400/80 to-rose-400/10",
     summary: "from-sky-400/80 to-sky-400/10",
   }[tone];
   const iconCls = {
     default: "text-primary",
     temp: "text-amber-300",
-    final: "text-emerald-300",
+    final: "text-primary",
     critical: "text-rose-300",
     summary: "text-sky-300",
   }[tone];
@@ -916,8 +916,8 @@ const ProjectDossier = () => {
               </SubBlock>
             </div>
 
-            <div className="mt-3 flex items-center justify-between rounded-md border border-emerald-400/15 bg-emerald-400/[0.04] px-3 py-2">
-              <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-emerald-300/90">
+            <div className="mt-3 flex items-center justify-between rounded-md border border-primary/15 bg-primary/[0.04] px-3 py-2">
+              <div className="font-display text-[10.5px] font-semibold uppercase tracking-[0.08em] text-primary/90">
                 Opleverdossier
               </div>
               <Pill tone="primary">{valOr(get("def_opleverdossier"))}</Pill>
@@ -937,7 +937,7 @@ const ProjectDossier = () => {
           {/* Uitvoering Criticals */}
           <Card title="Voor Uitvoering Belangrijk" icon={AlertTriangle} tone="critical">
             {criticals.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-md border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2 text-[12px] text-emerald-200/90">
+              <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/[0.04] px-3 py-2 text-[12px] text-primary/90">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Geen openstaande aandachtspunten gevonden.
               </div>

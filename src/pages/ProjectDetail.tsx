@@ -73,16 +73,16 @@ const STATE_STYLES: Record<SectionState, { dot: string; label: string; ring: str
     accent: "bg-amber-400",
   },
   complete: {
-    dot: "bg-emerald-400",
+    dot: "bg-primary",
     label: "Compleet",
-    ring: "border-emerald-400/30",
-    accent: "bg-emerald-400",
+    ring: "border-primary/30",
+    accent: "bg-primary",
   },
 };
 
 const StateIcon: React.FC<{ state: SectionState; className?: string }> = ({ state, className }) => {
   if (state === "complete")
-    return <CheckCircle2 className={`h-3.5 w-3.5 text-emerald-400 ${className ?? ""}`} />;
+    return <CheckCircle2 className={`h-3.5 w-3.5 text-primary ${className ?? ""}`} />;
   if (state === "partial")
     return <AlertCircle className={`h-3.5 w-3.5 text-amber-400 ${className ?? ""}`} />;
   return <Circle className={`h-3.5 w-3.5 text-muted-foreground/50 ${className ?? ""}`} />;
@@ -1007,7 +1007,7 @@ const ProjectDetail = () => {
               </span>
             </div>
             <div className="flex items-center gap-1.5 rounded border border-fg/[0.06] bg-fg/[0.02] px-2 py-1 text-[11px] text-muted-foreground">
-              <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse text-primary" : "text-emerald-400/80"}`} />
+              <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse text-primary" : "text-primary/80"}`} />
               {saving ? "Opslaan…" : "Autosave aan"}
             </div>
             <button
@@ -1106,7 +1106,7 @@ const ProjectDetail = () => {
                       className={cn(
                         "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
                         isComplete
-                          ? "border-emerald-400/40 bg-emerald-400/15 text-emerald-300"
+                          ? "border-primary/40 bg-primary/15 text-primary"
                           : c?.state === "partial"
                             ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
                             : isActive
@@ -1150,7 +1150,7 @@ const ProjectDetail = () => {
                                 className={cn(
                                   "block h-full rounded-full transition-all",
                                   isComplete
-                                    ? "bg-emerald-400/80"
+                                    ? "bg-primary/80"
                                     : c.state === "partial"
                                       ? "bg-amber-400/70"
                                       : "bg-muted-foreground/30",
