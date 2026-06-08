@@ -142,6 +142,8 @@
   body {
     background-color: var(--app-bg);
     @apply text-foreground font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.5;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     transition: background-color 0.2s ease;
   }
