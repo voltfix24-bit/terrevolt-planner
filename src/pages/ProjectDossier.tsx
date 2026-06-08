@@ -142,14 +142,14 @@ const Card: React.FC<{
   const accent = {
     default: "from-primary/70 to-primary/10",
     temp: "from-amber-400/80 to-amber-400/10",
-    final: "from-emerald-400/80 to-emerald-400/10",
+    final: "from-primary/80 to-primary/10",
     critical: "from-rose-400/80 to-rose-400/10",
     summary: "from-sky-400/80 to-sky-400/10",
   }[tone];
   const iconCls = {
     default: "text-primary",
     temp: "text-amber-300",
-    final: "text-emerald-300",
+    final: "text-primary",
     critical: "text-rose-300",
     summary: "text-sky-300",
   }[tone];
