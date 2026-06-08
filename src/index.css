@@ -8,72 +8,69 @@
   /* ===== Default = LIGHT theme ===== */
   :root {
     /* Custom raw-channel vars consumed by inline styles via rgb(var(...) / alpha) */
-    --fg-rgb: 18 28 42;            /* on-surface #121c2a */
-    --surface-rgb: 255 255 255;    /* surface-container-lowest #ffffff */
-    --app-bg: #f8f9ff;             /* background / surface */
+    --fg-rgb: 31 41 55;            /* neutral #1F2937 */
+    --surface-rgb: 255 255 255;
+    --app-bg: #eef2f7;
     --surface-solid: #ffffff;
 
-    /* shadcn HSL tokens — Emerald Light (exact mapping from design spec) */
-    --background: 228 100% 99%;          /* #f8f9ff surface */
-    --foreground: 217 39% 12%;           /* #121c2a on-surface */
+    /* shadcn HSL tokens — Emerald Light (palette: #10B981 / #064E3B / #FC7C78 / #1F2937) */
+    --background: 214 32% 95%;
+    --foreground: 215 28% 17%;
 
-    --card: 0 0% 100%;                   /* #ffffff surface-container-lowest */
-    --card-foreground: 217 39% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 217 39% 12%;
+    --popover-foreground: 215 28% 17%;
 
-    /* primary #006c49 / on #ffffff */
-    --primary: 156 100% 21%;
+    /* primary #10B981 */
+    --primary: 160 84% 39%;
     --primary-foreground: 0 0% 100%;
 
-    /* secondary-container #adedd3 / on-secondary-container #306d58 */
-    --secondary: 152 65% 81%;
-    --secondary-foreground: 156 39% 31%;
+    /* secondary = deep emerald #064E3B */
+    --secondary: 158 84% 16%;
+    --secondary-foreground: 0 0% 100%;
 
-    /* muted = surface-container-low #eff4ff, on-surface-variant #3c4a42 */
-    --muted: 222 100% 97%;
-    --muted-foreground: 145 9% 27%;
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 40%;
 
-    /* accent = secondary-container #adedd3 / on #306d58 */
-    --accent: 152 65% 81%;
-    --accent-foreground: 156 39% 31%;
+    --accent: 152 76% 88%;
+    --accent-foreground: 158 84% 16%;
 
-    --warning: 32 95% 34%;
+    --warning: 32 95% 44%;
     --warning-foreground: 0 0% 100%;
 
-    /* error #ba1a1a / on #ffffff */
-    --destructive: 0 75% 42%;
+    /* tertiary coral #FC7C78 used as destructive */
+    --destructive: 2 96% 73%;
     --destructive-foreground: 0 0% 100%;
 
-    /* outline-variant #bbcabf, outline #6c7a71 */
-    --border: 138 12% 76%;
-    --input: 138 12% 76%;
-    --ring: 156 100% 21%;
+    --border: 214 20% 84%;
+    --input: 214 20% 84%;
+    --ring: 160 84% 39%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 100%;             /* surface-container-lowest */
-    --sidebar-foreground: 217 39% 12%;           /* on-surface */
-    --sidebar-primary: 156 100% 21%;             /* primary */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 28% 17%;
+    --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 100% 97%;              /* surface-container-low #eff4ff */
-    --sidebar-accent-foreground: 217 39% 12%;
-    --sidebar-border: 138 12% 76%;               /* outline-variant */
-    --sidebar-ring: 156 100% 21%;
+    --sidebar-accent: 214 32% 95%;
+    --sidebar-accent-foreground: 215 28% 17%;
+    --sidebar-border: 214 20% 84%;
+    --sidebar-ring: 160 84% 39%;
 
-    /* Status / badge colors — Emerald Light */
+    /* Status / badge colors */
     --status-gepland-bg: #b87800;
     --status-gepland-fg: #ffffff;
-    --status-uitvoering-bg: #006c49;
+    --status-uitvoering-bg: #10b981;
     --status-uitvoering-fg: #ffffff;
-    --ms-avp-bg: #006c49;
+    --ms-avp-bg: #10b981;
     --ms-avp-fg: #ffffff;
-    --ms-vp-bg: #2b6954;             /* secondary */
+    --ms-vp-bg: #064e3b;
     --ms-vp-fg: #ffffff;
     --schakel-bg: #b87800;
     --schakel-fg: #ffffff;
-    --monteur-bg: #006c49;
+    --monteur-bg: #10b981;
     --monteur-fg: #ffffff;
     --warning-soft-text: #b87800;
   }
