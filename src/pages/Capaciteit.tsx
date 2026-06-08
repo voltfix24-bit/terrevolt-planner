@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { VrijeDagenExport } from "@/components/VrijeDagenExport";
 
 // Cast for tables not yet in generated types (feestdagen, monteur_afwezigheid)
 // and for monteurs.werkdagen column added in migration.
