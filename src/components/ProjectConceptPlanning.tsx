@@ -30,6 +30,8 @@ import {
   dagOffsetLabel,
   type ConceptCel,
 } from "@/lib/concept-planning";
+import { useConfirm, describeShift } from "@/components/ConfirmDialog";
+import { setAuditLabel } from "@/lib/audit";
 
 interface Monteur {
   id: string;
