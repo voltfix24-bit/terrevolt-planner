@@ -218,7 +218,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
 
   const removeSelection = async () => {
     if (selected.size === 0) return;
-    if (!confirm(`${selected.size} activiteit(en) verwijderen?`)) return;
+    if (!window.confirm(`${selected.size} activiteit(en) verwijderen?`)) return;
     const ids = Array.from(selected);
     setCellen((prev) => prev.filter((c) => !selected.has(c.id)));
     clearSelection();
