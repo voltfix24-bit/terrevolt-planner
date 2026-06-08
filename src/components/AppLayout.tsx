@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
+import { UndoButton } from "./UndoButton";
 
 const STORAGE_KEY = "terrevolt-nav-collapsed";
 
