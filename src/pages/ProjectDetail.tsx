@@ -1007,7 +1007,7 @@ const ProjectDetail = () => {
               </span>
             </div>
             <div className="flex items-center gap-1.5 rounded border border-fg/[0.06] bg-fg/[0.02] px-2 py-1 text-[11px] text-muted-foreground">
-              <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse text-primary" : "text-emerald-400/80"}`} />
+              <Save className={`h-3.5 w-3.5 ${saving ? "animate-pulse text-primary" : "text-primary/80"}`} />
               {saving ? "Opslaan…" : "Autosave aan"}
             </div>
             <button
