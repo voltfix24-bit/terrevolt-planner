@@ -1122,7 +1122,7 @@ export default function Overzicht() {
       }
       await fetchAllData(jaar);
     },
-    [activiteitenByProject, cellen, weken, weekById, fetchAllData, jaar],
+    [activiteitenByProject, cellen, weken, weekById, fetchAllData, jaar, projecten, confirmShift],
   );
 
   const startProjectDrag = (e: React.MouseEvent, projectId: string) => {
