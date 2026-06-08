@@ -80,7 +80,7 @@ export function useRecentBatches(limit = 20) {
   useEffect(() => {
     load();
     const ch = supabase
-      .channel("audit_log_changes")
+      .channel(`audit_log_changes_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "audit_log" },
