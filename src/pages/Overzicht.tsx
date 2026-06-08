@@ -1787,6 +1787,104 @@ export default function Overzicht() {
         </div>
       </div>
 
+      {/* Verlof-conflict waarschuwing */}
+      {verlofConflicten.length > 0 && (
+        <div
+          className="mb-3 rounded-lg border"
+          style={{
+            borderColor: "rgba(245,158,11,0.45)",
+            background: "rgba(245,158,11,0.08)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setVerlofWaarschuwingOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" style={{ color: "#f59e0b" }} />
+              <span className="text-xs md:text-sm font-semibold text-foreground">
+                {verlofConflicten.reduce((n, c) => n + c.items.length, 0)} planning-conflict
+                {verlofConflicten.reduce((n, c) => n + c.items.length, 0) === 1 ? "" : "en"} met verlof
+                <span className="ml-1 font-normal text-muted-foreground">
+                  ({verlofConflicten.length} project{verlofConflicten.length === 1 ? "" : "en"})
+                </span>
+              </span>
+            </div>
+            <ChevronDown
+              className="h-4 w-4 text-muted-foreground transition-transform"
+              style={{ transform: verlofWaarschuwingOpen ? "rotate(180deg)" : "rotate(0)" }}
+            />
+          </button>
+          {verlofWaarschuwingOpen && (
+            <div className="px-3 pb-3 pt-1 space-y-2">
+              {verlofConflicten.map((c) => (
+                <div
+                  key={c.projectId}
+                  className="rounded-md border bg-background/40 px-2.5 py-2"
+                  style={{ borderColor: "rgba(245,158,11,0.25)" }}
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/plannen?project=${c.projectId}`)}
+                      className="text-xs md:text-sm font-semibold text-foreground hover:underline"
+                      title="Open in Plannen"
+                    >
+                      {c.projectLabel}
+                    </button>
+                    <span className="text-[11px] text-muted-foreground">
+                      eerste conflict:{" "}
+                      <span className="font-semibold text-foreground">
+                        {c.eersteDatum.toLocaleDateString("nl-NL", {
+                          weekday: "short",
+                          day: "2-digit",
+                          month: "short",
+                        })}
+                      </span>
+                    </span>
+                  </div>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {c.items.map((it, i) => (
+                      <li
+                        key={i}
+                        className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] md:text-xs text-foreground/85"
+                      >
+                        <span
+                          className="inline-block h-1.5 w-1.5 rounded-full"
+                          style={{ background: "#f59e0b" }}
+                        />
+                        <span className="font-medium">{it.monteurNaam}</span>
+                        <span className="text-muted-foreground">op</span>
+                        <span className="font-semibold tabular-nums">
+                          {it.datum.toLocaleDateString("nl-NL", {
+                            weekday: "short",
+                            day: "2-digit",
+                            month: "short",
+                          })}
+                        </span>
+                        <span className="text-muted-foreground">— activiteit</span>
+                        <span className="font-medium">{it.activiteitNaam}</span>
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                          style={{
+                            background: "rgba(245,158,11,0.18)",
+                            color: "#b45309",
+                          }}
+                        >
+                          {it.verlofType}
+                          {it.verlofOmschrijving ? ` · ${it.verlofOmschrijving}` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Navigator + scale selector */}
       <div
         className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
