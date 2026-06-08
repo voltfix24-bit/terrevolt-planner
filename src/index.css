@@ -9,56 +9,57 @@
   :root {
     /* Custom raw-channel vars consumed by inline styles via rgb(var(...) / alpha) */
     --fg-rgb: 18 28 42;            /* on-surface #121c2a */
-    --surface-rgb: 255 255 255;    /* surface-container-lowest */
+    --surface-rgb: 255 255 255;    /* surface-container-lowest #ffffff */
     --app-bg: #f8f9ff;             /* background / surface */
     --surface-solid: #ffffff;
 
-    /* shadcn HSL tokens — Emerald Light */
-    --background: 228 100% 99%;          /* #f8f9ff */
-    --foreground: 217 39% 12%;           /* #121c2a */
+    /* shadcn HSL tokens — Emerald Light (exact mapping from design spec) */
+    --background: 228 100% 99%;          /* #f8f9ff surface */
+    --foreground: 217 39% 12%;           /* #121c2a on-surface */
 
-    --card: 0 0% 100%;
+    --card: 0 0% 100%;                   /* #ffffff surface-container-lowest */
     --card-foreground: 217 39% 12%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 217 39% 12%;
 
-    /* Emerald primary #006c49 */
+    /* primary #006c49 / on #ffffff */
     --primary: 156 100% 21%;
     --primary-foreground: 0 0% 100%;
 
-    /* secondary-container #adedd3 / on #306d58 */
+    /* secondary-container #adedd3 / on-secondary-container #306d58 */
     --secondary: 152 65% 81%;
     --secondary-foreground: 156 39% 31%;
 
     /* muted = surface-container-low #eff4ff, on-surface-variant #3c4a42 */
     --muted: 222 100% 97%;
-    --muted-foreground: 145 8% 27%;
+    --muted-foreground: 145 9% 27%;
 
-    --accent: 156 100% 21%;
-    --accent-foreground: 0 0% 100%;
+    /* accent = secondary-container #adedd3 / on #306d58 */
+    --accent: 152 65% 81%;
+    --accent-foreground: 156 39% 31%;
 
     --warning: 32 95% 34%;
     --warning-foreground: 0 0% 100%;
 
-    /* error #ba1a1a */
+    /* error #ba1a1a / on #ffffff */
     --destructive: 0 75% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    /* outline-variant #bbcabf-ish — use neutral #e5e7eb per design spec */
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
+    /* outline-variant #bbcabf, outline #6c7a71 */
+    --border: 138 12% 76%;
+    --input: 138 12% 76%;
     --ring: 156 100% 21%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 217 39% 18%;
-    --sidebar-primary: 156 100% 21%;
+    --sidebar-background: 0 0% 100%;             /* surface-container-lowest */
+    --sidebar-foreground: 217 39% 12%;           /* on-surface */
+    --sidebar-primary: 156 100% 21%;             /* primary */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 100% 97%;
+    --sidebar-accent: 222 100% 97%;              /* surface-container-low #eff4ff */
     --sidebar-accent-foreground: 217 39% 12%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 138 12% 76%;               /* outline-variant */
     --sidebar-ring: 156 100% 21%;
 
     /* Status / badge colors — Emerald Light */
@@ -68,7 +69,7 @@
     --status-uitvoering-fg: #ffffff;
     --ms-avp-bg: #006c49;
     --ms-avp-fg: #ffffff;
-    --ms-vp-bg: #2563a6;
+    --ms-vp-bg: #2b6954;             /* secondary */
     --ms-vp-fg: #ffffff;
     --schakel-bg: #b87800;
     --schakel-fg: #ffffff;
