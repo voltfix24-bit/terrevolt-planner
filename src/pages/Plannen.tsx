@@ -1212,9 +1212,13 @@ const Plannen = () => {
     async (groupIdx: number, deltaSlots: number) => {
       const g = selectedGroups[groupIdx];
       if (!g || g.length === 0) return;
+      const days = deltaSlots; // 1 slot = 1 dag
+      const ok = await confirmShift(describeShift(days, g.length, "cel"));
+      if (!ok) return;
+      await setAuditLabel(`Planning: ${g.length}× ${days > 0 ? "+" : ""}${days} dag`);
       await moveCellsByDelta(g, deltaSlots);
     },
-    [selectedGroups, moveCellsByDelta]
+    [selectedGroups, moveCellsByDelta, confirmShift]
   );
 
   /* ----------------------------- undo / history ----------------------------- */
