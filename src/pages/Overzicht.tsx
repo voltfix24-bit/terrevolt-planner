@@ -1048,6 +1048,18 @@ export default function Overzicht() {
         return;
       }
 
+      const project = projecten.find((p) => p.id === projectId);
+      const naam = project?.naam ?? "project";
+      const ok = await confirmShift({
+        title: `Hele planning van "${naam}" verschuiven?`,
+        description: `${projectCellen.length} planning-cellen worden ${Math.abs(deltaDays)} dag${Math.abs(deltaDays) === 1 ? "" : "en"} ${deltaDays > 0 ? "vooruit" : "terug"} verschoven. Dit kun je daarna ongedaan maken met de Undo-knop.`,
+        confirmText: "Verschuiven",
+        destructive: true,
+      });
+      if (!ok) return;
+      await setAuditLabel(`Project "${naam}": ${deltaDays > 0 ? "+" : ""}${deltaDays} dag`);
+
+
       const weekIdByNr = new Map<number, string>();
       let maxPos = -1;
       for (const w of weken) {
