@@ -8,70 +8,71 @@
   /* ===== Default = LIGHT theme ===== */
   :root {
     /* Custom raw-channel vars consumed by inline styles via rgb(var(...) / alpha) */
-    --fg-rgb: 15 23 42;            /* slate-900 — primary text/border channel on light */
-    --surface-rgb: 255 255 255;    /* white — panel base */
-    --app-bg: #f1f5f9;             /* slate-100 — page background */
-    --surface-solid: #ffffff;      /* solid panel fill (replaces #0a1a30) */
+    --fg-rgb: 18 28 42;            /* on-surface #121c2a */
+    --surface-rgb: 255 255 255;    /* surface-container-lowest */
+    --app-bg: #f8f9ff;             /* background / surface */
+    --surface-solid: #ffffff;
 
-    /* shadcn HSL tokens */
-    --background: 210 40% 98%;
-    --foreground: 217 33% 17%;
+    /* shadcn HSL tokens — Emerald Light */
+    --background: 228 100% 99%;          /* #f8f9ff */
+    --foreground: 217 39% 12%;           /* #121c2a */
 
     --card: 0 0% 100%;
-    --card-foreground: 217 33% 17%;
+    --card-foreground: 217 39% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 217 33% 17%;
+    --popover-foreground: 217 39% 12%;
 
-    /* Primary green — 28% L gives ~5.5:1 on white (AA body) */
-    --primary: 152 72% 26%;
+    /* Emerald primary #006c49 */
+    --primary: 156 100% 21%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 94%;
-    --secondary-foreground: 217 33% 17%;
+    /* secondary-container #adedd3 / on #306d58 */
+    --secondary: 152 65% 81%;
+    --secondary-foreground: 156 39% 31%;
 
-    --muted: 210 40% 94%;
-    /* Muted text — 35% L gives ~7:1 on white (AAA) */
-    --muted-foreground: 215 18% 35%;
+    /* muted = surface-container-low #eff4ff, on-surface-variant #3c4a42 */
+    --muted: 222 100% 97%;
+    --muted-foreground: 145 8% 27%;
 
-    --accent: 152 72% 26%;
+    --accent: 156 100% 21%;
     --accent-foreground: 0 0% 100%;
 
-    /* Warning — 36% L gives ~4.5:1 on white (AA body) */
     --warning: 32 95% 34%;
     --warning-foreground: 0 0% 100%;
 
-    /* Destructive — 42% L gives ~5.5:1 on white (AA) */
-    --destructive: 0 72% 42%;
+    /* error #ba1a1a */
+    --destructive: 0 75% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 17%;
-    --input: 214 32% 88%;
-    --ring: 152 72% 26%;
+    /* outline-variant #bbcabf-ish — use neutral #e5e7eb per design spec */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 156 100% 21%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 217 33% 25%;
-    --sidebar-primary: 152 72% 26%;
+    --sidebar-foreground: 217 39% 18%;
+    --sidebar-primary: 156 100% 21%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 94%;
-    --sidebar-accent-foreground: 217 33% 17%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 152 72% 26%;
+    --sidebar-accent: 222 100% 97%;
+    --sidebar-accent-foreground: 217 39% 12%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 156 100% 21%;
 
-    /* Status / badge colors — light theme: darker, readable on white */
-    --status-gepland-bg: #b87800;       /* amber-700 */
+    /* Status / badge colors — Emerald Light */
+    --status-gepland-bg: #b87800;
     --status-gepland-fg: #ffffff;
-    --status-uitvoering-bg: #1f7a3a;    /* deep green */
+    --status-uitvoering-bg: #006c49;
     --status-uitvoering-fg: #ffffff;
-    --ms-avp-bg: #1f7a3a;
+    --ms-avp-bg: #006c49;
     --ms-avp-fg: #ffffff;
-    --ms-vp-bg: #2563a6;                /* deep blue */
+    --ms-vp-bg: #2563a6;
     --ms-vp-fg: #ffffff;
     --schakel-bg: #b87800;
     --schakel-fg: #ffffff;
-    --monteur-bg: #1d4ed8;
+    --monteur-bg: #006c49;
     --monteur-fg: #ffffff;
     --warning-soft-text: #b87800;
   }
