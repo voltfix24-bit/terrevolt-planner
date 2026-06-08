@@ -1106,7 +1106,7 @@ const ProjectDetail = () => {
                       className={cn(
                         "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
                         isComplete
-                          ? "border-emerald-400/40 bg-emerald-400/15 text-emerald-300"
+                          ? "border-primary/40 bg-primary/15 text-primary"
                           : c?.state === "partial"
                             ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
                             : isActive
