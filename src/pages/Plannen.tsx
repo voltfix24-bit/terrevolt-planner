@@ -69,6 +69,8 @@ import {
   shortReason,
 } from "@/lib/monteur-beschikbaarheid";
 import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
+import { useConfirm, describeShift } from "@/components/ConfirmDialog";
+import { setAuditLabel } from "@/lib/audit";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
