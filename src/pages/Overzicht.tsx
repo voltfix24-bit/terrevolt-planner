@@ -1253,9 +1253,7 @@ export default function Overzicht() {
     }
     return result;
   }, [afwezigheid, dayKeyToSlot]);
-    },
-    [monteurSlotProjects, monteurSlotDubbel, slots.length],
-  );
+
 
   // ====== Project bar segments (consecutive filled slots) ======
   const projectSegments = useCallback(
