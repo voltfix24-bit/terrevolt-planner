@@ -210,6 +210,21 @@ function getCurrentISOWeek(): { week: number; year: number } {
   return { week, year: target.getUTCFullYear() };
 }
 
+function isoWeekOf(d: Date): { week: number; year: number } {
+  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+  const firstDayNr = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNr + 3);
+  const week =
+    1 +
+    Math.round(
+      (target.getTime() - firstThursday.getTime()) / (7 * 24 * 3600 * 1000),
+    );
+  return { week, year: target.getUTCFullYear() };
+}
+
 function statusColor(status: Status | null): { bg: string; text: string; label: string } {
   switch (status) {
     case "gepland":
