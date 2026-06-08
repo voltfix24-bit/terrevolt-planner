@@ -296,6 +296,7 @@ function firstWeekOfQuarter(q: number, jaar: number): number {
 // ============== Page ==============
 export default function Overzicht() {
   const navigate = useNavigate();
+  const confirmShift = useConfirm();
 
   const initialIso = useMemo(() => getCurrentISOWeek(), []);
   const [jaar, setJaar] = useState<number>(initialIso.year);
