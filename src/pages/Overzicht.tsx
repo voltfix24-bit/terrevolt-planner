@@ -1182,7 +1182,72 @@ export default function Overzicht() {
       // so a "phantom" pill can never bleed in/out at the grid edges.
       return segs.filter(
         (s) => s.startSlot >= 0 && s.endSlot < slots.length && s.endSlot >= s.startSlot,
-      );
+  );
+
+  // ====== Verlof / afwezigheid segments per monteur (voor verlofbalk) ======
+  type VerlofItem = { type: string; omschrijving: string | null };
+  type VerlofSeg = { startSlot: number; endSlot: number; items: VerlofItem[] };
+  const verlofSegmentsByMonteur = useMemo(() => {
+    const result = new Map<string, VerlofSeg[]>();
+    const bySlotPerMonteur = new Map<string, Map<number, VerlofItem[]>>();
+    for (const a of afwezigheid) {
+      if (!a.datum_van || !a.datum_tot) continue;
+      const start = new Date(a.datum_van + "T00:00:00");
+      const end = new Date(a.datum_tot + "T00:00:00");
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) continue;
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        const dow = (cursor.getDay() + 6) % 7; // 0=MA..6=ZO
+        if (dow <= 4) {
+          const { week } = isoWeekOf(cursor);
+          const idx = dayKeyToSlot.get(`${week}-${dow}`);
+          if (idx !== undefined) {
+            let perMid = bySlotPerMonteur.get(a.monteur_id);
+            if (!perMid) {
+              perMid = new Map();
+              bySlotPerMonteur.set(a.monteur_id, perMid);
+            }
+            const existing = perMid.get(idx) ?? [];
+            if (
+              !existing.some(
+                (it) => it.type === a.type && it.omschrijving === a.omschrijving,
+              )
+            ) {
+              existing.push({ type: a.type, omschrijving: a.omschrijving });
+            }
+            perMid.set(idx, existing);
+          }
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+    for (const [mid, perSlot] of bySlotPerMonteur) {
+      const sorted = [...perSlot.keys()].sort((x, y) => x - y);
+      const segs: VerlofSeg[] = [];
+      let cur: VerlofSeg | null = null;
+      for (const idx of sorted) {
+        const items = perSlot.get(idx)!;
+        if (cur && cur.endSlot === idx - 1) {
+          cur.endSlot = idx;
+          for (const it of items) {
+            if (
+              !cur.items.some(
+                (c) => c.type === it.type && c.omschrijving === it.omschrijving,
+              )
+            ) {
+              cur.items.push(it);
+            }
+          }
+        } else {
+          if (cur) segs.push(cur);
+          cur = { startSlot: idx, endSlot: idx, items: [...items] };
+        }
+      }
+      if (cur) segs.push(cur);
+      result.set(mid, segs);
+    }
+    return result;
+  }, [afwezigheid, dayKeyToSlot]);
     },
     [monteurSlotProjects, monteurSlotDubbel, slots.length],
   );
