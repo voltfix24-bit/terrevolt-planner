@@ -116,7 +116,7 @@ const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
   },
   afgerond: {
     label: "Afgerond",
-    cls: "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300",
+    cls: "border-primary/30 bg-primary/[0.08] text-primary",
   },
 };
 
