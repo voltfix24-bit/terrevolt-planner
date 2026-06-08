@@ -1530,7 +1530,7 @@ export default function Overzicht() {
                   <span
                     style={{
                       background: "rgba(63,255,139,0.2)",
-                      color: "#3fff8b",
+                      color: "#10b981",
                       fontSize: 8,
                       fontWeight: 700,
                       padding: "1px 5px",
@@ -1590,7 +1590,7 @@ export default function Overzicht() {
                   <div
                     style={{
                       width: 4, height: 4, borderRadius: "50%",
-                      background: "#3fff8b", marginTop: 2,
+                      background: "#10b981", marginTop: 2,
                     }}
                   />
                 )}
@@ -1633,7 +1633,7 @@ export default function Overzicht() {
                 style={{
                   borderColor: activeFilterCount > 0 ? "rgba(63,255,139,0.4)" : "rgb(var(--fg-rgb) / 0.12)",
                   background: activeFilterCount > 0 ? "rgba(63,255,139,0.12)" : "rgb(var(--fg-rgb) / 0.04)",
-                  color: activeFilterCount > 0 ? "#3fff8b" : "rgb(var(--fg-rgb) / 0.85)",
+                  color: activeFilterCount > 0 ? "#10b981" : "rgb(var(--fg-rgb) / 0.85)",
                 }}
                 aria-label="Filters openen"
               >
@@ -1644,7 +1644,7 @@ export default function Overzicht() {
                     className="ml-0.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums"
                     style={{
                       minWidth: 16, height: 16, padding: "0 4px",
-                      background: "#3fff8b", color: "var(--surface-solid)",
+                      background: "#10b981", color: "var(--surface-solid)",
                     }}
                   >
                     {activeFilterCount}
@@ -1742,7 +1742,7 @@ export default function Overzicht() {
                     type="button"
                     onClick={() => setFiltersOpen(false)}
                     className="flex-1 h-10 rounded-md text-sm font-bold"
-                    style={{ background: "#3fff8b", color: "var(--surface-solid)" }}
+                    style={{ background: "#10b981", color: "var(--surface-solid)" }}
                   >
                     Toepassen
                   </button>
@@ -1767,7 +1767,7 @@ export default function Overzicht() {
             style={{
               background: "rgba(63,255,139,0.15)",
               border: "1px solid rgba(63,255,139,0.3)",
-              color: "#3fff8b",
+              color: "#10b981",
               fontSize: 11,
               fontWeight: 700,
               padding: "5px 10px",
@@ -1778,7 +1778,7 @@ export default function Overzicht() {
             <span
               style={{
                 width: 8, height: 8, borderRadius: 999,
-                background: "#3fff8b",
+                background: "#10b981",
                 boxShadow: "0 0 6px rgba(63,255,139,0.6)",
               }}
             />
@@ -1940,7 +1940,7 @@ export default function Overzicht() {
             className="flex h-7 items-center justify-center rounded px-2 md:px-3 text-xs font-semibold transition-colors"
             style={{
               background: "rgba(63,255,139,0.12)",
-              color: "#3fff8b",
+              color: "#10b981",
               border: "1px solid rgba(63,255,139,0.2)",
               marginLeft: 4,
             }}
@@ -2340,7 +2340,7 @@ export default function Overzicht() {
                         borderLeft: (() => {
                           switch (p.status) {
                             case "gepland": return "3px solid #feb300";
-                            case "in_uitvoering": return "3px solid #3fff8b";
+                            case "in_uitvoering": return "3px solid #10b981";
                             case "afgerond": return "3px solid rgb(var(--fg-rgb) / 0.3)";
                             case "concept":
                             default: return "3px dashed rgb(var(--fg-rgb) / 0.2)";
@@ -2362,7 +2362,7 @@ export default function Overzicht() {
                           {/* Optional 4-char case number, very small */}
                           <span
                             className="absolute inset-x-0 bottom-0.5 text-center font-display text-[8px] font-bold tabular-nums"
-                            style={{ color: "#3fff8b" }}
+                            style={{ color: "#10b981" }}
                           >
                             {(p.case_nummer ?? "").slice(0, 4)}
                           </span>
@@ -2976,7 +2976,7 @@ function MonteurSidebarRow({
           }
         : {
             background: "rgba(63,255,139,0.12)",
-            color: "#3fff8b",
+            color: "#10b981",
             border: "1px solid rgba(63,255,139,0.2)",
           };
   const vdLabel = vd === 0 ? "Vol" : `${vd}d vrij`;
@@ -3219,7 +3219,7 @@ function MonteurCellsRow({
                     const p = projectById.get(pid);
                     return (
                       <div key={pid} className="text-xs">
-                        <span style={{ color: "#3fff8b", fontWeight: 700 }}>
+                        <span style={{ color: "#10b981", fontWeight: 700 }}>
                           {p?.case_nummer ?? pid.slice(0, 6)}
                         </span>{" "}
                         <span className="text-muted-foreground">
@@ -3271,7 +3271,7 @@ function MonteurCellsRow({
                 bottom: 8,
                 height: ROW_H_MONTEUR - 16,
                 background: isConcept ? "rgba(63,255,139,0.08)" : "rgba(63,255,139,0.85)",
-                color: isConcept ? "#3fff8b" : "var(--surface-solid)",
+                color: isConcept ? "#10b981" : "var(--surface-solid)",
                 fontSize: 9,
                 fontWeight: 700,
                 borderRadius: 4,
@@ -3302,7 +3302,7 @@ function MonteurCellsRow({
               left: left + 2, width: width - 4,
               top: topPad, height: PILL_H_MONTEUR,
               background: isConcept ? "rgba(63,255,139,0.08)" : "rgba(63,255,139,0.85)",
-              color: isConcept ? "#3fff8b" : "var(--surface-solid)",
+              color: isConcept ? "#10b981" : "var(--surface-solid)",
               fontSize: 9, fontWeight: 700,
               borderRadius: 4,
               border: isConcept ? "1.5px dashed rgba(63,255,139,0.7)" : undefined,
