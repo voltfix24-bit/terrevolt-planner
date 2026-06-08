@@ -1082,9 +1082,13 @@ const Plannen = () => {
       const targetWi = weekIndexById.get(targetWeekId);
       if (anchorWi == null || targetWi == null) return;
       const delta = targetWi * 5 + targetDagIndex - (anchorWi * 5 + a.dag_index);
+      if (delta === 0) return;
+      const ok = await confirmShift(describeShift(delta, sourceCelIds.length, "cel"));
+      if (!ok) return;
+      await setAuditLabel(`Sleep: ${sourceCelIds.length}× ${delta > 0 ? "+" : ""}${delta} dag`);
       await moveCellsByDelta(sourceCelIds, delta);
     },
-    [cellen, weken, moveCellsByDelta]
+    [cellen, weken, moveCellsByDelta, confirmShift]
   );
 
   // Excel-style fill handle: kopieer kleur + notitie + monteurs van bron-cel naar
