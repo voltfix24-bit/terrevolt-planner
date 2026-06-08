@@ -937,7 +937,7 @@ const ProjectDossier = () => {
           {/* Uitvoering Criticals */}
           <Card title="Voor Uitvoering Belangrijk" icon={AlertTriangle} tone="critical">
             {criticals.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-md border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2 text-[12px] text-emerald-200/90">
+              <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/[0.04] px-3 py-2 text-[12px] text-primary/90">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Geen openstaande aandachtspunten gevonden.
               </div>
