@@ -2889,6 +2889,7 @@ function EmptyCellsRow({
 function MonteurCellsRow({
   monteur,
   segments,
+  verlofSegments,
   projectById,
   slots,
   cellW,
@@ -2899,6 +2900,7 @@ function MonteurCellsRow({
 }: {
   monteur: Monteur;
   segments: { startSlot: number; endSlot: number; projectId: string | null; projectIds: string[]; dubbel: boolean }[];
+  verlofSegments: { startSlot: number; endSlot: number; items: { type: string; omschrijving: string | null }[] }[];
   projectById: Map<string, Project>;
   slots: Slot[];
   cellW: number;
