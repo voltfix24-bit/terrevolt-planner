@@ -41,7 +41,7 @@ Deno.test("correct geheim -> 200 + exacte top-level keys en recordvelden", async
   for (const p of j.projecten) {
     assertEquals(Object.keys(p).sort(), [
       "case_nummer", "jaar", "planner_id", "postcode", "stad", "station_naam",
-      "straat", "status", "urenapp_project_id",
+      "status", "straat", "urenapp_project_id",
     ]);
     assert(!("uurtarief" in p));
     assert(!("kostprijs" in p));
