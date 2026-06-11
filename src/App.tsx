@@ -29,16 +29,19 @@ const App = () => (
         <AuthProvider>
           <ConfirmProvider>
             <Routes>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Navigate to="/overzicht" replace />} />
-                <Route path="/overzicht" element={<Overzicht />} />
-                <Route path="/projecten" element={<Projecten />} />
-                <Route path="/projecten/:id" element={<ProjectDetail />} />
-                <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
-                <Route path="/plannen" element={<Plannen />} />
-                <Route path="/activiteiten" element={<Activiteiten />} />
-                <Route path="/capaciteit" element={<Capaciteit />} />
-                <Route path="/instellingen" element={<Instellingen />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<Navigate to="/overzicht" replace />} />
+                  <Route path="/overzicht" element={<Overzicht />} />
+                  <Route path="/projecten" element={<Projecten />} />
+                  <Route path="/projecten/:id" element={<ProjectDetail />} />
+                  <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
+                  <Route path="/plannen" element={<Plannen />} />
+                  <Route path="/activiteiten" element={<Activiteiten />} />
+                  <Route path="/capaciteit" element={<Capaciteit />} />
+                  <Route path="/instellingen" element={<Instellingen />} />
+                </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
