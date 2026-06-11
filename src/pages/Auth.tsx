@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 
 export default function Auth() {
-  const { session, loading, signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { session, loading, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,13 +19,10 @@ export default function Auth() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } =
-      mode === "signin" ? await signIn(email, password) : await signUp(email, password);
+    const { error } = await signIn(email, password);
     setBusy(false);
     if (error) {
-      toast({ title: "Mislukt", description: error, variant: "destructive" });
-    } else if (mode === "signup") {
-      toast({ title: "Account aangemaakt", description: "Je bent ingelogd." });
+      toast({ title: "Inloggen mislukt", description: error, variant: "destructive" });
     }
   };
 
@@ -46,12 +42,10 @@ export default function Auth() {
         </div>
 
         <h1 className="mb-1 font-display text-xl font-semibold tracking-tight text-foreground">
-          {mode === "signin" ? "Inloggen" : "Account aanmaken"}
+          Inloggen
         </h1>
         <p className="mb-6 text-sm text-muted-foreground">
-          {mode === "signin"
-            ? "Voer je gegevens in om verder te gaan."
-            : "Maak een account aan om de planner te gebruiken."}
+          Voer je gegevens in om verder te gaan.
         </p>
 
         <form onSubmit={onSubmit} className="space-y-4">
@@ -73,25 +67,19 @@ export default function Auth() {
               type="password"
               required
               minLength={6}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Bezig..." : mode === "signin" ? "Inloggen" : "Aanmaken"}
+            {busy ? "Bezig..." : "Inloggen"}
           </Button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-4 w-full text-center text-xs text-muted-foreground hover:text-foreground"
-        >
-          {mode === "signin"
-            ? "Nog geen account? Account aanmaken"
-            : "Al een account? Inloggen"}
-        </button>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Geen toegang? Neem contact op met een beheerder.
+        </p>
       </div>
     </div>
   );
