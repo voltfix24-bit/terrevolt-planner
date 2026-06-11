@@ -29,18 +29,27 @@ Deno.test("verkeerd geheim -> 401", async () => {
   assertEquals(r.status, 401);
 });
 
-Deno.test("correct geheim -> 200 + lijsten", async () => {
+Deno.test("correct geheim -> 200 + exacte top-level keys en recordvelden", async () => {
   const r = await call();
   const j = await r.json();
   assertEquals(r.status, 200);
-  assertEquals(j.success, true);
+  assertEquals(Object.keys(j).sort(), ["monteurs", "projecten"]);
+
   assert(Array.isArray(j.projecten));
   assert(Array.isArray(j.monteurs));
-  assert(typeof j.counts.projecten === "number");
-  assert(typeof j.counts.monteurs === "number");
-  // geen financiele velden
+
   for (const p of j.projecten) {
+    assertEquals(Object.keys(p).sort(), [
+      "case_nummer", "jaar", "planner_id", "postcode", "stad", "station_naam",
+      "straat", "status", "urenapp_project_id",
+    ]);
     assert(!("uurtarief" in p));
     assert(!("kostprijs" in p));
+  }
+
+  for (const m of j.monteurs) {
+    assertEquals(Object.keys(m).sort(), [
+      "actief", "naam", "planner_id", "type", "urenapp_profile_id", "werkdagen",
+    ]);
   }
 });

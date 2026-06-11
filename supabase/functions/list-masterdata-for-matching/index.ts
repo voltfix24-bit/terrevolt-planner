@@ -76,15 +76,6 @@ Deno.serve(async (req) => {
   if (mErr) return json(500, { error: "DB error (monteurs)" });
 
   return json(200, {
-    success: true,
-    counts: {
-      projecten: projecten?.length ?? 0,
-      monteurs: monteurs?.length ?? 0,
-      projecten_matched: (projecten ?? []).filter((p) => p.urenapp_project_id).length,
-      projecten_unmatched: (projecten ?? []).filter((p) => !p.urenapp_project_id).length,
-      monteurs_matched: (monteurs ?? []).filter((m) => m.urenapp_profile_id).length,
-      monteurs_unmatched: (monteurs ?? []).filter((m) => !m.urenapp_profile_id).length,
-    },
     projecten: (projecten ?? []).map((p) => ({
       planner_id: p.id,
       case_nummer: p.case_nummer,
