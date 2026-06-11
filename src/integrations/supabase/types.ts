@@ -199,6 +199,7 @@ export type Database = {
           id: string
           naam: string
           type: string
+          urenapp_profile_id: string | null
           werkdagen: number[] | null
         }
         Insert: {
@@ -209,6 +210,7 @@ export type Database = {
           id?: string
           naam: string
           type: string
+          urenapp_profile_id?: string | null
           werkdagen?: number[] | null
         }
         Update: {
@@ -219,6 +221,7 @@ export type Database = {
           id?: string
           naam?: string
           type?: string
+          urenapp_profile_id?: string | null
           werkdagen?: number[] | null
         }
         Relationships: []
@@ -262,6 +265,27 @@ export type Database = {
           id?: string
           naam?: string
           positie?: number | null
+        }
+        Relationships: []
+      }
+      planner_users: {
+        Row: {
+          active: boolean
+          created_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          role?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -727,6 +751,7 @@ export type Database = {
           tijd_tekeningen_aanwezig: string | null
           tijdelijke_situatie: string | null
           updated_at: string | null
+          urenapp_project_id: string | null
           wv_naam: string | null
         }
         Insert: {
@@ -801,6 +826,7 @@ export type Database = {
           tijd_tekeningen_aanwezig?: string | null
           tijdelijke_situatie?: string | null
           updated_at?: string | null
+          urenapp_project_id?: string | null
           wv_naam?: string | null
         }
         Update: {
@@ -875,6 +901,7 @@ export type Database = {
           tijd_tekeningen_aanwezig?: string | null
           tijdelijke_situatie?: string | null
           updated_at?: string | null
+          urenapp_project_id?: string | null
           wv_naam?: string | null
         }
         Relationships: [
@@ -892,6 +919,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_planner_manager: { Args: { check_user_id?: string }; Returns: boolean }
       set_audit_label: { Args: { p_label: string }; Returns: undefined }
       undo_batch: {
         Args: { p_batch_id?: string }
