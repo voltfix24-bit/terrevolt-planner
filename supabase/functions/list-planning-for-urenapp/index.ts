@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
   wekenQ = wekenQ.in("project_id", projectIds);
   const { data: weken, error: wkErr } = await wekenQ;
   if (wkErr) return json(500, { error: "DB error (weken)" });
-  if (!weken || weken.length === 0) return json(200, { planning: [], problemen: [] });
+  if (!weken || weken.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
   const weekMap = new Map<string, { project_id: string; week_nr: number | null }>();
   for (const w of weken) weekMap.set(w.id as string, { project_id: w.project_id as string, week_nr: w.week_nr as number | null });
