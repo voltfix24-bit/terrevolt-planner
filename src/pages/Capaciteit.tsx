@@ -191,6 +191,8 @@ const Capaciteit = () => {
   const [aanwijzingLs, setAanwijzingLs] = useState<Aanwijzing | null>(null);
   const [aanwijzingMs, setAanwijzingMs] = useState<Aanwijzing | null>(null);
   const [actief, setActief] = useState(true);
+  const [urenappSyncEnabled, setUrenappSyncEnabled] = useState(true);
+  const [urenappReden, setUrenappReden] = useState<UrenappExclusionReason | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -222,6 +224,8 @@ const Capaciteit = () => {
     setAanwijzingLs(null);
     setAanwijzingMs(null);
     setActief(true);
+    setUrenappSyncEnabled(true);
+    setUrenappReden(null);
     setModalOpen(true);
   };
 
@@ -232,12 +236,18 @@ const Capaciteit = () => {
     setAanwijzingLs(m.aanwijzing_ls);
     setAanwijzingMs(m.aanwijzing_ms);
     setActief(m.actief);
+    setUrenappSyncEnabled(m.urenapp_sync_enabled ?? true);
+    setUrenappReden((m.urenapp_sync_exclusion_reason ?? null) as UrenappExclusionReason | null);
     setModalOpen(true);
   };
 
   const handleSave = async () => {
     if (!naam.trim()) {
       toast.error("Naam is verplicht");
+      return;
+    }
+    if (!urenappSyncEnabled && !urenappReden) {
+      toast.error("Kies een reden om urenapp-sync uit te schakelen");
       return;
     }
     setSaving(true);
@@ -247,6 +257,8 @@ const Capaciteit = () => {
       aanwijzing_ls: aanwijzingLs,
       aanwijzing_ms: aanwijzingMs,
       actief,
+      urenapp_sync_enabled: urenappSyncEnabled,
+      urenapp_sync_exclusion_reason: urenappSyncEnabled ? null : urenappReden,
     };
 
     if (editing) {
