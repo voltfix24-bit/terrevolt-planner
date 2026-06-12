@@ -28,6 +28,13 @@ import {
 
 type MonteurType = "schakelmonteur" | "montagemonteur";
 type Aanwijzing = "VOP" | "VP" | "AVP";
+type UrenappExclusionReason = "sporadisch_ingehuurd" | "geen_urenapp_account" | "anders";
+
+const URENAPP_REDENEN: { id: UrenappExclusionReason; label: string }[] = [
+  { id: "sporadisch_ingehuurd", label: "Sporadisch ingehuurd" },
+  { id: "geen_urenapp_account", label: "Geen urenapp-account" },
+  { id: "anders", label: "Anders" },
+];
 
 interface Monteur {
   id: string;
@@ -38,6 +45,8 @@ interface Monteur {
   actief: boolean;
   created_at: string;
   werkdagen?: number[] | null;
+  urenapp_sync_enabled?: boolean;
+  urenapp_sync_exclusion_reason?: UrenappExclusionReason | null;
 }
 
 interface Feestdag {
