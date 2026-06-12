@@ -141,17 +141,16 @@ Deno.test("afwijkende bestaande koppeling -> 409 zonder write", async () => {
   }
 });
 
-Deno.test("twee gelijktijdige verzoeken -> 1 linked, 1 already_linked of conflict", async () => {
+Deno.test("twee gelijktijdige verzoeken -> veilig, exact 1 linked, geen duplicaten", async () => {
   const id = await createTestProject();
   try {
     const body = { kind: "project" as const, planner_id: id, urenapp_id: UA1, expected_current_urenapp_id: null };
     const [r1, r2] = await Promise.all([call(body), call(body)]);
     const [j1, j2] = await Promise.all([r1.json(), r2.json()]);
-    const statuses = [r1.status, r2.status].sort();
-    // both should be 200 (one linked, one already_linked) — never duplicate write
-    assert(statuses.every((s) => s === 200), `statuses=${JSON.stringify(statuses)}`);
-    const actions = [j1.action, j2.action].sort();
-    assertEquals(actions, ["already_linked", "linked"]);
+    // each request must be either 200 (linked/already_linked) or 409 (lost the race)
+    for (const s of [r1.status, r2.status]) assert(s === 200 || s === 409, `unexpected ${s}`);
+    const linkedCount = [j1, j2].filter((j) => j.action === "linked").length;
+    assertEquals(linkedCount, 1, "exactly one request must perform the link");
     const after = await getProj(id);
     assertEquals(after.urenapp_project_id, UA1);
   } finally {
