@@ -120,18 +120,22 @@ Deno.serve(async (req) => {
   const { data: projecten, error: projErr } = await projQ;
   if (projErr) return json(500, { error: "DB error (projecten)" });
 
-  let montQ = supabase.from("monteurs").select("id, urenapp_profile_id");
+  let montQ = supabase.from("monteurs").select("id, urenapp_profile_id, urenapp_sync_enabled, urenapp_sync_exclusion_reason");
   if (planner_monteur_ids?.length) montQ = montQ.in("id", planner_monteur_ids);
   const { data: monteurs, error: montErr } = await montQ;
   if (montErr) return json(500, { error: "DB error (monteurs)" });
 
   const projMap = new Map<string, { jaar: number | null; urenapp_project_id: string | null }>();
   for (const p of projecten ?? []) projMap.set(p.id as string, { jaar: p.jaar as number | null, urenapp_project_id: p.urenapp_project_id as string | null });
-  const montMap = new Map<string, { urenapp_profile_id: string | null }>();
-  for (const m of monteurs ?? []) montMap.set(m.id as string, { urenapp_profile_id: m.urenapp_profile_id as string | null });
+  const montMap = new Map<string, { urenapp_profile_id: string | null; sync_enabled: boolean; reason: string | null }>();
+  for (const m of monteurs ?? []) montMap.set(m.id as string, {
+    urenapp_profile_id: m.urenapp_profile_id as string | null,
+    sync_enabled: (m.urenapp_sync_enabled as boolean | null) ?? true,
+    reason: (m.urenapp_sync_exclusion_reason as string | null) ?? null,
+  });
 
   const projectIds = [...projMap.keys()];
-  if (projectIds.length === 0) return json(200, { planning: [], problemen: [] });
+  if (projectIds.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
   // 2) Load weken for these projects
   let wekenQ = supabase.from("project_weken").select("id, project_id, week_nr");
