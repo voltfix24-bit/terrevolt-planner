@@ -630,7 +630,47 @@ const Capaciteit = () => {
                 className="data-[state=checked]:bg-primary"
               />
             </div>
+
+            <div className="space-y-3 rounded-md bg-fg/[0.03] px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-display text-sm font-semibold text-foreground">
+                    Sync naar urenapp
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Planning van deze monteur wordt naar de urenapp gestuurd
+                  </div>
+                </div>
+                <Switch
+                  checked={urenappSyncEnabled}
+                  onCheckedChange={(v) => {
+                    setUrenappSyncEnabled(v);
+                    if (v) setUrenappReden(null);
+                  }}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+              {!urenappSyncEnabled && (
+                <div className="space-y-2">
+                  <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Reden uitsluiting
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {URENAPP_REDENEN.map((r) => (
+                      <PillButton
+                        key={r.id}
+                        active={urenappReden === r.id}
+                        onClick={() => setUrenappReden(r.id)}
+                      >
+                        {r.label}
+                      </PillButton>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
 
           <div className="px-6 pb-6">
             <Button
