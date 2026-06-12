@@ -278,6 +278,11 @@ Deno.serve(async (req) => {
     const kb = `${b.datum}|${b.planner_project_id}|${b.planner_monteur_id}|${b.external_id}`;
     return ka < kb ? -1 : ka > kb ? 1 : 0;
   });
+  uitgesloten.sort((a, b) => {
+    const ka = `${a.datum}|${a.planner_monteur_id}|${a.planning_cel_id}`;
+    const kb = `${b.datum}|${b.planner_monteur_id}|${b.planning_cel_id}`;
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
 
-  return json(200, { planning, problemen });
+  return json(200, { planning, problemen, uitgesloten });
 });
