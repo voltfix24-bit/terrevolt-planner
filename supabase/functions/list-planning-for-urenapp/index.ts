@@ -237,6 +237,15 @@ Deno.serve(async (req) => {
         // not in selected/loaded monteurs (e.g. filtered out)
         continue;
       }
+      if (!mont.sync_enabled) {
+        uitgesloten.push({
+          planner_monteur_id: monteurId,
+          planning_cel_id: celId,
+          datum,
+          reden: mont.reason ?? "anders",
+        });
+        continue;
+      }
       if (!mont.urenapp_profile_id) {
         problemen.push({ code: "MONTEUR_NIET_GEKOPPELD", planning_cel_id: celId, uitleg: "monteur zonder urenapp_profile_id" });
         continue;
