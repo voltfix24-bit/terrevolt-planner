@@ -178,6 +178,7 @@ Deno.serve(async (req) => {
 
   const planning: Array<Record<string, unknown>> = [];
   const problemen: Array<{ code: string; planning_cel_id: string | null; uitleg: string }> = [];
+  const uitgesloten: Array<{ planner_monteur_id: string; planning_cel_id: string; datum: string; reden: string }> = [];
   const seen = new Set<string>();
 
   // Group cel_monteurs by cel_id
