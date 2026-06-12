@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
   if (celErr) return json(500, { error: "DB error (planning_cellen)" });
 
   const celIds = (cellen ?? []).map((c) => c.id as string);
-  if (celIds.length === 0) return json(200, { planning: [], problemen: [] });
+  if (celIds.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
   // 4) cel_monteurs
   let cmQ = supabase.from("cel_monteurs").select("cel_id, monteur_id").in("cel_id", celIds);
