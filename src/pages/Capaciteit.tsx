@@ -28,6 +28,13 @@ import {
 
 type MonteurType = "schakelmonteur" | "montagemonteur";
 type Aanwijzing = "VOP" | "VP" | "AVP";
+type UrenappExclusionReason = "sporadisch_ingehuurd" | "geen_urenapp_account" | "anders";
+
+const URENAPP_REDENEN: { id: UrenappExclusionReason; label: string }[] = [
+  { id: "sporadisch_ingehuurd", label: "Sporadisch ingehuurd" },
+  { id: "geen_urenapp_account", label: "Geen urenapp-account" },
+  { id: "anders", label: "Anders" },
+];
 
 interface Monteur {
   id: string;
@@ -38,6 +45,8 @@ interface Monteur {
   actief: boolean;
   created_at: string;
   werkdagen?: number[] | null;
+  urenapp_sync_enabled?: boolean;
+  urenapp_sync_exclusion_reason?: UrenappExclusionReason | null;
 }
 
 interface Feestdag {
@@ -182,6 +191,8 @@ const Capaciteit = () => {
   const [aanwijzingLs, setAanwijzingLs] = useState<Aanwijzing | null>(null);
   const [aanwijzingMs, setAanwijzingMs] = useState<Aanwijzing | null>(null);
   const [actief, setActief] = useState(true);
+  const [urenappSyncEnabled, setUrenappSyncEnabled] = useState(true);
+  const [urenappReden, setUrenappReden] = useState<UrenappExclusionReason | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -213,6 +224,8 @@ const Capaciteit = () => {
     setAanwijzingLs(null);
     setAanwijzingMs(null);
     setActief(true);
+    setUrenappSyncEnabled(true);
+    setUrenappReden(null);
     setModalOpen(true);
   };
 
@@ -223,12 +236,18 @@ const Capaciteit = () => {
     setAanwijzingLs(m.aanwijzing_ls);
     setAanwijzingMs(m.aanwijzing_ms);
     setActief(m.actief);
+    setUrenappSyncEnabled(m.urenapp_sync_enabled ?? true);
+    setUrenappReden((m.urenapp_sync_exclusion_reason ?? null) as UrenappExclusionReason | null);
     setModalOpen(true);
   };
 
   const handleSave = async () => {
     if (!naam.trim()) {
       toast.error("Naam is verplicht");
+      return;
+    }
+    if (!urenappSyncEnabled && !urenappReden) {
+      toast.error("Kies een reden om urenapp-sync uit te schakelen");
       return;
     }
     setSaving(true);
@@ -238,6 +257,8 @@ const Capaciteit = () => {
       aanwijzing_ls: aanwijzingLs,
       aanwijzing_ms: aanwijzingMs,
       actief,
+      urenapp_sync_enabled: urenappSyncEnabled,
+      urenapp_sync_exclusion_reason: urenappSyncEnabled ? null : urenappReden,
     };
 
     if (editing) {
@@ -609,7 +630,47 @@ const Capaciteit = () => {
                 className="data-[state=checked]:bg-primary"
               />
             </div>
+
+            <div className="space-y-3 rounded-md bg-fg/[0.03] px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-display text-sm font-semibold text-foreground">
+                    Sync naar urenapp
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Planning van deze monteur wordt naar de urenapp gestuurd
+                  </div>
+                </div>
+                <Switch
+                  checked={urenappSyncEnabled}
+                  onCheckedChange={(v) => {
+                    setUrenappSyncEnabled(v);
+                    if (v) setUrenappReden(null);
+                  }}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+              {!urenappSyncEnabled && (
+                <div className="space-y-2">
+                  <Label className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Reden uitsluiting
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {URENAPP_REDENEN.map((r) => (
+                      <PillButton
+                        key={r.id}
+                        active={urenappReden === r.id}
+                        onClick={() => setUrenappReden(r.id)}
+                      >
+                        {r.label}
+                      </PillButton>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
 
           <div className="px-6 pb-6">
             <Button

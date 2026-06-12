@@ -120,25 +120,29 @@ Deno.serve(async (req) => {
   const { data: projecten, error: projErr } = await projQ;
   if (projErr) return json(500, { error: "DB error (projecten)" });
 
-  let montQ = supabase.from("monteurs").select("id, urenapp_profile_id");
+  let montQ = supabase.from("monteurs").select("id, urenapp_profile_id, urenapp_sync_enabled, urenapp_sync_exclusion_reason");
   if (planner_monteur_ids?.length) montQ = montQ.in("id", planner_monteur_ids);
   const { data: monteurs, error: montErr } = await montQ;
   if (montErr) return json(500, { error: "DB error (monteurs)" });
 
   const projMap = new Map<string, { jaar: number | null; urenapp_project_id: string | null }>();
   for (const p of projecten ?? []) projMap.set(p.id as string, { jaar: p.jaar as number | null, urenapp_project_id: p.urenapp_project_id as string | null });
-  const montMap = new Map<string, { urenapp_profile_id: string | null }>();
-  for (const m of monteurs ?? []) montMap.set(m.id as string, { urenapp_profile_id: m.urenapp_profile_id as string | null });
+  const montMap = new Map<string, { urenapp_profile_id: string | null; sync_enabled: boolean; reason: string | null }>();
+  for (const m of monteurs ?? []) montMap.set(m.id as string, {
+    urenapp_profile_id: m.urenapp_profile_id as string | null,
+    sync_enabled: (m.urenapp_sync_enabled as boolean | null) ?? true,
+    reason: (m.urenapp_sync_exclusion_reason as string | null) ?? null,
+  });
 
   const projectIds = [...projMap.keys()];
-  if (projectIds.length === 0) return json(200, { planning: [], problemen: [] });
+  if (projectIds.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
   // 2) Load weken for these projects
   let wekenQ = supabase.from("project_weken").select("id, project_id, week_nr");
   wekenQ = wekenQ.in("project_id", projectIds);
   const { data: weken, error: wkErr } = await wekenQ;
   if (wkErr) return json(500, { error: "DB error (weken)" });
-  if (!weken || weken.length === 0) return json(200, { planning: [], problemen: [] });
+  if (!weken || weken.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
   const weekMap = new Map<string, { project_id: string; week_nr: number | null }>();
   for (const w of weken) weekMap.set(w.id as string, { project_id: w.project_id as string, week_nr: w.week_nr as number | null });
@@ -152,7 +156,7 @@ Deno.serve(async (req) => {
   if (celErr) return json(500, { error: "DB error (planning_cellen)" });
 
   const celIds = (cellen ?? []).map((c) => c.id as string);
-  if (celIds.length === 0) return json(200, { planning: [], problemen: [] });
+  if (celIds.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
   // 4) cel_monteurs
   let cmQ = supabase.from("cel_monteurs").select("cel_id, monteur_id").in("cel_id", celIds);
@@ -174,6 +178,7 @@ Deno.serve(async (req) => {
 
   const planning: Array<Record<string, unknown>> = [];
   const problemen: Array<{ code: string; planning_cel_id: string | null; uitleg: string }> = [];
+  const uitgesloten: Array<{ planner_monteur_id: string; planning_cel_id: string; datum: string; reden: string }> = [];
   const seen = new Set<string>();
 
   // Group cel_monteurs by cel_id
@@ -232,6 +237,15 @@ Deno.serve(async (req) => {
         // not in selected/loaded monteurs (e.g. filtered out)
         continue;
       }
+      if (!mont.sync_enabled) {
+        uitgesloten.push({
+          planner_monteur_id: monteurId,
+          planning_cel_id: celId,
+          datum,
+          reden: mont.reason ?? "anders",
+        });
+        continue;
+      }
       if (!mont.urenapp_profile_id) {
         problemen.push({ code: "MONTEUR_NIET_GEKOPPELD", planning_cel_id: celId, uitleg: "monteur zonder urenapp_profile_id" });
         continue;
@@ -264,6 +278,11 @@ Deno.serve(async (req) => {
     const kb = `${b.datum}|${b.planner_project_id}|${b.planner_monteur_id}|${b.external_id}`;
     return ka < kb ? -1 : ka > kb ? 1 : 0;
   });
+  uitgesloten.sort((a, b) => {
+    const ka = `${a.datum}|${a.planner_monteur_id}|${a.planning_cel_id}`;
+    const kb = `${b.datum}|${b.planner_monteur_id}|${b.planning_cel_id}`;
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
 
-  return json(200, { planning, problemen });
+  return json(200, { planning, problemen, uitgesloten });
 });

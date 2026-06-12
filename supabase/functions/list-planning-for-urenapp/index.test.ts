@@ -72,9 +72,86 @@ Deno.test("empty/valid range -> 200 met exacte top-level keys", async () => {
   const r = await call({ datum_vanaf: "2026-01-05", datum_tot: "2026-01-11" });
   const j = await r.json();
   assertEquals(r.status, 200);
-  assertEquals(Object.keys(j).sort(), ["planning", "problemen"]);
+  assertEquals(Object.keys(j).sort(), ["planning", "problemen", "uitgesloten"]);
   assert(Array.isArray(j.planning));
   assert(Array.isArray(j.problemen));
+  assert(Array.isArray(j.uitgesloten));
+});
+
+// Uitgesloten monteur: verschijnt in uitgesloten, niet in planning, niet als MONTEUR_NIET_GEKOPPELD
+Deno.test("uitgesloten monteur wordt nooit naar urenapp gestuurd en niet als probleem geteld", async () => {
+  const { data: proj } = await admin.from("projecten").insert({
+    case_nummer: `TPX-${Date.now()}`, station_naam: "X", jaar: 2026, status: "concept",
+    urenapp_project_id: UA_P,
+  }).select("id").single();
+  const projectId = proj!.id as string;
+
+  // monteur uitgesloten met reden
+  const { data: mEx } = await admin.from("monteurs").insert({
+    naam: `EX-${Date.now()}`, type: "montagemonteur", actief: true, werkdagen: [1,2,3,4,5],
+    urenapp_sync_enabled: false,
+    urenapp_sync_exclusion_reason: "sporadisch_ingehuurd",
+  }).select("id").single();
+  // monteur uitgesloten + tegelijk gekoppeld: nog steeds nooit syncen
+  const { data: mExLinked } = await admin.from("monteurs").insert({
+    naam: `EXL-${Date.now()}`, type: "montagemonteur", actief: true, werkdagen: [1,2,3,4,5],
+    urenapp_profile_id: UA_M,
+    urenapp_sync_enabled: false,
+    urenapp_sync_exclusion_reason: "anders",
+  }).select("id").single();
+  const mExId = mEx!.id as string;
+  const mExLinkedId = mExLinked!.id as string;
+
+  const { data: week } = await admin.from("project_weken").insert({
+    project_id: projectId, week_nr: 25, positie: 0,
+  }).select("id").single();
+  const { data: cMa } = await admin.from("planning_cellen").insert({
+    week_id: week!.id, dag_index: 0,
+  }).select("id").single();
+  const cMaId = cMa!.id as string;
+  await admin.from("cel_monteurs").insert([
+    { cel_id: cMaId, monteur_id: mExId },
+    { cel_id: cMaId, monteur_id: mExLinkedId },
+  ]);
+
+  try {
+    const r = await call({
+      datum_vanaf: "2026-06-15", datum_tot: "2026-06-19",
+      planner_project_ids: [projectId],
+      planner_monteur_ids: [mExId, mExLinkedId],
+    });
+    const j = await r.json();
+    assertEquals(r.status, 200);
+    assertEquals(Object.keys(j).sort(), ["planning", "problemen", "uitgesloten"]);
+
+    // planning bevat geen uitgesloten monteurs
+    const mine = j.planning.filter((p: any) => p.planner_project_id === projectId);
+    assertEquals(mine.length, 0);
+
+    // geen MONTEUR_NIET_GEKOPPELD voor deze cel
+    const probs = j.problemen.filter(
+      (p: any) => p.planning_cel_id === cMaId && p.code === "MONTEUR_NIET_GEKOPPELD"
+    );
+    assertEquals(probs.length, 0);
+
+    // beide monteurs in uitgesloten, met exact de afgesproken velden
+    const ex = j.uitgesloten.filter((u: any) => u.planning_cel_id === cMaId);
+    assertEquals(ex.length, 2);
+    for (const u of ex) {
+      assertEquals(Object.keys(u).sort(), ["datum", "planner_monteur_id", "planning_cel_id", "reden"]);
+      assertEquals(u.datum, "2026-06-15");
+      assert(["sporadisch_ingehuurd", "anders"].includes(u.reden));
+    }
+    // urenapp_profile_id mag NOOIT in uitgesloten zitten (geen PII / koppelinfo lekken)
+    for (const u of ex) assert(!("urenapp_profile_id" in u));
+  } finally {
+    await admin.from("cel_monteurs").delete().eq("cel_id", cMaId);
+    await admin.from("planning_cellen").delete().eq("id", cMaId);
+    await admin.from("project_weken").delete().eq("project_id", projectId);
+    await admin.from("projecten").delete().eq("id", projectId);
+    await admin.from("monteurs").delete().eq("id", mExId);
+    await admin.from("monteurs").delete().eq("id", mExLinkedId);
+  }
 });
 
 // Volledige scenariotest: koppel een testproject + monteur + week + cellen
