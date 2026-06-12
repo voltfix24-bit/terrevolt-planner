@@ -200,6 +200,8 @@ export type Database = {
           naam: string
           type: string
           urenapp_profile_id: string | null
+          urenapp_sync_enabled: boolean
+          urenapp_sync_exclusion_reason: string | null
           werkdagen: number[] | null
         }
         Insert: {
@@ -211,6 +213,8 @@ export type Database = {
           naam: string
           type: string
           urenapp_profile_id?: string | null
+          urenapp_sync_enabled?: boolean
+          urenapp_sync_exclusion_reason?: string | null
           werkdagen?: number[] | null
         }
         Update: {
@@ -222,6 +226,8 @@ export type Database = {
           naam?: string
           type?: string
           urenapp_profile_id?: string | null
+          urenapp_sync_enabled?: boolean
+          urenapp_sync_exclusion_reason?: string | null
           werkdagen?: number[] | null
         }
         Relationships: []
