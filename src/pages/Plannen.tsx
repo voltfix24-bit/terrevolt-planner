@@ -805,6 +805,34 @@ const Plannen = () => {
     return () => ro.disconnect();
   }, [bodyScrollRef.current]);
 
+  // Auto-scroll bij openen van een gepland project: spring naar de eerste week
+  // die planning_cellen bevat, zodat de gebruiker direct de planning ziet
+  // zonder handmatig te hoeven scrollen.
+  const autoScrolledForProjectRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!projectId) {
+      autoScrolledForProjectRef.current = null;
+      return;
+    }
+    if (autoScrolledForProjectRef.current === projectId) return;
+    if (weken.length === 0) return;
+    if (cellen.size === 0) return;
+    if (!bodyScrollRef.current) return;
+    const weekHasCel = new Set<string>();
+    cellen.forEach((c) => weekHasCel.add(c.week_id));
+    if (weekHasCel.size === 0) return;
+    const sorted = [...weken].sort((a, b) => a.positie - b.positie);
+    const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
+    autoScrolledForProjectRef.current = projectId;
+    if (idx <= 0) return;
+    const left = idx * 5 * CELL_W;
+    requestAnimationFrame(() => {
+      if (headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
+      if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
+      setGridScrollLeft(left);
+    });
+  }, [projectId, weken, cellen]);
+
   /* ----------------------------- cell ops ----------------------------- */
   const updateCellLocal = useCallback((cel: Cel) => {
     setCellen((prev) => {
