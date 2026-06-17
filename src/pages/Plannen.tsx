@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  Crosshair,
   GripVertical,
   History,
   Pencil,
@@ -854,6 +855,41 @@ const Plannen = () => {
         // Markeer pas als gedaan nadat scroll daadwerkelijk is toegepast.
         autoScrolledForProjectRef.current = projectId;
         // Extra passes voor browser layout settling.
+        setTimeout(apply, 50);
+        setTimeout(apply, 200);
+        return;
+      }
+      if (++tries < maxTries) setTimeout(tick, 50);
+    };
+    requestAnimationFrame(tick);
+  }, [projectId, weken, cellen]);
+
+  /* ----------------------------- handmatige scroll naar planning ----------------------------- */
+  const handleScrollToPlanned = useCallback(() => {
+    if (!projectId || weken.length === 0 || cellen.size === 0) return;
+    const projectWeekIds = new Set(weken.map((w) => w.id));
+    const weekHasCel = new Set<string>();
+    cellen.forEach((c) => {
+      if (projectWeekIds.has(c.week_id)) weekHasCel.add(c.week_id);
+    });
+    if (weekHasCel.size === 0) return;
+    const sorted = [...weken].sort((a, b) => a.positie - b.positie);
+    const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
+    if (idx < 0) return;
+    const targetIdx = Math.max(0, idx - 1);
+    const left = targetIdx * 5 * CELL_W;
+    const apply = () => {
+      if (headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
+      if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
+      setGridScrollLeft(left);
+    };
+    let tries = 0;
+    const maxTries = 40;
+    const tick = () => {
+      const el = bodyScrollRef.current;
+      if (el && el.scrollWidth > el.clientWidth + left - 1) {
+        apply();
+        autoScrolledForProjectRef.current = projectId;
         setTimeout(apply, 50);
         setTimeout(apply, 200);
         return;
@@ -2135,6 +2171,14 @@ const Plannen = () => {
             className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
           >
             <Printer className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleScrollToPlanned}
+            title="Scroll naar geplande data"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
+          >
+            <Crosshair className="h-4 w-4" />
           </button>
         </div>
       </div>
