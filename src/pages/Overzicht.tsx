@@ -844,7 +844,7 @@ export default function Overzicht() {
         const db = earliestDate(b);
         if (da !== db) return da - db;
       }
-      return (a.naam ?? "").localeCompare(b.naam ?? "");
+      return (a.case_nummer ?? "").localeCompare(b.case_nummer ?? "");
     });
     return sorted.filter((p) => {
       if (filterProjectId && p.id !== filterProjectId) return false;
