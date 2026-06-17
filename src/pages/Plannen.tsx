@@ -63,6 +63,7 @@ import {
   initialen,
   wrapWeek,
   addIsoWeeks,
+  weekDeltaIso,
 } from "@/lib/planning-types";
 
 import {
