@@ -402,7 +402,22 @@ const Plannen = () => {
       return;
     }
     setProject(projRes.data as Project);
-    const weekRows = (wRes.data ?? []) as Week[];
+    let weekRows = ((wRes.data ?? []) as Week[]).slice().sort((a, b) =>
+      a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
+    );
+    // Repareer posities als ze niet chronologisch zijn (legacy data)
+    const posMismatch = weekRows.some((w, i) => w.positie !== i);
+    if (posMismatch && weekRows.length > 0) {
+      const fixes = weekRows
+        .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+        .filter(Boolean) as { id: string; positie: number }[];
+      await Promise.all(
+        fixes.map((p) =>
+          supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
+        ),
+      );
+      weekRows = weekRows.map((w, i) => ({ ...w, positie: i }));
+    }
     setWeken(weekRows);
     let actRows = (aRes.data ?? []) as Activiteit[];
     setMonteurs((mRes.data ?? []) as Monteur[]);
@@ -585,15 +600,10 @@ const Plannen = () => {
             .order("positie", { ascending: true });
           let finalWeeks = ((afterRows ?? []) as Week[]).slice();
 
-          // Hercomputeer positie op basis van week_nr om gaten/duplicaten te corrigeren
-          // (ISO-weken stijgend; week 52→1 jaarwissel handhaven we via volgorde van candidates).
-          const wnOrder = new Map<number, number>();
-          dedup.forEach((c, i) => wnOrder.set(c.week_nr, i));
-          finalWeeks.sort((a, b) => {
-            const ai = wnOrder.has(a.week_nr) ? wnOrder.get(a.week_nr)! : 9999 + a.week_nr;
-            const bi = wnOrder.has(b.week_nr) ? wnOrder.get(b.week_nr)! : 9999 + b.week_nr;
-            return ai - bi;
-          });
+          // Hercomputeer positie chronologisch op (jaar, week_nr).
+          finalWeeks.sort((a, b) =>
+            a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
+          );
           // Push positie-correcties als ze afwijken
           const positieFixes = finalWeeks
             .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
@@ -655,15 +665,10 @@ const Plannen = () => {
             .eq("project_id", projectId)
             .order("positie", { ascending: true });
           let finalWeeks = ((afterRows ?? []) as Week[]).slice();
-          // Hercomputeer posities op basis van chronologische volgorde van candidates,
-          // onbekende week_nrs achteraan op week_nr volgorde.
-          const wnOrder = new Map<number, number>();
-          candidates.forEach((c, i) => wnOrder.set(c.week_nr, i));
-          finalWeeks.sort((a, b) => {
-            const ai = wnOrder.has(a.week_nr) ? wnOrder.get(a.week_nr)! : 9999 + a.week_nr;
-            const bi = wnOrder.has(b.week_nr) ? wnOrder.get(b.week_nr)! : 9999 + b.week_nr;
-            return ai - bi;
-          });
+          // Hercomputeer posities chronologisch op (jaar, week_nr).
+          finalWeeks.sort((a, b) =>
+            a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
+          );
           const fixes = finalWeeks
             .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
             .filter(Boolean) as { id: string; positie: number }[];
