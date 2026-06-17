@@ -818,13 +818,19 @@ const Plannen = () => {
     if (weken.length === 0) return;
     if (cellen.size === 0) return;
     if (!bodyScrollRef.current) return;
+    // Bouw set van week_ids die bij DIT project horen, zodat stale cellen
+    // van een eerder project ons niet voortijdig laten "klaar" markeren.
+    const projectWeekIds = new Set(weken.map((w) => w.id));
     const weekHasCel = new Set<string>();
-    cellen.forEach((c) => weekHasCel.add(c.week_id));
-    if (weekHasCel.size === 0) return;
+    cellen.forEach((c) => {
+      if (projectWeekIds.has(c.week_id)) weekHasCel.add(c.week_id);
+    });
+    if (weekHasCel.size === 0) return; // cellen nog niet voor dit project geladen
     const sorted = [...weken].sort((a, b) => a.positie - b.positie);
     const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
+    if (idx < 0) return;
+    // Markeer als gedaan ZODRA we daadwerkelijk de geplande week hebben gevonden.
     autoScrolledForProjectRef.current = projectId;
-    if (idx <= 0) return;
     // Schuif één week eerder zodat er wat context links van de geplande week
     // zichtbaar is. Clamp op 0.
     const targetIdx = Math.max(0, idx - 1);
@@ -836,9 +842,8 @@ const Plannen = () => {
     };
     requestAnimationFrame(() => {
       apply();
-      // Tweede pass na layout-settle (sommige browsers clampen scrollLeft
-      // wanneer het grid net pas zijn definitieve breedte heeft gekregen).
       setTimeout(apply, 50);
+      setTimeout(apply, 200);
     });
   }, [projectId, weken, cellen]);
 
