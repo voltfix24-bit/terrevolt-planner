@@ -59,6 +59,18 @@ export function addIsoWeeks(
   return isoWeekPartsOf(m);
 }
 
+/** Verschil in ISO-weken tussen twee (jaar, week_nr) tupels. */
+export function weekDeltaIso(
+  fromJaar: number,
+  fromWeek: number,
+  toJaar: number,
+  toWeek: number,
+): number {
+  const a = getMondayOfWeek(fromWeek, fromJaar);
+  const b = getMondayOfWeek(toWeek, toJaar);
+  return Math.round((b.getTime() - a.getTime()) / (7 * 86400000));
+}
+
 export function initialen(naam: string): string {
   const parts = naam.trim().split(/\s+/);
   if (parts.length === 0) return "";
