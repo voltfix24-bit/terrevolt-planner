@@ -822,7 +822,6 @@ const Plannen = () => {
     if (autoScrolledForProjectRef.current === projectId) return;
     if (weken.length === 0) return;
     if (cellen.size === 0) return;
-    if (!bodyScrollRef.current) return;
     // Bouw set van week_ids die bij DIT project horen, zodat stale cellen
     // van een eerder project ons niet voortijdig laten "klaar" markeren.
     const projectWeekIds = new Set(weken.map((w) => w.id));
@@ -834,8 +833,6 @@ const Plannen = () => {
     const sorted = [...weken].sort((a, b) => a.positie - b.positie);
     const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
     if (idx < 0) return;
-    // Markeer als gedaan ZODRA we daadwerkelijk de geplande week hebben gevonden.
-    autoScrolledForProjectRef.current = projectId;
     // Schuif één week eerder zodat er wat context links van de geplande week
     // zichtbaar is. Clamp op 0.
     const targetIdx = Math.max(0, idx - 1);
@@ -845,12 +842,27 @@ const Plannen = () => {
       if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
       setGridScrollLeft(left);
     };
-    requestAnimationFrame(() => {
-      apply();
-      setTimeout(apply, 50);
-      setTimeout(apply, 200);
-    });
+    // Poll tot de scroll container daadwerkelijk gemonteerd is en breed
+    // genoeg is om te scrollen — voorkomt no-op als de ref nog niet bestaat
+    // of de grid nog geen layout heeft.
+    let tries = 0;
+    const maxTries = 40; // ~2s bij 50ms
+    const tick = () => {
+      const el = bodyScrollRef.current;
+      if (el && el.scrollWidth > el.clientWidth + left - 1) {
+        apply();
+        // Markeer pas als gedaan nadat scroll daadwerkelijk is toegepast.
+        autoScrolledForProjectRef.current = projectId;
+        // Extra passes voor browser layout settling.
+        setTimeout(apply, 50);
+        setTimeout(apply, 200);
+        return;
+      }
+      if (++tries < maxTries) setTimeout(tick, 50);
+    };
+    requestAnimationFrame(tick);
   }, [projectId, weken, cellen]);
+
 
   /* ----------------------------- cell ops ----------------------------- */
   const updateCellLocal = useCallback((cel: Cel) => {
