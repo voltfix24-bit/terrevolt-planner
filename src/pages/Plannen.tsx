@@ -1469,31 +1469,45 @@ const Plannen = () => {
         .map((w) => (w.id === week_id ? { ...w, jaar: newJaar, week_nr: newNr } : w))
         .sort((a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr);
       setWeken(updated);
-      const { error } = await supabase
-        .from("project_weken")
-        .update({ jaar: newJaar, week_nr: newNr })
-        .eq("id", week_id);
-      if (error) {
-        toast.error("Weeknummer opslaan mislukt");
-        loadAll();
-        return;
-      }
-      // Herstel posities op chronologische volgorde
-      const fixes = updated
-        .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-        .filter(Boolean) as { id: string; positie: number }[];
-      if (fixes.length > 0) {
-        await Promise.all(
-          fixes.map((f) =>
-            supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
-          ),
-        );
-        setWeken((prev) =>
-          prev.map((w) => {
-            const f = fixes.find((x) => x.id === w.id);
-            return f ? { ...w, positie: f.positie } : w;
-          }),
-        );
+  // Wijzig (jaar, week_nr) van één week en verschuif álle andere weken met dezelfde delta.
+  // Zo blijven de onderlinge afstanden bewaard en is er nooit een unique-constraint conflict
+  // binnen het project (alle weken schuiven samen op).
+  const setWeekNr = useCallback(
+    async (week_id: string, newJaar: number, newNr: number) => {
+      const target = weken.find((w) => w.id === week_id);
+      if (!target) return;
+      if (target.jaar === newJaar && target.week_nr === newNr) return;
+      const delta = weekDeltaIso(target.jaar, target.week_nr, newJaar, newNr);
+      if (delta === 0) return;
+
+      const shifted = weken.map((w) => {
+        const n = addIsoWeeks(w.jaar, w.week_nr, delta);
+        return { ...w, jaar: n.jaar, week_nr: n.week_nr };
+      });
+      const sortedNew = [...shifted].sort(
+        (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
+      );
+      // Posities hercomputeren op chronologische volgorde
+      const withPos = sortedNew.map((w, i) => ({ ...w, positie: i }));
+      setWeken(withPos);
+
+      // Update in veilige volgorde om transient unique-conflicts te vermijden:
+      // delta>0 → hoog naar laag; delta<0 → laag naar hoog.
+      const updateOrder = [...withPos].sort((a, b) =>
+        delta > 0
+          ? b.jaar - a.jaar || b.week_nr - a.week_nr
+          : a.jaar - b.jaar || a.week_nr - b.week_nr,
+      );
+      for (const w of updateOrder) {
+        const { error } = await supabase
+          .from("project_weken")
+          .update({ jaar: w.jaar, week_nr: w.week_nr, positie: w.positie })
+          .eq("id", w.id);
+        if (error) {
+          toast.error("Weeknummers opslaan mislukt");
+          loadAll();
+          return;
+        }
       }
     },
     [weken, loadAll],
