@@ -402,7 +402,22 @@ const Plannen = () => {
       return;
     }
     setProject(projRes.data as Project);
-    const weekRows = (wRes.data ?? []) as Week[];
+    let weekRows = ((wRes.data ?? []) as Week[]).slice().sort((a, b) =>
+      a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
+    );
+    // Repareer posities als ze niet chronologisch zijn (legacy data)
+    const posMismatch = weekRows.some((w, i) => w.positie !== i);
+    if (posMismatch && weekRows.length > 0) {
+      const fixes = weekRows
+        .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+        .filter(Boolean) as { id: string; positie: number }[];
+      await Promise.all(
+        fixes.map((p) =>
+          supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
+        ),
+      );
+      weekRows = weekRows.map((w, i) => ({ ...w, positie: i }));
+    }
     setWeken(weekRows);
     let actRows = (aRes.data ?? []) as Activiteit[];
     setMonteurs((mRes.data ?? []) as Monteur[]);
