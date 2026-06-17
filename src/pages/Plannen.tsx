@@ -62,7 +62,9 @@ import {
   getMondayOfWeek,
   initialen,
   wrapWeek,
+  addIsoWeeks,
 } from "@/lib/planning-types";
+
 import {
   checkBeschikbaarheid,
   isFeestdag,
@@ -138,9 +140,11 @@ function enumerateISOWeeks(startISO: string, endISO: string): { week_nr: number;
 interface Week {
   id: string;
   week_nr: number;
+  jaar: number;
   positie: number;
   opmerking: string | null;
 }
+
 
 interface Activiteit {
   id: string;
@@ -547,24 +551,27 @@ const Plannen = () => {
             candidates = [{ week_nr: CURRENT_WEEK, year: CURRENT_YEAR }];
             usedFallback = true;
           }
-          // Dedupe op week_nr (ISO weeknummer is uniek binnen het projectjaar)
-          const seenWn = new Set<number>();
+          // Dedupe op (year, week_nr) — verschillende jaren mogen hetzelfde weeknummer hebben
+          const seenKey = new Set<string>();
           const dedup = candidates.filter((c) => {
-            if (seenWn.has(c.week_nr)) return false;
-            seenWn.add(c.week_nr);
+            const k = `${c.year}-${c.week_nr}`;
+            if (seenKey.has(k)) return false;
+            seenKey.add(k);
             return true;
           });
           // Positie volgt chronologische volgorde van de candidates
           const inserts = dedup.map((c, i) => ({
             project_id: projectId,
+            jaar: c.year,
             week_nr: c.week_nr,
             positie: i,
             opmerking: "",
           }));
-          // Insert; unique index op (project_id, week_nr) zorgt voor DB-niveau dedupe.
+          // Insert; unique index op (project_id, jaar, week_nr) zorgt voor DB-niveau dedupe.
           const { error: weekErr } = await supabase
             .from("project_weken")
             .insert(inserts);
+
           if (weekErr) {
             // Eén of meerdere weken bestonden al (race) — niet fataal, opnieuw ophalen.
             console.warn("[plannen] week-seed insert error, terugvallen op refetch:", weekErr.message);
@@ -624,18 +631,20 @@ const Plannen = () => {
       !seedingProjectsRef.current.has(projectId)
     ) {
       const candidates = enumerateISOWeeks(proj.gsu_datum, proj.geu_datum);
-      const existingWn = new Set(effectiveWeeks.map((w) => w.week_nr));
-      const missing = candidates.filter((c) => !existingWn.has(c.week_nr));
+      const existingKeys = new Set(effectiveWeeks.map((w) => `${w.jaar}-${w.week_nr}`));
+      const missing = candidates.filter((c) => !existingKeys.has(`${c.year}-${c.week_nr}`));
       if (missing.length > 0) {
         seedingProjectsRef.current.add(projectId);
         try {
           const inserts = missing.map((c) => ({
             project_id: projectId,
+            jaar: c.year,
             week_nr: c.week_nr,
             positie: 0,
             opmerking: "",
           }));
           const { error: topupErr } = await supabase.from("project_weken").insert(inserts);
+
           if (topupErr) {
             console.warn("[plannen] week-topup insert error:", topupErr.message);
           }
@@ -1374,10 +1383,19 @@ const Plannen = () => {
     if (!projectId) return;
     const lastWeek = weken[weken.length - 1];
     const newPos = (lastWeek?.positie ?? -1) + 1;
-    const newWeekNr = wrapWeek((lastWeek?.week_nr ?? 0) + 1);
+    const fallbackJaar = project?.jaar ?? new Date().getFullYear();
+    const next = lastWeek
+      ? addIsoWeeks(lastWeek.jaar, lastWeek.week_nr, 1)
+      : { jaar: fallbackJaar, week_nr: 1 };
     const { data, error } = await supabase
       .from("project_weken")
-      .insert({ project_id: projectId, week_nr: newWeekNr, positie: newPos, opmerking: "" })
+      .insert({
+        project_id: projectId,
+        jaar: next.jaar,
+        week_nr: next.week_nr,
+        positie: newPos,
+        opmerking: "",
+      })
       .select()
       .single();
     if (error || !data) {
@@ -1385,7 +1403,7 @@ const Plannen = () => {
       return;
     }
     setWeken((prev) => [...prev, data as Week]);
-  }, [projectId, weken]);
+  }, [projectId, weken, project?.jaar]);
 
   const removeLastWeek = useCallback(async () => {
     const last = weken[weken.length - 1];
@@ -1398,34 +1416,60 @@ const Plannen = () => {
     }
   }, [weken, loadAll]);
 
+  // Wijzig (jaar, week_nr) van één week. Géén cascade — andere weken blijven staan.
+  // Botst de nieuwe combinatie met een bestaande week in hetzelfde project, dan tonen we een fout.
   const setWeekNr = useCallback(
-    async (week_id: string, newNr: number) => {
-      // find index of changed week, shift all subsequent
-      const idx = weken.findIndex((w) => w.id === week_id);
-      if (idx < 0) return;
-      const updated = weken.map((w, i) =>
-        i >= idx ? { ...w, week_nr: wrapWeek(newNr + (i - idx)) } : w
+    async (week_id: string, newJaar: number, newNr: number) => {
+      const target = weken.find((w) => w.id === week_id);
+      if (!target) return;
+      if (target.jaar === newJaar && target.week_nr === newNr) return;
+      const conflict = weken.find(
+        (w) => w.id !== week_id && w.jaar === newJaar && w.week_nr === newNr,
       );
+      if (conflict) {
+        toast.error(`Week ${newNr} ${newJaar} bestaat al in dit project`);
+        return;
+      }
+      const updated = weken
+        .map((w) => (w.id === week_id ? { ...w, jaar: newJaar, week_nr: newNr } : w))
+        .sort((a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr);
       setWeken(updated);
-      // batch update affected
-      const updates = updated.slice(idx).map((w) =>
-        supabase.from("project_weken").update({ week_nr: w.week_nr }).eq("id", w.id)
-      );
-      const results = await Promise.all(updates);
-      if (results.some((r) => r.error)) {
-        toast.error("Weeknummers opslaan mislukt");
+      const { error } = await supabase
+        .from("project_weken")
+        .update({ jaar: newJaar, week_nr: newNr })
+        .eq("id", week_id);
+      if (error) {
+        toast.error("Weeknummer opslaan mislukt");
         loadAll();
+        return;
+      }
+      // Herstel posities op chronologische volgorde
+      const fixes = updated
+        .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+        .filter(Boolean) as { id: string; positie: number }[];
+      if (fixes.length > 0) {
+        await Promise.all(
+          fixes.map((f) =>
+            supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
+          ),
+        );
+        setWeken((prev) =>
+          prev.map((w) => {
+            const f = fixes.find((x) => x.id === w.id);
+            return f ? { ...w, positie: f.positie } : w;
+          }),
+        );
       }
     },
-    [weken, loadAll]
+    [weken, loadAll],
   );
 
-  // Toggle een specifiek weeknummer (toevoegen of verwijderen).
-  // Weken worden gesorteerd op week_nr en posities worden opnieuw genummerd.
+  // Toggle een (jaar, week_nr) — voeg toe of verwijder.
+  // Sorteert chronologisch (jaar, week_nr) en hernummert posities.
   const toggleWeekNr = useCallback(
-    async (week_nr: number) => {
+    async (jaar: number, week_nr: number) => {
       if (!projectId) return;
-      const existing = weken.find((w) => w.week_nr === week_nr);
+      const existing = weken.find((w) => w.jaar === jaar && w.week_nr === week_nr);
       if (existing) {
         // Verwijderen
         const next = weken.filter((w) => w.id !== existing.id);
@@ -1439,7 +1483,6 @@ const Plannen = () => {
           loadAll();
           return;
         }
-        // Hernummer posities
         const fixes = next
           .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
           .filter(Boolean) as { id: string; positie: number }[];
@@ -1457,15 +1500,18 @@ const Plannen = () => {
           );
         }
       } else {
-        // Toevoegen op chronologische positie (sorteer op week_nr)
-        const inserted = [...weken, { week_nr } as Week].sort(
-          (a, b) => a.week_nr - b.week_nr,
+        // Toevoegen
+        const inserted = [...weken, { jaar, week_nr } as Week].sort(
+          (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
         );
-        const insertIdx = inserted.findIndex((w) => w.week_nr === week_nr);
+        const insertIdx = inserted.findIndex(
+          (w) => w.jaar === jaar && w.week_nr === week_nr,
+        );
         const { data, error } = await supabase
           .from("project_weken")
           .insert({
             project_id: projectId,
+            jaar,
             week_nr,
             positie: insertIdx,
             opmerking: "",
@@ -1477,9 +1523,10 @@ const Plannen = () => {
           return;
         }
         const newWeek = data as Week;
-        const next = [...weken, newWeek].sort((a, b) => a.week_nr - b.week_nr);
+        const next = [...weken, newWeek].sort(
+          (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
+        );
         setWeken(next);
-        // Hernummer posities
         const fixes = next
           .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
           .filter(Boolean) as { id: string; positie: number }[];
@@ -1500,6 +1547,7 @@ const Plannen = () => {
     },
     [projectId, weken, loadAll],
   );
+
 
   /* ----------------------------- activiteit ops ----------------------------- */
   const addActiviteitFromType = useCallback(
@@ -1693,10 +1741,11 @@ const Plannen = () => {
   // Tooltip-tekst voor lege cellen in de huidige ISO-week.
   // Verklaart waarom de week een groene tint heeft + samenvatting van wat er die week gepland staat.
   const currentWeekTooltip = useMemo<string | null>(() => {
-    const projectJaar = project?.jaar ?? new Date().getFullYear();
-    if (projectJaar !== CURRENT_YEAR) return null;
-    const currentWeek = weken.find((w) => w.week_nr === CURRENT_WEEK);
+    const currentWeek = weken.find(
+      (w) => w.week_nr === CURRENT_WEEK && w.jaar === CURRENT_YEAR,
+    );
     if (!currentWeek) return null;
+
 
     // Tel per activiteit hoeveel dagen er gepland zijn in deze week (cellen met kleur_code).
     const dagenPerActiviteit = new Map<string, number>();
@@ -2023,10 +2072,10 @@ const Plannen = () => {
                   <WeekHeader
                     key={w.id}
                     week={w}
-                    jaar={project.jaar ?? new Date().getFullYear()}
-                    onWeekChange={(nr) => setWeekNr(w.id, nr)}
+                    onWeekChange={(jaar, nr) => { void setWeekNr(w.id, jaar, nr); }}
                   />
                 ))}
+
               </div>
             </div>
           </div>
@@ -2461,51 +2510,73 @@ const Plannen = () => {
           <div className="px-6 py-5 space-y-4">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>
-                Jaar <span className="text-foreground font-semibold">{project.jaar ?? new Date().getFullYear()}</span>
+                Vrij scrollen door alle jaren — meerdere jaren per project is mogelijk.
               </span>
               <span>
                 {weken.length} {weken.length === 1 ? "week" : "weken"} geselecteerd
               </span>
             </div>
-            <div className="max-h-[55vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
-                {Array.from({ length: 53 }, (_, i) => i + 1).map((nr) => {
-                  const selected = weken.some((w) => w.week_nr === nr);
-                  const monday = getMondayOfWeek(nr, project.jaar ?? new Date().getFullYear());
-                  const isNow = nr === CURRENT_WEEK && (project.jaar ?? new Date().getFullYear()) === CURRENT_YEAR;
-                  return (
-                    <button
-                      key={nr}
-                      type="button"
-                      onClick={() => toggleWeekNr(nr)}
-                      className={[
-                        "group flex flex-col items-start gap-0.5 rounded-md border px-2.5 py-2 text-left transition-all",
-                        selected
-                          ? "border-primary/60 bg-primary/15 text-foreground"
-                          : "border-fg/10 bg-fg/[0.03] text-muted-foreground hover:border-fg/25 hover:bg-fg/[0.07] hover:text-foreground",
-                      ].join(" ")}
-                    >
-                      <div className="flex w-full items-center justify-between">
-                        <span className="font-display text-xs font-bold tracking-wide">
-                          W{nr}
-                        </span>
-                        {selected && <Check className="h-3 w-3 text-primary" />}
-                        {!selected && isNow && (
-                          <span
-                            className="rounded-full px-1.5 text-[8px] font-bold"
-                            style={{ background: "rgba(16,185,129,0.2)", color: "#10b981" }}
-                          >
-                            Nu
-                          </span>
-                        )}
+            <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-4">
+              {(() => {
+                const focusJaar = project.jaar ?? new Date().getFullYear();
+                const opts = buildYearWeekList(focusJaar, 6);
+                const perJaar = new Map<number, { jaar: number; week_nr: number }[]>();
+                for (const o of opts) {
+                  const arr = perJaar.get(o.jaar) ?? [];
+                  arr.push(o);
+                  perJaar.set(o.jaar, arr);
+                }
+                return Array.from(perJaar.entries())
+                  .sort((a, b) => a[0] - b[0])
+                  .map(([yr, weeks]) => (
+                    <div key={yr} className="space-y-2">
+                      <div className="sticky top-0 z-10 bg-[var(--surface-solid)] px-1 py-1 text-[11px] font-display font-bold uppercase tracking-wider text-primary/80">
+                        Jaar {yr}
                       </div>
-                      <span className="text-[10px] opacity-80">{formatDate(monday)}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                      <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
+                        {weeks.map(({ week_nr: nr }) => {
+                          const selected = weken.some(
+                            (w) => w.jaar === yr && w.week_nr === nr,
+                          );
+                          const monday = getMondayOfWeek(nr, yr);
+                          const isNow = nr === CURRENT_WEEK && yr === CURRENT_YEAR;
+                          return (
+                            <button
+                              key={`${yr}-${nr}`}
+                              type="button"
+                              onClick={() => toggleWeekNr(yr, nr)}
+                              className={[
+                                "group flex flex-col items-start gap-0.5 rounded-md border px-2.5 py-2 text-left transition-all",
+                                selected
+                                  ? "border-primary/60 bg-primary/15 text-foreground"
+                                  : "border-fg/10 bg-fg/[0.03] text-muted-foreground hover:border-fg/25 hover:bg-fg/[0.07] hover:text-foreground",
+                              ].join(" ")}
+                            >
+                              <div className="flex w-full items-center justify-between">
+                                <span className="font-display text-xs font-bold tracking-wide">
+                                  W{nr}
+                                </span>
+                                {selected && <Check className="h-3 w-3 text-primary" />}
+                                {!selected && isNow && (
+                                  <span
+                                    className="rounded-full px-1.5 text-[8px] font-bold"
+                                    style={{ background: "rgba(16,185,129,0.2)", color: "#10b981" }}
+                                  >
+                                    Nu
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] opacity-80">{formatDate(monday)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ));
+              })()}
             </div>
           </div>
+
 
         </DialogContent>
       </Dialog>
@@ -2515,18 +2586,50 @@ const Plannen = () => {
 
 /* ----------------------------- Sub components ----------------------------- */
 
+// Bouw een lijst van (jaar, week_nr) rond een referentiejaar, voor vrije scroll.
+function buildYearWeekList(focusJaar: number, range = 6): { jaar: number; week_nr: number }[] {
+  const out: { jaar: number; week_nr: number }[] = [];
+  for (let y = focusJaar - range; y <= focusJaar + range; y++) {
+    // Aantal ISO-weken in een jaar (52 of 53) — neem 53 en filter weken die niet bestaan
+    for (let w = 1; w <= 53; w++) {
+      const monday = getMondayOfWeek(w, y);
+      // valideer: getMondayOfWeek(54) bestaat soms in de volgende ISO-jaar; check via re-derivatie
+      const checkJan4 = new Date(y, 0, 4);
+      const checkDow = checkJan4.getDay() || 7;
+      const wk1Monday = new Date(checkJan4);
+      wk1Monday.setDate(checkJan4.getDate() - checkDow + 1);
+      const diffWeeks = Math.round(
+        (monday.getTime() - wk1Monday.getTime()) / (7 * 86_400_000),
+      );
+      if (diffWeeks + 1 !== w) continue;
+      // valideer of week 53 bestaat in dit jaar
+      if (w === 53) {
+        const dec28 = new Date(y, 11, 28);
+        const dec28Dow = dec28.getDay() || 7;
+        const dec28Monday = new Date(dec28);
+        dec28Monday.setDate(dec28.getDate() - dec28Dow + 1);
+        const dec28Wk = Math.round(
+          (dec28Monday.getTime() - wk1Monday.getTime()) / (7 * 86_400_000),
+        ) + 1;
+        if (dec28Wk < 53) continue;
+      }
+      out.push({ jaar: y, week_nr: w });
+    }
+  }
+  return out;
+}
+
 const WeekHeader = memo(function WeekHeader({
   week,
-  jaar,
   onWeekChange,
 }: {
   week: Week;
-  jaar: number;
-  onWeekChange: (nr: number) => void;
+  onWeekChange: (jaar: number, nr: number) => void;
 }) {
-  const monday = getMondayOfWeek(week.week_nr, jaar);
+  const monday = getMondayOfWeek(week.week_nr, week.jaar);
   const dayWidth = CELL_W * 5;
-  const isCurrentWeek = week.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
+  const isCurrentWeek = week.week_nr === CURRENT_WEEK && week.jaar === CURRENT_YEAR;
+  const options = useMemo(() => buildYearWeekList(week.jaar), [week.jaar]);
   return (
     <div
       className="shrink-0 flex flex-col"
@@ -2545,7 +2648,7 @@ const WeekHeader = memo(function WeekHeader({
             ].join(" ")}
             style={isCurrentWeek ? { color: "#10b981" } : undefined}
           >
-            Week {week.week_nr}
+            W{week.week_nr} · {week.jaar}
             {isCurrentWeek && (
               <span
                 style={{
@@ -2566,17 +2669,35 @@ const WeekHeader = memo(function WeekHeader({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="center"
-          className="border-fg/10 bg-[var(--surface-solid)] text-foreground max-h-72 overflow-y-auto"
+          className="border-fg/10 bg-[var(--surface-solid)] text-foreground max-h-72 overflow-y-auto w-48"
         >
-          {Array.from({ length: 53 }, (_, i) => i + 1).map((n) => (
-            <DropdownMenuItem
-              key={n}
-              onSelect={() => onWeekChange(n)}
-              className="cursor-pointer focus:bg-primary/15 focus:text-primary text-xs"
-            >
-              Week {n}
-            </DropdownMenuItem>
-          ))}
+          {options.map((o, idx) => {
+            const prev = options[idx - 1];
+            const showJaarHeader = !prev || prev.jaar !== o.jaar;
+            const isNow = o.week_nr === CURRENT_WEEK && o.jaar === CURRENT_YEAR;
+            const isSelected = o.week_nr === week.week_nr && o.jaar === week.jaar;
+            return (
+              <div key={`${o.jaar}-${o.week_nr}`}>
+                {showJaarHeader && (
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-fg/[0.04] sticky top-0">
+                    {o.jaar}
+                  </div>
+                )}
+                <DropdownMenuItem
+                  onSelect={() => onWeekChange(o.jaar, o.week_nr)}
+                  className={[
+                    "cursor-pointer focus:bg-primary/15 focus:text-primary text-xs flex justify-between",
+                    isSelected ? "bg-primary/10 text-primary" : "",
+                  ].join(" ")}
+                >
+                  <span>Week {o.week_nr}{isNow ? " · nu" : ""}</span>
+                  <span className="text-muted-foreground text-[10px]">
+                    {formatDate(getMondayOfWeek(o.week_nr, o.jaar))}
+                  </span>
+                </DropdownMenuItem>
+              </div>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
       <div className="flex flex-1">
@@ -2604,6 +2725,7 @@ const WeekHeader = memo(function WeekHeader({
     </div>
   );
 });
+
 
 const SidebarRow = ({ a, onRemove }: { a: Activiteit; onRemove: () => void }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -2719,7 +2841,7 @@ const GridRow = memo(function GridRow({
       }}
     >
       {weken.map((w, wi) => {
-        const isCurrentWeek = w.week_nr === CURRENT_WEEK && jaar === CURRENT_YEAR;
+        const isCurrentWeek = w.week_nr === CURRENT_WEEK && w.jaar === CURRENT_YEAR;
         return DAG_LABELS.map((_, d) => {
           const cel = cellen.get(cellKey(activiteit.id, w.id, d));
           const monteurIds = cel ? celMonteurs.get(cel.id) ?? [] : [];

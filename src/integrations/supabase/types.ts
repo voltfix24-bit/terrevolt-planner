@@ -655,6 +655,7 @@ export type Database = {
       project_weken: {
         Row: {
           id: string
+          jaar: number
           opmerking: string | null
           positie: number
           project_id: string | null
@@ -662,6 +663,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          jaar: number
           opmerking?: string | null
           positie: number
           project_id?: string | null
@@ -669,6 +671,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          jaar?: number
           opmerking?: string | null
           positie?: number
           project_id?: string | null

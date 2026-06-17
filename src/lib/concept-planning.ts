@@ -80,26 +80,40 @@ export async function loadConceptPlanning(
 export async function uitrollenNaarPlanning(opts: {
   project_id: string;
   startWeek: number;
+  startJaar?: number;
   cellen: ConceptCel[];
 }): Promise<{ aangemaakteCellen: number; aangemaakteWeken: number }> {
   const { project_id, startWeek, cellen } = opts;
   if (cellen.length === 0) return { aangemaakteCellen: 0, aangemaakteWeken: 0 };
 
-  // 1) Bepaal benodigde weeknummers
-  const benodigdeWeken = new Set<number>();
+  // Bepaal startjaar: meegegeven, anders uit projecten, anders huidig jaar
+  let startJaar = opts.startJaar;
+  if (startJaar === undefined) {
+    const { data: proj } = await supabase
+      .from("projecten")
+      .select("jaar")
+      .eq("id", project_id)
+      .maybeSingle();
+    startJaar = (proj?.jaar as number | null) ?? new Date().getFullYear();
+  }
+
+  // 1) Bepaal benodigde (jaar, week_nr) paren via echte datum-rekenkunde
+  const { addIsoWeeks } = await import("./planning-types");
+  const benodigdeWeken = new Map<string, { jaar: number; week_nr: number }>();
   for (const c of cellen) {
     const { week_offset } = offsetToWeekDag(c.dag_offset);
-    benodigdeWeken.add(((startWeek - 1 + week_offset) % 53) + 1);
+    const w = addIsoWeeks(startJaar, startWeek, week_offset);
+    benodigdeWeken.set(`${w.jaar}-${w.week_nr}`, w);
   }
 
   // 2) Bestaande project_weken laden
   const { data: bestaandeWeken } = await supabase
     .from("project_weken")
-    .select("id,week_nr,positie")
+    .select("id,week_nr,jaar,positie")
     .eq("project_id", project_id);
-  const wekenMap = new Map<number, string>();
+  const wekenMap = new Map<string, string>();
   (bestaandeWeken ?? []).forEach((w) =>
-    wekenMap.set(w.week_nr, w.id as string),
+    wekenMap.set(`${w.jaar}-${w.week_nr}`, w.id as string),
   );
   const maxPositie = (bestaandeWeken ?? []).reduce(
     (m, w) => Math.max(m, w.positie ?? 0),
@@ -107,12 +121,14 @@ export async function uitrollenNaarPlanning(opts: {
   );
 
   // 3) Ontbrekende weken aanmaken
-  const teMaken: { project_id: string; week_nr: number; positie: number }[] =
-    [];
+  const teMaken: { project_id: string; jaar: number; week_nr: number; positie: number }[] = [];
   let pos = maxPositie + 1;
-  for (const wn of Array.from(benodigdeWeken).sort((a, b) => a - b)) {
-    if (!wekenMap.has(wn)) {
-      teMaken.push({ project_id, week_nr: wn, positie: pos++ });
+  const sorted = Array.from(benodigdeWeken.values()).sort(
+    (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
+  );
+  for (const w of sorted) {
+    if (!wekenMap.has(`${w.jaar}-${w.week_nr}`)) {
+      teMaken.push({ project_id, jaar: w.jaar, week_nr: w.week_nr, positie: pos++ });
     }
   }
   let aangemaakteWeken = 0;
@@ -120,11 +136,14 @@ export async function uitrollenNaarPlanning(opts: {
     const { data: ingev, error: e1 } = await supabase
       .from("project_weken")
       .insert(teMaken)
-      .select("id,week_nr");
+      .select("id,week_nr,jaar");
     if (e1) throw e1;
-    (ingev ?? []).forEach((w) => wekenMap.set(w.week_nr, w.id as string));
+    (ingev ?? []).forEach((w) =>
+      wekenMap.set(`${w.jaar}-${w.week_nr}`, w.id as string),
+    );
     aangemaakteWeken = ingev?.length ?? 0;
   }
+
 
   // 4) Planning cellen aanmaken
   const insertRows: {
@@ -140,9 +159,10 @@ export async function uitrollenNaarPlanning(opts: {
   cellen.forEach((c) => {
     if (!c.activiteit_id) return;
     const { week_offset, dag_index } = offsetToWeekDag(c.dag_offset);
-    const wn = ((startWeek - 1 + week_offset) % 53) + 1;
-    const week_id = wekenMap.get(wn);
+    const w = addIsoWeeks(startJaar!, startWeek, week_offset);
+    const week_id = wekenMap.get(`${w.jaar}-${w.week_nr}`);
     if (!week_id) return;
+
     insertRows.push({
       activiteit_id: c.activiteit_id,
       week_id,

@@ -137,15 +137,20 @@ Deno.serve(async (req) => {
   const projectIds = [...projMap.keys()];
   if (projectIds.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
-  // 2) Load weken for these projects
-  let wekenQ = supabase.from("project_weken").select("id, project_id, week_nr");
+  // 2) Load weken for these projects (jaar nu per week opgeslagen)
+  let wekenQ = supabase.from("project_weken").select("id, project_id, week_nr, jaar");
   wekenQ = wekenQ.in("project_id", projectIds);
   const { data: weken, error: wkErr } = await wekenQ;
   if (wkErr) return json(500, { error: "DB error (weken)" });
   if (!weken || weken.length === 0) return json(200, { planning: [], problemen: [], uitgesloten: [] });
 
-  const weekMap = new Map<string, { project_id: string; week_nr: number | null }>();
-  for (const w of weken) weekMap.set(w.id as string, { project_id: w.project_id as string, week_nr: w.week_nr as number | null });
+  const weekMap = new Map<string, { project_id: string; week_nr: number | null; jaar: number | null }>();
+  for (const w of weken) weekMap.set(w.id as string, {
+    project_id: w.project_id as string,
+    week_nr: w.week_nr as number | null,
+    jaar: (w as { jaar?: number | null }).jaar ?? null,
+  });
+
 
   // 3) Load planning_cellen for these weken
   const weekIds = [...weekMap.keys()];
@@ -206,17 +211,20 @@ Deno.serve(async (req) => {
       problemen.push({ code: "WEEKNUMMER_ONGELDIG", planning_cel_id: celId, uitleg: "week_nr ontbreekt of ongeldig" });
       continue;
     }
-    if (proj.jaar === null || !Number.isInteger(proj.jaar)) {
-      problemen.push({ code: "PROJECTJAAR_ONGELDIG", planning_cel_id: celId, uitleg: "project jaar ontbreekt of ongeldig" });
+    // Bepaal het jaar van de week: per-week jaar (nieuw) heeft voorrang, anders project.jaar (fallback).
+    const weekJaar = week.jaar ?? proj.jaar;
+    if (weekJaar === null || !Number.isInteger(weekJaar)) {
+      problemen.push({ code: "PROJECTJAAR_ONGELDIG", planning_cel_id: celId, uitleg: "jaar ontbreekt voor deze week" });
       continue;
     }
 
-    const datum = isoWeekDate(proj.jaar, week.week_nr, dagIndex);
+    const datum = isoWeekDate(weekJaar, week.week_nr, dagIndex);
     if (!datum) {
       problemen.push({ code: "WEEKNUMMER_ONGELDIG", planning_cel_id: celId, uitleg: "week bestaat niet in iso-jaar" });
       continue;
     }
     if (datum < datum_vanaf || datum > datum_tot) continue;
+
 
     const monteurIdsForCel = cmByCel.get(celId) ?? [];
     if (monteurIdsForCel.length === 0) continue;
