@@ -2655,7 +2655,11 @@ function buildYearWeekList(focusJaar: number, range = 6): { jaar: number; week_n
       out.push({ jaar: y, week_nr: w });
     }
   }
-  return out;
+  // Beperk verleden: maximaal 52 ISO-weken vóór de huidige week tonen.
+  // Vooruit blijft vrij scrollen.
+  const minMonday = getMondayOfWeek(CURRENT_WEEK, CURRENT_YEAR);
+  minMonday.setDate(minMonday.getDate() - 52 * 7);
+  return out.filter(({ jaar, week_nr }) => getMondayOfWeek(week_nr, jaar) >= minMonday);
 }
 
 const WeekHeader = memo(function WeekHeader({
