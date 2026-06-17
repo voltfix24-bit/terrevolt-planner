@@ -1085,6 +1085,7 @@ export default function Overzicht() {
           .sort((a, b) => a - b)
           .map((wn, i) => ({
             project_id: projectId,
+            jaar,
             week_nr: wn,
             positie: maxPos + 1 + i,
           }));
@@ -1099,6 +1100,7 @@ export default function Overzicht() {
         (ingev ?? []).forEach((w) =>
           weekIdByNr.set(w.week_nr as number, w.id as string),
         );
+
       }
 
       const results = await Promise.all(

@@ -38,6 +38,27 @@ export function wrapWeek(n: number): number {
   return ((n - 1 + 53) % 53) + 1;
 }
 
+/** ISO-week-onderdelen (jaar + weeknummer) van een datum. */
+export function isoWeekPartsOf(d: Date): { jaar: number; week_nr: number } {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return { jaar: date.getUTCFullYear(), week_nr: week };
+}
+
+/** Verschuif een ISO-week met N weken, met correcte jaargrens. */
+export function addIsoWeeks(
+  jaar: number,
+  weekNr: number,
+  delta: number,
+): { jaar: number; week_nr: number } {
+  const m = getMondayOfWeek(weekNr, jaar);
+  m.setDate(m.getDate() + delta * 7);
+  return isoWeekPartsOf(m);
+}
+
 export function initialen(naam: string): string {
   const parts = naam.trim().split(/\s+/);
   if (parts.length === 0) return "";
