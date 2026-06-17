@@ -687,6 +687,40 @@ const Plannen = () => {
     }
 
 
+    // Anker: zorg dat de eerst getoonde week de huidige ISO-week is.
+    // Als de eerste week in het verleden ligt, verschuif alle weken uniform vooruit
+    // (relatieve afstanden tussen weken blijven behouden).
+    if (effectiveWeeks.length > 0) {
+      const sortedByPos = [...effectiveWeeks].sort((a, b) => a.positie - b.positie);
+      const first = sortedByPos[0];
+      const delta = weekDeltaIso(first.jaar, first.week_nr, CURRENT_YEAR, CURRENT_WEEK);
+      if (delta > 0) {
+        // Shift alle weken met +delta. Update in volgorde van hoog->laag om unique-conflict te vermijden.
+        const shifted = sortedByPos.map((w) => {
+          const n = addIsoWeeks(w.jaar, w.week_nr, delta);
+          return { ...w, jaar: n.jaar, week_nr: n.week_nr };
+        });
+        const ordered = [...shifted].sort(
+          (a, b) => b.jaar - a.jaar || b.week_nr - a.week_nr,
+        );
+        let anyError = false;
+        for (const w of ordered) {
+          const { error } = await supabase
+            .from("project_weken")
+            .update({ jaar: w.jaar, week_nr: w.week_nr })
+            .eq("id", w.id);
+          if (error) {
+            anyError = true;
+            console.warn("[plannen] anker-shift mislukt:", error.message);
+            break;
+          }
+        }
+        if (!anyError) {
+          effectiveWeeks = shifted.sort((a, b) => a.positie - b.positie);
+          setWeken(effectiveWeeks);
+        }
+      }
+    }
 
     // load cells for these weeks
     if (effectiveWeeks.length > 0) {
