@@ -687,37 +687,45 @@ const Plannen = () => {
     }
 
 
-    // Anker: zorg dat de eerst getoonde week de huidige ISO-week is.
-    // Als de eerste week in het verleden ligt, verschuif alle weken uniform vooruit
-    // (relatieve afstanden tussen weken blijven behouden).
+    // Anker: alleen voor projecten die nog NIET zijn gepland (geen planning_cellen).
+    // Reeds geplande projecten houden hun bestaande week-range — die mag in het verleden liggen.
     if (effectiveWeeks.length > 0) {
-      const sortedByPos = [...effectiveWeeks].sort((a, b) => a.positie - b.positie);
-      const first = sortedByPos[0];
-      const delta = weekDeltaIso(first.jaar, first.week_nr, CURRENT_YEAR, CURRENT_WEEK);
-      if (delta > 0) {
-        // Shift alle weken met +delta. Update in volgorde van hoog->laag om unique-conflict te vermijden.
-        const shifted = sortedByPos.map((w) => {
-          const n = addIsoWeeks(w.jaar, w.week_nr, delta);
-          return { ...w, jaar: n.jaar, week_nr: n.week_nr };
-        });
-        const ordered = [...shifted].sort(
-          (a, b) => b.jaar - a.jaar || b.week_nr - a.week_nr,
-        );
-        let anyError = false;
-        for (const w of ordered) {
-          const { error } = await supabase
-            .from("project_weken")
-            .update({ jaar: w.jaar, week_nr: w.week_nr })
-            .eq("id", w.id);
-          if (error) {
-            anyError = true;
-            console.warn("[plannen] anker-shift mislukt:", error.message);
-            break;
+      const weekIds = effectiveWeeks.map((w) => w.id);
+      const { count: celCount } = await supabase
+        .from("planning_cellen")
+        .select("id", { count: "exact", head: true })
+        .in("week_id", weekIds);
+      const isUnplanned = (celCount ?? 0) === 0;
+      if (isUnplanned) {
+        const sortedByPos = [...effectiveWeeks].sort((a, b) => a.positie - b.positie);
+        const first = sortedByPos[0];
+        const delta = weekDeltaIso(first.jaar, first.week_nr, CURRENT_YEAR, CURRENT_WEEK);
+        if (delta !== 0) {
+          const shifted = sortedByPos.map((w) => {
+            const n = addIsoWeeks(w.jaar, w.week_nr, delta);
+            return { ...w, jaar: n.jaar, week_nr: n.week_nr };
+          });
+          const ordered = [...shifted].sort((a, b) =>
+            delta > 0
+              ? b.jaar - a.jaar || b.week_nr - a.week_nr
+              : a.jaar - b.jaar || a.week_nr - b.week_nr,
+          );
+          let anyError = false;
+          for (const w of ordered) {
+            const { error } = await supabase
+              .from("project_weken")
+              .update({ jaar: w.jaar, week_nr: w.week_nr })
+              .eq("id", w.id);
+            if (error) {
+              anyError = true;
+              console.warn("[plannen] anker-shift mislukt:", error.message);
+              break;
+            }
           }
-        }
-        if (!anyError) {
-          effectiveWeeks = shifted.sort((a, b) => a.positie - b.positie);
-          setWeken(effectiveWeeks);
+          if (!anyError) {
+            effectiveWeeks = shifted.sort((a, b) => a.positie - b.positie);
+            setWeken(effectiveWeeks);
+          }
         }
       }
     }
@@ -2647,7 +2655,11 @@ function buildYearWeekList(focusJaar: number, range = 6): { jaar: number; week_n
       out.push({ jaar: y, week_nr: w });
     }
   }
-  return out;
+  // Beperk verleden: maximaal 52 ISO-weken vóór de huidige week tonen.
+  // Vooruit blijft vrij scrollen.
+  const minMonday = getMondayOfWeek(CURRENT_WEEK, CURRENT_YEAR);
+  minMonday.setDate(minMonday.getDate() - 52 * 7);
+  return out.filter(({ jaar, week_nr }) => getMondayOfWeek(week_nr, jaar) >= minMonday);
 }
 
 const WeekHeader = memo(function WeekHeader({
