@@ -1451,24 +1451,6 @@ const Plannen = () => {
     }
   }, [weken, loadAll]);
 
-  // Wijzig (jaar, week_nr) van één week. Géén cascade — andere weken blijven staan.
-  // Botst de nieuwe combinatie met een bestaande week in hetzelfde project, dan tonen we een fout.
-  const setWeekNr = useCallback(
-    async (week_id: string, newJaar: number, newNr: number) => {
-      const target = weken.find((w) => w.id === week_id);
-      if (!target) return;
-      if (target.jaar === newJaar && target.week_nr === newNr) return;
-      const conflict = weken.find(
-        (w) => w.id !== week_id && w.jaar === newJaar && w.week_nr === newNr,
-      );
-      if (conflict) {
-        toast.error(`Week ${newNr} ${newJaar} bestaat al in dit project`);
-        return;
-      }
-      const updated = weken
-        .map((w) => (w.id === week_id ? { ...w, jaar: newJaar, week_nr: newNr } : w))
-        .sort((a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr);
-      setWeken(updated);
   // Wijzig (jaar, week_nr) van één week en verschuif álle andere weken met dezelfde delta.
   // Zo blijven de onderlinge afstanden bewaard en is er nooit een unique-constraint conflict
   // binnen het project (alle weken schuiven samen op).
