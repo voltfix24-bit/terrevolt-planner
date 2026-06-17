@@ -795,14 +795,24 @@ export default function Overzicht() {
   // (3) overige projecten (bv. concept zonder planning) — onderaan.
   const visibleProjecten = useMemo(() => {
     const planned = new Set<string>();
+    // Earliest planned week_nr per project (binnen huidig jaar/zicht)
+    const earliestWeek = new Map<string, number>();
+    const noteWeek = (projectId: string, weekNr: number) => {
+      const cur = earliestWeek.get(projectId);
+      if (cur === undefined || weekNr < cur) earliestWeek.set(projectId, weekNr);
+    };
     for (const c of cellen) {
-      if (!c.activiteit_id || !c.kleur_code) continue;
+      if (!c.activiteit_id || !c.kleur_code || !c.week_id) continue;
       const act = activiteitById.get(c.activiteit_id);
-      if (act?.project_id) planned.add(act.project_id);
+      if (!act?.project_id) continue;
+      planned.add(act.project_id);
+      const w = weekById.get(c.week_id);
+      if (w) noteWeek(act.project_id, w.week_nr);
     }
     for (const w of weken) {
       if (w.project_id && visibleWeekNrSet.has(w.week_nr)) {
         planned.add(w.project_id);
+        noteWeek(w.project_id, w.week_nr);
       }
     }
     const inDateRange = (iso: string | null): boolean => {
@@ -815,18 +825,33 @@ export default function Overzicht() {
       if (inDateRange(p.gsu_datum) || inDateRange(p.geu_datum)) return 1;
       return 2;
     };
+    const earliestDate = (p: Project): number => {
+      const ds: number[] = [];
+      if (p.gsu_datum) ds.push(new Date(p.gsu_datum).getTime());
+      if (p.geu_datum) ds.push(new Date(p.geu_datum).getTime());
+      return ds.length ? Math.min(...ds) : Number.POSITIVE_INFINITY;
+    };
     const sorted = [...projecten].sort((a, b) => {
       const ta = tier(a);
       const tb = tier(b);
       if (ta !== tb) return ta - tb;
-      return 0;
+      if (ta === 0) {
+        const wa = earliestWeek.get(a.id) ?? Number.POSITIVE_INFINITY;
+        const wb = earliestWeek.get(b.id) ?? Number.POSITIVE_INFINITY;
+        if (wa !== wb) return wa - wb;
+      } else if (ta === 1) {
+        const da = earliestDate(a);
+        const db = earliestDate(b);
+        if (da !== db) return da - db;
+      }
+      return (a.case_nummer ?? "").localeCompare(b.case_nummer ?? "");
     });
     return sorted.filter((p) => {
       if (filterProjectId && p.id !== filterProjectId) return false;
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
       return true;
     });
-  }, [projecten, weken, cellen, activiteitById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus]);
+  }, [projecten, weken, cellen, activiteitById, weekById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus]);
 
   const schakelMonteurs = useMemo(
     () =>
