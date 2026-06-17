@@ -825,11 +825,20 @@ const Plannen = () => {
     const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
     autoScrolledForProjectRef.current = projectId;
     if (idx <= 0) return;
-    const left = idx * 5 * CELL_W;
-    requestAnimationFrame(() => {
+    // Schuif één week eerder zodat er wat context links van de geplande week
+    // zichtbaar is. Clamp op 0.
+    const targetIdx = Math.max(0, idx - 1);
+    const left = targetIdx * 5 * CELL_W;
+    const apply = () => {
       if (headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
       if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
       setGridScrollLeft(left);
+    };
+    requestAnimationFrame(() => {
+      apply();
+      // Tweede pass na layout-settle (sommige browsers clampen scrollLeft
+      // wanneer het grid net pas zijn definitieve breedte heeft gekregen).
+      setTimeout(apply, 50);
     });
   }, [projectId, weken, cellen]);
 
