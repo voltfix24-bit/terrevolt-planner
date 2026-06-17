@@ -2172,6 +2172,14 @@ const Plannen = () => {
           >
             <Printer className="h-4 w-4" />
           </button>
+          <button
+            type="button"
+            onClick={handleScrollToPlanned}
+            title="Scroll naar geplande data"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
+          >
+            <Crosshair className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
