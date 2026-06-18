@@ -971,6 +971,10 @@ export type Database = {
         Args: { p_bucket: string }
         Returns: number
       }
+      restore_concept_planning: {
+        Args: { p_apply?: boolean; p_target_ts: string }
+        Returns: Json
+      }
       set_audit_label: { Args: { p_label: string }; Returns: undefined }
       shift_project_weken: {
         Args: { p_delta: number; p_project_id: string }
