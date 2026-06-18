@@ -692,6 +692,66 @@ const Plannen = () => {
       }
     }
 
+    // Gap-fill: zorg dat tussen de eerste en laatste week alle ISO-weken bestaan,
+    // zodat de volgorde nooit een gat heeft (bv. W39 → W41 zonder W40).
+    if (effectiveWeeks.length >= 2 && !seedingProjectsRef.current.has(projectId)) {
+      const sortedChrono = [...effectiveWeeks].sort((a, b) =>
+        a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
+      );
+      const first = sortedChrono[0];
+      const last = sortedChrono[sortedChrono.length - 1];
+      const startMonday = getMondayOfWeek(first.week_nr, first.jaar);
+      const endMonday = getMondayOfWeek(last.week_nr, last.jaar);
+      const toISO = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const candidates = enumerateISOWeeks(toISO(startMonday), toISO(endMonday));
+      const existingKeys = new Set(effectiveWeeks.map((w) => `${w.jaar}-${w.week_nr}`));
+      const missing = candidates.filter((c) => !existingKeys.has(`${c.year}-${c.week_nr}`));
+      if (missing.length > 0) {
+        seedingProjectsRef.current.add(projectId);
+        try {
+          const inserts = missing.map((c) => ({
+            project_id: projectId,
+            jaar: c.year,
+            week_nr: c.week_nr,
+            positie: 0,
+            opmerking: "",
+          }));
+          const { error: gapErr } = await supabase.from("project_weken").insert(inserts);
+          if (gapErr) {
+            console.warn("[plannen] week-gapfill insert error:", gapErr.message);
+          }
+          const { data: afterRows } = await supabase
+            .from("project_weken")
+            .select("*")
+            .eq("project_id", projectId)
+            .order("positie", { ascending: true });
+          let finalWeeks = ((afterRows ?? []) as Week[]).slice();
+          finalWeeks.sort((a, b) =>
+            a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
+          );
+          const fixes = finalWeeks
+            .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+            .filter(Boolean) as { id: string; positie: number }[];
+          if (fixes.length > 0) {
+            await Promise.all(
+              fixes.map((p) =>
+                supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
+              ),
+            );
+            finalWeeks = finalWeeks.map((w, i) => ({ ...w, positie: i }));
+          }
+          effectiveWeeks = finalWeeks;
+          setWeken(effectiveWeeks);
+          toast.success(
+            `${missing.length} ontbrekende tussenliggende ${missing.length === 1 ? "week" : "weken"} toegevoegd`,
+          );
+        } finally {
+          seedingProjectsRef.current.delete(projectId);
+        }
+      }
+    }
+
 
     // Anker: alleen voor projecten die nog NIET zijn gepland (geen planning_cellen).
     // Reeds geplande projecten houden hun bestaande week-range — die mag in het verleden liggen.
