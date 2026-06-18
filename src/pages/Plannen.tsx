@@ -76,7 +76,7 @@ import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwi
 import { useConfirm, describeShift } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
-import { hasCellContent, formatOverwritePrompt } from "@/lib/cell-conflicts";
+import { hasCellContent, formatOverwritePrompt, prepareFillTargets } from "@/lib/cell-conflicts";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
