@@ -2452,7 +2452,17 @@ export default function Overzicht() {
                 const sc = statusColor(p.status);
                 const acts = activiteitenByProject.get(p.id) ?? [];
                 return (
-                  <div key={p.id}>
+                  <div
+                    key={p.id}
+                    onDragOver={(e) => handleProjectDragOver(e, p.id)}
+                    onDrop={(e) => handleProjectDrop(e, p.id)}
+                    onDragEnd={handleProjectDragEnd}
+                    style={{
+                      outline: dragOverProjectId === p.id ? "2px dashed hsl(var(--primary))" : "none",
+                      outlineOffset: -2,
+                      opacity: dragProjectId === p.id ? 0.5 : 1,
+                    }}
+                  >
                     {/* Project header sidebar */}
                     <div
                       onClick={() => navigateToProject(p.id)}
@@ -2460,7 +2470,7 @@ export default function Overzicht() {
                       className="group relative flex cursor-pointer items-center gap-1.5 pr-2 hover:bg-fg/[0.03]"
                       style={{
                         height: ROW_H_PROJECT,
-                        paddingLeft: 12,
+                        paddingLeft: sidebarCollapsed ? 12 : 4,
                         borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
                         borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
                         borderLeft: (() => {
@@ -2474,6 +2484,20 @@ export default function Overzicht() {
                         })(),
                       }}
                     >
+                      {!sidebarCollapsed && (
+                        <span
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            handleProjectDragStart(e, p.id);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Sleep om volgorde te wijzigen (alleen binnen dezelfde status/categorie)"
+                          className="flex h-5 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-60 hover:opacity-100 active:cursor-grabbing"
+                        >
+                          <GripVertical className="h-3.5 w-3.5" />
+                        </span>
+                      )}
                       {sidebarCollapsed ? (
                         <>
                           {/* Status dot */}
