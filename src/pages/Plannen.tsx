@@ -2268,8 +2268,90 @@ const Plannen = () => {
           >
             <Crosshair className="h-4 w-4" />
           </button>
+          {/* divider */}
+          <span
+            aria-hidden
+            className="inline-block"
+            style={{
+              width: 1,
+              height: 20,
+              backgroundColor: "rgb(var(--fg-rgb) / 0.08)",
+              marginInline: 2,
+            }}
+          />
+          {/* Rolling planning-venster navigatie */}
+          <div
+            className="flex items-center gap-1 rounded-md border border-fg/15 px-1 py-0.5"
+            title={`Periode ${planningWindow.startDate.toLocaleDateString("nl-NL")} – ${planningWindow.endDate.toLocaleDateString("nl-NL")}`}
+          >
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o - PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+              title="Vorige periode (~3 maanden terug)"
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks(0)}
+              disabled={windowOffsetWeeks === 0}
+              className={[
+                "rounded px-2 py-0.5 text-[11px] font-display font-semibold",
+                windowOffsetWeeks === 0
+                  ? "text-muted-foreground"
+                  : "text-foreground hover:bg-fg/[0.08]",
+              ].join(" ")}
+              title="Terug naar vandaag"
+            >
+              Vandaag
+            </button>
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o + PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+              title="Volgende periode (~3 maanden vooruit)"
+            >
+              ▶
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Indicator: planning bestaat buiten het huidige venster */}
+      {(outsideCellCount > 0 || outsideWeekCount > 0) && (
+        <div
+          className="mx-8 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2 text-[12px]"
+          style={{
+            borderColor: "rgb(var(--fg-rgb) / 0.12)",
+            backgroundColor: "rgb(var(--fg-rgb) / 0.04)",
+          }}
+        >
+          <span className="text-muted-foreground">
+            Er bestaat planning buiten de huidige periode
+            {outsideCellCount > 0
+              ? ` (${outsideCellCount} ${outsideCellCount === 1 ? "cel" : "cellen"} verborgen)`
+              : ` (${outsideWeekCount} ${outsideWeekCount === 1 ? "week" : "weken"} verborgen)`}
+            .
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o - PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded-md border border-fg/15 px-2 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+            >
+              ◀ Vorige periode
+            </button>
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o + PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded-md border border-fg/15 px-2 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+            >
+              Volgende periode ▶
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Planning grid */}
       <div className="px-8 py-6">
