@@ -745,6 +745,8 @@ export type Database = {
           nsa_luik_aanwezig: string | null
           opdrachtgever_id: string | null
           perceel_id: string | null
+          planning_sort_bucket: string | null
+          planning_sort_order: number | null
           postcode: string | null
           prov_ls_eindsluitingen_aantal: number | null
           prov_ls_moffen_aantal: number | null
@@ -820,6 +822,8 @@ export type Database = {
           nsa_luik_aanwezig?: string | null
           opdrachtgever_id?: string | null
           perceel_id?: string | null
+          planning_sort_bucket?: string | null
+          planning_sort_order?: number | null
           postcode?: string | null
           prov_ls_eindsluitingen_aantal?: number | null
           prov_ls_moffen_aantal?: number | null
@@ -895,6 +899,8 @@ export type Database = {
           nsa_luik_aanwezig?: string | null
           opdrachtgever_id?: string | null
           perceel_id?: string | null
+          planning_sort_bucket?: string | null
+          planning_sort_order?: number | null
           postcode?: string | null
           prov_ls_eindsluitingen_aantal?: number | null
           prov_ls_moffen_aantal?: number | null
@@ -928,6 +934,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      compute_project_overview_bucket: {
+        Args: { p_project_id: string }
+        Returns: string
+      }
       fill_cell_range: {
         Args: {
           p_overwrite_ids: string[]
@@ -944,6 +954,22 @@ export type Database = {
       normalize_project_weken: {
         Args: { p_project_id: string }
         Returns: undefined
+      }
+      reorder_project_in_overview: {
+        Args: {
+          p_after_project_id?: string
+          p_before_project_id?: string
+          p_project_id: string
+        }
+        Returns: {
+          planning_sort_bucket: string
+          planning_sort_order: number
+          project_id: string
+        }[]
+      }
+      reset_overview_manual_sort: {
+        Args: { p_bucket: string }
+        Returns: number
       }
       set_audit_label: { Args: { p_label: string }; Returns: undefined }
       shift_project_weken: {

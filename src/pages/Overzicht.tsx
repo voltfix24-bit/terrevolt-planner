@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PanelLeftClose, PanelLeftOpen, Printer, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
@@ -32,7 +32,7 @@ import {
 import { useConfirm, describeShift } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
-import { buildProjectCellDates, compareOverviewProjects } from "@/lib/project-overview-sort";
+import { buildProjectCellDates, compareOverviewProjects, computeBucketClient, planningCategory } from "@/lib/project-overview-sort";
 
 // ============== Constants ==============
 const SIDEBAR_W = 260;
@@ -124,6 +124,8 @@ interface Project {
   bouwkundig_dagen: number | null;
   asbest_benodigd: string | null;
   asbest_dagen: number | null;
+  planning_sort_order: number | null;
+  planning_sort_bucket: string | null;
 }
 
 interface Week {
@@ -549,7 +551,7 @@ export default function Overzicht() {
     const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes, afwRes] = await Promise.all([
       supabase
         .from("projecten")
-        .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen")
+        .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen, planning_sort_order, planning_sort_bucket")
         .order("created_at", { ascending: true }),
       supabase.from("project_weken").select("id, project_id, week_nr, jaar, positie"),
       supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
@@ -796,23 +798,104 @@ export default function Overzicht() {
 
   // Visible projects: toon ALLE projecten zodat niets stilletjes verdwijnt.
   // Sortering (zie src/lib/project-overview-sort.ts):
-  //   1. status: gepland → in_uitvoering → concept → afgerond
-  //   2. binnen status: toekomst-planning eerst, dan verleden-planning, dan geen planning
-  //   3. binnen "toekomst": vroegste eerstvolgende activiteit eerst
-  //   4. tiebreaker: case_nummer
+  //   1. status: in_uitvoering → gepland → concept → afgerond
+  //   2. planning-categorie: future → past → none
+  //   3. handmatige sortering (planning_sort_order, alleen geldig binnen huidige bucket)
+  //   4. eerstvolgende datum / GSU / case_nummer
+  const projectCellDates = useMemo(
+    () => buildProjectCellDates(weken, activiteiten, cellen),
+    [weken, activiteiten, cellen],
+  );
+  const todayMs = useMemo(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
+  }, []);
+  const projectBuckets = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of projecten) {
+      m.set(p.id, computeBucketClient(p, projectCellDates.get(p.id), todayMs));
+    }
+    return m;
+  }, [projecten, projectCellDates, todayMs]);
   const visibleProjecten = useMemo(() => {
-    const cellDates = buildProjectCellDates(weken, activiteiten, cellen);
-    const now = new Date();
-    const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const sorted = [...projecten].sort((a, b) =>
-      compareOverviewProjects(a, b, cellDates, todayMs),
+      compareOverviewProjects(a, b, projectCellDates, todayMs),
     );
     return sorted.filter((p) => {
       if (filterProjectId && p.id !== filterProjectId) return false;
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
       return true;
     });
-  }, [projecten, weken, activiteiten, cellen, filterProjectId, filterStatus]);
+  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus]);
+
+  // ====== Handmatige sortering (drag & drop binnen dezelfde bucket) ======
+  const [dragProjectId, setDragProjectId] = useState<string | null>(null);
+  const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null);
+
+  const handleProjectDragStart = (e: React.DragEvent, projectId: string) => {
+    setDragProjectId(projectId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", projectId);
+  };
+  const handleProjectDragOver = (e: React.DragEvent, overId: string) => {
+    if (!dragProjectId || dragProjectId === overId) return;
+    const a = projectBuckets.get(dragProjectId);
+    const b = projectBuckets.get(overId);
+    if (!a || a !== b) return; // andere bucket → geen drop toegestaan
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverProjectId !== overId) setDragOverProjectId(overId);
+  };
+  const handleProjectDragEnd = () => {
+    setDragProjectId(null);
+    setDragOverProjectId(null);
+  };
+  const handleProjectDrop = async (e: React.DragEvent, beforeProjectId: string) => {
+    e.preventDefault();
+    const movedId = dragProjectId;
+    setDragProjectId(null);
+    setDragOverProjectId(null);
+    if (!movedId || movedId === beforeProjectId) return;
+    const bucketA = projectBuckets.get(movedId);
+    const bucketB = projectBuckets.get(beforeProjectId);
+    if (!bucketA || bucketA !== bucketB) {
+      toast.error("Slepen tussen statussen of planning-categorieën is niet toegestaan.");
+      return;
+    }
+    try {
+      const { error } = await supabase.rpc("reorder_project_in_overview", {
+        p_project_id: movedId,
+        p_before_project_id: beforeProjectId,
+        p_after_project_id: null,
+      });
+      if (error) throw error;
+      toast.success("Volgorde bijgewerkt.");
+      await fetchAllData(jaar);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Volgorde niet opgeslagen: ${msg}`);
+      await fetchAllData(jaar);
+    }
+  };
+
+  const resetAllManualSort = async () => {
+    const buckets = Array.from(new Set(projecten.map((p) => p.planning_sort_bucket).filter(Boolean) as string[]));
+    if (buckets.length === 0) {
+      toast("Geen handmatige sortering om te resetten.");
+      return;
+    }
+    try {
+      for (const b of buckets) {
+        const { error } = await supabase.rpc("reset_overview_manual_sort", { p_bucket: b });
+        if (error) throw error;
+      }
+      toast.success("Handmatige sortering gewist.");
+      await fetchAllData(jaar);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Reset mislukt: ${msg}`);
+    }
+  };
 
   const schakelMonteurs = useMemo(
     () =>
@@ -2322,6 +2405,24 @@ export default function Overzicht() {
                       {allExpanded ? "Inklappen" : "Uitklappen"}
                     </button>
                   )}
+                  {!sidebarCollapsed && (
+                    <button
+                      type="button"
+                      onClick={resetAllManualSort}
+                      className="flex items-center gap-1 text-[10px] font-semibold transition-colors hover:text-foreground"
+                      style={{
+                        color: "rgb(var(--fg-rgb) / 0.4)",
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        border: "1px solid rgb(var(--fg-rgb) / 0.1)",
+                        background: "rgb(var(--fg-rgb) / 0.03)",
+                        marginRight: 12,
+                      }}
+                      title="Handmatige volgorde wissen (per bucket)"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
               );
             })()}
@@ -2351,7 +2452,17 @@ export default function Overzicht() {
                 const sc = statusColor(p.status);
                 const acts = activiteitenByProject.get(p.id) ?? [];
                 return (
-                  <div key={p.id}>
+                  <div
+                    key={p.id}
+                    onDragOver={(e) => handleProjectDragOver(e, p.id)}
+                    onDrop={(e) => handleProjectDrop(e, p.id)}
+                    onDragEnd={handleProjectDragEnd}
+                    style={{
+                      outline: dragOverProjectId === p.id ? "2px dashed hsl(var(--primary))" : "none",
+                      outlineOffset: -2,
+                      opacity: dragProjectId === p.id ? 0.5 : 1,
+                    }}
+                  >
                     {/* Project header sidebar */}
                     <div
                       onClick={() => navigateToProject(p.id)}
@@ -2359,7 +2470,7 @@ export default function Overzicht() {
                       className="group relative flex cursor-pointer items-center gap-1.5 pr-2 hover:bg-fg/[0.03]"
                       style={{
                         height: ROW_H_PROJECT,
-                        paddingLeft: 12,
+                        paddingLeft: sidebarCollapsed ? 12 : 4,
                         borderRight: "1px solid rgb(var(--fg-rgb) / 0.08)",
                         borderBottom: "1px solid rgb(var(--fg-rgb) / 0.04)",
                         borderLeft: (() => {
@@ -2373,6 +2484,20 @@ export default function Overzicht() {
                         })(),
                       }}
                     >
+                      {!sidebarCollapsed && (
+                        <span
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            handleProjectDragStart(e, p.id);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Sleep om volgorde te wijzigen (alleen binnen dezelfde status/categorie)"
+                          className="flex h-5 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-60 hover:opacity-100 active:cursor-grabbing"
+                        >
+                          <GripVertical className="h-3.5 w-3.5" />
+                        </span>
+                      )}
                       {sidebarCollapsed ? (
                         <>
                           {/* Status dot */}

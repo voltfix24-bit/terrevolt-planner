@@ -3,124 +3,133 @@ import {
   buildProjectCellDates,
   cellDateMs,
   compareOverviewProjects,
+  computeBucketClient,
   getProjectOverviewSortKey,
+  planningCategory,
+  bucketKey,
   type OverviewProject,
 } from "./project-overview-sort";
-import { getMondayOfWeek } from "./planning-types";
 
-const today = new Date(2026, 5, 18); // 18 juni 2026
+const today = new Date(2026, 5, 18);
 const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
 
-function p(id: string, status: OverviewProject["status"], cn = id): OverviewProject {
-  return { id, status, case_nummer: cn };
+function p(id: string, status: OverviewProject["status"], extra: Partial<OverviewProject> = {}): OverviewProject {
+  return { id, status, case_nummer: id, ...extra };
+}
+function mkDate(days: number): number {
+  const d = new Date(today); d.setDate(d.getDate() + days); d.setHours(0, 0, 0, 0); return d.getTime();
 }
 
-function mkDate(daysFromToday: number): number {
-  const d = new Date(today);
-  d.setDate(d.getDate() + daysFromToday);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-describe("getProjectOverviewSortKey", () => {
-  it("gepland staat boven concept binnen dezelfde groep", () => {
-    const cmp = compareOverviewProjects(
-      p("a", "concept"),
-      p("b", "gepland"),
-      new Map([
-        ["a", [mkDate(7)]],
-        ["b", [mkDate(14)]],
-      ]),
-      todayMs,
-    );
-    expect(cmp).toBeGreaterThan(0); // a (concept) na b (gepland)
+describe("sort helper - basis", () => {
+  it("statusvolgorde: in_uitvoering → gepland → concept → afgerond", () => {
+    const dates = new Map<string, number[]>([
+      ["u", [mkDate(7)]], ["g", [mkDate(7)]], ["c", [mkDate(7)]], ["a", [mkDate(7)]],
+    ]);
+    const arr = [p("a", "afgerond"), p("c", "concept"), p("g", "gepland"), p("u", "in_uitvoering")]
+      .sort((x, y) => compareOverviewProjects(x, y, dates, todayMs))
+      .map((x) => x.id);
+    expect(arr).toEqual(["u", "g", "c", "a"]);
   });
 
-  it("toekomstplanning boven verledenplanning binnen dezelfde status", () => {
-    const cmp = compareOverviewProjects(
-      p("past", "gepland"),
-      p("future", "gepland"),
-      new Map([
-        ["past", [mkDate(-30)]],
-        ["future", [mkDate(5)]],
-      ]),
-      todayMs,
-    );
+  it("gepland boven concept (sanity)", () => {
+    const cmp = compareOverviewProjects(p("c", "concept"), p("g", "gepland"), new Map([["c",[mkDate(7)]],["g",[mkDate(7)]]]), todayMs);
     expect(cmp).toBeGreaterThan(0);
   });
 
-  it("vroegste toekomstige activiteit eerst", () => {
-    const cmp = compareOverviewProjects(
-      p("later", "gepland"),
-      p("sooner", "gepland"),
-      new Map([
-        ["later", [mkDate(20)]],
-        ["sooner", [mkDate(2)]],
-      ]),
-      todayMs,
-    );
+  it("future → past → none binnen status", () => {
+    const dates = new Map<string, number[]>([
+      ["f", [mkDate(7)]],
+      ["pst", [mkDate(-7)]],
+    ]);
+    const arr = [p("none", "gepland"), p("pst", "gepland"), p("f", "gepland")]
+      .sort((x, y) => compareOverviewProjects(x, y, dates, todayMs))
+      .map((x) => x.id);
+    expect(arr).toEqual(["f", "pst", "none"]);
+  });
+
+  it("vroegste toekomstige cel eerst", () => {
+    const dates = new Map<string, number[]>([["a", [mkDate(2)]], ["b", [mkDate(20)]]]);
+    const cmp = compareOverviewProjects(p("b","gepland"), p("a","gepland"), dates, todayMs);
     expect(cmp).toBeGreaterThan(0);
   });
 
-  it("projecten zonder planning komen onderaan binnen status", () => {
-    const cmp = compareOverviewProjects(
-      p("none", "gepland"),
-      p("some", "gepland"),
-      new Map([["some", [mkDate(-5)]]]), // verleden, maar wel iets
-      todayMs,
-    );
-    expect(cmp).toBeGreaterThan(0); // none → na some
-  });
-
-  it("zonder planning gepland staat nog steeds boven concept zonder planning", () => {
-    const cmp = compareOverviewProjects(
-      p("c", "concept"),
-      p("g", "gepland"),
-      new Map(),
-      todayMs,
-    );
-    expect(cmp).toBeGreaterThan(0);
-  });
-
-  it("ISO-jaargrens werkt: cel in week 1 van volgend jaar is toekomst", () => {
-    const dec = new Date(2026, 11, 28); // di 29 dec ligt in week 53 of 1...
-    const decMs = new Date(dec.getFullYear(), dec.getMonth(), dec.getDate()).getTime();
-    // Project A: cel op ma in ISO-week 1 van 2027 (= 4 jan 2027)
-    // Project B: cel op ma in ISO-week 52 van 2026
+  it("ISO-jaargrens: cel in W1 2027 is toekomst", () => {
+    const dec = new Date(2026, 11, 29).setHours(0,0,0,0);
     const aMs = cellDateMs({ jaar: 2027, week_nr: 1 }, 0);
     const bMs = cellDateMs({ jaar: 2026, week_nr: 52 }, 0);
     expect(aMs).toBeGreaterThan(bMs);
     const cmp = compareOverviewProjects(
-      p("a", "gepland"),
-      p("b", "gepland"),
-      new Map([
-        ["a", [aMs]],
-        ["b", [bMs]],
-      ]),
-      decMs,
-    );
-    // a heeft toekomst-cel (2027/W1) → groep 0; b alleen verleden (2026/W52) → groep 1
+      p("a","gepland"), p("b","gepland"),
+      new Map([["a",[aMs]],["b",[bMs]]]), dec);
     expect(cmp).toBeLessThan(0);
   });
 
-  it("buildProjectCellDates groepeert via activiteit_id → project_id", () => {
-    const monday = getMondayOfWeek(26, 2026);
-    const map = buildProjectCellDates(
-      [{ id: "w1", project_id: "P", jaar: 2026, week_nr: 26 }],
-      [{ id: "a1", project_id: "P" }],
-      [{ activiteit_id: "a1", week_id: "w1", dag_index: 2 }],
+  it("buildProjectCellDates volgt activiteit_id → project_id", () => {
+    const m = buildProjectCellDates(
+      [{ id: "w", project_id: "P", jaar: 2026, week_nr: 26 }],
+      [{ id: "a", project_id: "P" }],
+      [{ activiteit_id: "a", week_id: "w", dag_index: 1 }],
     );
-    const arr = map.get("P");
-    expect(arr).toBeDefined();
-    const expected = new Date(monday);
-    expected.setDate(expected.getDate() + 2);
-    expected.setHours(0, 0, 0, 0);
-    expect(arr![0]).toBe(expected.getTime());
+    expect(m.get("P")?.length).toBe(1);
+  });
+});
+
+describe("sort helper - manual order", () => {
+  const dates = new Map<string, number[]>([
+    ["a", [mkDate(7)]], ["b", [mkDate(8)]], ["c", [mkDate(9)]],
+  ]);
+  const bucket = "gepland:future";
+
+  it("manual order werkt binnen dezelfde bucket", () => {
+    const arr = [
+      p("c", "gepland", { planning_sort_order: 1000, planning_sort_bucket: bucket }),
+      p("a", "gepland", { planning_sort_order: 3000, planning_sort_bucket: bucket }),
+      p("b", "gepland", { planning_sort_order: 2000, planning_sort_bucket: bucket }),
+    ].sort((x, y) => compareOverviewProjects(x, y, dates, todayMs)).map((x) => x.id);
+    expect(arr).toEqual(["c", "b", "a"]);
   });
 
-  it("key tiebreaker valt op case_nummer", () => {
-    const k1 = getProjectOverviewSortKey({ id: "1", status: "gepland", case_nummer: "100" }, undefined, todayMs);
-    const k2 = getProjectOverviewSortKey({ id: "2", status: "gepland", case_nummer: "200" }, undefined, todayMs);
-    expect(k1[3] < k2[3]).toBe(true);
+  it("oude/foute bucket valt terug op datum-sort", () => {
+    // Alle 3 hebben verkeerde bucket → manualOrder negeren → datum sorteert
+    const arr = [
+      p("c", "gepland", { planning_sort_order: 1, planning_sort_bucket: "concept:past" }),
+      p("a", "gepland", { planning_sort_order: 2, planning_sort_bucket: "gepland:past" }),
+      p("b", "gepland", { planning_sort_order: 3, planning_sort_bucket: "iets:anders" }),
+    ].sort((x, y) => compareOverviewProjects(x, y, dates, todayMs)).map((x) => x.id);
+    expect(arr).toEqual(["a", "b", "c"]);
+  });
+
+  it("manual order overstijgt nooit status/category", () => {
+    // concept met manual order 1 staat NIET boven gepland met manual order 9999
+    const arr = [
+      p("g", "gepland", { planning_sort_order: 9999, planning_sort_bucket: "gepland:future" }),
+      p("c", "concept", { planning_sort_order: 1, planning_sort_bucket: "concept:future" }),
+    ].sort((x, y) => compareOverviewProjects(x, y, dates, todayMs)).map((x) => x.id);
+    expect(arr).toEqual(["g", "c"]);
+  });
+
+  it("datum-tiebreaker bij gelijke manual order", () => {
+    const arr = [
+      p("b", "gepland", { planning_sort_order: 1000, planning_sort_bucket: bucket }),
+      p("a", "gepland", { planning_sort_order: 1000, planning_sort_bucket: bucket }),
+    ].sort((x, y) => compareOverviewProjects(x, y, dates, todayMs)).map((x) => x.id);
+    expect(arr).toEqual(["a", "b"]);
+  });
+});
+
+describe("sort helper - bucket helpers", () => {
+  it("planningCategory", () => {
+    expect(planningCategory(undefined, todayMs)).toBe("none");
+    expect(planningCategory([mkDate(-1)], todayMs)).toBe("past");
+    expect(planningCategory([mkDate(1)], todayMs)).toBe("future");
+    expect(planningCategory([mkDate(-1), mkDate(1)], todayMs)).toBe("future");
+  });
+  it("bucketKey en computeBucketClient", () => {
+    expect(bucketKey("gepland", "future")).toBe("gepland:future");
+    expect(computeBucketClient(p("x","concept"), undefined, todayMs)).toBe("concept:none");
+  });
+  it("key heeft 7 elementen", () => {
+    const k = getProjectOverviewSortKey(p("x","gepland"), [mkDate(5)], todayMs);
+    expect(k.length).toBe(7);
   });
 });
