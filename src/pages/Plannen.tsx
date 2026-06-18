@@ -77,6 +77,7 @@ import { useConfirm, describeShift } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
 import { hasCellContent, formatOverwritePrompt, prepareFillTargets } from "@/lib/cell-conflicts";
+import { decideGapFill } from "@/lib/gap-fill";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -689,6 +690,9 @@ const Plannen = () => {
 
     // Gap-fill: zorg dat tussen de eerste en laatste week alle ISO-weken bestaan,
     // zodat de volgorde nooit een gat heeft (bv. W39 → W41 zonder W40).
+    // CAP: bij een extreem groot week-bereik (zoals een corrupte staat met
+    // verdwaalde weken jaren in de toekomst) NIET automatisch honderden lege
+    // weken aanmaken — dat zou de oorzaak verbergen en de UI onbruikbaar maken.
     if (effectiveWeeks.length >= 2 && !seedingProjectsRef.current.has(projectId)) {
       const sortedChrono = [...effectiveWeeks].sort(compareWeeksChronological);
       const first = sortedChrono[0];
@@ -696,7 +700,14 @@ const Plannen = () => {
       const candidates = enumerateWeekRange(first, last);
       const existingKeys = new Set(effectiveWeeks.map(weekKey));
       const missing = candidates.filter((c) => !existingKeys.has(`${c.year}-${c.week_nr}`));
-      if (missing.length > 0) {
+      const span = candidates.length;
+      const decision = decideGapFill(missing.length, span);
+      if (!decision.allow && decision.reason) {
+        console.warn(
+          `[plannen] gap-fill overgeslagen voor project ${projectId}: span=${span}w, missing=${missing.length}w`,
+        );
+        toast.warning(decision.reason);
+      } else if (decision.allow) {
         seedingProjectsRef.current.add(projectId);
         try {
           const gapMaxPos = effectiveWeeks.reduce(
