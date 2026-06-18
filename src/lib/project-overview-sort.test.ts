@@ -99,7 +99,8 @@ describe("getProjectOverviewSortKey", () => {
       ]),
       decMs,
     );
-    expect(cmp).toBeGreaterThan(0); // b (eerder) komt eerst
+    // a heeft toekomst-cel (2027/W1) → groep 0; b alleen verleden (2026/W52) → groep 1
+    expect(cmp).toBeLessThan(0);
   });
 
   it("buildProjectCellDates groepeert via activiteit_id → project_id", () => {
