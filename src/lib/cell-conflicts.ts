@@ -30,3 +30,42 @@ export function formatOverwritePrompt(conflictCount: number): string {
   const noun = conflictCount === 1 ? "dag is" : "dagen zijn";
   return `${conflictCount} doel-${noun} al gevuld. Wil je de bestaande inhoud overschrijven?`;
 }
+
+export interface WeekRef {
+  id: string;
+}
+
+export interface FillTarget {
+  week_id: string;
+  dag_index: number;
+}
+
+/**
+ * Pure helper: bepaal alle doel-(week_id, dag_index) tussen bron-slot en doel-slot
+ * (exclusief bron). Een week telt als 5 slots; richting wordt automatisch bepaald.
+ * Slots buiten het zichtbare bereik worden overgeslagen. Retourneert lege array als
+ * bron === doel of als de start-/eindweek niet bestaat.
+ */
+export function prepareFillTargets(
+  srcWeekIndex: number,
+  srcDagIndex: number,
+  tgtWeekIndex: number,
+  tgtDagIndex: number,
+  weken: readonly WeekRef[],
+): FillTarget[] {
+  const srcSlot = srcWeekIndex * 5 + srcDagIndex;
+  const tgtSlot = tgtWeekIndex * 5 + tgtDagIndex;
+  if (srcSlot === tgtSlot) return [];
+  if (srcWeekIndex < 0 || tgtWeekIndex < 0) return [];
+  const step = tgtSlot > srcSlot ? 1 : -1;
+  const out: FillTarget[] = [];
+  for (let s = srcSlot + step; step > 0 ? s <= tgtSlot : s >= tgtSlot; s += step) {
+    const wi = Math.floor(s / 5);
+    const di = s % 5;
+    const w = weken[wi];
+    if (!w) continue;
+    out.push({ week_id: w.id, dag_index: di });
+  }
+  return out;
+}
+
