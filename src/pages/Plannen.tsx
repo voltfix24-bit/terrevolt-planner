@@ -1112,7 +1112,7 @@ const Plannen = () => {
   }, [pushHistory]);
 
   const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
-    const prevArr = (celMonteursRef.current.get(cel.id) ?? []).slice();
+    const prevArr = (celMonteurs.get(cel.id) ?? []).slice();
     setCelMonteurs((prev) => {
       const m = new Map(prev);
       const arr = (m.get(cel.id) ?? []).filter((x) => x !== monteur_id);
@@ -1134,7 +1134,8 @@ const Plannen = () => {
       });
       toast.error("Monteur verwijderen mislukt: " + error.message);
     }
-  }, [pushHistory]);
+  }, [celMonteurs, pushHistory]);
+
 
 
 
