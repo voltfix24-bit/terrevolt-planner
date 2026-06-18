@@ -84,6 +84,7 @@ import {
   PLANNING_WINDOW_STEP_WEEKS,
   type PlanningWindow,
 } from "@/lib/planning-window";
+import { findInitialPlanningFocus } from "@/lib/planning-focus";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
