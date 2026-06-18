@@ -84,6 +84,7 @@ import {
   PLANNING_WINDOW_STEP_WEEKS,
   type PlanningWindow,
 } from "@/lib/planning-window";
+import { findInitialPlanningFocus } from "@/lib/planning-focus";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -403,6 +404,10 @@ const Plannen = () => {
   // bestaan — basis voor de "er is planning buiten de periode"-melding.
   const [outsideWeekCount, setOutsideWeekCount] = useState<number>(0);
   const [outsideCellCount, setOutsideCellCount] = useState<number>(0);
+  // Volledige (ongefilterde) sets voor focus-berekening — `weken`/`cellen` zijn
+  // (mogelijk) al door het rolling window heen gefilterd / komen incrementeel.
+  const [allWeken, setAllWeken] = useState<Week[]>([]);
+  const [allCellsList, setAllCellsList] = useState<Cel[]>([]);
 
   const pushHistory = useCallback((entry: HistoryEntry) => {
     if (skipHistoryRef.current) return;
@@ -863,6 +868,9 @@ const Plannen = () => {
     } else {
       setOutsideCellCount(0);
     }
+    // Volledige sets voor focus-berekening (vóór window-filtering)
+    setAllWeken(effectiveWeeks);
+    setAllCellsList(allCells);
 
     setLoading(false);
   }, [projectId, planningWindow]);
@@ -903,6 +911,42 @@ const Plannen = () => {
     ro.observe(el);
     return () => ro.disconnect();
   }, [bodyScrollRef.current]);
+
+  // ---- Initiële focus: zorg dat de juiste week in-window valt zodra een
+  // project geopend wordt (één keer per project). Past windowOffsetWeeks aan
+  // als de vroegste planning of GSU buiten het standaard venster ligt, en
+  // toont in dat geval een subtiele toast.
+  const focusAppliedForProjectRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!projectId) {
+      focusAppliedForProjectRef.current = null;
+      return;
+    }
+    if (focusAppliedForProjectRef.current === projectId) return;
+    if (loading) return;
+    if (!project) return;
+    // Wacht tot loadAll de volledige sets heeft gevuld (allWeken kan 0 zijn
+    // bij een echt leeg project — dan mogen we doorgaan en op GSU/today vallen).
+    const focus = findInitialPlanningFocus(
+      { id: project.id, gsu_datum: project.gsu_datum ?? null },
+      allWeken.map((w) => ({ id: w.id, jaar: w.jaar, week_nr: w.week_nr })),
+      allCellsList.map((c) => ({
+        week_id: c.week_id,
+        dag_index: c.dag_index,
+        kleur_code: c.kleur_code,
+      })),
+      new Date(),
+    );
+    focusAppliedForProjectRef.current = projectId;
+    if (focus.outsideStandardWindow && focus.windowOffsetWeeks !== windowOffsetWeeks) {
+      setWindowOffsetWeeks(focus.windowOffsetWeeks);
+      if (focus.source === "planning") {
+        toast.warning(
+          "Planning staat buiten de standaard periode; we zijn naar de eerste geplande week gesprongen.",
+        );
+      }
+    }
+  }, [projectId, project, loading, allWeken, allCellsList, windowOffsetWeeks]);
 
   // Auto-scroll bij openen van een gepland project: spring naar de eerste week
   // die planning_cellen bevat, zodat de gebruiker direct de planning ziet
