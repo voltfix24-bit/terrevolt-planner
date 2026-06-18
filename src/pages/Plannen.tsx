@@ -1044,48 +1044,75 @@ const Plannen = () => {
 
   const updateCellColor = useCallback(
     async (cel: Cel, kleur_code: string | null) => {
-      pushHistory({ type: "cel_color_changed", cel, prevColor: cel.kleur_code });
+      const prevColor = cel.kleur_code;
+      pushHistory({ type: "cel_color_changed", cel, prevColor });
       updateCellLocal({ ...cel, kleur_code });
       const { error } = await supabase
         .from("planning_cellen")
         .update({ kleur_code })
         .eq("id", cel.id);
-      if (error) toast.error("Kleur opslaan mislukt");
+      if (error) {
+        // rollback optimistische update zodat UI en DB consistent blijven
+        updateCellLocal({ ...cel, kleur_code: prevColor });
+        toast.error("Kleur opslaan mislukt: " + error.message);
+      }
     },
     [updateCellLocal, pushHistory]
   );
 
   const updateCellNotitie = useCallback(
     async (cel: Cel, notitie: string) => {
-      pushHistory({ type: "cel_notitie_changed", cel, prevNotitie: cel.notitie });
+      const prevNotitie = cel.notitie;
+      pushHistory({ type: "cel_notitie_changed", cel, prevNotitie });
       updateCellLocal({ ...cel, notitie });
       const { error } = await supabase
         .from("planning_cellen")
         .update({ notitie })
         .eq("id", cel.id);
-      if (error) toast.error("Notitie opslaan mislukt");
+      if (error) {
+        updateCellLocal({ ...cel, notitie: prevNotitie ?? "" });
+        toast.error("Notitie opslaan mislukt: " + error.message);
+      }
     },
     [updateCellLocal, pushHistory]
   );
 
   const addMonteurToCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    let wasAlreadyPresent = false;
     setCelMonteurs((prev) => {
       const m = new Map(prev);
       const arr = [...(m.get(cel.id) ?? [])];
-      if (!arr.includes(monteur_id)) arr.push(monteur_id);
-      m.set(cel.id, arr);
+      if (arr.includes(monteur_id)) {
+        wasAlreadyPresent = true;
+      } else {
+        arr.push(monteur_id);
+        m.set(cel.id, arr);
+      }
       return m;
     });
+    if (wasAlreadyPresent) return; // niets te doen, geen history-entry
     pushHistory({ type: "monteur_added", cel, monteurId: monteur_id });
+    // Upsert i.p.v. insert: voorkomt 23505 bij dubbele klik / race condition
     const { error } = await supabase
       .from("cel_monteurs")
-      .insert({ cel_id: cel.id, monteur_id });
+      .upsert(
+        { cel_id: cel.id, monteur_id },
+        { onConflict: "cel_id,monteur_id", ignoreDuplicates: true },
+      );
     if (error) {
-      toast.error("Monteur toevoegen mislukt");
+      // rollback lokaal
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        const arr = (m.get(cel.id) ?? []).filter((x) => x !== monteur_id);
+        m.set(cel.id, arr);
+        return m;
+      });
+      toast.error("Monteur toevoegen mislukt: " + error.message);
     }
   }, [pushHistory]);
 
   const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    const prevArr = (celMonteursRef.current.get(cel.id) ?? []).slice();
     setCelMonteurs((prev) => {
       const m = new Map(prev);
       const arr = (m.get(cel.id) ?? []).filter((x) => x !== monteur_id);
@@ -1098,8 +1125,17 @@ const Plannen = () => {
       .delete()
       .eq("cel_id", cel.id)
       .eq("monteur_id", monteur_id);
-    if (error) toast.error("Monteur verwijderen mislukt");
+    if (error) {
+      // rollback naar vorige set
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        m.set(cel.id, prevArr);
+        return m;
+      });
+      toast.error("Monteur verwijderen mislukt: " + error.message);
+    }
   }, [pushHistory]);
+
 
 
   /* ----------------------------- drag-and-drop verplaatsen ----------------------------- */
