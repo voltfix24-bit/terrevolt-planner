@@ -126,6 +126,7 @@ interface Week {
   id: string;
   project_id: string | null;
   week_nr: number;
+  jaar: number;
   positie: number;
 }
 
@@ -546,7 +547,7 @@ export default function Overzicht() {
         .from("projecten")
         .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen")
         .order("created_at", { ascending: true }),
-      supabase.from("project_weken").select("id, project_id, week_nr, positie"),
+      supabase.from("project_weken").select("id, project_id, week_nr, jaar, positie"),
       supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
       // Alleen cellen die echt gevuld zijn (kleur_code != null) — lege cellen worden nooit gerenderd op Overzicht.
       supabase
@@ -795,11 +796,12 @@ export default function Overzicht() {
   // (3) overige projecten (bv. concept zonder planning) — onderaan.
   const visibleProjecten = useMemo(() => {
     const planned = new Set<string>();
-    // Earliest planned week_nr per project (binnen huidig jaar/zicht)
-    const earliestWeek = new Map<string, number>();
-    const noteWeek = (projectId: string, weekNr: number) => {
-      const cur = earliestWeek.get(projectId);
-      if (cur === undefined || weekNr < cur) earliestWeek.set(projectId, weekNr);
+    // Eerste geplande week per project op echte ISO-datum, niet alleen op weeknummer.
+    const earliestWeekDate = new Map<string, number>();
+    const noteWeek = (projectId: string, week: Week) => {
+      const t = getMondayOfWeek(week.week_nr, week.jaar).getTime();
+      const cur = earliestWeekDate.get(projectId);
+      if (cur === undefined || t < cur) earliestWeekDate.set(projectId, t);
     };
     for (const c of cellen) {
       if (!c.activiteit_id || !c.kleur_code || !c.week_id) continue;
@@ -807,12 +809,12 @@ export default function Overzicht() {
       if (!act?.project_id) continue;
       planned.add(act.project_id);
       const w = weekById.get(c.week_id);
-      if (w) noteWeek(act.project_id, w.week_nr);
+      if (w) noteWeek(act.project_id, w);
     }
     for (const w of weken) {
       if (w.project_id && visibleWeekNrSet.has(w.week_nr)) {
         planned.add(w.project_id);
-        noteWeek(w.project_id, w.week_nr);
+        noteWeek(w.project_id, w);
       }
     }
     const inDateRange = (iso: string | null): boolean => {
@@ -836,8 +838,8 @@ export default function Overzicht() {
       const tb = tier(b);
       if (ta !== tb) return ta - tb;
       if (ta === 0) {
-        const wa = earliestWeek.get(a.id) ?? Number.POSITIVE_INFINITY;
-        const wb = earliestWeek.get(b.id) ?? Number.POSITIVE_INFINITY;
+        const wa = earliestWeekDate.get(a.id) ?? Number.POSITIVE_INFINITY;
+        const wb = earliestWeekDate.get(b.id) ?? Number.POSITIVE_INFINITY;
         if (wa !== wb) return wa - wb;
       } else if (ta === 1) {
         const da = earliestDate(a);
