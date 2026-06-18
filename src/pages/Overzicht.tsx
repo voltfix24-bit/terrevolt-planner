@@ -948,7 +948,7 @@ export default function Overzicht() {
       s.add(si);
     }
     return m;
-  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot]);
+  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot, visibleWeekNrSet, jaar]);
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
   // Excludes feestdagen consistently (both in possible and planned).
