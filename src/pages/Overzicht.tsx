@@ -653,7 +653,7 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const act = activiteitById.get(c.activiteit_id);
       if (!act?.project_id) continue;
       const monteurIds = monteurIdsByCel.get(c.id) ?? [];
@@ -735,7 +735,7 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const act = activiteitById.get(c.activiteit_id);
       if (!act?.project_id) continue;
       const k = dayKey(w.week_nr, c.dag_index);
@@ -755,7 +755,7 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const k = dayKey(w.week_nr, c.dag_index);
       let byDay = m.get(c.activiteit_id);
       if (!byDay) { byDay = new Map(); m.set(c.activiteit_id, byDay); }
@@ -814,7 +814,7 @@ export default function Overzicht() {
       if (w) noteWeek(act.project_id, w);
     }
     for (const w of weken) {
-      if (w.project_id && visibleWeekNrSet.has(w.week_nr)) {
+      if (w.project_id && w.jaar === jaar && visibleWeekNrSet.has(w.week_nr)) {
         planned.add(w.project_id);
         noteWeek(w.project_id, w);
       }
