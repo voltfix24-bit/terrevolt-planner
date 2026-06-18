@@ -76,6 +76,7 @@ import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwi
 import { useConfirm, describeShift } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
+import { hasCellContent, formatOverwritePrompt } from "@/lib/cell-conflicts";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -1171,12 +1172,8 @@ const Plannen = () => {
 
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
-        const heeftInhoud =
-          !!targetCel.kleur_code || targetMonteurs.length > 0 || !!targetCel.notitie;
-        if (heeftInhoud) {
-          const ok = window.confirm(
-            "De doel-dag is al gevuld. Wil je de bestaande inhoud overschrijven?"
-          );
+        if (hasCellContent(targetCel, targetMonteurs)) {
+          const ok = window.confirm(formatOverwritePrompt(1));
           if (!ok) return;
         }
         const delMonteurs = await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
@@ -1271,20 +1268,28 @@ const Plannen = () => {
         if (!existing) continue;
         if (sourceIdSet.has(existing.id)) continue; // wordt zelf ook verplaatst
         const monteurs = celMonteurs.get(existing.id) ?? [];
-        const heeftInhoud = !!existing.kleur_code || monteurs.length > 0 || !!existing.notitie;
-        if (heeftInhoud) conflicts.push(existing);
+        if (hasCellContent(existing, monteurs)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
-        const ok = window.confirm(
-          `${conflicts.length} doel-${conflicts.length === 1 ? "dag is" : "dagen zijn"} al gevuld. Wil je de bestaande inhoud overschrijven?`
-        );
+        const ok = window.confirm(formatOverwritePrompt(conflicts.length));
         if (!ok) return;
       }
 
-      // Verwijder conflict-cellen (db + lokaal)
-      for (const c of conflicts) {
-        await supabase.from("cel_monteurs").delete().eq("cel_id", c.id);
-        await supabase.from("planning_cellen").delete().eq("id", c.id);
+      // Verwijder conflict-cellen (db eerst, parallel). Bij fout: niets lokaal muteren,
+      // herladen en stoppen — zo voorkomen we half-state met unique_cel-conflicten.
+      if (conflicts.length > 0) {
+        const delResults = await Promise.all(
+          conflicts.flatMap((c) => [
+            supabase.from("cel_monteurs").delete().eq("cel_id", c.id),
+            supabase.from("planning_cellen").delete().eq("id", c.id),
+          ])
+        );
+        const delErr = delResults.find((r) => r.error)?.error;
+        if (delErr) {
+          toast.error("Overschrijven mislukt: " + delErr.message);
+          loadAll();
+          return;
+        }
       }
 
       // Update lokale Map: eerst alle oude keys verwijderen, dan nieuwe inzetten
@@ -1320,8 +1325,9 @@ const Plannen = () => {
             .eq("id", mv.src.id)
         )
       );
-      if (results.some((r) => r.error)) {
-        toast.error("Verplaatsen mislukt");
+      const updErr = results.find((r) => r.error)?.error;
+      if (updErr) {
+        toast.error("Verplaatsen mislukt: " + updErr.message);
         loadAll();
       }
     },
@@ -1398,33 +1404,41 @@ const Plannen = () => {
         const existing = cellen.get(cellKey(src.activiteit_id, coord.weekId, coord.dagIndex));
         if (!existing) continue;
         const ms = celMonteurs.get(existing.id) ?? [];
-        const heeftInhoud = !!existing.kleur_code || ms.length > 0 || !!existing.notitie;
-        if (heeftInhoud) conflicts.push(existing);
+        if (hasCellContent(existing, ms)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
-        const ok = window.confirm(
-          `${conflicts.length} doel-${conflicts.length === 1 ? "dag is" : "dagen zijn"} al gevuld. Wil je de bestaande inhoud overschrijven?`
-        );
+        const ok = window.confirm(formatOverwritePrompt(conflicts.length));
         if (!ok) return;
       }
 
-      // Verwijder conflict-cellen
-      for (const c of conflicts) {
-        await supabase.from("cel_monteurs").delete().eq("cel_id", c.id);
-        await supabase.from("planning_cellen").delete().eq("id", c.id);
-      }
-      setCellen((prev) => {
-        const m = new Map(prev);
-        for (const c of conflicts) {
-          m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+      // Verwijder conflict-cellen (db parallel). Bij fout: niets lokaal muteren,
+      // herladen en stoppen — voorkomt half-state / unique_cel-conflicten bij insert.
+      if (conflicts.length > 0) {
+        const delResults = await Promise.all(
+          conflicts.flatMap((c) => [
+            supabase.from("cel_monteurs").delete().eq("cel_id", c.id),
+            supabase.from("planning_cellen").delete().eq("id", c.id),
+          ])
+        );
+        const delErr = delResults.find((r) => r.error)?.error;
+        if (delErr) {
+          toast.error("Overschrijven mislukt: " + delErr.message);
+          loadAll();
+          return;
         }
-        return m;
-      });
-      setCelMonteurs((prev) => {
-        const m = new Map(prev);
-        for (const c of conflicts) m.delete(c.id);
-        return m;
-      });
+        setCellen((prev) => {
+          const m = new Map(prev);
+          for (const c of conflicts) {
+            m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+          }
+          return m;
+        });
+        setCelMonteurs((prev) => {
+          const m = new Map(prev);
+          for (const c of conflicts) m.delete(c.id);
+          return m;
+        });
+      }
 
       const srcMonteurs = celMonteurs.get(src.id) ?? [];
 
