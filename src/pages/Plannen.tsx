@@ -1603,16 +1603,16 @@ const Plannen = () => {
   }, [weken, loadAll, projectId]);
 
   // Wijzig (jaar, week_nr) van één week en verschuif álle andere weken met dezelfde delta.
-  // Zo blijven de onderlinge afstanden bewaard en is er nooit een unique-constraint conflict
-  // binnen het project (alle weken schuiven samen op).
+  // Volledig transactioneel via de RPC `shift_project_weken`: alles schuift, of niets schuift.
   const setWeekNr = useCallback(
     async (week_id: string, newJaar: number, newNr: number) => {
       const target = weken.find((w) => w.id === week_id);
       if (!target) return;
       if (target.jaar === newJaar && target.week_nr === newNr) return;
       const delta = weekDeltaIso(target.jaar, target.week_nr, newJaar, newNr);
-      if (delta === 0) return;
+      if (delta === 0 || !projectId) return;
 
+      // Optimistic UI: bereken de nieuwe staat lokaal zodat de gebruiker direct iets ziet.
       const shifted = weken.map((w) => {
         const n = addIsoWeeks(w.jaar, w.week_nr, delta);
         return { ...w, jaar: n.jaar, week_nr: n.week_nr };
@@ -1620,36 +1620,24 @@ const Plannen = () => {
       const sortedNew = [...shifted].sort(
         (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
       );
-      // Posities hercomputeren op chronologische volgorde
       const withPos = sortedNew.map((w, i) => ({ ...w, positie: i }));
       setWeken(withPos);
 
-      // Update in veilige volgorde om transient unique-conflicts op
-      // (project_id, jaar, week_nr) te vermijden:
-      // delta>0 → hoog naar laag; delta<0 → laag naar hoog.
-      // `positie` blijft ongemoeid: een uniforme delta over alle weken
-      // verandert hun onderlinge chronologische volgorde niet, dus de
-      // huidige posities blijven correct (en we voorkomen onnodige
-      // botsingen met de DEFERRABLE UNIQUE (project_id, positie)).
-      const updateOrder = [...withPos].sort((a, b) =>
-        delta > 0
-          ? b.jaar - a.jaar || b.week_nr - a.week_nr
-          : a.jaar - b.jaar || a.week_nr - b.week_nr,
-      );
-      for (const w of updateOrder) {
-        const { error } = await supabase
-          .from("project_weken")
-          .update({ jaar: w.jaar, week_nr: w.week_nr })
-          .eq("id", w.id);
-        if (error) {
-          toast.error("Weeknummers opslaan mislukt: " + error.message);
-          loadAll();
-          return;
-        }
+      const { error } = await supabase.rpc("shift_project_weken", {
+        p_project_id: projectId,
+        p_delta: delta,
+      });
+      if (error) {
+        toast.error("Weeknummers opslaan mislukt: " + error.message);
+        loadAll();
+        return;
       }
+      // Eindstand altijd refreshen — DB is autoriteit.
+      loadAll();
     },
-    [weken, loadAll],
+    [weken, loadAll, projectId],
   );
+
 
   // Toggle een (jaar, week_nr) — voeg toe of verwijder.
   // Sorteert chronologisch (jaar, week_nr) en hernummert posities.
