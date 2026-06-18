@@ -809,6 +809,7 @@ const Plannen = () => {
     }
 
     // load cells for these weeks
+    let allCells: Cel[] = [];
     if (effectiveWeeks.length > 0) {
       const weekIds = effectiveWeeks.map((w) => w.id);
       const { data: celRows } = await supabase
@@ -816,6 +817,7 @@ const Plannen = () => {
         .select("*")
         .in("week_id", weekIds);
       const celArr = (celRows ?? []) as Cel[];
+      allCells = celArr;
       const cmap: CelMap = new Map();
       celArr.forEach((c) => cmap.set(cellKey(c.activiteit_id, c.week_id, c.dag_index), c));
       setCellen(cmap);
@@ -843,8 +845,27 @@ const Plannen = () => {
       setCelMonteurs(new Map());
     }
 
+    // Pas het rolling planning-venster pas hier toe — alle DB-operaties
+    // (seed/top-up/gap-fill/anchor) hierboven werken op de volledige set.
+    // De UI rendert vervolgens alleen weken binnen het venster; cellen
+    // buiten beeld blijven in `cellen`-state voor snelle her-render bij
+    // navigeren naar een andere periode.
+    const windowed = effectiveWeeks.filter((w) =>
+      isWeekInWindow(w.jaar, w.week_nr, planningWindow),
+    );
+    setWeken(windowed);
+    setOutsideWeekCount(Math.max(0, effectiveWeeks.length - windowed.length));
+    if (allCells.length > 0) {
+      const visIds = new Set(windowed.map((w) => w.id));
+      let outside = 0;
+      for (const c of allCells) if (!visIds.has(c.week_id)) outside++;
+      setOutsideCellCount(outside);
+    } else {
+      setOutsideCellCount(0);
+    }
+
     setLoading(false);
-  }, [projectId]);
+  }, [projectId, planningWindow]);
 
   useEffect(() => {
     loadAll();
