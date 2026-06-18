@@ -32,6 +32,7 @@ import {
 import { useConfirm, describeShift } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
+import { buildProjectCellDates, compareOverviewProjects } from "@/lib/project-overview-sort";
 
 // ============== Constants ==============
 const SIDEBAR_W = 260;
@@ -794,69 +795,24 @@ export default function Overzicht() {
   }, [slots, jaar]);
 
   // Visible projects: toon ALLE projecten zodat niets stilletjes verdwijnt.
-  // Volgorde: (1) projecten met geplande cellen of project_weken in zicht,
-  // (2) projecten waarvan GSU/GEU binnen zichtbaar bereik valt,
-  // (3) overige projecten (bv. concept zonder planning) — onderaan.
+  // Sortering (zie src/lib/project-overview-sort.ts):
+  //   1. status: gepland → in_uitvoering → concept → afgerond
+  //   2. binnen status: toekomst-planning eerst, dan verleden-planning, dan geen planning
+  //   3. binnen "toekomst": vroegste eerstvolgende activiteit eerst
+  //   4. tiebreaker: case_nummer
   const visibleProjecten = useMemo(() => {
-    const planned = new Set<string>();
-    // Eerste geplande week per project op echte ISO-datum, niet alleen op weeknummer.
-    const earliestWeekDate = new Map<string, number>();
-    const noteWeek = (projectId: string, week: Week) => {
-      const t = getMondayOfWeek(week.week_nr, week.jaar).getTime();
-      const cur = earliestWeekDate.get(projectId);
-      if (cur === undefined || t < cur) earliestWeekDate.set(projectId, t);
-    };
-    for (const c of cellen) {
-      if (!c.activiteit_id || !c.kleur_code || !c.week_id) continue;
-      const act = activiteitById.get(c.activiteit_id);
-      if (!act?.project_id) continue;
-      planned.add(act.project_id);
-      const w = weekById.get(c.week_id);
-      if (w) noteWeek(act.project_id, w);
-    }
-    for (const w of weken) {
-      if (w.project_id && w.jaar === jaar && visibleWeekNrSet.has(w.week_nr)) {
-        planned.add(w.project_id);
-        noteWeek(w.project_id, w);
-      }
-    }
-    const inDateRange = (iso: string | null): boolean => {
-      if (!iso || !visibleDateRange.min || !visibleDateRange.max) return false;
-      const d = new Date(iso);
-      return d >= visibleDateRange.min && d <= visibleDateRange.max;
-    };
-    const tier = (p: Project): number => {
-      if (planned.has(p.id)) return 0;
-      if (inDateRange(p.gsu_datum) || inDateRange(p.geu_datum)) return 1;
-      return 2;
-    };
-    const earliestDate = (p: Project): number => {
-      const ds: number[] = [];
-      if (p.gsu_datum) ds.push(new Date(p.gsu_datum).getTime());
-      if (p.geu_datum) ds.push(new Date(p.geu_datum).getTime());
-      return ds.length ? Math.min(...ds) : Number.POSITIVE_INFINITY;
-    };
-    const sorted = [...projecten].sort((a, b) => {
-      const ta = tier(a);
-      const tb = tier(b);
-      if (ta !== tb) return ta - tb;
-      if (ta === 0) {
-        const wa = earliestWeekDate.get(a.id) ?? Number.POSITIVE_INFINITY;
-        const wb = earliestWeekDate.get(b.id) ?? Number.POSITIVE_INFINITY;
-        if (wa !== wb) return wa - wb;
-      } else if (ta === 1) {
-        const da = earliestDate(a);
-        const db = earliestDate(b);
-        if (da !== db) return da - db;
-      }
-      return (a.case_nummer ?? "").localeCompare(b.case_nummer ?? "");
-    });
+    const cellDates = buildProjectCellDates(weken, activiteiten, cellen);
+    const now = new Date();
+    const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const sorted = [...projecten].sort((a, b) =>
+      compareOverviewProjects(a, b, cellDates, todayMs),
+    );
     return sorted.filter((p) => {
       if (filterProjectId && p.id !== filterProjectId) return false;
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
       return true;
     });
-  }, [projecten, weken, cellen, activiteitById, weekById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus, jaar]);
+  }, [projecten, weken, activiteiten, cellen, filterProjectId, filterStatus]);
 
   const schakelMonteurs = useMemo(
     () =>
