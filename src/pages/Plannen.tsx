@@ -1398,7 +1398,7 @@ const Plannen = () => {
       // Atomic: 1 RPC-call doet alles in één transactie. Bij fout: niets gewijzigd.
       const { error } = await supabase.rpc("fill_cell_range", {
         p_source_cel_id: src.id,
-        p_targets: targets as unknown as Record<string, unknown>[],
+        p_targets: targets as unknown as never,
         p_overwrite_ids: conflicts.map((c) => c.id),
       });
       if (error) {
