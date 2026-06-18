@@ -124,6 +124,8 @@ interface Project {
   bouwkundig_dagen: number | null;
   asbest_benodigd: string | null;
   asbest_dagen: number | null;
+  planning_sort_order: number | null;
+  planning_sort_bucket: string | null;
 }
 
 interface Week {
