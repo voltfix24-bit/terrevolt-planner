@@ -1365,6 +1365,7 @@ const Plannen = () => {
   // Excel-style fill handle: kopieer kleur + notitie + monteurs van bron-cel naar
   // alle dagen tussen bron en doel binnen DEZELFDE activiteit-rij. Bestaande inhoud
   // op tussenliggende dagen wordt na bevestiging overschreven.
+  // Atomic via de RPC `fill_cell_range`: alles slaagt of niets wordt opgeslagen.
   const fillCellRange = useCallback(
     async (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => {
       let sourceCel: Cel | null = null;
@@ -1377,31 +1378,14 @@ const Plannen = () => {
       const srcWi = weekIndexById.get(src.week_id);
       const tgtWi = weekIndexById.get(targetWeekId);
       if (srcWi == null || tgtWi == null) return;
-      const srcSlot = srcWi * 5 + src.dag_index;
-      const tgtSlot = tgtWi * 5 + targetDagIndex;
-      if (srcSlot === tgtSlot) return;
 
-      const step = tgtSlot > srcSlot ? 1 : -1;
-      const targetSlots: number[] = [];
-      for (let s = srcSlot + step; step > 0 ? s <= tgtSlot : s >= tgtSlot; s += step) {
-        targetSlots.push(s);
-      }
+      const targets = prepareFillTargets(srcWi, src.dag_index, tgtWi, targetDagIndex, weken);
+      if (targets.length === 0) return;
 
-      // Map slot -> {weekId, dagIndex}
-      const slotToCoord = (slot: number): { weekId: string; dagIndex: number } | null => {
-        const wi = Math.floor(slot / 5);
-        const di = slot % 5;
-        const w = weken[wi];
-        if (!w) return null;
-        return { weekId: w.id, dagIndex: di };
-      };
-
-      // Detecteer conflicten (al gevulde doel-cellen, exclusief bron)
+      // Detecteer conflicten (al gevulde doel-cellen) voor bevestiging + overwrite-lijst
       const conflicts: Cel[] = [];
-      for (const s of targetSlots) {
-        const coord = slotToCoord(s);
-        if (!coord) continue;
-        const existing = cellen.get(cellKey(src.activiteit_id, coord.weekId, coord.dagIndex));
+      for (const t of targets) {
+        const existing = cellen.get(cellKey(src.activiteit_id, t.week_id, t.dag_index));
         if (!existing) continue;
         const ms = celMonteurs.get(existing.id) ?? [];
         if (hasCellContent(existing, ms)) conflicts.push(existing);
@@ -1411,76 +1395,32 @@ const Plannen = () => {
         if (!ok) return;
       }
 
-      // Verwijder conflict-cellen (db parallel). Bij fout: niets lokaal muteren,
-      // herladen en stoppen — voorkomt half-state / unique_cel-conflicten bij insert.
-      if (conflicts.length > 0) {
-        const delResults = await Promise.all(
-          conflicts.flatMap((c) => [
-            supabase.from("cel_monteurs").delete().eq("cel_id", c.id),
-            supabase.from("planning_cellen").delete().eq("id", c.id),
-          ])
-        );
-        const delErr = delResults.find((r) => r.error)?.error;
-        if (delErr) {
-          toast.error("Overschrijven mislukt: " + delErr.message);
-          loadAll();
-          return;
+      // Atomic: 1 RPC-call doet alles in één transactie. Bij fout: niets gewijzigd.
+      const { error } = await supabase.rpc("fill_cell_range", {
+        p_source_cel_id: src.id,
+        p_targets: targets as unknown as Record<string, unknown>[],
+        p_overwrite_ids: conflicts.map((c) => c.id),
+      });
+      if (error) {
+        const msg = error.message ?? "onbekende fout";
+        if (error.code === "23505") {
+          toast.error("Doortrekken mislukt: doel-dag is intussen door iemand anders gevuld. Probeer opnieuw.");
+        } else if (error.code === "42501") {
+          toast.error("Doortrekken mislukt: je hebt geen rechten om te plannen.");
+        } else {
+          toast.error("Doortrekken mislukt: " + msg);
         }
-        setCellen((prev) => {
-          const m = new Map(prev);
-          for (const c of conflicts) {
-            m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
-          }
-          return m;
-        });
-        setCelMonteurs((prev) => {
-          const m = new Map(prev);
-          for (const c of conflicts) m.delete(c.id);
-          return m;
-        });
+        // RPC is transactioneel — bij fout is er niets gewijzigd. Toch loadAll
+        // om zeker te weten dat lokale state actueel is (race met andere users).
+        loadAll();
+        return;
       }
-
-      const srcMonteurs = celMonteurs.get(src.id) ?? [];
-
-      // Maak voor elk doel-slot een nieuwe cel met dezelfde kleur/notitie/monteurs
-      for (const s of targetSlots) {
-        const coord = slotToCoord(s);
-        if (!coord) continue;
-        const { data, error } = await supabase
-          .from("planning_cellen")
-          .insert({
-            activiteit_id: src.activiteit_id,
-            week_id: coord.weekId,
-            dag_index: coord.dagIndex,
-            kleur_code: src.kleur_code,
-            notitie: src.notitie,
-            capaciteit: src.capaciteit,
-          })
-          .select()
-          .single();
-        if (error || !data) {
-          toast.error("Doortrekken mislukt");
-          loadAll();
-          return;
-        }
-        const newCel = data as Cel;
-        updateCellLocal(newCel);
-        if (srcMonteurs.length > 0) {
-          const { error: mErr } = await supabase
-            .from("cel_monteurs")
-            .insert(srcMonteurs.map((mid) => ({ cel_id: newCel.id, monteur_id: mid })));
-          if (!mErr) {
-            setCelMonteurs((prev) => {
-              const m = new Map(prev);
-              m.set(newCel.id, [...srcMonteurs]);
-              return m;
-            });
-          }
-        }
-      }
+      // Herlaad om nieuwe cellen + monteurs op te halen (eenvoudig en altijd consistent).
+      loadAll();
     },
-    [cellen, celMonteurs, weken, updateCellLocal, loadAll]
+    [cellen, celMonteurs, weken, loadAll]
   );
+
 
   // Live preview-state tijdens slepen van fill-handle (gedeeld met cellen voor highlight)
   const [fillState, setFillState] = useState<{
