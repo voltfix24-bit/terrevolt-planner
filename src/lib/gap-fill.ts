@@ -7,7 +7,7 @@
  * weken aanmaken. Deze cap voorkomt dat.
  */
 
-export const GAP_FILL_MAX_WEEKS = 104; // ~2 jaar
+export const GAP_FILL_MAX_WEEKS = 60; // ~1 jaar — past op het rolling planning-venster
 
 export interface GapFillDecision {
   /** True = gap-fill mag doorgaan. */
