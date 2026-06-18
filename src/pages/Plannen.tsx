@@ -1687,7 +1687,8 @@ const Plannen = () => {
           toast.info("Tussenliggende weken blijven staan zodat de planning aaneengesloten blijft");
           return;
         }
-        const next = ordered.filter((w) => w.id !== existing.id).map((w, i) => ({ ...w, positie: i }));
+        const rawNext = ordered.filter((w) => w.id !== existing.id);
+        const next = rawNext.map((w, i) => ({ ...w, positie: i }));
         setWeken(next);
         const { error } = await supabase
           .from("project_weken")
@@ -1698,7 +1699,7 @@ const Plannen = () => {
           loadAll();
           return;
         }
-        const fixes = next
+        const fixes = rawNext
           .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
           .filter(Boolean) as { id: string; positie: number }[];
         if (fixes.length > 0) {
