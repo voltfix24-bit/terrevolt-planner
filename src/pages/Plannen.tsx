@@ -764,7 +764,7 @@ const Plannen = () => {
         .in("week_id", weekIds);
       const isUnplanned = (celCount ?? 0) === 0;
       if (isUnplanned) {
-        const sortedByPos = [...effectiveWeeks].sort((a, b) => a.positie - b.positie);
+        const sortedByPos = [...effectiveWeeks].sort(compareWeeksChronological);
         const first = sortedByPos[0];
         const delta = weekDeltaIso(first.jaar, first.week_nr, CURRENT_YEAR, CURRENT_WEEK);
         if (delta !== 0) {
@@ -790,7 +790,7 @@ const Plannen = () => {
             }
           }
           if (!anyError) {
-            effectiveWeeks = shifted.sort((a, b) => a.positie - b.positie);
+            effectiveWeeks = shifted.sort(compareWeeksChronological).map((w, i) => ({ ...w, positie: i }));
             setWeken(effectiveWeeks);
           }
         }
