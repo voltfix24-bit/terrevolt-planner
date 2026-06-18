@@ -668,7 +668,7 @@ export default function Overzicht() {
       }
     }
     return m;
-  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds]);
+  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds, jaar]);
 
   // dayKey → Set<monteurId> double-booked on that day
   // dayKey → monteurId → reden ("dubbel" | "verlof" | "vrije_dag")
@@ -746,7 +746,7 @@ export default function Overzicht() {
       byAct.set(c.activiteit_id, c);
     }
     return m;
-  }, [cellen, weekById, activiteitById, visibleWeekNrSet]);
+  }, [cellen, weekById, activiteitById, visibleWeekNrSet, jaar]);
 
   // activiteit_id → dayKey → cel
   const activiteitDayCel = useMemo(() => {
@@ -762,7 +762,7 @@ export default function Overzicht() {
       byDay.set(k, c);
     }
     return m;
-  }, [cellen, weekById, visibleWeekNrSet]);
+  }, [cellen, weekById, visibleWeekNrSet, jaar]);
 
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
