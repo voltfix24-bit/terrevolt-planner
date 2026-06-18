@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { decideGapFill, GAP_FILL_MAX_WEEKS } from "./gap-fill";
 
 describe("decideGapFill", () => {
-  it("staat normale projecten (≤ 104w) toe", () => {
+  it("staat normale projecten (≤ 60w) toe", () => {
     const r = decideGapFill(5, 30);
     expect(r.allow).toBe(true);
     expect(r.reason).toBeUndefined();
@@ -12,7 +12,7 @@ describe("decideGapFill", () => {
     const r = decideGapFill(969, 1013);
     expect(r.allow).toBe(false);
     expect(r.reason).toMatch(/1013 weken/);
-    expect(r.reason).toMatch(/max 104/);
+    expect(r.reason).toMatch(new RegExp(`max ${GAP_FILL_MAX_WEEKS}`));
   });
 
   it("staat exact de drempel toe", () => {

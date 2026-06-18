@@ -78,6 +78,12 @@ import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
 import { hasCellContent, formatOverwritePrompt, prepareFillTargets } from "@/lib/cell-conflicts";
 import { decideGapFill } from "@/lib/gap-fill";
+import {
+  getPlanningWindow,
+  isWeekInWindow,
+  PLANNING_WINDOW_STEP_WEEKS,
+  type PlanningWindow,
+} from "@/lib/planning-window";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -383,6 +389,21 @@ const Plannen = () => {
   // Voorkomt dat dezelfde projectId tijdens één sessie meerdere keren tegelijk
   // weken gaat seeden (StrictMode dubbele mount, snelle navigatie, refetch).
   const seedingProjectsRef = useRef<Set<string>>(new Set());
+
+  // Rolling planning-venster (~3 mnd terug, ~9 mnd vooruit). offsetWeeks=0 = vandaag.
+  // De DB bevat altijd alle weken — dit filtert puur de weergave + welke weken
+  // we voor cellen laden, zodat projecten met verdwaalde weken jaren in de
+  // toekomst de UI niet opblazen.
+  const [windowOffsetWeeks, setWindowOffsetWeeks] = useState<number>(0);
+  const planningWindow = useMemo<PlanningWindow>(
+    () => getPlanningWindow(new Date(), windowOffsetWeeks),
+    [windowOffsetWeeks],
+  );
+  // Aantal project_weken / planning_cellen die buiten het huidige venster
+  // bestaan — basis voor de "er is planning buiten de periode"-melding.
+  const [outsideWeekCount, setOutsideWeekCount] = useState<number>(0);
+  const [outsideCellCount, setOutsideCellCount] = useState<number>(0);
+
   const pushHistory = useCallback((entry: HistoryEntry) => {
     if (skipHistoryRef.current) return;
     setHistory((prev) => [...prev.slice(-29), entry]);
@@ -788,6 +809,7 @@ const Plannen = () => {
     }
 
     // load cells for these weeks
+    let allCells: Cel[] = [];
     if (effectiveWeeks.length > 0) {
       const weekIds = effectiveWeeks.map((w) => w.id);
       const { data: celRows } = await supabase
@@ -795,6 +817,7 @@ const Plannen = () => {
         .select("*")
         .in("week_id", weekIds);
       const celArr = (celRows ?? []) as Cel[];
+      allCells = celArr;
       const cmap: CelMap = new Map();
       celArr.forEach((c) => cmap.set(cellKey(c.activiteit_id, c.week_id, c.dag_index), c));
       setCellen(cmap);
@@ -822,8 +845,27 @@ const Plannen = () => {
       setCelMonteurs(new Map());
     }
 
+    // Pas het rolling planning-venster pas hier toe — alle DB-operaties
+    // (seed/top-up/gap-fill/anchor) hierboven werken op de volledige set.
+    // De UI rendert vervolgens alleen weken binnen het venster; cellen
+    // buiten beeld blijven in `cellen`-state voor snelle her-render bij
+    // navigeren naar een andere periode.
+    const windowed = effectiveWeeks.filter((w) =>
+      isWeekInWindow(w.jaar, w.week_nr, planningWindow),
+    );
+    setWeken(windowed);
+    setOutsideWeekCount(Math.max(0, effectiveWeeks.length - windowed.length));
+    if (allCells.length > 0) {
+      const visIds = new Set(windowed.map((w) => w.id));
+      let outside = 0;
+      for (const c of allCells) if (!visIds.has(c.week_id)) outside++;
+      setOutsideCellCount(outside);
+    } else {
+      setOutsideCellCount(0);
+    }
+
     setLoading(false);
-  }, [projectId]);
+  }, [projectId, planningWindow]);
 
   useEffect(() => {
     loadAll();
@@ -2226,8 +2268,90 @@ const Plannen = () => {
           >
             <Crosshair className="h-4 w-4" />
           </button>
+          {/* divider */}
+          <span
+            aria-hidden
+            className="inline-block"
+            style={{
+              width: 1,
+              height: 20,
+              backgroundColor: "rgb(var(--fg-rgb) / 0.08)",
+              marginInline: 2,
+            }}
+          />
+          {/* Rolling planning-venster navigatie */}
+          <div
+            className="flex items-center gap-1 rounded-md border border-fg/15 px-1 py-0.5"
+            title={`Periode ${planningWindow.startDate.toLocaleDateString("nl-NL")} – ${planningWindow.endDate.toLocaleDateString("nl-NL")}`}
+          >
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o - PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+              title="Vorige periode (~3 maanden terug)"
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks(0)}
+              disabled={windowOffsetWeeks === 0}
+              className={[
+                "rounded px-2 py-0.5 text-[11px] font-display font-semibold",
+                windowOffsetWeeks === 0
+                  ? "text-muted-foreground"
+                  : "text-foreground hover:bg-fg/[0.08]",
+              ].join(" ")}
+              title="Terug naar vandaag"
+            >
+              Vandaag
+            </button>
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o + PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+              title="Volgende periode (~3 maanden vooruit)"
+            >
+              ▶
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Indicator: planning bestaat buiten het huidige venster */}
+      {(outsideCellCount > 0 || outsideWeekCount > 0) && (
+        <div
+          className="mx-8 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2 text-[12px]"
+          style={{
+            borderColor: "rgb(var(--fg-rgb) / 0.12)",
+            backgroundColor: "rgb(var(--fg-rgb) / 0.04)",
+          }}
+        >
+          <span className="text-muted-foreground">
+            Er bestaat planning buiten de huidige periode
+            {outsideCellCount > 0
+              ? ` (${outsideCellCount} ${outsideCellCount === 1 ? "cel" : "cellen"} verborgen)`
+              : ` (${outsideWeekCount} ${outsideWeekCount === 1 ? "week" : "weken"} verborgen)`}
+            .
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o - PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded-md border border-fg/15 px-2 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+            >
+              ◀ Vorige periode
+            </button>
+            <button
+              type="button"
+              onClick={() => setWindowOffsetWeeks((o) => o + PLANNING_WINDOW_STEP_WEEKS)}
+              className="rounded-md border border-fg/15 px-2 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+            >
+              Volgende periode ▶
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Planning grid */}
       <div className="px-8 py-6">
