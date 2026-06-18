@@ -941,6 +941,10 @@ export type Database = {
         }[]
       }
       is_planner_manager: { Args: { check_user_id?: string }; Returns: boolean }
+      normalize_project_weken: {
+        Args: { p_project_id: string }
+        Returns: undefined
+      }
       set_audit_label: { Args: { p_label: string }; Returns: undefined }
       undo_batch: {
         Args: { p_batch_id?: string }

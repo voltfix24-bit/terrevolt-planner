@@ -424,17 +424,12 @@ const Plannen = () => {
     }
     setProject(projRes.data as Project);
     let weekRows = ((wRes.data ?? []) as Week[]).slice().sort(compareWeeksChronological);
-    // Repareer posities als ze niet chronologisch zijn (legacy data)
+    // Repareer posities als ze niet chronologisch zijn (legacy data).
+    // Eén transactionele RPC i.p.v. losse per-rij updates, zodat de DEFERRABLE
+    // UNIQUE (project_id, positie) constraint geen tussentijdse botsing geeft.
     const posMismatch = weekRows.some((w, i) => w.positie !== i);
     if (posMismatch && weekRows.length > 0) {
-      const fixes = weekRows
-        .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-        .filter(Boolean) as { id: string; positie: number }[];
-      await Promise.all(
-        fixes.map((p) =>
-          supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
-        ),
-      );
+      await normalizeProjectWeeks(projectId);
       weekRows = weekRows.map((w, i) => ({ ...w, positie: i }));
     }
     setWeken(weekRows);
@@ -619,17 +614,10 @@ const Plannen = () => {
             .order("positie", { ascending: true });
           let finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
 
-          // Hercomputeer positie chronologisch op (jaar, week_nr).
-          // Push positie-correcties als ze afwijken
-          const positieFixes = finalWeeks
-            .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-            .filter(Boolean) as { id: string; positie: number }[];
-          if (positieFixes.length > 0) {
-            await Promise.all(
-              positieFixes.map((p) =>
-                supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
-              ),
-            );
+          // Hercomputeer positie chronologisch via transactionele RPC.
+          const seedNeedsFix = finalWeeks.some((w, i) => w.positie !== i);
+          if (seedNeedsFix) {
+            await normalizeProjectWeeks(projectId);
             finalWeeks = finalWeeks.map((w, i) => ({ ...w, positie: i }));
           }
 
@@ -663,11 +651,17 @@ const Plannen = () => {
       if (missing.length > 0) {
         seedingProjectsRef.current.add(projectId);
         try {
-          const inserts = missing.map((c) => ({
+          // Insert met unieke positie waarden boven de bestaande max om de
+          // UNIQUE (project_id, positie) constraint niet meteen te raken.
+          const topupMaxPos = effectiveWeeks.reduce(
+            (m, w) => Math.max(m, w.positie ?? -1),
+            -1,
+          );
+          const inserts = missing.map((c, i) => ({
             project_id: projectId,
             jaar: c.year,
             week_nr: c.week_nr,
-            positie: 0,
+            positie: topupMaxPos + 1 + i,
             opmerking: "",
           }));
           const { error: topupErr } = await supabase.from("project_weken").insert(inserts);
@@ -675,24 +669,13 @@ const Plannen = () => {
           if (topupErr) {
             console.warn("[plannen] week-topup insert error:", topupErr.message);
           }
+          await normalizeProjectWeeks(projectId);
           const { data: afterRows } = await supabase
             .from("project_weken")
             .select("*")
             .eq("project_id", projectId)
             .order("positie", { ascending: true });
-          let finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
-          // Hercomputeer posities chronologisch op (jaar, week_nr).
-          const fixes = finalWeeks
-            .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-            .filter(Boolean) as { id: string; positie: number }[];
-          if (fixes.length > 0) {
-            await Promise.all(
-              fixes.map((p) =>
-                supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
-              ),
-            );
-            finalWeeks = finalWeeks.map((w, i) => ({ ...w, positie: i }));
-          }
+          const finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
           effectiveWeeks = finalWeeks;
           setWeken(effectiveWeeks);
           toast.success(
@@ -716,34 +699,28 @@ const Plannen = () => {
       if (missing.length > 0) {
         seedingProjectsRef.current.add(projectId);
         try {
-          const inserts = missing.map((c) => ({
+          const gapMaxPos = effectiveWeeks.reduce(
+            (m, w) => Math.max(m, w.positie ?? -1),
+            -1,
+          );
+          const inserts = missing.map((c, i) => ({
             project_id: projectId,
             jaar: c.year,
             week_nr: c.week_nr,
-            positie: 0,
+            positie: gapMaxPos + 1 + i,
             opmerking: "",
           }));
           const { error: gapErr } = await supabase.from("project_weken").insert(inserts);
           if (gapErr) {
             console.warn("[plannen] week-gapfill insert error:", gapErr.message);
           }
+          await normalizeProjectWeeks(projectId);
           const { data: afterRows } = await supabase
             .from("project_weken")
             .select("*")
             .eq("project_id", projectId)
             .order("positie", { ascending: true });
-          let finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
-          const fixes = finalWeeks
-            .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-            .filter(Boolean) as { id: string; positie: number }[];
-          if (fixes.length > 0) {
-            await Promise.all(
-              fixes.map((p) =>
-                supabase.from("project_weken").update({ positie: p.positie }).eq("id", p.id),
-              ),
-            );
-            finalWeeks = finalWeeks.map((w, i) => ({ ...w, positie: i }));
-          }
+          const finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
           effectiveWeeks = finalWeeks;
           setWeken(effectiveWeeks);
           toast.success(
@@ -1619,17 +1596,11 @@ const Plannen = () => {
       loadAll();
       return;
     }
-    const fixes = rawNext
-      .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-      .filter(Boolean) as { id: string; positie: number }[];
-    if (fixes.length > 0) {
-      await Promise.all(
-        fixes.map((f) =>
-          supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
-        ),
-      );
+    const needsNorm = rawNext.some((w, i) => w.positie !== i);
+    if (needsNorm && projectId) {
+      await normalizeProjectWeeks(projectId);
     }
-  }, [weken, loadAll]);
+  }, [weken, loadAll, projectId]);
 
   // Wijzig (jaar, week_nr) van één week en verschuif álle andere weken met dezelfde delta.
   // Zo blijven de onderlinge afstanden bewaard en is er nooit een unique-constraint conflict
@@ -1653,8 +1624,13 @@ const Plannen = () => {
       const withPos = sortedNew.map((w, i) => ({ ...w, positie: i }));
       setWeken(withPos);
 
-      // Update in veilige volgorde om transient unique-conflicts te vermijden:
+      // Update in veilige volgorde om transient unique-conflicts op
+      // (project_id, jaar, week_nr) te vermijden:
       // delta>0 → hoog naar laag; delta<0 → laag naar hoog.
+      // `positie` blijft ongemoeid: een uniforme delta over alle weken
+      // verandert hun onderlinge chronologische volgorde niet, dus de
+      // huidige posities blijven correct (en we voorkomen onnodige
+      // botsingen met de DEFERRABLE UNIQUE (project_id, positie)).
       const updateOrder = [...withPos].sort((a, b) =>
         delta > 0
           ? b.jaar - a.jaar || b.week_nr - a.week_nr
@@ -1663,10 +1639,10 @@ const Plannen = () => {
       for (const w of updateOrder) {
         const { error } = await supabase
           .from("project_weken")
-          .update({ jaar: w.jaar, week_nr: w.week_nr, positie: w.positie })
+          .update({ jaar: w.jaar, week_nr: w.week_nr })
           .eq("id", w.id);
         if (error) {
-          toast.error("Weeknummers opslaan mislukt");
+          toast.error("Weeknummers opslaan mislukt: " + error.message);
           loadAll();
           return;
         }
@@ -1701,20 +1677,13 @@ const Plannen = () => {
           loadAll();
           return;
         }
-        const fixes = rawNext
-          .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-          .filter(Boolean) as { id: string; positie: number }[];
-        if (fixes.length > 0) {
-          await Promise.all(
-            fixes.map((f) =>
-              supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
-            ),
-          );
+        const needsNorm = rawNext.some((w, i) => w.positie !== i);
+        if (needsNorm) {
+          await normalizeProjectWeeks(projectId);
           setWeken((prev) =>
-            prev.map((w) => {
-              const f = fixes.find((x) => x.id === w.id);
-              return f ? { ...w, positie: f.positie } : w;
-            }),
+            [...prev]
+              .sort(compareWeeksChronological)
+              .map((w, i) => ({ ...w, positie: i })),
           );
         }
       } else {
@@ -1724,36 +1693,35 @@ const Plannen = () => {
         const candidates = enumerateWeekRange(bounds[0], bounds[bounds.length - 1]);
         const existingKeys = new Set(weken.map(weekKey));
         const toInsert = candidates.filter((c) => !existingKeys.has(`${c.year}-${c.week_nr}`));
+        // Insert met unieke posities boven de huidige max zodat de UNIQUE
+        // constraint (project_id, positie) niet meteen botst.
+        const addMaxPos = weken.reduce(
+          (m, w) => Math.max(m, w.positie ?? -1),
+          -1,
+        );
         const { data, error } = await supabase
           .from("project_weken")
-          .insert(toInsert.map((c) => ({
+          .insert(toInsert.map((c, i) => ({
             project_id: projectId,
             jaar: c.year,
             week_nr: c.week_nr,
-            positie: 0,
+            positie: addMaxPos + 1 + i,
             opmerking: "",
           })))
           .select();
         if (error || !data) {
-          toast.error("Week toevoegen mislukt");
+          toast.error("Week toevoegen mislukt: " + (error?.message ?? ""));
           return;
         }
         const next = [...weken, ...((data ?? []) as Week[])].sort(compareWeeksChronological);
         setWeken(next);
-        const fixes = next
-          .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
-          .filter(Boolean) as { id: string; positie: number }[];
-        if (fixes.length > 0) {
-          await Promise.all(
-            fixes.map((f) =>
-              supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
-            ),
-          );
+        const needsNorm2 = next.some((w, i) => w.positie !== i);
+        if (needsNorm2) {
+          await normalizeProjectWeeks(projectId);
           setWeken((prev) =>
-            prev.map((w) => {
-              const f = fixes.find((x) => x.id === w.id);
-              return f ? { ...w, positie: f.positie } : w;
-            }),
+            [...prev]
+              .sort(compareWeeksChronological)
+              .map((w, i) => ({ ...w, positie: i })),
           );
         }
       }

@@ -41,24 +41,21 @@ export function computeWeekPositionFixes<T extends WeekRow>(
 }
 
 /**
- * Herstelt de invarianten voor één project: leest alle weken, sorteert ze
- * chronologisch en zet `positie` opnieuw naar 0..n-1 voor zover nodig.
+ * Herstelt de invarianten voor één project via de transactionele RPC
+ * `normalize_project_weken`. De RPC voert één UPDATE met ROW_NUMBER uit binnen
+ * één transactie — veilig met de DEFERRABLE UNIQUE constraint op
+ * (project_id, positie).
  *
  * Idempotent: een tweede aanroep doet niets als alles al klopt.
+ * Stil falen bij niet-manager (RLS); de UI laadt dan toch via loadAll opnieuw.
  */
 export async function normalizeProjectWeeks(projectId: string): Promise<void> {
-  const { data, error } = await supabase
-    .from("project_weken")
-    .select("id, jaar, week_nr, positie")
-    .eq("project_id", projectId);
-  if (error || !data) return;
-
-  const { fixes } = computeWeekPositionFixes(data as WeekRow[]);
-  if (fixes.length === 0) return;
-
-  await Promise.all(
-    fixes.map((f) =>
-      supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
-    ),
-  );
+  if (!projectId) return;
+  const { error } = await supabase.rpc("normalize_project_weken", {
+    p_project_id: projectId,
+  });
+  if (error) {
+    // Niet fataal: de UI valt terug op een fresh loadAll().
+    console.warn("[project-weken] normalize_project_weken faalde:", error.message);
+  }
 }
