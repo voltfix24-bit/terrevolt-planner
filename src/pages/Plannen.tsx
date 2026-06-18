@@ -404,6 +404,10 @@ const Plannen = () => {
   // bestaan — basis voor de "er is planning buiten de periode"-melding.
   const [outsideWeekCount, setOutsideWeekCount] = useState<number>(0);
   const [outsideCellCount, setOutsideCellCount] = useState<number>(0);
+  // Volledige (ongefilterde) sets voor focus-berekening — `weken`/`cellen` zijn
+  // (mogelijk) al door het rolling window heen gefilterd / komen incrementeel.
+  const [allWeken, setAllWeken] = useState<Week[]>([]);
+  const [allCellsList, setAllCellsList] = useState<Cel[]>([]);
 
   const pushHistory = useCallback((entry: HistoryEntry) => {
     if (skipHistoryRef.current) return;
