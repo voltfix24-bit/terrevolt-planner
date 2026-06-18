@@ -946,6 +946,10 @@ export type Database = {
         Returns: undefined
       }
       set_audit_label: { Args: { p_label: string }; Returns: undefined }
+      shift_project_weken: {
+        Args: { p_delta: number; p_project_id: string }
+        Returns: number
+      }
       undo_batch: {
         Args: { p_batch_id?: string }
         Returns: {
