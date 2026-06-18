@@ -1172,12 +1172,8 @@ const Plannen = () => {
 
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
-        const heeftInhoud =
-          !!targetCel.kleur_code || targetMonteurs.length > 0 || !!targetCel.notitie;
-        if (heeftInhoud) {
-          const ok = window.confirm(
-            "De doel-dag is al gevuld. Wil je de bestaande inhoud overschrijven?"
-          );
+        if (hasCellContent(targetCel, targetMonteurs)) {
+          const ok = window.confirm(formatOverwritePrompt(1));
           if (!ok) return;
         }
         const delMonteurs = await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
