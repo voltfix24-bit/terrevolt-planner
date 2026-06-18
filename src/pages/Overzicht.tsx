@@ -1024,7 +1024,7 @@ export default function Overzicht() {
         if (!cel.week_id) continue;
         const week = weekById.get(cel.week_id);
         if (!week) continue;
-        if (!visibleWeekNrSet.has(week.week_nr)) continue;
+        if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
         const key = `${week.week_nr}-${cel.dag_index}`;
         if (!workingDateKeys.has(key)) continue;
         const mids = monteurIdsByCel.get(cel.id) ?? [];
@@ -1350,7 +1350,7 @@ export default function Overzicht() {
     for (const c of cellen) {
       const w = c.week_id ? weekById.get(c.week_id) : undefined;
       if (!w) continue;
-      if (visibleWeekNrSet.size && !visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || (visibleWeekNrSet.size && !visibleWeekNrSet.has(w.week_nr))) continue;
       const act = c.activiteit_id ? activiteitById.get(c.activiteit_id) : undefined;
       if (!act || !act.project_id) continue;
       const mids = monteurIdsByCel.get(c.id) ?? [];
