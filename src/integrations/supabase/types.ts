@@ -928,6 +928,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fill_cell_range: {
+        Args: {
+          p_overwrite_ids: string[]
+          p_source_cel_id: string
+          p_targets: Json
+        }
+        Returns: {
+          dag_index: number
+          id: string
+          week_id: string
+        }[]
+      }
       is_planner_manager: { Args: { check_user_id?: string }; Returns: boolean }
       set_audit_label: { Args: { p_label: string }; Returns: undefined }
       undo_batch: {
