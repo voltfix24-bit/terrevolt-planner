@@ -120,10 +120,11 @@ export async function uitrollenNaarPlanning(opts: {
   }
 
   // 2) Bestaande project_weken laden
-  const { data: bestaandeWeken } = await supabase
+  const { data: bestaandeWeken, error: eLoadWeken } = await supabase
     .from("project_weken")
     .select("id,week_nr,jaar,positie")
     .eq("project_id", project_id);
+  if (eLoadWeken) throw new Error("Kon bestaande weken niet laden: " + eLoadWeken.message);
   const wekenMap = new Map<string, string>();
   (bestaandeWeken ?? []).forEach((w) =>
     wekenMap.set(`${w.jaar}-${w.week_nr}`, w.id as string),
@@ -133,7 +134,7 @@ export async function uitrollenNaarPlanning(opts: {
     -1,
   );
 
-  // 3) Ontbrekende weken aanmaken
+  // 3) Ontbrekende weken aanmaken (idempotent via upsert op project_id+jaar+week_nr).
   const teMaken: { project_id: string; jaar: number; week_nr: number; positie: number }[] = [];
   let pos = maxPositie + 1;
   const sorted = Array.from(benodigdeWeken.values()).sort(
@@ -146,28 +147,36 @@ export async function uitrollenNaarPlanning(opts: {
   }
   let aangemaakteWeken = 0;
   if (teMaken.length > 0) {
-    const { data: ingev, error: e1 } = await supabase
+    // Upsert i.p.v. insert: voorkomt 23505 bij gelijktijdige uitrollen.
+    const { error: eUpsert } = await supabase
       .from("project_weken")
-      .insert(teMaken)
-      .select("id,week_nr,jaar");
-    if (e1) throw e1;
-    (ingev ?? []).forEach((w) =>
+      .upsert(teMaken, { onConflict: "project_id,jaar,week_nr", ignoreDuplicates: true });
+    if (eUpsert) throw new Error("Kon weken niet aanmaken: " + eUpsert.message);
+
+    // Herlees zodat we ALLE id's (ook reeds bestaande dubbele) hebben.
+    const { data: refreshed, error: eReload } = await supabase
+      .from("project_weken")
+      .select("id,week_nr,jaar")
+      .eq("project_id", project_id);
+    if (eReload) throw new Error("Kon weken niet herladen: " + eReload.message);
+    (refreshed ?? []).forEach((w) =>
       wekenMap.set(`${w.jaar}-${w.week_nr}`, w.id as string),
     );
-    aangemaakteWeken = ingev?.length ?? 0;
+    aangemaakteWeken = teMaken.length;
   }
 
-
-  // 4) Planning cellen aanmaken
-  const insertRows: {
+  // 4) Planning cellen voorbereiden (gedupliceerd per (activiteit, week, dag) wegfilteren).
+  type InsertRow = {
     activiteit_id: string;
     week_id: string;
     dag_index: number;
     kleur_code: string | null;
     capaciteit: number;
     notitie: string;
-  }[] = [];
-  const monteurInsertPerIndex: { idx: number; monteur_ids: string[] }[] = [];
+  };
+  const insertRows: InsertRow[] = [];
+  const monteurPerKey = new Map<string, string[]>();
+  const seenKey = new Set<string>();
 
   cellen.forEach((c) => {
     if (!c.activiteit_id) return;
@@ -175,7 +184,14 @@ export async function uitrollenNaarPlanning(opts: {
     const w = addIsoWeeks(startJaar!, startWeek, week_offset);
     const week_id = wekenMap.get(`${w.jaar}-${w.week_nr}`);
     if (!week_id) return;
-
+    const key = `${c.activiteit_id}|${week_id}|${dag_index}`;
+    if (seenKey.has(key)) {
+      // Merge monteurs als er meerdere concept-cellen op dezelfde slot landen.
+      const prev = monteurPerKey.get(key) ?? [];
+      monteurPerKey.set(key, Array.from(new Set([...prev, ...c.monteur_ids])));
+      return;
+    }
+    seenKey.add(key);
     insertRows.push({
       activiteit_id: c.activiteit_id,
       week_id,
@@ -184,33 +200,42 @@ export async function uitrollenNaarPlanning(opts: {
       capaciteit: c.capaciteit ?? 0,
       notitie: c.notitie ?? "",
     });
-    monteurInsertPerIndex.push({
-      idx: insertRows.length - 1,
-      monteur_ids: c.monteur_ids,
-    });
+    monteurPerKey.set(key, [...c.monteur_ids]);
   });
 
   if (insertRows.length === 0)
     return { aangemaakteCellen: 0, aangemaakteWeken };
 
+  // Upsert: opnieuw uitrollen overschrijft dezelfde cel i.p.v. dubbele rijen te
+  // produceren (constraint unique_cel: activiteit_id, week_id, dag_index).
   const { data: ingevoegdeCellen, error: e2 } = await supabase
     .from("planning_cellen")
-    .insert(insertRows)
-    .select("id");
-  if (e2) throw e2;
+    .upsert(insertRows, { onConflict: "activiteit_id,week_id,dag_index" })
+    .select("id,activiteit_id,week_id,dag_index");
+  if (e2) throw new Error("Kon planning-cellen niet schrijven: " + e2.message);
 
-  // 5) Monteurs koppelen
+  // 5) Monteurs synchroniseren: verwijder oude koppelingen voor de geraakte
+  //    cellen, voeg dan de gewenste set toe. Zo blijft re-uitrol consistent.
+  const celIds = (ingevoegdeCellen ?? []).map((c) => c.id as string);
+  if (celIds.length > 0) {
+    const { error: eDel } = await supabase
+      .from("cel_monteurs")
+      .delete()
+      .in("cel_id", celIds);
+    if (eDel) throw new Error("Kon monteur-koppelingen niet opschonen: " + eDel.message);
+  }
+
   const monteurRows: { cel_id: string; monteur_id: string }[] = [];
-  monteurInsertPerIndex.forEach(({ idx, monteur_ids }) => {
-    const cel = (ingevoegdeCellen ?? [])[idx];
-    if (!cel) return;
-    monteur_ids.forEach((mid) =>
-      monteurRows.push({ cel_id: cel.id as string, monteur_id: mid }),
-    );
+  (ingevoegdeCellen ?? []).forEach((cel) => {
+    const key = `${cel.activiteit_id}|${cel.week_id}|${cel.dag_index}`;
+    const mids = monteurPerKey.get(key) ?? [];
+    mids.forEach((mid) => monteurRows.push({ cel_id: cel.id as string, monteur_id: mid }));
   });
   if (monteurRows.length > 0) {
-    const { error: e3 } = await supabase.from("cel_monteurs").insert(monteurRows);
-    if (e3) throw e3;
+    const { error: e3 } = await supabase
+      .from("cel_monteurs")
+      .upsert(monteurRows, { onConflict: "cel_id,monteur_id", ignoreDuplicates: true });
+    if (e3) throw new Error("Kon monteurs niet koppelen: " + e3.message);
   }
 
   return {
@@ -218,3 +243,4 @@ export async function uitrollenNaarPlanning(opts: {
     aangemaakteWeken,
   };
 }
+
