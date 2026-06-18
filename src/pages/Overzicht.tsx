@@ -855,7 +855,7 @@ export default function Overzicht() {
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
       return true;
     });
-  }, [projecten, weken, cellen, activiteitById, weekById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus]);
+  }, [projecten, weken, cellen, activiteitById, weekById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus, jaar]);
 
   const schakelMonteurs = useMemo(
     () =>
