@@ -27,10 +27,10 @@ describe("dagOffsetLabel", () => {
 
 describe("ISO weken voor uitrol", () => {
   it("addIsoWeeks rolt netjes door jaargrens", () => {
-    // Week 52 van 2024 + 2 weken
+    // 2024 heeft 52 ISO-weken: W52/2024 + 2 = W2/2025.
     const r = addIsoWeeks(2024, 52, 2);
     expect(r.jaar).toBe(2025);
-    expect(r.week_nr).toBe(1);
+    expect(r.week_nr).toBe(2);
   });
   it("weekDeltaIso berekent correcte span over jaren", () => {
     const d = weekDeltaIso(2024, 51, 2025, 2);
