@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/hover-card";
 import { useConfirm, describeShift } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
+import { normalizeProjectWeeks } from "@/lib/project-weken";
 
 // ============== Constants ==============
 const SIDEBAR_W = 260;
