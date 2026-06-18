@@ -1088,46 +1088,47 @@ export default function Overzicht() {
       await setAuditLabel(`Project "${naam}": ${deltaDays > 0 ? "+" : ""}${deltaDays} dag`);
 
 
-      const weekIdByNr = new Map<number, string>();
+      const weekIdByKey = new Map<string, string>();
       let maxPos = -1;
       for (const w of weken) {
         if (w.project_id === projectId) {
-          weekIdByNr.set(w.week_nr, w.id);
+          weekIdByKey.set(`${w.jaar}-${w.week_nr}`, w.id);
           if (w.positie > maxPos) maxPos = w.positie;
         }
       }
 
-      const updates: { id: string; week_nr: number; dag_index: number }[] = [];
-      const needed = new Set<number>();
+      const updates: { id: string; jaar: number; week_nr: number; dag_index: number }[] = [];
+      const needed = new Map<string, { jaar: number; week_nr: number }>();
       for (const c of projectCellen) {
         if (!c.week_id) continue;
         const w = weekById.get(c.week_id);
         if (!w) continue;
-        const n = shiftDay(w.week_nr, c.dag_index, deltaDays);
+        const n = shiftDay(w, c.dag_index, deltaDays);
         updates.push({ id: c.id, ...n });
-        if (!weekIdByNr.has(n.week_nr)) needed.add(n.week_nr);
+        const key = `${n.jaar}-${n.week_nr}`;
+        if (!weekIdByKey.has(key)) needed.set(key, { jaar: n.jaar, week_nr: n.week_nr });
       }
 
       if (needed.size > 0) {
-        const teMaken = [...needed]
-          .sort((a, b) => a - b)
-          .map((wn, i) => ({
+        const teMaken = [...needed.values()]
+          .sort((a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr)
+          .map((w, i) => ({
             project_id: projectId,
-            jaar,
-            week_nr: wn,
+            jaar: w.jaar,
+            week_nr: w.week_nr,
             positie: maxPos + 1 + i,
           }));
         const { data: ingev, error: e1 } = await supabase
           .from("project_weken")
           .insert(teMaken)
-          .select("id, week_nr");
+          .select("id, jaar, week_nr");
         if (e1) {
           toast.error("Aanmaken weken mislukt");
           return;
         }
-        (ingev ?? []).forEach((w) =>
-          weekIdByNr.set(w.week_nr as number, w.id as string),
-        );
+        (ingev ?? []).forEach((w) => {
+          weekIdByKey.set(`${w.jaar}-${w.week_nr}`, w.id as string);
+        });
 
       }
 
