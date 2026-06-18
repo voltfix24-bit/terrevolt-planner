@@ -868,6 +868,9 @@ const Plannen = () => {
     } else {
       setOutsideCellCount(0);
     }
+    // Volledige sets voor focus-berekening (vóór window-filtering)
+    setAllWeken(effectiveWeeks);
+    setAllCellsList(allCells);
 
     setLoading(false);
   }, [projectId, planningWindow]);
