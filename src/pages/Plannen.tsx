@@ -389,6 +389,21 @@ const Plannen = () => {
   // Voorkomt dat dezelfde projectId tijdens één sessie meerdere keren tegelijk
   // weken gaat seeden (StrictMode dubbele mount, snelle navigatie, refetch).
   const seedingProjectsRef = useRef<Set<string>>(new Set());
+
+  // Rolling planning-venster (~3 mnd terug, ~9 mnd vooruit). offsetWeeks=0 = vandaag.
+  // De DB bevat altijd alle weken — dit filtert puur de weergave + welke weken
+  // we voor cellen laden, zodat projecten met verdwaalde weken jaren in de
+  // toekomst de UI niet opblazen.
+  const [windowOffsetWeeks, setWindowOffsetWeeks] = useState<number>(0);
+  const planningWindow = useMemo<PlanningWindow>(
+    () => getPlanningWindow(new Date(), windowOffsetWeeks),
+    [windowOffsetWeeks],
+  );
+  // Aantal project_weken / planning_cellen die buiten het huidige venster
+  // bestaan — basis voor de "er is planning buiten de periode"-melding.
+  const [outsideWeekCount, setOutsideWeekCount] = useState<number>(0);
+  const [outsideCellCount, setOutsideCellCount] = useState<number>(0);
+
   const pushHistory = useCallback((entry: HistoryEntry) => {
     if (skipHistoryRef.current) return;
     setHistory((prev) => [...prev.slice(-29), entry]);
