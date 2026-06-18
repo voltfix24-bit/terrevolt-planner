@@ -1398,7 +1398,7 @@ const Plannen = () => {
             notitie: src.notitie,
             capaciteit: src.capaciteit,
           })
-          .select();
+          .select()
           .single();
         if (error || !data) {
           toast.error("Doortrekken mislukt");
@@ -1732,7 +1732,7 @@ const Plannen = () => {
             positie: 0,
             opmerking: "",
           })))
-          .select()
+          .select();
         if (error || !data) {
           toast.error("Week toevoegen mislukt");
           return;
