@@ -2405,6 +2405,24 @@ export default function Overzicht() {
                       {allExpanded ? "Inklappen" : "Uitklappen"}
                     </button>
                   )}
+                  {!sidebarCollapsed && (
+                    <button
+                      type="button"
+                      onClick={resetAllManualSort}
+                      className="flex items-center gap-1 text-[10px] font-semibold transition-colors hover:text-foreground"
+                      style={{
+                        color: "rgb(var(--fg-rgb) / 0.4)",
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        border: "1px solid rgb(var(--fg-rgb) / 0.1)",
+                        background: "rgb(var(--fg-rgb) / 0.03)",
+                        marginRight: 12,
+                      }}
+                      title="Handmatige volgorde wissen (per bucket)"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
               );
             })()}
