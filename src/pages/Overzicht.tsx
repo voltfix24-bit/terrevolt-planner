@@ -1148,6 +1148,11 @@ export default function Overzicht() {
           weekIdByKey.set(`${w.jaar}-${w.week_nr}`, w.id as string);
         });
 
+        // Nieuwe weken zijn ingevoegd met positie = maxPos + 1 + i, wat de
+        // chronologische volgorde kan breken (bv. wanneer de planning
+        // achteruit verschuift). Herstel direct de invariant
+        // positie == chronologische index, zonder week_id van cellen aan te raken.
+        await normalizeProjectWeeks(projectId);
       }
 
       const results = await Promise.all(
