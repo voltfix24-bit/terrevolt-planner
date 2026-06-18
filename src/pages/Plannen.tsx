@@ -78,6 +78,12 @@ import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
 import { hasCellContent, formatOverwritePrompt, prepareFillTargets } from "@/lib/cell-conflicts";
 import { decideGapFill } from "@/lib/gap-fill";
+import {
+  getPlanningWindow,
+  isWeekInWindow,
+  PLANNING_WINDOW_STEP_WEEKS,
+  type PlanningWindow,
+} from "@/lib/planning-window";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
