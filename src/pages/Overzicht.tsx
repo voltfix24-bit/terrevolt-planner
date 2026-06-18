@@ -932,6 +932,7 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const k = dayKey(w.week_nr, c.dag_index);
       const si = dayKeyToSlot.get(k);
       if (si === undefined) continue;
@@ -990,6 +991,7 @@ export default function Overzicht() {
       if (!cel.week_id) continue;
       const week = weekById.get(cel.week_id);
       if (!week) continue;
+      if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
       const monday = getMondayOfWeek(week.week_nr, jaar);
       const date = new Date(monday);
       date.setDate(monday.getDate() + cel.dag_index);
