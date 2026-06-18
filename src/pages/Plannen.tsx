@@ -1404,33 +1404,41 @@ const Plannen = () => {
         const existing = cellen.get(cellKey(src.activiteit_id, coord.weekId, coord.dagIndex));
         if (!existing) continue;
         const ms = celMonteurs.get(existing.id) ?? [];
-        const heeftInhoud = !!existing.kleur_code || ms.length > 0 || !!existing.notitie;
-        if (heeftInhoud) conflicts.push(existing);
+        if (hasCellContent(existing, ms)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
-        const ok = window.confirm(
-          `${conflicts.length} doel-${conflicts.length === 1 ? "dag is" : "dagen zijn"} al gevuld. Wil je de bestaande inhoud overschrijven?`
-        );
+        const ok = window.confirm(formatOverwritePrompt(conflicts.length));
         if (!ok) return;
       }
 
-      // Verwijder conflict-cellen
-      for (const c of conflicts) {
-        await supabase.from("cel_monteurs").delete().eq("cel_id", c.id);
-        await supabase.from("planning_cellen").delete().eq("id", c.id);
-      }
-      setCellen((prev) => {
-        const m = new Map(prev);
-        for (const c of conflicts) {
-          m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+      // Verwijder conflict-cellen (db parallel). Bij fout: niets lokaal muteren,
+      // herladen en stoppen — voorkomt half-state / unique_cel-conflicten bij insert.
+      if (conflicts.length > 0) {
+        const delResults = await Promise.all(
+          conflicts.flatMap((c) => [
+            supabase.from("cel_monteurs").delete().eq("cel_id", c.id),
+            supabase.from("planning_cellen").delete().eq("id", c.id),
+          ])
+        );
+        const delErr = delResults.find((r) => r.error)?.error;
+        if (delErr) {
+          toast.error("Overschrijven mislukt: " + delErr.message);
+          loadAll();
+          return;
         }
-        return m;
-      });
-      setCelMonteurs((prev) => {
-        const m = new Map(prev);
-        for (const c of conflicts) m.delete(c.id);
-        return m;
-      });
+        setCellen((prev) => {
+          const m = new Map(prev);
+          for (const c of conflicts) {
+            m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+          }
+          return m;
+        });
+        setCelMonteurs((prev) => {
+          const m = new Map(prev);
+          for (const c of conflicts) m.delete(c.id);
+          return m;
+        });
+      }
 
       const srcMonteurs = celMonteurs.get(src.id) ?? [];
 
