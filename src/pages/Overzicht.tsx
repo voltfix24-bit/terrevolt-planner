@@ -551,7 +551,7 @@ export default function Overzicht() {
     const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes, afwRes] = await Promise.all([
       supabase
         .from("projecten")
-        .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen")
+        .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen, planning_sort_order, planning_sort_bucket")
         .order("created_at", { ascending: true }),
       supabase.from("project_weken").select("id, project_id, week_nr, jaar, positie"),
       supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
