@@ -21,6 +21,7 @@ import {
   formatDate,
   getMondayOfWeek,
   initialen,
+  weekDeltaIso,
   wrapWeek,
 } from "@/lib/planning-types";
 import {
@@ -1107,6 +1108,20 @@ export default function Overzicht() {
         updates.push({ id: c.id, ...n });
         const key = `${n.jaar}-${n.week_nr}`;
         if (!weekIdByKey.has(key)) needed.set(key, { jaar: n.jaar, week_nr: n.week_nr });
+      }
+      const rangeWeeks = [
+        ...weken.filter((w) => w.project_id === projectId).map((w) => ({ jaar: w.jaar, week_nr: w.week_nr })),
+        ...needed.values(),
+      ].sort((a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr);
+      if (rangeWeeks.length > 1) {
+        const first = rangeWeeks[0];
+        const last = rangeWeeks[rangeWeeks.length - 1];
+        const span = Math.max(0, weekDeltaIso(first.jaar, first.week_nr, last.jaar, last.week_nr));
+        for (let i = 0; i <= span; i++) {
+          const w = addIsoWeeks(first.jaar, first.week_nr, i);
+          const key = `${w.jaar}-${w.week_nr}`;
+          if (!weekIdByKey.has(key)) needed.set(key, w);
+        }
       }
 
       if (needed.size > 0) {
