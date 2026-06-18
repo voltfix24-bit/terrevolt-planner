@@ -1398,7 +1398,7 @@ const Plannen = () => {
             notitie: src.notitie,
             capaciteit: src.capaciteit,
           })
-          .select()
+          .select();
           .single();
         if (error || !data) {
           toast.error("Doortrekken mislukt");
