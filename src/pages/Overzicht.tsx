@@ -798,23 +798,104 @@ export default function Overzicht() {
 
   // Visible projects: toon ALLE projecten zodat niets stilletjes verdwijnt.
   // Sortering (zie src/lib/project-overview-sort.ts):
-  //   1. status: gepland → in_uitvoering → concept → afgerond
-  //   2. binnen status: toekomst-planning eerst, dan verleden-planning, dan geen planning
-  //   3. binnen "toekomst": vroegste eerstvolgende activiteit eerst
-  //   4. tiebreaker: case_nummer
+  //   1. status: in_uitvoering → gepland → concept → afgerond
+  //   2. planning-categorie: future → past → none
+  //   3. handmatige sortering (planning_sort_order, alleen geldig binnen huidige bucket)
+  //   4. eerstvolgende datum / GSU / case_nummer
+  const projectCellDates = useMemo(
+    () => buildProjectCellDates(weken, activiteiten, cellen),
+    [weken, activiteiten, cellen],
+  );
+  const todayMs = useMemo(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
+  }, []);
+  const projectBuckets = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of projecten) {
+      m.set(p.id, computeBucketClient(p, projectCellDates.get(p.id), todayMs));
+    }
+    return m;
+  }, [projecten, projectCellDates, todayMs]);
   const visibleProjecten = useMemo(() => {
-    const cellDates = buildProjectCellDates(weken, activiteiten, cellen);
-    const now = new Date();
-    const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const sorted = [...projecten].sort((a, b) =>
-      compareOverviewProjects(a, b, cellDates, todayMs),
+      compareOverviewProjects(a, b, projectCellDates, todayMs),
     );
     return sorted.filter((p) => {
       if (filterProjectId && p.id !== filterProjectId) return false;
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
       return true;
     });
-  }, [projecten, weken, activiteiten, cellen, filterProjectId, filterStatus]);
+  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus]);
+
+  // ====== Handmatige sortering (drag & drop binnen dezelfde bucket) ======
+  const [dragProjectId, setDragProjectId] = useState<string | null>(null);
+  const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null);
+
+  const handleProjectDragStart = (e: React.DragEvent, projectId: string) => {
+    setDragProjectId(projectId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", projectId);
+  };
+  const handleProjectDragOver = (e: React.DragEvent, overId: string) => {
+    if (!dragProjectId || dragProjectId === overId) return;
+    const a = projectBuckets.get(dragProjectId);
+    const b = projectBuckets.get(overId);
+    if (!a || a !== b) return; // andere bucket → geen drop toegestaan
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverProjectId !== overId) setDragOverProjectId(overId);
+  };
+  const handleProjectDragEnd = () => {
+    setDragProjectId(null);
+    setDragOverProjectId(null);
+  };
+  const handleProjectDrop = async (e: React.DragEvent, beforeProjectId: string) => {
+    e.preventDefault();
+    const movedId = dragProjectId;
+    setDragProjectId(null);
+    setDragOverProjectId(null);
+    if (!movedId || movedId === beforeProjectId) return;
+    const bucketA = projectBuckets.get(movedId);
+    const bucketB = projectBuckets.get(beforeProjectId);
+    if (!bucketA || bucketA !== bucketB) {
+      toast.error("Slepen tussen statussen of planning-categorieën is niet toegestaan.");
+      return;
+    }
+    try {
+      const { error } = await supabase.rpc("reorder_project_in_overview", {
+        p_project_id: movedId,
+        p_before_project_id: beforeProjectId,
+        p_after_project_id: null,
+      });
+      if (error) throw error;
+      toast.success("Volgorde bijgewerkt.");
+      await fetchAllData(jaar);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Volgorde niet opgeslagen: ${msg}`);
+      await fetchAllData(jaar);
+    }
+  };
+
+  const resetAllManualSort = async () => {
+    const buckets = Array.from(new Set(projecten.map((p) => p.planning_sort_bucket).filter(Boolean) as string[]));
+    if (buckets.length === 0) {
+      toast("Geen handmatige sortering om te resetten.");
+      return;
+    }
+    try {
+      for (const b of buckets) {
+        const { error } = await supabase.rpc("reset_overview_manual_sort", { p_bucket: b });
+        if (error) throw error;
+      }
+      toast.success("Handmatige sortering gewist.");
+      await fetchAllData(jaar);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Reset mislukt: ${msg}`);
+    }
+  };
 
   const schakelMonteurs = useMemo(
     () =>
