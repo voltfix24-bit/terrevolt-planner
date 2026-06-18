@@ -1137,7 +1137,7 @@ export default function Overzicht() {
           supabase
             .from("planning_cellen")
             .update({
-              week_id: weekIdByNr.get(u.week_nr)!,
+              week_id: weekIdByKey.get(`${u.jaar}-${u.week_nr}`)!,
               dag_index: u.dag_index,
             })
             .eq("id", u.id),
