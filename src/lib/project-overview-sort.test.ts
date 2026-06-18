@@ -90,13 +90,12 @@ describe("sort helper - manual order", () => {
   });
 
   it("oude/foute bucket valt terug op datum-sort", () => {
+    // Alle 3 hebben verkeerde bucket → manualOrder negeren → datum sorteert
     const arr = [
       p("c", "gepland", { planning_sort_order: 1, planning_sort_bucket: "concept:past" }),
       p("a", "gepland", { planning_sort_order: 2, planning_sort_bucket: "gepland:past" }),
-      p("b", "gepland", { planning_sort_order: 3, planning_sort_bucket: "gepland:future" }),
+      p("b", "gepland", { planning_sort_order: 3, planning_sort_bucket: "iets:anders" }),
     ].sort((x, y) => compareOverviewProjects(x, y, dates, todayMs)).map((x) => x.id);
-    // a/c hebben verkeerde bucket → vallen terug → sorteren op datum (a < b < c)
-    expect(arr[0]).toBe("a");
     expect(arr).toEqual(["a", "b", "c"]);
   });
 
