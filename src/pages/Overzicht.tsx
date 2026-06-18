@@ -17,9 +17,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
+  addIsoWeeks,
   formatDate,
   getMondayOfWeek,
   initialen,
+  weekDeltaIso,
   wrapWeek,
 } from "@/lib/planning-types";
 import {
@@ -126,6 +128,7 @@ interface Week {
   id: string;
   project_id: string | null;
   week_nr: number;
+  jaar: number;
   positie: number;
 }
 
@@ -546,7 +549,7 @@ export default function Overzicht() {
         .from("projecten")
         .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen")
         .order("created_at", { ascending: true }),
-      supabase.from("project_weken").select("id, project_id, week_nr, positie"),
+      supabase.from("project_weken").select("id, project_id, week_nr, jaar, positie"),
       supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
       // Alleen cellen die echt gevuld zijn (kleur_code != null) — lege cellen worden nooit gerenderd op Overzicht.
       supabase
@@ -650,7 +653,7 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const act = activiteitById.get(c.activiteit_id);
       if (!act?.project_id) continue;
       const monteurIds = monteurIdsByCel.get(c.id) ?? [];
@@ -665,7 +668,7 @@ export default function Overzicht() {
       }
     }
     return m;
-  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds]);
+  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds, jaar]);
 
   // dayKey → Set<monteurId> double-booked on that day
   // dayKey → monteurId → reden ("dubbel" | "verlof" | "vrije_dag")
@@ -732,7 +735,7 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const act = activiteitById.get(c.activiteit_id);
       if (!act?.project_id) continue;
       const k = dayKey(w.week_nr, c.dag_index);
@@ -743,7 +746,7 @@ export default function Overzicht() {
       byAct.set(c.activiteit_id, c);
     }
     return m;
-  }, [cellen, weekById, activiteitById, visibleWeekNrSet]);
+  }, [cellen, weekById, activiteitById, visibleWeekNrSet, jaar]);
 
   // activiteit_id → dayKey → cel
   const activiteitDayCel = useMemo(() => {
@@ -752,14 +755,14 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (!visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const k = dayKey(w.week_nr, c.dag_index);
       let byDay = m.get(c.activiteit_id);
       if (!byDay) { byDay = new Map(); m.set(c.activiteit_id, byDay); }
       byDay.set(k, c);
     }
     return m;
-  }, [cellen, weekById, visibleWeekNrSet]);
+  }, [cellen, weekById, visibleWeekNrSet, jaar]);
 
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
@@ -795,11 +798,12 @@ export default function Overzicht() {
   // (3) overige projecten (bv. concept zonder planning) — onderaan.
   const visibleProjecten = useMemo(() => {
     const planned = new Set<string>();
-    // Earliest planned week_nr per project (binnen huidig jaar/zicht)
-    const earliestWeek = new Map<string, number>();
-    const noteWeek = (projectId: string, weekNr: number) => {
-      const cur = earliestWeek.get(projectId);
-      if (cur === undefined || weekNr < cur) earliestWeek.set(projectId, weekNr);
+    // Eerste geplande week per project op echte ISO-datum, niet alleen op weeknummer.
+    const earliestWeekDate = new Map<string, number>();
+    const noteWeek = (projectId: string, week: Week) => {
+      const t = getMondayOfWeek(week.week_nr, week.jaar).getTime();
+      const cur = earliestWeekDate.get(projectId);
+      if (cur === undefined || t < cur) earliestWeekDate.set(projectId, t);
     };
     for (const c of cellen) {
       if (!c.activiteit_id || !c.kleur_code || !c.week_id) continue;
@@ -807,12 +811,12 @@ export default function Overzicht() {
       if (!act?.project_id) continue;
       planned.add(act.project_id);
       const w = weekById.get(c.week_id);
-      if (w) noteWeek(act.project_id, w.week_nr);
+      if (w) noteWeek(act.project_id, w);
     }
     for (const w of weken) {
-      if (w.project_id && visibleWeekNrSet.has(w.week_nr)) {
+      if (w.project_id && w.jaar === jaar && visibleWeekNrSet.has(w.week_nr)) {
         planned.add(w.project_id);
-        noteWeek(w.project_id, w.week_nr);
+        noteWeek(w.project_id, w);
       }
     }
     const inDateRange = (iso: string | null): boolean => {
@@ -836,8 +840,8 @@ export default function Overzicht() {
       const tb = tier(b);
       if (ta !== tb) return ta - tb;
       if (ta === 0) {
-        const wa = earliestWeek.get(a.id) ?? Number.POSITIVE_INFINITY;
-        const wb = earliestWeek.get(b.id) ?? Number.POSITIVE_INFINITY;
+        const wa = earliestWeekDate.get(a.id) ?? Number.POSITIVE_INFINITY;
+        const wb = earliestWeekDate.get(b.id) ?? Number.POSITIVE_INFINITY;
         if (wa !== wb) return wa - wb;
       } else if (ta === 1) {
         const da = earliestDate(a);
@@ -851,7 +855,7 @@ export default function Overzicht() {
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
       return true;
     });
-  }, [projecten, weken, cellen, activiteitById, weekById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus]);
+  }, [projecten, weken, cellen, activiteitById, weekById, visibleWeekNrSet, visibleDateRange, filterProjectId, filterStatus, jaar]);
 
   const schakelMonteurs = useMemo(
     () =>
@@ -928,6 +932,7 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
+      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
       const k = dayKey(w.week_nr, c.dag_index);
       const si = dayKeyToSlot.get(k);
       if (si === undefined) continue;
@@ -943,7 +948,7 @@ export default function Overzicht() {
       s.add(si);
     }
     return m;
-  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot]);
+  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot, visibleWeekNrSet, jaar]);
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
   // Excludes feestdagen consistently (both in possible and planned).
@@ -986,6 +991,7 @@ export default function Overzicht() {
       if (!cel.week_id) continue;
       const week = weekById.get(cel.week_id);
       if (!week) continue;
+      if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
       const monday = getMondayOfWeek(week.week_nr, jaar);
       const date = new Date(monday);
       date.setDate(monday.getDate() + cel.dag_index);
@@ -1020,7 +1026,7 @@ export default function Overzicht() {
         if (!cel.week_id) continue;
         const week = weekById.get(cel.week_id);
         if (!week) continue;
-        if (!visibleWeekNrSet.has(week.week_nr)) continue;
+        if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
         const key = `${week.week_nr}-${cel.dag_index}`;
         if (!workingDateKeys.has(key)) continue;
         const mids = monteurIdsByCel.get(cel.id) ?? [];
@@ -1051,13 +1057,13 @@ export default function Overzicht() {
   const [drag, setDrag] = useState<{ projectId: string; dx: number } | null>(null);
   const dragMovedRef = useRef(false);
 
-  // Verschuif (week_nr,dag_index) met N dagen (5 werkdagen per week, wrap 1..52).
-  const shiftDay = (week_nr: number, dag_index: number, deltaDays: number) => {
-    const total = (week_nr - 1) * 5 + dag_index + deltaDays;
-    const newWeekRaw = Math.floor(total / 5) + 1;
+  // Verschuif (jaar, week_nr, dag_index) met N werkdagen, met correcte ISO-jaargrenzen.
+  const shiftDay = (week: Week, dag_index: number, deltaDays: number) => {
+    const total = dag_index + deltaDays;
+    const weekDelta = Math.floor(total / 5);
     const newDag = ((total % 5) + 5) % 5;
-    const newWeek = ((((newWeekRaw - 1) % 52) + 52) % 52) + 1;
-    return { week_nr: newWeek, dag_index: newDag };
+    const shifted = addIsoWeeks(week.jaar, week.week_nr, weekDelta);
+    return { jaar: shifted.jaar, week_nr: shifted.week_nr, dag_index: newDag };
   };
 
   const shiftProjectPlanning = useCallback(
@@ -1085,46 +1091,61 @@ export default function Overzicht() {
       await setAuditLabel(`Project "${naam}": ${deltaDays > 0 ? "+" : ""}${deltaDays} dag`);
 
 
-      const weekIdByNr = new Map<number, string>();
+      const weekIdByKey = new Map<string, string>();
       let maxPos = -1;
       for (const w of weken) {
         if (w.project_id === projectId) {
-          weekIdByNr.set(w.week_nr, w.id);
+          weekIdByKey.set(`${w.jaar}-${w.week_nr}`, w.id);
           if (w.positie > maxPos) maxPos = w.positie;
         }
       }
 
-      const updates: { id: string; week_nr: number; dag_index: number }[] = [];
-      const needed = new Set<number>();
+      const updates: { id: string; jaar: number; week_nr: number; dag_index: number }[] = [];
+      const needed = new Map<string, { jaar: number; week_nr: number }>();
       for (const c of projectCellen) {
         if (!c.week_id) continue;
         const w = weekById.get(c.week_id);
         if (!w) continue;
-        const n = shiftDay(w.week_nr, c.dag_index, deltaDays);
+        const n = shiftDay(w, c.dag_index, deltaDays);
         updates.push({ id: c.id, ...n });
-        if (!weekIdByNr.has(n.week_nr)) needed.add(n.week_nr);
+        const key = `${n.jaar}-${n.week_nr}`;
+        if (!weekIdByKey.has(key)) needed.set(key, { jaar: n.jaar, week_nr: n.week_nr });
+      }
+      const rangeWeeks = [
+        ...weken.filter((w) => w.project_id === projectId).map((w) => ({ jaar: w.jaar, week_nr: w.week_nr })),
+        ...needed.values(),
+      ].sort((a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr);
+      if (rangeWeeks.length > 1) {
+        const first = rangeWeeks[0];
+        const last = rangeWeeks[rangeWeeks.length - 1];
+        const span = Math.max(0, weekDeltaIso(first.jaar, first.week_nr, last.jaar, last.week_nr));
+        for (let i = 0; i <= span; i++) {
+          const w = addIsoWeeks(first.jaar, first.week_nr, i);
+          const key = `${w.jaar}-${w.week_nr}`;
+          if (!weekIdByKey.has(key)) needed.set(key, w);
+        }
       }
 
       if (needed.size > 0) {
-        const teMaken = [...needed]
-          .sort((a, b) => a - b)
-          .map((wn, i) => ({
+        const teMaken = [...needed.values()]
+          .sort((a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr)
+          .map((w, i) => ({
             project_id: projectId,
-            jaar,
-            week_nr: wn,
+            jaar: w.jaar,
+            week_nr: w.week_nr,
             positie: maxPos + 1 + i,
           }));
         const { data: ingev, error: e1 } = await supabase
           .from("project_weken")
           .insert(teMaken)
-          .select("id, week_nr");
+          .select("id, jaar, week_nr");
         if (e1) {
           toast.error("Aanmaken weken mislukt");
           return;
         }
-        (ingev ?? []).forEach((w) =>
-          weekIdByNr.set(w.week_nr as number, w.id as string),
-        );
+        (ingev ?? []).forEach((w) => {
+          weekIdByKey.set(`${w.jaar}-${w.week_nr}`, w.id as string);
+        });
 
       }
 
@@ -1133,7 +1154,7 @@ export default function Overzicht() {
           supabase
             .from("planning_cellen")
             .update({
-              week_id: weekIdByNr.get(u.week_nr)!,
+              week_id: weekIdByKey.get(`${u.jaar}-${u.week_nr}`)!,
               dag_index: u.dag_index,
             })
             .eq("id", u.id),
@@ -1331,7 +1352,7 @@ export default function Overzicht() {
     for (const c of cellen) {
       const w = c.week_id ? weekById.get(c.week_id) : undefined;
       if (!w) continue;
-      if (visibleWeekNrSet.size && !visibleWeekNrSet.has(w.week_nr)) continue;
+      if (w.jaar !== jaar || (visibleWeekNrSet.size && !visibleWeekNrSet.has(w.week_nr))) continue;
       const act = c.activiteit_id ? activiteitById.get(c.activiteit_id) : undefined;
       if (!act || !act.project_id) continue;
       const mids = monteurIdsByCel.get(c.id) ?? [];

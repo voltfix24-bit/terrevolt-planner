@@ -127,7 +127,7 @@ function enumerateISOWeeks(startISO: string, endISO: string): { week_nr: number;
   const out: { week_nr: number; year: number }[] = [];
   const seen = new Set<string>();
   const cursor = new Date(monday);
-  for (let i = 0; i < 60 && cursor.getTime() <= end.getTime() + 6 * 86400000; i++) {
+  for (let i = 0; i < 2600 && cursor.getTime() <= end.getTime() + 6 * 86400000; i++) {
     const { year, week } = isoWeekParts(cursor);
     const key = `${year}-${week}`;
     if (!seen.has(key)) {
@@ -145,6 +145,24 @@ interface Week {
   jaar: number;
   positie: number;
   opmerking: string | null;
+}
+
+function compareWeeksChronological(a: Pick<Week, "jaar" | "week_nr">, b: Pick<Week, "jaar" | "week_nr">): number {
+  return a.jaar - b.jaar || a.week_nr - b.week_nr;
+}
+
+function weekKey(week: Pick<Week, "jaar" | "week_nr">): string {
+  return `${week.jaar}-${week.week_nr}`;
+}
+
+function isoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function enumerateWeekRange(first: Pick<Week, "jaar" | "week_nr">, last: Pick<Week, "jaar" | "week_nr">): { year: number; week_nr: number }[] {
+  const startMonday = getMondayOfWeek(first.week_nr, first.jaar);
+  const endMonday = getMondayOfWeek(last.week_nr, last.jaar);
+  return enumerateISOWeeks(isoDate(startMonday), isoDate(endMonday));
 }
 
 
@@ -403,9 +421,7 @@ const Plannen = () => {
       return;
     }
     setProject(projRes.data as Project);
-    let weekRows = ((wRes.data ?? []) as Week[]).slice().sort((a, b) =>
-      a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
-    );
+    let weekRows = ((wRes.data ?? []) as Week[]).slice().sort(compareWeeksChronological);
     // Repareer posities als ze niet chronologisch zijn (legacy data)
     const posMismatch = weekRows.some((w, i) => w.positie !== i);
     if (posMismatch && weekRows.length > 0) {
@@ -599,12 +615,9 @@ const Plannen = () => {
             .select("*")
             .eq("project_id", projectId)
             .order("positie", { ascending: true });
-          let finalWeeks = ((afterRows ?? []) as Week[]).slice();
+          let finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
 
           // Hercomputeer positie chronologisch op (jaar, week_nr).
-          finalWeeks.sort((a, b) =>
-            a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
-          );
           // Push positie-correcties als ze afwijken
           const positieFixes = finalWeeks
             .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
@@ -665,11 +678,8 @@ const Plannen = () => {
             .select("*")
             .eq("project_id", projectId)
             .order("positie", { ascending: true });
-          let finalWeeks = ((afterRows ?? []) as Week[]).slice();
+          let finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
           // Hercomputeer posities chronologisch op (jaar, week_nr).
-          finalWeeks.sort((a, b) =>
-            a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
-          );
           const fixes = finalWeeks
             .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
             .filter(Boolean) as { id: string; positie: number }[];
@@ -695,17 +705,11 @@ const Plannen = () => {
     // Gap-fill: zorg dat tussen de eerste en laatste week alle ISO-weken bestaan,
     // zodat de volgorde nooit een gat heeft (bv. W39 → W41 zonder W40).
     if (effectiveWeeks.length >= 2 && !seedingProjectsRef.current.has(projectId)) {
-      const sortedChrono = [...effectiveWeeks].sort((a, b) =>
-        a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
-      );
+      const sortedChrono = [...effectiveWeeks].sort(compareWeeksChronological);
       const first = sortedChrono[0];
       const last = sortedChrono[sortedChrono.length - 1];
-      const startMonday = getMondayOfWeek(first.week_nr, first.jaar);
-      const endMonday = getMondayOfWeek(last.week_nr, last.jaar);
-      const toISO = (d: Date) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const candidates = enumerateISOWeeks(toISO(startMonday), toISO(endMonday));
-      const existingKeys = new Set(effectiveWeeks.map((w) => `${w.jaar}-${w.week_nr}`));
+      const candidates = enumerateWeekRange(first, last);
+      const existingKeys = new Set(effectiveWeeks.map(weekKey));
       const missing = candidates.filter((c) => !existingKeys.has(`${c.year}-${c.week_nr}`));
       if (missing.length > 0) {
         seedingProjectsRef.current.add(projectId);
@@ -726,10 +730,7 @@ const Plannen = () => {
             .select("*")
             .eq("project_id", projectId)
             .order("positie", { ascending: true });
-          let finalWeeks = ((afterRows ?? []) as Week[]).slice();
-          finalWeeks.sort((a, b) =>
-            a.jaar !== b.jaar ? a.jaar - b.jaar : a.week_nr - b.week_nr,
-          );
+          let finalWeeks = ((afterRows ?? []) as Week[]).slice().sort(compareWeeksChronological);
           const fixes = finalWeeks
             .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
             .filter(Boolean) as { id: string; positie: number }[];
@@ -763,7 +764,7 @@ const Plannen = () => {
         .in("week_id", weekIds);
       const isUnplanned = (celCount ?? 0) === 0;
       if (isUnplanned) {
-        const sortedByPos = [...effectiveWeeks].sort((a, b) => a.positie - b.positie);
+        const sortedByPos = [...effectiveWeeks].sort(compareWeeksChronological);
         const first = sortedByPos[0];
         const delta = weekDeltaIso(first.jaar, first.week_nr, CURRENT_YEAR, CURRENT_WEEK);
         if (delta !== 0) {
@@ -789,7 +790,7 @@ const Plannen = () => {
             }
           }
           if (!anyError) {
-            effectiveWeeks = shifted.sort((a, b) => a.positie - b.positie);
+            effectiveWeeks = shifted.sort(compareWeeksChronological).map((w, i) => ({ ...w, positie: i }));
             setWeken(effectiveWeeks);
           }
         }
@@ -891,7 +892,7 @@ const Plannen = () => {
       if (projectWeekIds.has(c.week_id)) weekHasCel.add(c.week_id);
     });
     if (weekHasCel.size === 0) return; // cellen nog niet voor dit project geladen
-    const sorted = [...weken].sort((a, b) => a.positie - b.positie);
+    const sorted = [...weken].sort(compareWeeksChronological);
     const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
     if (idx < 0) return;
     // Schuif één week eerder zodat er wat context links van de geplande week
@@ -933,7 +934,7 @@ const Plannen = () => {
       if (projectWeekIds.has(c.week_id)) weekHasCel.add(c.week_id);
     });
     if (weekHasCel.size === 0) return;
-    const sorted = [...weken].sort((a, b) => a.positie - b.positie);
+    const sorted = [...weken].sort(compareWeeksChronological);
     const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
     if (idx < 0) return;
     const targetIdx = Math.max(0, idx - 1);
@@ -1579,8 +1580,9 @@ const Plannen = () => {
   /* ----------------------------- week mgmt ----------------------------- */
   const addWeek = useCallback(async () => {
     if (!projectId) return;
-    const lastWeek = weken[weken.length - 1];
-    const newPos = (lastWeek?.positie ?? -1) + 1;
+    const orderedWeeks = [...weken].sort(compareWeeksChronological);
+    const lastWeek = orderedWeeks[orderedWeeks.length - 1];
+    const newPos = orderedWeeks.length;
     const fallbackJaar = project?.jaar ?? new Date().getFullYear();
     const next = lastWeek
       ? addIsoWeeks(lastWeek.jaar, lastWeek.week_nr, 1)
@@ -1600,17 +1602,31 @@ const Plannen = () => {
       toast.error("Week toevoegen mislukt");
       return;
     }
-    setWeken((prev) => [...prev, data as Week]);
+    setWeken((prev) => [...prev, data as Week].sort(compareWeeksChronological));
   }, [projectId, weken, project?.jaar]);
 
   const removeLastWeek = useCallback(async () => {
-    const last = weken[weken.length - 1];
+    const orderedWeeks = [...weken].sort(compareWeeksChronological);
+    const last = orderedWeeks[orderedWeeks.length - 1];
     if (!last) return;
-    setWeken((prev) => prev.slice(0, -1));
+    const rawNext = orderedWeeks.filter((w) => w.id !== last.id);
+    const next = rawNext.map((w, i) => ({ ...w, positie: i }));
+    setWeken(next);
     const { error } = await supabase.from("project_weken").delete().eq("id", last.id);
     if (error) {
       toast.error("Week verwijderen mislukt");
       loadAll();
+      return;
+    }
+    const fixes = rawNext
+      .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
+      .filter(Boolean) as { id: string; positie: number }[];
+    if (fixes.length > 0) {
+      await Promise.all(
+        fixes.map((f) =>
+          supabase.from("project_weken").update({ positie: f.positie }).eq("id", f.id),
+        ),
+      );
     }
   }, [weken, loadAll]);
 
@@ -1665,8 +1681,15 @@ const Plannen = () => {
       if (!projectId) return;
       const existing = weken.find((w) => w.jaar === jaar && w.week_nr === week_nr);
       if (existing) {
-        // Verwijderen
-        const next = weken.filter((w) => w.id !== existing.id);
+        // Alleen randen verwijderen; een tussenweek verwijderen zou opnieuw gaten maken.
+        const ordered = [...weken].sort(compareWeeksChronological);
+        const existingIdx = ordered.findIndex((w) => w.id === existing.id);
+        if (existingIdx > 0 && existingIdx < ordered.length - 1) {
+          toast.info("Tussenliggende weken blijven staan zodat de planning aaneengesloten blijft");
+          return;
+        }
+        const rawNext = ordered.filter((w) => w.id !== existing.id);
+        const next = rawNext.map((w, i) => ({ ...w, positie: i }));
         setWeken(next);
         const { error } = await supabase
           .from("project_weken")
@@ -1677,7 +1700,7 @@ const Plannen = () => {
           loadAll();
           return;
         }
-        const fixes = next
+        const fixes = rawNext
           .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
           .filter(Boolean) as { id: string; positie: number }[];
         if (fixes.length > 0) {
@@ -1694,32 +1717,27 @@ const Plannen = () => {
           );
         }
       } else {
-        // Toevoegen
-        const inserted = [...weken, { jaar, week_nr } as Week].sort(
-          (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
-        );
-        const insertIdx = inserted.findIndex(
-          (w) => w.jaar === jaar && w.week_nr === week_nr,
-        );
+        // Toevoegen: vul meteen alle tussenweken tussen de eerste en laatste week.
+        const synthetic = { id: "", jaar, week_nr, positie: 0, opmerking: "" } as Week;
+        const bounds = [...weken, synthetic].sort(compareWeeksChronological);
+        const candidates = enumerateWeekRange(bounds[0], bounds[bounds.length - 1]);
+        const existingKeys = new Set(weken.map(weekKey));
+        const toInsert = candidates.filter((c) => !existingKeys.has(`${c.year}-${c.week_nr}`));
         const { data, error } = await supabase
           .from("project_weken")
-          .insert({
+          .insert(toInsert.map((c) => ({
             project_id: projectId,
-            jaar,
-            week_nr,
-            positie: insertIdx,
+            jaar: c.year,
+            week_nr: c.week_nr,
+            positie: 0,
             opmerking: "",
-          })
-          .select()
-          .single();
+          })))
+          .select();
         if (error || !data) {
           toast.error("Week toevoegen mislukt");
           return;
         }
-        const newWeek = data as Week;
-        const next = [...weken, newWeek].sort(
-          (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
-        );
+        const next = [...weken, ...((data ?? []) as Week[])].sort(compareWeeksChronological);
         setWeken(next);
         const fixes = next
           .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))

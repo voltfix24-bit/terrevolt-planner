@@ -97,13 +97,26 @@ export async function uitrollenNaarPlanning(opts: {
     startJaar = (proj?.jaar as number | null) ?? new Date().getFullYear();
   }
 
-  // 1) Bepaal benodigde (jaar, week_nr) paren via echte datum-rekenkunde
-  const { addIsoWeeks } = await import("./planning-types");
+  // 1) Bepaal benodigde (jaar, week_nr) paren via echte datum-rekenkunde.
+  // Vul ook alle tussenliggende weken, zodat een projectplanning nooit W39 → W41 kan krijgen.
+  const { addIsoWeeks, weekDeltaIso } = await import("./planning-types");
   const benodigdeWeken = new Map<string, { jaar: number; week_nr: number }>();
   for (const c of cellen) {
     const { week_offset } = offsetToWeekDag(c.dag_offset);
     const w = addIsoWeeks(startJaar, startWeek, week_offset);
     benodigdeWeken.set(`${w.jaar}-${w.week_nr}`, w);
+  }
+  const bounds = Array.from(benodigdeWeken.values()).sort(
+    (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
+  );
+  if (bounds.length > 1) {
+    const first = bounds[0];
+    const last = bounds[bounds.length - 1];
+    const span = Math.max(0, weekDeltaIso(first.jaar, first.week_nr, last.jaar, last.week_nr));
+    for (let i = 0; i <= span; i++) {
+      const w = addIsoWeeks(first.jaar, first.week_nr, i);
+      benodigdeWeken.set(`${w.jaar}-${w.week_nr}`, w);
+    }
   }
 
   // 2) Bestaande project_weken laden

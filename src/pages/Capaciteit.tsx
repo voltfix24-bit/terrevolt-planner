@@ -780,7 +780,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
 
       const { data: weken, error: wErr } = await supabase
         .from("project_weken")
-        .select("id, week_nr, project_id, positie")
+        .select("id, week_nr, jaar, project_id, positie")
         .in("week_nr", weekNrs);
 
       if (wErr || !weken) {
@@ -844,29 +844,33 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
         return;
       }
 
-      // Build week_id → {project_id, week_nr}
-      const weekById: Record<string, { project_id: string | null; week_nr: number }> = {};
+      const visibleWeekKeys = new Set(visibleWeeks.map((w) => `${w.jaar}-${w.week}`));
+      // Build week_id → {project_id, jaar, week_nr}
+      const weekById: Record<string, { project_id: string | null; jaar: number; week_nr: number }> = {};
       weken.forEach((w) => {
-        weekById[w.id] = { project_id: w.project_id, week_nr: w.week_nr };
+        if (visibleWeekKeys.has(`${w.jaar}-${w.week_nr}`)) {
+          weekById[w.id] = { project_id: w.project_id, jaar: w.jaar, week_nr: w.week_nr };
+        }
       });
 
-      // Build cel_id → {project_id, week_nr, dag_index}
-      const celById: Record<string, { project_id: string | null; week_nr: number; dag_index: number }> = {};
+      // Build cel_id → {project_id, jaar, week_nr, dag_index}
+      const celById: Record<string, { project_id: string | null; jaar: number; week_nr: number; dag_index: number }> = {};
       cellen.forEach((c) => {
         const w = weekById[c.week_id];
         if (w) {
           celById[c.id] = {
             project_id: w.project_id,
+            jaar: w.jaar,
             week_nr: w.week_nr,
             dag_index: c.dag_index,
           };
         }
       });
 
-      // Map week_nr → first matching visible monday (so we can compute date)
-      const weekNrToMonday: Record<number, Date> = {};
+      // Map jaar-week_nr → visible monday (so we can compute date)
+      const weekNrToMonday: Record<string, Date> = {};
       visibleWeeks.forEach((w) => {
-        weekNrToMonday[w.week] = w.monday;
+        weekNrToMonday[`${w.jaar}-${w.week}`] = w.monday;
       });
 
       // Build monteur_id → date_key → Set<project_id>
@@ -875,7 +879,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
       cms.forEach((cm) => {
         const cel = celById[cm.cel_id];
         if (!cel || !cel.project_id) return;
-        const monday = weekNrToMonday[cel.week_nr];
+        const monday = weekNrToMonday[`${cel.jaar}-${cel.week_nr}`];
         if (!monday) return;
         const date = addDays(monday, cel.dag_index);
         const key = isoKey(date);

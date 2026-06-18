@@ -160,7 +160,7 @@ export const VrijeDagenExport = ({ monteurs }: { monteurs: Monteur[] }) => {
           .gte("datum_tot", startIso),
         sb.from("feestdagen").select("datum").in("jaar", jaren),
         sb.from("cel_monteurs")
-          .select("monteur_id, planning_cellen!inner(dag_index, project_weken!inner(week_nr, projecten!inner(jaar)))")
+          .select("monteur_id, planning_cellen!inner(dag_index, project_weken!inner(week_nr, jaar))")
           .in("monteur_id", ids),
       ]);
 
@@ -178,7 +178,7 @@ export const VrijeDagenExport = ({ monteurs }: { monteurs: Monteur[] }) => {
         if (!pc) continue;
         const pw = pc.project_weken;
         if (!pw) continue;
-        const jaar = pw.projecten?.jaar;
+        const jaar = pw.jaar;
         if (!jaar) continue;
         gepland.add(`${row.monteur_id}|${jaar}|${pw.week_nr}|${pc.dag_index}`);
       }
