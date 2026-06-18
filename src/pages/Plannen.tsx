@@ -1178,8 +1178,13 @@ const Plannen = () => {
           );
           if (!ok) return;
         }
-        await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
-        await supabase.from("planning_cellen").delete().eq("id", targetCel.id);
+        const delMonteurs = await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
+        const delCel = await supabase.from("planning_cellen").delete().eq("id", targetCel.id);
+        if (delMonteurs.error || delCel.error) {
+          toast.error("Overschrijven mislukt: " + (delCel.error?.message ?? delMonteurs.error?.message));
+          loadAll();
+          return;
+        }
         setCelMonteurs((prev) => {
           const m = new Map(prev);
           m.delete(targetCel.id);
@@ -1190,6 +1195,7 @@ const Plannen = () => {
           m.delete(targetKey);
           return m;
         });
+
       }
 
       const oldKey = cellKey(src.activiteit_id, src.week_id, src.dag_index);
