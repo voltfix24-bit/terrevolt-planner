@@ -1680,8 +1680,14 @@ const Plannen = () => {
       if (!projectId) return;
       const existing = weken.find((w) => w.jaar === jaar && w.week_nr === week_nr);
       if (existing) {
-        // Verwijderen
-        const next = weken.filter((w) => w.id !== existing.id);
+        // Alleen randen verwijderen; een tussenweek verwijderen zou opnieuw gaten maken.
+        const ordered = [...weken].sort(compareWeeksChronological);
+        const existingIdx = ordered.findIndex((w) => w.id === existing.id);
+        if (existingIdx > 0 && existingIdx < ordered.length - 1) {
+          toast.info("Tussenliggende weken blijven staan zodat de planning aaneengesloten blijft");
+          return;
+        }
+        const next = ordered.filter((w) => w.id !== existing.id).map((w, i) => ({ ...w, positie: i }));
         setWeken(next);
         const { error } = await supabase
           .from("project_weken")
@@ -1709,32 +1715,27 @@ const Plannen = () => {
           );
         }
       } else {
-        // Toevoegen
-        const inserted = [...weken, { jaar, week_nr } as Week].sort(
-          (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
-        );
-        const insertIdx = inserted.findIndex(
-          (w) => w.jaar === jaar && w.week_nr === week_nr,
-        );
+        // Toevoegen: vul meteen alle tussenweken tussen de eerste en laatste week.
+        const synthetic = { id: "", jaar, week_nr, positie: 0, opmerking: "" } as Week;
+        const bounds = [...weken, synthetic].sort(compareWeeksChronological);
+        const candidates = enumerateWeekRange(bounds[0], bounds[bounds.length - 1]);
+        const existingKeys = new Set(weken.map(weekKey));
+        const toInsert = candidates.filter((c) => !existingKeys.has(`${c.year}-${c.week_nr}`));
         const { data, error } = await supabase
           .from("project_weken")
-          .insert({
+          .insert(toInsert.map((c) => ({
             project_id: projectId,
-            jaar,
-            week_nr,
-            positie: insertIdx,
+            jaar: c.year,
+            week_nr: c.week_nr,
+            positie: 0,
             opmerking: "",
-          })
+          })))
           .select()
-          .single();
         if (error || !data) {
           toast.error("Week toevoegen mislukt");
           return;
         }
-        const newWeek = data as Week;
-        const next = [...weken, newWeek].sort(
-          (a, b) => a.jaar - b.jaar || a.week_nr - b.week_nr,
-        );
+        const next = [...weken, ...((data ?? []) as Week[])].sort(compareWeeksChronological);
         setWeken(next);
         const fixes = next
           .map((w, i) => (w.positie !== i ? { id: w.id, positie: i } : null))
