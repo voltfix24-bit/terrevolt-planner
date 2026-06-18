@@ -1647,6 +1647,9 @@ const Plannen = () => {
       return;
     }
     setWeken((prev) => [...prev, data as Week].sort(compareWeeksChronological));
+    // Garandeer dat positie chronologisch blijft 0..n-1, ook als de nieuwe
+    // week (door addIsoWeeks rondom jaargrens) niet exact achteraan landt.
+    await normalizeProjectWeeks(projectId);
   }, [projectId, weken, project?.jaar]);
 
   const removeLastWeek = useCallback(async () => {
