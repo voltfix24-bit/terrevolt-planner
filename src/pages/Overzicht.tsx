@@ -17,6 +17,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
+  addIsoWeeks,
   formatDate,
   getMondayOfWeek,
   initialen,
@@ -1053,13 +1054,13 @@ export default function Overzicht() {
   const [drag, setDrag] = useState<{ projectId: string; dx: number } | null>(null);
   const dragMovedRef = useRef(false);
 
-  // Verschuif (week_nr,dag_index) met N dagen (5 werkdagen per week, wrap 1..52).
-  const shiftDay = (week_nr: number, dag_index: number, deltaDays: number) => {
-    const total = (week_nr - 1) * 5 + dag_index + deltaDays;
-    const newWeekRaw = Math.floor(total / 5) + 1;
+  // Verschuif (jaar, week_nr, dag_index) met N werkdagen, met correcte ISO-jaargrenzen.
+  const shiftDay = (week: Week, dag_index: number, deltaDays: number) => {
+    const total = dag_index + deltaDays;
+    const weekDelta = Math.floor(total / 5);
     const newDag = ((total % 5) + 5) % 5;
-    const newWeek = ((((newWeekRaw - 1) % 52) + 52) % 52) + 1;
-    return { week_nr: newWeek, dag_index: newDag };
+    const shifted = addIsoWeeks(week.jaar, week.week_nr, weekDelta);
+    return { jaar: shifted.jaar, week_nr: shifted.week_nr, dag_index: newDag };
   };
 
   const shiftProjectPlanning = useCallback(
