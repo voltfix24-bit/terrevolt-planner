@@ -5,6 +5,8 @@
  * De gebruiker kiest daarna in de browserprintdialoog "Opslaan als PDF".
  */
 
+import { TERREVOLT_ICON_DATA_URI } from "@/lib/brand-assets";
+
 export type Dienstverband = "zzp" | "loondienst";
 
 export interface ProjectMeta {
@@ -254,16 +256,19 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   }
   .brand { display: flex; gap: 10px; align-items: center; }
   .logo {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent-soft);
-    color: var(--accent-dark);
-    font-weight: 900;
-    font-size: 13px;
+    background: var(--accent-soft) !important;
+  }
+  .logo img {
+    width: 29px;
+    height: 29px;
+    object-fit: contain;
+    display: block;
   }
   .brand-name {
     font-size: 14px;
@@ -483,7 +488,7 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   <main class="print-root">
     <header class="doc-header">
       <div class="brand">
-        <div class="logo">TV</div>
+        <div class="logo"><img src="${TERREVOLT_ICON_DATA_URI}" alt="TerreVolt" /></div>
         <div>
           <div class="brand-name">TerreVolt</div>
           <div class="brand-sub">Mandagenregister</div>
