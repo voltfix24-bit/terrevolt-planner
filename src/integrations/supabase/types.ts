@@ -1204,6 +1204,16 @@ export type Database = {
           uren: number
         }[]
       }
+      mandagenregister_project_range: {
+        Args: { p_project_id: string }
+        Returns: {
+          first_planned: string
+          last_planned: string
+          planned_days: number
+          planned_monteurs: number
+          project_id: string
+        }[]
+      }
       normalize_project_planning_window: {
         Args: {
           p_apply?: boolean
