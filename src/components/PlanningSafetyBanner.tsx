@@ -105,7 +105,7 @@ export function PlanningSafetyBanner({
             <PlanningCleanupButton
               projectId={projectId}
               projectLabel={projectLabel}
-              onApplied={onCleaned}
+              onApplied={handleCleaned}
             />
           </div>
         )}
