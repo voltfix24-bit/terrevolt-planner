@@ -340,6 +340,47 @@ export type Database = {
           },
         ]
       }
+      planning_restore_snapshots: {
+        Row: {
+          cel_monteurs: Json
+          created_at: string
+          id: string
+          label: string
+          planning_cellen: Json
+          project_id: string
+          project_weken: Json
+          reason: string | null
+        }
+        Insert: {
+          cel_monteurs: Json
+          created_at?: string
+          id?: string
+          label: string
+          planning_cellen: Json
+          project_id: string
+          project_weken: Json
+          reason?: string | null
+        }
+        Update: {
+          cel_monteurs?: Json
+          created_at?: string
+          id?: string
+          label?: string
+          planning_cellen?: Json
+          project_id?: string
+          project_weken?: Json
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_restore_snapshots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ploeg_monteurs: {
         Row: {
           created_at: string | null
@@ -934,9 +975,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assess_project_planning: { Args: { p_project_id: string }; Returns: Json }
       compute_project_overview_bucket: {
         Args: { p_project_id: string }
         Returns: string
+      }
+      count_dangling_planning_cellen: {
+        Args: { p_project_ids?: string[] }
+        Returns: number
       }
       fill_cell_range: {
         Args: {
@@ -971,20 +1017,23 @@ export type Database = {
         Args: { p_bucket: string }
         Returns: number
       }
-      restore_concept_planning:
-        | { Args: { p_apply?: boolean; p_target_ts: string }; Returns: Json }
-        | {
-            Args: {
-              p_apply?: boolean
-              p_project_ids?: string[]
-              p_target_ts: string
-            }
-            Returns: Json
-          }
+      restore_concept_planning: {
+        Args: {
+          p_apply?: boolean
+          p_force_project_ids?: string[]
+          p_project_ids?: string[]
+          p_target_ts: string
+        }
+        Returns: Json
+      }
       set_audit_label: { Args: { p_label: string }; Returns: undefined }
       shift_project_weken: {
-        Args: { p_delta: number; p_project_id: string }
+        Args: { p_delta: number; p_force?: boolean; p_project_id: string }
         Returns: number
+      }
+      snapshot_project_planning: {
+        Args: { p_label: string; p_project_id: string; p_reason?: string }
+        Returns: string
       }
       undo_batch: {
         Args: { p_batch_id?: string }
