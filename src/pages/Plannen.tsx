@@ -1581,22 +1581,57 @@ const Plannen = () => {
         } else {
           toast.error("Doortrekken mislukt: " + msg);
         }
-        // RPC is transactioneel — bij fout is er niets gewijzigd. Toch loadAll
-        // om zeker te weten dat lokale state actueel is (race met andere users).
-        loadAll();
+        // Stille refresh om zeker te zijn dat lokale state actueel is.
+        void loadAll({ silent: true });
         return;
       }
-      const insertedIds = Array.isArray(inserted)
-        ? (inserted as Array<{ id: string }>).map((r) => r.id).filter(Boolean)
+
+      const insertedRows = Array.isArray(inserted)
+        ? (inserted as Array<{ id: string; week_id: string; dag_index: number }>)
         : [];
+      const insertedIds = insertedRows.map((r) => r.id).filter(Boolean);
+      const srcMonteurIds = [...(celMonteurs.get(src.id) ?? [])];
+
+      // Lokale UI-update — geen globale loader.
+      const overwrittenIds = new Set(conflicts.map((c) => c.id));
+      setCellen((prev) => {
+        const m = new Map(prev);
+        // Verwijder overschreven cellen
+        for (const c of conflicts) {
+          m.delete(cellKey(c.activiteit_id, c.week_id, c.dag_index));
+        }
+        // Voeg nieuwe cellen toe op basis van bron + insert response
+        for (const row of insertedRows) {
+          const newCel: Cel = {
+            id: row.id,
+            activiteit_id: src.activiteit_id,
+            week_id: row.week_id,
+            dag_index: row.dag_index,
+            kleur_code: src.kleur_code,
+            notitie: src.notitie,
+            capaciteit: src.capaciteit,
+          };
+          m.set(cellKey(newCel.activiteit_id, newCel.week_id, newCel.dag_index), newCel);
+        }
+        return m;
+      });
+      setCelMonteurs((prev) => {
+        const m = new Map(prev);
+        for (const id of overwrittenIds) m.delete(id);
+        for (const row of insertedRows) {
+          m.set(row.id, [...srcMonteurIds]);
+        }
+        return m;
+      });
+
       pushHistory({
         type: "cells_filled",
         label: `Doortrekken: ${insertedIds.length} cel${insertedIds.length === 1 ? "" : "len"}`,
         insertedCelIds: insertedIds,
         overwritten,
       });
-      // Herlaad om nieuwe cellen + monteurs op te halen (eenvoudig en altijd consistent).
-      loadAll();
+      // Stille background refresh — geen globale loader.
+      void loadAll({ silent: true });
     },
     [cellen, celMonteurs, weken, loadAll, pushHistory]
   );
