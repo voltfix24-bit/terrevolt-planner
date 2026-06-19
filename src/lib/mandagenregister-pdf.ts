@@ -57,23 +57,46 @@ const fmtDate = (iso: string | null | undefined): string => {
 const fmtShortDate = (d: Date): string =>
   d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+const fmtDay = (d: Date): string => String(d.getUTCDate()).padStart(2, "0");
+
 const fmtUren = (n: number): string => {
-  if (!n) return "";
-  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.0+$/, "").replace(/\.([1-9])0$/, ".$1");
+  if (!n) return "-";
+  return Number.isInteger(n) ? `${n}.0` : n.toFixed(2).replace(/\.0+$/, ".0").replace(/\.([1-9])0$/, ".$1");
 };
 
-function isoWeekRange(weekKey: string): string {
+function isoWeekDates(weekKey: string): Date[] | null {
   const match = weekKey.match(/^(\d{4})-W(\d{2})$/);
-  if (!match) return weekKey;
+  if (!match) return null;
   const year = Number(match[1]);
   const week = Number(match[2]);
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const jan4Day = jan4.getUTCDay() || 7;
   const monday = new Date(jan4);
   monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1 + (week - 1) * 7);
-  const sunday = new Date(monday);
-  sunday.setUTCDate(monday.getUTCDate() + 6);
-  return `${weekKey} · ${fmtShortDate(monday)} t/m ${fmtShortDate(sunday)}`;
+  return Array.from({ length: 7 }, (_, index) => {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + index);
+    return d;
+  });
+}
+
+function isoWeekLabel(weekKey: string): { badge: string; range: string; dayHeaders: string[] } {
+  const dates = isoWeekDates(weekKey);
+  if (!dates) {
+    return {
+      badge: weekKey,
+      range: weekKey,
+      dayHeaders: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
+    };
+  }
+  const shortWeek = weekKey.replace(/^\d{4}-W/, "Week ");
+  return {
+    badge: shortWeek,
+    range: `${fmtShortDate(dates[0])} t/m ${fmtShortDate(dates[6])}`,
+    dayHeaders: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"].map(
+      (label, index) => `${label} (${fmtDay(dates[index])})`,
+    ),
+  };
 }
 
 export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void {
@@ -81,18 +104,6 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   const preparedBy = input.preparedBy ?? "TerreVolt Planner";
   const titel = dienstverband === "zzp" ? "Mandagenregister ZZP" : "Mandagenregister Loondienst";
   const projectLabel = [project.case_nummer, project.station_naam].filter(Boolean).join(" - ");
-
-  const zzpHeaders = [
-    "Naam zelfstandige", "Status", "KvK-nummer",
-    "Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo",
-    "Totaal", "Opmerking",
-  ];
-  const loondienstHeaders = [
-    "Naam", "BSN", "Geboortedatum", "ID-type", "ID-nummer", "ID geldig tot",
-    "Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo",
-    "Totaal", "Opmerking",
-  ];
-  const headers = dienstverband === "zzp" ? zzpHeaders : loondienstHeaders;
 
   const sortedRows = [...rows].sort(
     (a, b) => a.week.localeCompare(b.week) || a.naam.localeCompare(b.naam, "nl"),
@@ -102,6 +113,12 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
     (acc[row.week] ??= []).push(row);
     return acc;
   }, {});
+
+  const baseHeader = dienstverband === "zzp"
+    ? ["Naam zelfstandige", "Status", "KvK-nummer"]
+    : ["Naam", "BSN", "Geboortedatum", "ID-type", "ID-nummer", "ID geldig tot"];
+  const trailingHeader = ["Totaal", "Opmerking"];
+  const columnCount = baseHeader.length + 7 + trailingHeader.length;
 
   const renderRow = (r: WeekRow): string => {
     if (dienstverband === "zzp") {
@@ -128,23 +145,37 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   };
 
   const weekSections = sortedRows.length === 0
-    ? `<section class="week-section"><table><tbody><tr><td colspan="${headers.length}" class="empty">Geen geplande monteurs in deze periode.</td></tr></tbody></table></section>`
+    ? `<section class="week-section"><table><tbody><tr><td colspan="${columnCount}" class="empty">Geen geplande monteurs in deze periode.</td></tr></tbody></table></section>`
     : Object.entries(rowsByWeek).map(([week, weekRows]) => {
+        const labels = isoWeekLabel(week);
+        const dayTotals = Array.from({ length: 7 }, (_, index) =>
+          weekRows.reduce((sum, row) => sum + (Number(row.days[index]) || 0), 0),
+        );
         const weekTotal = weekRows.reduce((sum, r) => sum + (r.total || 0), 0);
+        const headers = [...baseHeader, ...labels.dayHeaders, ...trailingHeader];
         return `<section class="week-section">
-          <div class="week-title">
-            <span>${escHtml(isoWeekRange(week))}</span>
-            <b>${escHtml(fmtUren(weekTotal) || "0")} uur</b>
+          <div class="week-heading">
+            <span class="week-badge">${escHtml(labels.badge)}</span>
+            <span class="week-range">Weekoverzicht: ${escHtml(labels.range)}</span>
           </div>
           <table aria-label="${escHtml(titel)} ${escHtml(week)}">
-            <thead><tr>${headers.map((h) => `<th>${escHtml(h)}</th>`).join("")}</tr></thead>
+            <thead><tr>${headers.map((h, index) => `<th class="${index === headers.length - 2 ? "total-head" : ""}">${escHtml(h)}</th>`).join("")}</tr></thead>
             <tbody>${weekRows.map(renderRow).join("")}</tbody>
+            <tfoot>
+              <tr>
+                <td colspan="${baseHeader.length}" class="daily-label">Dagtotaal</td>
+                ${dayTotals.map((u) => `<td class="daily-total">${escHtml(fmtUren(u))}</td>`).join("")}
+                <td class="grand-total">${escHtml(fmtUren(weekTotal))}</td>
+                <td></td>
+              </tr>
+            </tfoot>
           </table>
         </section>`;
       }).join("");
 
   const totalAll = sortedRows.reduce((sum, r) => sum + (r.total || 0), 0);
   const monteurCount = new Set(sortedRows.map((r) => r.monteur_id)).size;
+  const weekKeys = Object.keys(rowsByWeek);
 
   const html = `<!doctype html>
 <html lang="nl">
@@ -156,10 +187,12 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   :root {
     --accent: #10b981;
     --accent-dark: #064e3b;
-    --ink: #1f2937;
+    --accent-soft: #d1fae5;
+    --ink: #111827;
     --muted: #64748b;
-    --line: #cbd5e1;
-    --soft: #f8fafc;
+    --line: #d9e2e8;
+    --soft: #f3f6f7;
+    --summary: #111827;
   }
 
   @page { size: A4 landscape; margin: 12mm; }
@@ -210,79 +243,96 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
 
   .doc-header {
     display: grid;
-    grid-template-columns: 190px 1fr 210px;
-    gap: 14px;
+    grid-template-columns: 260px 1fr 230px;
+    gap: 18px;
     align-items: start;
-    padding-bottom: 8px;
-    margin-bottom: 10px;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
     border-bottom: 2px solid var(--accent);
   }
-  .brand { display: flex; gap: 9px; align-items: center; }
+  .brand { display: flex; gap: 10px; align-items: center; }
   .logo {
-    width: 32px;
-    height: 32px;
-    border-radius: 7px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #d1fae5;
-    color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-dark);
     font-weight: 900;
     font-size: 13px;
   }
   .brand-name {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 800;
     color: var(--accent-dark);
-    letter-spacing: 0.02em;
   }
-  .brand-sub { color: var(--muted); font-size: 9.5px; }
+  .brand-sub {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
   .doc-title { text-align: center; }
   .doc-title h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
     line-height: 1.1;
     color: var(--ink);
   }
-  .doc-title div { margin-top: 3px; color: var(--muted); }
-  .doc-meta { text-align: right; color: var(--muted); font-size: 9.5px; }
+  .doc-title div { margin-top: 4px; color: var(--muted); }
+  .doc-meta { text-align: right; color: var(--muted); font-size: 10px; }
   .doc-meta b { color: var(--ink); }
 
   .project-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 7px 14px;
-    margin-bottom: 10px;
+    gap: 7px 20px;
+    margin-bottom: 24px;
+    padding: 14px 16px;
+    border-radius: 7px;
+    background: var(--soft) !important;
   }
   .label {
-    color: var(--muted);
-    font-size: 8px;
+    color: #4b5563;
+    font-size: 8.5px;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-  .value { margin-top: 1px; font-size: 10.8px; font-weight: 700; color: var(--ink); }
+  .value { margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--ink); }
 
   .week-section {
-    margin-top: 10px;
+    margin-top: 22px;
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .week-title {
+  .week-heading {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 5px 7px;
-    border: 0.5px solid #bbf7d0;
-    border-bottom: 0;
-    border-radius: 4px 4px 0 0;
-    background: #f0fdf4 !important;
-    color: var(--accent-dark);
-    font-size: 10px;
-    font-weight: 800;
+    gap: 9px;
+    margin-bottom: 8px;
   }
-  .week-title b { font-size: 9.5px; }
+  .week-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    border-radius: 4px;
+    background: var(--accent) !important;
+    color: #ffffff;
+    padding: 4px 10px;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .week-range {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+  }
 
   table {
     width: 100%;
@@ -293,50 +343,105 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   tr { break-inside: avoid; page-break-inside: avoid; }
   th, td {
     border: 0.5px solid var(--line);
-    padding: 4px 5px;
+    padding: 6px 7px;
     vertical-align: middle;
   }
   th {
-    background: #ecfdf5 !important;
-    color: var(--accent-dark);
-    font-size: 8.5px;
+    background: #f3f6f7 !important;
+    color: var(--ink);
+    font-size: 9px;
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    text-align: center;
+    text-align: left;
   }
-  td.naam { font-weight: 700; min-width: 135px; }
+  th:not(:first-child), td.uren, td.daily-total { text-align: center; }
+  th.total-head {
+    background: #e8f8f0 !important;
+    color: var(--accent-dark);
+  }
+  td.naam { font-weight: 800; min-width: 135px; }
   td.status { text-align: center; color: var(--accent-dark); font-weight: 900; }
   td.mono { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  td.uren { text-align: center; min-width: 24px; font-variant-numeric: tabular-nums; }
-  td.totaal { text-align: right; font-weight: 800; background: var(--soft) !important; }
+  td.uren { min-width: 27px; font-variant-numeric: tabular-nums; }
+  td.totaal { text-align: right; font-weight: 900; background: #fafafa !important; }
   td.opmerking { color: #475569; font-size: 9px; }
   td.empty { padding: 22px; text-align: center; color: var(--muted); font-style: italic; }
-
-  .totals {
-    margin-top: 8px;
-    text-align: right;
-    font-size: 10.5px;
+  tfoot td {
+    background: #eef2f3 !important;
+    font-weight: 900;
   }
-  .totals b { color: var(--accent-dark); }
+  .daily-label { color: var(--ink); }
+  .grand-total {
+    background: var(--accent) !important;
+    color: #ffffff;
+    text-align: right;
+  }
 
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 330px;
+    gap: 24px;
+    align-items: end;
+    margin-top: 26px;
+  }
   .prepared {
-    margin-top: 12px;
-    padding-top: 6px;
-    border-top: 1px dashed var(--line);
+    padding-top: 8px;
+    border-top: 1px solid #cbd5e1;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 9.5px;
   }
   .prepared b { color: var(--ink); }
+  .summary-card {
+    border-radius: 8px;
+    background: var(--summary) !important;
+    color: #ffffff;
+    padding: 16px 18px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .summary-title {
+    padding-bottom: 7px;
+    border-bottom: 1px solid rgb(255 255 255 / 0.18);
+    color: #e5e7eb;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+    margin-top: 12px;
+  }
+  .summary-grid span:nth-child(odd) { color: #cbd5e1; }
+  .summary-grid span:nth-child(even) { font-weight: 900; text-align: right; }
+  .summary-total {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid rgb(255 255 255 / 0.18);
+  }
+  .summary-total b:first-child {
+    color: var(--accent);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .summary-total b:last-child { font-size: 20px; }
 
   .footer {
-    margin-top: 10px;
-    padding-top: 6px;
-    border-top: 1px dashed var(--line);
+    margin-top: 14px;
+    padding-top: 7px;
+    border-top: 1px solid #e5e7eb;
     display: flex;
     justify-content: space-between;
     color: var(--muted);
     font-size: 8.8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   @media print {
@@ -357,8 +462,9 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
     .project-grid,
     .week-section,
     table,
-    .totals,
+    .bottom-row,
     .prepared,
+    .summary-card,
     .footer {
       visibility: visible !important;
       opacity: 1 !important;
@@ -378,7 +484,7 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
         <div class="logo">TV</div>
         <div>
           <div class="brand-name">TerreVolt</div>
-          <div class="brand-sub">Planner · Mandagenregister</div>
+          <div class="brand-sub">Mandagenregister</div>
         </div>
       </div>
       <div class="doc-title">
@@ -399,14 +505,19 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
 
     ${weekSections}
 
-    <div class="totals">
-      Totaal uren in deze periode: <b>${escHtml(fmtUren(totalAll) || "0")}</b>
-      · ${monteurCount} monteur${monteurCount === 1 ? "" : "s"}
-      · ${sortedRows.length} weekregel${sortedRows.length === 1 ? "" : "s"}
-    </div>
-
-    <div class="prepared">
-      Opgesteld door <b>${escHtml(preparedBy)}</b>.
+    <div class="bottom-row">
+      <div class="prepared">
+        Opgesteld door <b>${escHtml(preparedBy)}</b>.
+      </div>
+      <aside class="summary-card">
+        <div class="summary-title">Registersamenvatting</div>
+        <div class="summary-grid">
+          <span>Monteurs</span><span>${monteurCount}</span>
+          <span>Weken</span><span>${weekKeys.length}</span>
+          <span>Weekregels</span><span>${sortedRows.length}</span>
+          <div class="summary-total"><b>Totaal uren</b><b>${escHtml(fmtUren(totalAll))}</b></div>
+        </div>
+      </aside>
     </div>
 
     <footer class="footer">
