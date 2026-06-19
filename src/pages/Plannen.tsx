@@ -1553,8 +1553,14 @@ const Plannen = () => {
         if (!ok) return;
       }
 
+      // Snapshot van overgeschreven cellen (incl. monteurs) voor undo
+      const overwritten: OverwrittenCell[] = conflicts.map((c) => ({
+        cel: c,
+        monteurIds: [...(celMonteurs.get(c.id) ?? [])],
+      }));
+
       // Atomic: 1 RPC-call doet alles in één transactie. Bij fout: niets gewijzigd.
-      const { error } = await supabase.rpc("fill_cell_range", {
+      const { data: inserted, error } = await supabase.rpc("fill_cell_range", {
         p_source_cel_id: src.id,
         p_targets: targets as unknown as never,
         p_overwrite_ids: conflicts.map((c) => c.id),
@@ -1573,10 +1579,19 @@ const Plannen = () => {
         loadAll();
         return;
       }
+      const insertedIds = Array.isArray(inserted)
+        ? (inserted as Array<{ id: string }>).map((r) => r.id).filter(Boolean)
+        : [];
+      pushHistory({
+        type: "cells_filled",
+        label: `Doortrekken: ${insertedIds.length} cel${insertedIds.length === 1 ? "" : "len"}`,
+        insertedCelIds: insertedIds,
+        overwritten,
+      });
       // Herlaad om nieuwe cellen + monteurs op te halen (eenvoudig en altijd consistent).
       loadAll();
     },
-    [cellen, celMonteurs, weken, loadAll]
+    [cellen, celMonteurs, weken, loadAll, pushHistory]
   );
 
 
