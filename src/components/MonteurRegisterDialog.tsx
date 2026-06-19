@@ -216,110 +216,177 @@ export function MonteurRegisterDialog({
                 </div>
               </div>
 
-              {/* Algemeen */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Geboortedatum</Label>
-                  <Input
-                    type="date"
-                    value={reg.geboortedatum ?? ""}
-                    onChange={(e) => set("geboortedatum", e.target.value || null)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Nationaliteit</Label>
-                  <Input
-                    value={reg.nationaliteit ?? ""}
-                    onChange={(e) => set("nationaliteit", e.target.value || null)}
-                    placeholder="Nederlandse"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">ID-type</Label>
-                  <select
-                    className="h-10 w-full rounded-md border border-fg/15 bg-background px-3 text-sm"
-                    value={reg.id_type ?? ""}
-                    onChange={(e) => set("id_type", (e.target.value || null) as IdType | null)}
-                  >
-                    <option value="">— kies —</option>
-                    <option value="paspoort">Paspoort</option>
-                    <option value="id-kaart">ID-kaart</option>
-                    <option value="rijbewijs">Rijbewijs</option>
-                    <option value="verblijfsdocument">Verblijfsdocument</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">ID-nummer</Label>
-                  <Input
-                    value={reg.id_nummer ?? ""}
-                    onChange={(e) => set("id_nummer", e.target.value || null)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">ID geldig tot</Label>
-                  <Input
-                    type="date"
-                    value={reg.id_geldig_tot ?? ""}
-                    onChange={(e) => set("id_geldig_tot", e.target.value || null)}
-                  />
-                </div>
-              </div>
-
-              {/* Loondienst */}
-              {dienstverband === "loondienst" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">BSN (9 cijfers, elfproef)</Label>
-                  <Input
-                    inputMode="numeric"
-                    maxLength={9}
-                    value={reg.bsn ?? ""}
-                    onChange={(e) => set("bsn", e.target.value.replace(/\D/g, "") || null)}
-                    className={bsnInvalid ? "border-destructive" : ""}
-                  />
-                  {bsnInvalid && (
-                    <p className="text-xs text-destructive">Ongeldig BSN (elfproef faalt)</p>
-                  )}
+              {/* ZZP: alleen KvK is verplicht voor de standaard mandagenregister-export. */}
+              {dienstverband === "zzp" && (
+                <div className="space-y-3">
+                  <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+                    Voor ZZP zijn alleen <strong>naam</strong> en <strong>KvK-nummer</strong>{" "}
+                    verplicht. Statuscode <strong>Z</strong> wordt automatisch toegevoegd. BSN,
+                    geboortedatum, nationaliteit en ID-velden worden niet gevraagd en niet
+                    geëxporteerd.
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">KvK-nummer (8 cijfers) *</Label>
+                      <Input
+                        inputMode="numeric"
+                        maxLength={8}
+                        value={reg.kvk_nummer ?? ""}
+                        onChange={(e) =>
+                          set("kvk_nummer", e.target.value.replace(/\D/g, "") || null)
+                        }
+                        className={kvkInvalid ? "border-destructive" : ""}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Bedrijfsnaam (optioneel)</Label>
+                      <Input
+                        value={reg.bedrijfsnaam ?? ""}
+                        onChange={(e) => set("bedrijfsnaam", e.target.value || null)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Btw-nummer (optioneel)</Label>
+                      <Input
+                        value={reg.btw_nummer ?? ""}
+                        onChange={(e) => set("btw_nummer", e.target.value || null)}
+                        placeholder="NL123456789B01"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Uurtarief € (optioneel)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={reg.uurtarief ?? ""}
+                        onChange={(e) => set("uurtarief", e.target.value || null)}
+                      />
+                    </div>
+                  </div>
+                  <details className="rounded-md border border-fg/10 px-3 py-2">
+                    <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Extra identiteitsgegevens (niet verplicht, niet in export)
+                    </summary>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Alleen invullen indien strikt noodzakelijk; deze velden worden niet
+                      meegenomen in de standaard ZZP-mandagenregister-export.
+                    </p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Geboortedatum</Label>
+                        <Input
+                          type="date"
+                          value={reg.geboortedatum ?? ""}
+                          onChange={(e) => set("geboortedatum", e.target.value || null)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Nationaliteit</Label>
+                        <Input
+                          value={reg.nationaliteit ?? ""}
+                          onChange={(e) => set("nationaliteit", e.target.value || null)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">ID-type</Label>
+                        <select
+                          className="h-10 w-full rounded-md border border-fg/15 bg-background px-3 text-sm"
+                          value={reg.id_type ?? ""}
+                          onChange={(e) =>
+                            set("id_type", (e.target.value || null) as IdType | null)
+                          }
+                        >
+                          <option value="">— kies —</option>
+                          <option value="paspoort">Paspoort</option>
+                          <option value="id-kaart">ID-kaart</option>
+                          <option value="rijbewijs">Rijbewijs</option>
+                          <option value="verblijfsdocument">Verblijfsdocument</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">ID-nummer</Label>
+                        <Input
+                          value={reg.id_nummer ?? ""}
+                          onChange={(e) => set("id_nummer", e.target.value || null)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">ID geldig tot</Label>
+                        <Input
+                          type="date"
+                          value={reg.id_geldig_tot ?? ""}
+                          onChange={(e) => set("id_geldig_tot", e.target.value || null)}
+                        />
+                      </div>
+                    </div>
+                  </details>
                 </div>
               )}
 
-              {/* ZZP */}
-              {dienstverband === "zzp" && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-xs">Bedrijfsnaam</Label>
-                    <Input
-                      value={reg.bedrijfsnaam ?? ""}
-                      onChange={(e) => set("bedrijfsnaam", e.target.value || null)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">KvK-nummer (8 cijfers)</Label>
-                    <Input
-                      inputMode="numeric"
-                      maxLength={8}
-                      value={reg.kvk_nummer ?? ""}
-                      onChange={(e) =>
-                        set("kvk_nummer", e.target.value.replace(/\D/g, "") || null)
-                      }
-                      className={kvkInvalid ? "border-destructive" : ""}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Btw-nummer</Label>
-                    <Input
-                      value={reg.btw_nummer ?? ""}
-                      onChange={(e) => set("btw_nummer", e.target.value || null)}
-                      placeholder="NL123456789B01"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Uurtarief (€)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={reg.uurtarief ?? ""}
-                      onChange={(e) => set("uurtarief", e.target.value || null)}
-                    />
+              {/* Loondienst: identiteit + BSN blijven verplicht. */}
+              {dienstverband === "loondienst" && (
+                <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Geboortedatum *</Label>
+                      <Input
+                        type="date"
+                        value={reg.geboortedatum ?? ""}
+                        onChange={(e) => set("geboortedatum", e.target.value || null)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nationaliteit *</Label>
+                      <Input
+                        value={reg.nationaliteit ?? ""}
+                        onChange={(e) => set("nationaliteit", e.target.value || null)}
+                        placeholder="Nederlandse"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">ID-type *</Label>
+                      <select
+                        className="h-10 w-full rounded-md border border-fg/15 bg-background px-3 text-sm"
+                        value={reg.id_type ?? ""}
+                        onChange={(e) =>
+                          set("id_type", (e.target.value || null) as IdType | null)
+                        }
+                      >
+                        <option value="">— kies —</option>
+                        <option value="paspoort">Paspoort</option>
+                        <option value="id-kaart">ID-kaart</option>
+                        <option value="rijbewijs">Rijbewijs</option>
+                        <option value="verblijfsdocument">Verblijfsdocument</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">ID-nummer *</Label>
+                      <Input
+                        value={reg.id_nummer ?? ""}
+                        onChange={(e) => set("id_nummer", e.target.value || null)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">ID geldig tot *</Label>
+                      <Input
+                        type="date"
+                        value={reg.id_geldig_tot ?? ""}
+                        onChange={(e) => set("id_geldig_tot", e.target.value || null)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">BSN (9 cijfers, elfproef) *</Label>
+                      <Input
+                        inputMode="numeric"
+                        maxLength={9}
+                        value={reg.bsn ?? ""}
+                        onChange={(e) => set("bsn", e.target.value.replace(/\D/g, "") || null)}
+                        className={bsnInvalid ? "border-destructive" : ""}
+                      />
+                      {bsnInvalid && (
+                        <p className="text-xs text-destructive">Ongeldig BSN (elfproef faalt)</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
