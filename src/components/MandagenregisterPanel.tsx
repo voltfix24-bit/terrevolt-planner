@@ -344,16 +344,29 @@ export function MandagenregisterPanel({
       <div className="flex flex-wrap items-end gap-3 rounded-md border border-fg/10 bg-fg/[0.02] px-3 py-2.5">
         <div className="space-y-1">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Van</Label>
-          <Input type="date" value={van} onChange={(e) => setVan(e.target.value)} className="h-9 w-[160px]" />
+          <Input type="date" value={van} onChange={(e) => { setUserTouchedRange(true); setVan(e.target.value); }} className="h-9 w-[160px]" />
         </div>
         <div className="space-y-1">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">T/m</Label>
-          <Input type="date" value={tot} onChange={(e) => setTot(e.target.value)} className="h-9 w-[160px]" />
+          <Input type="date" value={tot} onChange={(e) => { setUserTouchedRange(true); setTot(e.target.value); }} className="h-9 w-[160px]" />
         </div>
         <Button onClick={fetchRows} disabled={loading} className="h-9">
           <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Register ophalen
         </Button>
+        {defaultVan && defaultTot && (defaultVan !== van || defaultTot !== tot) && (
+          <Button
+            variant="outline"
+            className="h-9"
+            onClick={() => {
+              setUserTouchedRange(false);
+              setVan(defaultVan);
+              setTot(defaultTot);
+            }}
+          >
+            Volledige planning
+          </Button>
+        )}
         <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <CalendarDays className="h-3.5 w-3.5" />
           {hasRows ? `${rows.length} regels` : "Geen data geladen"}
