@@ -104,7 +104,7 @@ function isoWeekLabel(weekKey: string): { badge: string; range: string; dayHeade
 export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void {
   const { dienstverband, project, periodeVan, periodeTot, rows } = input;
   const preparedBy = input.preparedBy ?? "TerreVolt Planner";
-  const titel = dienstverband === "zzp" ? "Mandagenregister ZZP" : "Mandagenregister Loondienst";
+  const titel = "Mandagenregister";
   const projectLabel = [project.case_nummer, project.station_naam].filter(Boolean).join(" - ");
 
   const sortedRows = [...rows].sort(
