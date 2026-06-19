@@ -974,6 +974,7 @@ const ProjectDetail = () => {
           projectId={id}
           projectLabel={get<string>("case_nummer") || get<string>("station_naam") || undefined}
           showCleanup
+          onCleaned={() => { void load(); }}
         />
       )}
       {/* ============================================ */}
