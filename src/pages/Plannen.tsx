@@ -86,6 +86,7 @@ import {
   type PlanningWindow,
 } from "@/lib/planning-window";
 import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/planning-focus";
+import { useIsManager } from "@/hooks/use-is-manager";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
