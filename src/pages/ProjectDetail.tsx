@@ -2192,6 +2192,37 @@ const ProjectDetail = () => {
           </section>
 
           {/* ============================================ */}
+          {/* MANDAGENREGISTER (manager-only)              */}
+          {/* ============================================ */}
+          {isManager && (
+            <section
+              id="mandagenregister"
+              className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-fg/10 px-4 py-3.5"
+            >
+              <div className="absolute left-0 top-0 h-full w-[3px] bg-primary/50" />
+              <div className="mb-3 flex items-center gap-2">
+                <ClipboardList className="h-3.5 w-3.5 text-primary" />
+                <h2 className="font-display text-base font-bold tracking-tight text-foreground">
+                  Mandagenregister
+                </h2>
+                <span className="hidden text-[11px] text-muted-foreground md:inline">
+                  · Uren & PII per monteur · alleen voor managers
+                </span>
+              </div>
+              <MandagenregisterPanel
+                projectId={id!}
+                projectLabel={
+                  [get<string>("case_nummer"), get<string>("station_naam")]
+                    .filter(Boolean)
+                    .join(" · ") || null
+                }
+              />
+            </section>
+          )}
+
+
+
+          {/* ============================================ */}
           {/* PROJECT ARCHIEF (placeholder)                */}
           {/* ============================================ */}
           <section
