@@ -22,6 +22,9 @@ type Props = {
   size?: "sm" | "md";
   /** Wordt aangeroepen na succesvolle apply, zodat de pagina kan herladen. */
   onApplied?: () => void;
+  /** Controlled open state — overschrijft interne knop-trigger */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 type DryRun = {
@@ -54,11 +57,18 @@ export function PlanningCleanupButton({
   className = "",
   size = "sm",
   onApplied,
+  open: controlledOpen,
+  onOpenChange,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [dryRun, setDryRun] = useState<DryRun | null>(null);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen ?? internalOpen;
+  const setIsOpen = (v: boolean) => {
+    onOpenChange?.(v);
+    setInternalOpen(v);
+  };
 
   const startDryRun = async () => {
     setLoading(true);
@@ -71,7 +81,7 @@ export function PlanningCleanupButton({
       });
       if (error) throw error;
       setDryRun((data ?? {}) as DryRun);
-      setOpen(true);
+      setIsOpen(true);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error("Kon planning niet analyseren: " + msg);
