@@ -4673,6 +4673,10 @@ const describeEntry = (
       }`;
     case "cel_notitie_changed":
       return "Notitie gewijzigd";
+    case "cells_moved":
+      return entry.label;
+    case "cells_filled":
+      return entry.label;
   }
 };
 
