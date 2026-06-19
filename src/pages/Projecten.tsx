@@ -29,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { assessPlanningRange, type PlanningWeek } from "@/lib/planning-safety";
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
