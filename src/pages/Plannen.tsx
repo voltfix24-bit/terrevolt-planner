@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  Sparkles,
   Trash2,
   Undo2,
   Users,
