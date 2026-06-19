@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit2, Plus, Power, Trash2, X } from "lucide-react";
+import { BadgeCheck, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit2, Plus, Power, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { VrijeDagenExport } from "@/components/VrijeDagenExport";
+import { MonteurRegisterDialog } from "@/components/MonteurRegisterDialog";
+import { useIsManager } from "@/hooks/use-is-manager";
+
 
 // Cast for tables not yet in generated types (feestdagen, monteur_afwezigheid)
 // and for monteurs.werkdagen column added in migration.
