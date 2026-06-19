@@ -136,16 +136,25 @@ export function MandagenregisterPanel({
     (async () => {
       const { data } = await supabase
         .from("projecten")
-        .select("case_nummer, station_naam, locatie, opdrachtgever:opdrachtgevers(naam)")
+        .select("case_nummer, station_naam, locatie, opdrachtgever_id")
         .eq("id", projectId)
         .maybeSingle();
       if (cancelled || !data) return;
-      const og = (data as { opdrachtgever: { naam: string | null } | null }).opdrachtgever;
+      let opdrachtgeverNaam: string | null = null;
+      if (data.opdrachtgever_id) {
+        const { data: og } = await supabase
+          .from("opdrachtgevers")
+          .select("naam")
+          .eq("id", data.opdrachtgever_id)
+          .maybeSingle();
+        opdrachtgeverNaam = og?.naam ?? null;
+      }
+      if (cancelled) return;
       setProjectMeta({
-        case_nummer: (data as { case_nummer: string | null }).case_nummer ?? null,
-        station_naam: (data as { station_naam: string | null }).station_naam ?? null,
-        locatie: (data as { locatie: string | null }).locatie ?? null,
-        opdrachtgever: og?.naam ?? null,
+        case_nummer: data.case_nummer ?? null,
+        station_naam: data.station_naam ?? null,
+        locatie: data.locatie ?? null,
+        opdrachtgever: opdrachtgeverNaam,
       });
     })();
     return () => {
