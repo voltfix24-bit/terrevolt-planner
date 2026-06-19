@@ -344,7 +344,7 @@ const Capaciteit = () => {
   );
 
   return (
-    <div>
+    <div className="capaciteit-page">
       <div className="mb-6 flex items-end justify-between gap-4">
         <PageHeader title="Capaciteit" description="Monteurs en hun beschikbaarheid." />
         {tab === "monteurs" && (
