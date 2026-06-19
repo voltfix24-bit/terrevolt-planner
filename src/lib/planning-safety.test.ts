@@ -26,7 +26,7 @@ describe("isValidIsoWeek", () => {
   });
 
   it("rejects week 53 in years without ISO week 53", () => {
-    expect(isValidIsoWeek(2026, 53)).toBe(false);
+    expect(isValidIsoWeek(2025, 53)).toBe(false);
   });
 
   it("accepts week 53 in years that have ISO week 53", () => {
