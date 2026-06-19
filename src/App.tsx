@@ -12,6 +12,7 @@ import "@/lib/toast-error-guard";
 import "./styles/overzicht-fixes.css";
 import "./styles/mandagenregister-fixes.css";
 import "./styles/form-control-fixes.css";
+import "./styles/capaciteit-fixes.css";
 import Auth from "./pages/Auth";
 import Projecten from "./pages/Projecten";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -38,25 +39,3 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                  <Route path="/" element={<Navigate to="/overzicht" replace />} />
-                  <Route path="/overzicht" element={<Overzicht />} />
-                  <Route path="/projecten" element={<Projecten />} />
-                  <Route path="/projecten/:id" element={<ProjectDetail />} />
-                  <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
-                  <Route path="/plannen" element={<Plannen />} />
-                  <Route path="/mandagenregister" element={<Mandagenregister />} />
-                  <Route path="/activiteiten" element={<Activiteiten />} />
-                  <Route path="/capaciteit" element={<Capaciteit />} />
-                  <Route path="/instellingen" element={<Instellingen />} />
-                </Route>
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </ConfirmProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-export default App;
