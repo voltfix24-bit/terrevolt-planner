@@ -4635,6 +4635,9 @@ const dotColor = (type: HistoryEntry["type"]): string => {
       return "#feb300";
     case "cel_notitie_changed":
       return "#7cc1ff";
+    case "cells_moved":
+    case "cells_filled":
+      return "#a78bfa";
   }
 };
 
