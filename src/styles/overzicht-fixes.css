@@ -72,19 +72,16 @@ body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 bu
   box-shadow: 0 1px 2px rgb(var(--fg-rgb) / 0.04);
 }
 
-body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 button[aria-label="Laatste celactie ongedaan maken"] {
-  margin-left: 0.375rem;
-}
-
-body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 button[aria-label="Meer acties"]:first-child {
+body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 button[aria-label="Laatste celactie ongedaan maken"],
+body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 button[aria-label="Meer acties"] {
   margin-left: 0.375rem;
 }
 
 body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 button[title="Terug naar vandaag"] {
   min-width: 4.5rem;
   border-radius: 0.5rem;
-  background-color: rgb(var(--primary-rgb) / 0.11);
-  color: rgb(var(--primary-rgb));
+  background-color: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
 }
 
 @media (max-width: 1023px) {
