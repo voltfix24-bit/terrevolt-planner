@@ -268,6 +268,7 @@ const Plannen = () => {
   const confirmShift = useConfirm();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project");
+  const { isManager } = useIsManager();
 
   const [project, setProject] = useState<Project | null>(null);
   const [weken, setWeken] = useState<Week[]>([]);
