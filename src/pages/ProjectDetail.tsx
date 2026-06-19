@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { ProjectTekeningen } from "@/components/ProjectTekeningen";
 import { ProjectConceptPlanning } from "@/components/ProjectConceptPlanning";
+import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 // =====================================================
 // Types
