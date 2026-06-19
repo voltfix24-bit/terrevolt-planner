@@ -1944,6 +1944,12 @@ const Plannen = () => {
       const delta = weekDeltaIso(target.jaar, target.week_nr, newJaar, newNr);
       if (delta === 0 || !projectId) return;
 
+      const guard = guardShiftWeeks(weken, week_id, newJaar, newNr);
+      if (!guard.ok) {
+        toast.error(`Planningwijziging geblokkeerd: ${formatMutationGuardReasons(guard)}`);
+        return;
+      }
+
       // Optimistic UI: bereken de nieuwe staat lokaal zodat de gebruiker direct iets ziet.
       const shifted = weken.map((w) => {
         const n = addIsoWeeks(w.jaar, w.week_nr, delta);
