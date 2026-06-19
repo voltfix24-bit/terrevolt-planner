@@ -968,6 +968,8 @@ const ProjectDetail = () => {
 
   return (
     <div className="space-y-3">
+      {/* Planning-veiligheid: waarschuw als de planning buiten veilige grenzen valt */}
+      {id && <PlanningSafetyBanner projectId={id} />}
       {/* ============================================ */}
       {/* PROJECT HEADER / ACTION BAR                  */}
       {/* ============================================ */}
