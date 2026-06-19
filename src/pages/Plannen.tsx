@@ -2420,6 +2420,7 @@ const Plannen = () => {
         projectId={projectId}
         projectLabel={project.case_nummer || project.station_naam || undefined}
         showCleanup
+        onCleaned={() => { void loadAll(); }}
         className="mx-8 mt-4"
       />
 
