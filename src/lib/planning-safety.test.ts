@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   assessPlanningRange,
   isoWeekMonday,
+  isValidIsoWeek,
   PLANNING_SAFETY_LIMITS,
 } from "./planning-safety";
 
@@ -11,6 +12,25 @@ describe("isoWeekMonday", () => {
   });
   it("week 1 of 2024 starts 2024-01-01 (Monday)", () => {
     expect(isoWeekMonday(2024, 1).toISOString().slice(0, 10)).toBe("2024-01-01");
+  });
+});
+
+describe("isValidIsoWeek", () => {
+  it("accepts normal ISO weeks", () => {
+    expect(isValidIsoWeek(2026, 36)).toBe(true);
+  });
+
+  it("rejects week 0 and week 54", () => {
+    expect(isValidIsoWeek(2026, 0)).toBe(false);
+    expect(isValidIsoWeek(2026, 54)).toBe(false);
+  });
+
+  it("rejects week 53 in years without ISO week 53", () => {
+    expect(isValidIsoWeek(2026, 53)).toBe(false);
+  });
+
+  it("accepts week 53 in years that have ISO week 53", () => {
+    expect(isValidIsoWeek(2020, 53)).toBe(true);
   });
 });
 
@@ -76,5 +96,41 @@ describe("assessPlanningRange", () => {
     ]);
     expect(a.rangeWeeks).toBeLessThanOrEqual(PLANNING_SAFETY_LIMITS.maxRangeWeeks);
     expect(a.status).toBe("safe");
+  });
+
+  it("dubbele jaar/week-combinaties → blocked", () => {
+    const a = assessPlanningRange([
+      { jaar: 2026, week_nr: 36 },
+      { jaar: 2026, week_nr: 36 },
+    ]);
+    expect(a.status).toBe("blocked");
+    expect(a.reasons.some((r) => r.includes("dubbele projectweek"))).toBe(true);
+  });
+
+  it("ongeldige ISO-week → blocked", () => {
+    const a = assessPlanningRange([
+      { jaar: 2026, week_nr: 36 },
+      { jaar: 2026, week_nr: 53 },
+    ]);
+    expect(a.status).toBe("blocked");
+    expect(a.reasons.some((r) => r.includes("ongeldige ISO-week"))).toBe(true);
+  });
+
+  it("dubbele positie → blocked", () => {
+    const a = assessPlanningRange([
+      { jaar: 2026, week_nr: 36, positie: 0 },
+      { jaar: 2026, week_nr: 37, positie: 0 },
+    ]);
+    expect(a.status).toBe("blocked");
+    expect(a.reasons.some((r) => r.includes("dubbele weekpositie"))).toBe(true);
+  });
+
+  it("niet-aaneengesloten posities → blocked", () => {
+    const a = assessPlanningRange([
+      { jaar: 2026, week_nr: 36, positie: 0 },
+      { jaar: 2026, week_nr: 37, positie: 2 },
+    ]);
+    expect(a.status).toBe("blocked");
+    expect(a.reasons.some((r) => r.includes("niet aaneengesloten"))).toBe(true);
   });
 });
