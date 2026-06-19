@@ -54,10 +54,27 @@ const fmtDate = (iso: string | null | undefined): string => {
   return d.toLocaleDateString("nl-NL", { year: "numeric", month: "short", day: "numeric" });
 };
 
+const fmtShortDate = (d: Date): string =>
+  d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+
 const fmtUren = (n: number): string => {
   if (!n) return "";
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.0+$/, "").replace(/\.([1-9])0$/, ".$1");
 };
+
+function isoWeekRange(weekKey: string): string {
+  const match = weekKey.match(/^(\d{4})-W(\d{2})$/);
+  if (!match) return weekKey;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1 + (week - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return `${weekKey} · ${fmtShortDate(monday)} t/m ${fmtShortDate(sunday)}`;
+}
 
 export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void {
   const { dienstverband, project, periodeVan, periodeTot, rows } = input;
@@ -81,36 +98,56 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   const headers = dienstverband === "zzp" ? zzpHeaders : loondienstHeaders;
 
   const sortedRows = [...rows].sort(
-    (a, b) => a.naam.localeCompare(b.naam, "nl") || a.week.localeCompare(b.week),
+    (a, b) => a.week.localeCompare(b.week) || a.naam.localeCompare(b.naam, "nl"),
   );
 
-  const bodyRows = sortedRows.length === 0
-    ? `<tr><td colspan="${headers.length}" class="empty">Geen geplande monteurs in deze periode.</td></tr>`
-    : sortedRows.map((r) => {
-        if (dienstverband === "zzp") {
-          return `<tr>
-            <td class="naam">${escHtml(r.naam)}</td>
-            <td class="status">Z</td>
-            <td class="mono">${escHtml(r.kvk_nummer ?? "")}</td>
-            ${r.days.map((u) => `<td class="uren">${escHtml(fmtUren(u))}</td>`).join("")}
-            <td class="totaal">${escHtml(fmtUren(r.total))}</td>
-            <td class="opmerking">${escHtml(r.opmerking)}</td>
-          </tr>`;
-        }
-        return `<tr>
-          <td class="naam">${escHtml(r.naam)}</td>
-          <td class="mono">${escHtml(r.bsn ?? "")}</td>
-          <td>${escHtml(fmtDate(r.geboortedatum))}</td>
-          <td>${escHtml(r.id_type ?? "")}</td>
-          <td class="mono">${escHtml(r.id_nummer ?? "")}</td>
-          <td>${escHtml(fmtDate(r.id_geldig_tot))}</td>
-          ${r.days.map((u) => `<td class="uren">${escHtml(fmtUren(u))}</td>`).join("")}
-          <td class="totaal">${escHtml(fmtUren(r.total))}</td>
-          <td class="opmerking">${escHtml(r.opmerking)}</td>
-        </tr>`;
+  const rowsByWeek = sortedRows.reduce<Record<string, WeekRow[]>>((acc, row) => {
+    (acc[row.week] ??= []).push(row);
+    return acc;
+  }, {});
+
+  const renderRow = (r: WeekRow): string => {
+    if (dienstverband === "zzp") {
+      return `<tr>
+        <td class="naam">${escHtml(r.naam)}</td>
+        <td class="status">Z</td>
+        <td class="mono">${escHtml(r.kvk_nummer ?? "")}</td>
+        ${r.days.map((u) => `<td class="uren">${escHtml(fmtUren(u))}</td>`).join("")}
+        <td class="totaal">${escHtml(fmtUren(r.total))}</td>
+        <td class="opmerking">${escHtml(r.opmerking)}</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td class="naam">${escHtml(r.naam)}</td>
+      <td class="mono">${escHtml(r.bsn ?? "")}</td>
+      <td>${escHtml(fmtDate(r.geboortedatum))}</td>
+      <td>${escHtml(r.id_type ?? "")}</td>
+      <td class="mono">${escHtml(r.id_nummer ?? "")}</td>
+      <td>${escHtml(fmtDate(r.id_geldig_tot))}</td>
+      ${r.days.map((u) => `<td class="uren">${escHtml(fmtUren(u))}</td>`).join("")}
+      <td class="totaal">${escHtml(fmtUren(r.total))}</td>
+      <td class="opmerking">${escHtml(r.opmerking)}</td>
+    </tr>`;
+  };
+
+  const weekSections = sortedRows.length === 0
+    ? `<section class="week-section"><table><tbody><tr><td colspan="${headers.length}" class="empty">Geen geplande monteurs in deze periode.</td></tr></tbody></table></section>`
+    : Object.entries(rowsByWeek).map(([week, weekRows]) => {
+        const weekTotal = weekRows.reduce((sum, r) => sum + (r.total || 0), 0);
+        return `<section class="week-section">
+          <div class="week-title">
+            <span>${escHtml(isoWeekRange(week))}</span>
+            <b>${escHtml(fmtUren(weekTotal) || "0")} uur</b>
+          </div>
+          <table aria-label="${escHtml(titel)} ${escHtml(week)}">
+            <thead><tr>${headers.map((h) => `<th>${escHtml(h)}</th>`).join("")}</tr></thead>
+            <tbody>${weekRows.map(renderRow).join("")}</tbody>
+          </table>
+        </section>`;
       }).join("");
 
   const totalAll = sortedRows.reduce((sum, r) => sum + (r.total || 0), 0);
+  const monteurCount = new Set(sortedRows.map((r) => r.monteur_id)).size;
 
   const html = `<!doctype html>
 <html lang="nl">
@@ -229,6 +266,27 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   }
   .value { margin-top: 1px; font-size: 10.8px; font-weight: 700; color: var(--ink); }
 
+  .week-section {
+    margin-top: 10px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .week-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 7px;
+    border: 0.5px solid #bbf7d0;
+    border-bottom: 0;
+    border-radius: 4px 4px 0 0;
+    background: #f0fdf4 !important;
+    color: var(--accent-dark);
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .week-title b { font-size: 9.5px; }
+
   table {
     width: 100%;
     border-collapse: collapse;
@@ -280,31 +338,17 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
     color: #92400e;
   }
 
-  .signatures {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  .signature {
-    border-top: 1px solid var(--ink);
-    padding-top: 5px;
-  }
-  .signature .role {
+  .prepared {
+    margin-top: 12px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line);
     color: var(--muted);
-    font-size: 8.5px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 9px;
   }
-  .signature .who { margin-top: 2px; font-weight: 700; }
-  .signature .line { height: 34px; border-bottom: 1px dashed var(--line); margin-top: 8px; }
-  .signature .date { margin-top: 4px; color: var(--muted); font-size: 9px; }
+  .prepared b { color: var(--ink); }
 
   .footer {
-    margin-top: 14px;
+    margin-top: 10px;
     padding-top: 6px;
     border-top: 1px dashed var(--line);
     display: flex;
@@ -329,10 +373,11 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
     }
     .doc-header,
     .project-grid,
+    .week-section,
     table,
     .totals,
     .notice,
-    .signatures,
+    .prepared,
     .footer {
       visibility: visible !important;
       opacity: 1 !important;
@@ -372,34 +417,21 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
       <div><div class="label">Hoofdaannemer / opdrachtgever</div><div class="value">${escHtml(project.opdrachtgever ?? "-")}</div></div>
     </section>
 
-    <table aria-label="${escHtml(titel)}">
-      <thead><tr>${headers.map((h) => `<th>${escHtml(h)}</th>`).join("")}</tr></thead>
-      <tbody>${bodyRows}</tbody>
-    </table>
+    ${weekSections}
 
     <div class="totals">
       Totaal uren in deze periode: <b>${escHtml(fmtUren(totalAll) || "0")}</b>
-      · ${sortedRows.length} regel${sortedRows.length === 1 ? "" : "s"}
+      · ${monteurCount} monteur${monteurCount === 1 ? "" : "s"}
+      · ${sortedRows.length} weekregel${sortedRows.length === 1 ? "" : "s"}
     </div>
 
     ${dienstverband === "zzp"
-      ? `<div class="notice">AVG/dataminimalisatie: deze ZZP-export bevat geen BSN, geboortedatum, nationaliteit of identiteitsdocumenten. Alleen naam, statuscode en KvK-nummer worden verwerkt.</div>`
+      ? `<div class="notice">AVG/dataminimalisatie: deze ZZP-export bevat geen BSN, geboortedatum, nationaliteit of identiteitsdocumenten. Alleen naam, statuscode Z, KvK-nummer en uren worden verwerkt.</div>`
       : `<div class="notice loondienst">Bevat persoonsgegevens van werknemers. Vertrouwelijk — alleen verstrekken aan geautoriseerde verwerkers.</div>`}
 
-    <section class="signatures">
-      <div class="signature">
-        <div class="role">Opgesteld door</div>
-        <div class="who">${escHtml(preparedBy)}</div>
-        <div class="line"></div>
-        <div class="date">Datum: ${escHtml(todayLabel)}</div>
-      </div>
-      <div class="signature">
-        <div class="role">Akkoord opdrachtgever / hoofdaannemer</div>
-        <div class="who">${escHtml(project.opdrachtgever ?? "")}</div>
-        <div class="line"></div>
-        <div class="date">Naam & datum: __________________________</div>
-      </div>
-    </section>
+    <div class="prepared">
+      Opgesteld door <b>${escHtml(preparedBy)}</b> op ${escHtml(todayLabel)}.
+    </div>
 
     <footer class="footer">
       <div>TerreVolt Planner · ${escHtml(titel)}</div>
