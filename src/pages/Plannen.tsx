@@ -1596,8 +1596,9 @@ const Plannen = () => {
       const days = deltaSlots; // 1 slot = 1 dag
       const ok = await confirmShift(describeShift(days, g.length, "cel"));
       if (!ok) return;
-      await setAuditLabel(`Planning: ${g.length}× ${days > 0 ? "+" : ""}${days} dag`);
-      await moveCellsByDelta(g, deltaSlots);
+      const lbl = `Planning: ${g.length}× ${days > 0 ? "+" : ""}${days} dag`;
+      await setAuditLabel(lbl);
+      await moveCellsByDelta(g, deltaSlots, lbl);
     },
     [selectedGroups, moveCellsByDelta, confirmShift]
   );
