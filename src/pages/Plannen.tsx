@@ -2348,10 +2348,21 @@ const Plannen = () => {
           <button
             type="button"
             onClick={handleScrollToPlanned}
-            title="Scroll naar geplande data"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
+            disabled={!firstPlanningTarget}
+            title={
+              firstPlanningTarget
+                ? `Spring naar week ${firstPlanningTarget.week_nr} / ${firstPlanningTarget.jaar}`
+                : "Geen planning gevonden"
+            }
+            className={[
+              "flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold",
+              firstPlanningTarget
+                ? "text-foreground hover:bg-fg/[0.06]"
+                : "cursor-not-allowed text-muted-foreground opacity-50",
+            ].join(" ")}
           >
             <Crosshair className="h-4 w-4" />
+            <span>Ga naar eerste planning</span>
           </button>
           {/* divider */}
           <span
