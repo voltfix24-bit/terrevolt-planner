@@ -89,3 +89,18 @@ export function describeShift(days: number, itemCount: number, itemLabel = "cel"
     description: `Je staat op het punt ${itemCount} ${itemWoord} met ${absD} ${dagWoord} ${dir} te verschuiven. Dit kun je daarna ongedaan maken met de Undo-knop.`,
   };
 }
+
+/** Convenience: confirm overwriting existing planning cells. */
+export function describeOverwrite(cellCount: number): ConfirmOptions {
+  const cellWord = cellCount === 1 ? "cel" : "cellen";
+  return {
+    title: `${cellCount} bestaande ${cellWord} overschrijven?`,
+    description:
+      cellCount === 1
+        ? "Op de gekozen dag staat al planning. Als je doorgaat, wordt die cel vervangen door de nieuwe planning."
+        : `Er staan al ${cellCount} cellen in deze reeks. Als je doorgaat, worden die cellen vervangen door de nieuwe planning.`,
+    confirmText: "Overschrijven",
+    cancelText: "Annuleren",
+    destructive: true,
+  };
+}
