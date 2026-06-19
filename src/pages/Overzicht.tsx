@@ -33,6 +33,8 @@ import { useConfirm, describeShift } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
 import { buildProjectCellDates, compareOverviewProjects, computeBucketClient, planningCategory } from "@/lib/project-overview-sort";
+import { assessPlanningRange, type PlanningWeek } from "@/lib/planning-safety";
+import { PlanningCleanupButton } from "@/components/PlanningCleanupButton";
 
 // ============== Constants ==============
 const SIDEBAR_W = 260;
@@ -1467,6 +1469,47 @@ export default function Overzicht() {
 
   const [verlofWaarschuwingOpen, setVerlofWaarschuwingOpen] = useState(true);
 
+  // ====== Planning-range waarschuwingen (project_weken buiten veilige periode) ======
+  type RangeWarn = {
+    projectId: string;
+    projectLabel: string;
+    rangeWeeks: number;
+    weekCount: number;
+    firstDate: Date | null;
+    lastDate: Date | null;
+    reasons: string[];
+  };
+  const planningRangeWarnings = useMemo<RangeWarn[]>(() => {
+    if (!weken.length || !projecten.length) return [];
+    const byProj = new Map<string, PlanningWeek[]>();
+    for (const w of weken) {
+      const arr = byProj.get(w.project_id);
+      if (arr) arr.push({ jaar: w.jaar, week_nr: w.week_nr });
+      else byProj.set(w.project_id, [{ jaar: w.jaar, week_nr: w.week_nr }]);
+    }
+    const out: RangeWarn[] = [];
+    for (const p of projecten) {
+      const ws = byProj.get(p.id);
+      if (!ws || !ws.length) continue;
+      const a = assessPlanningRange(ws);
+      if (a.status !== "blocked") continue;
+      out.push({
+        projectId: p.id,
+        projectLabel:
+          (p.case_nummer ? p.case_nummer + " · " : "") +
+          (p.station_naam ?? "—"),
+        rangeWeeks: a.rangeWeeks,
+        weekCount: a.weekCount,
+        firstDate: a.firstDate,
+        lastDate: a.lastDate,
+        reasons: a.reasons,
+      });
+    }
+    out.sort((a, b) => b.rangeWeeks - a.rangeWeeks);
+    return out;
+  }, [weken, projecten]);
+  const [rangeWaarschuwingOpen, setRangeWaarschuwingOpen] = useState(true);
+
 
 
 
@@ -1992,6 +2035,78 @@ export default function Overzicht() {
           )}
         </div>
       )}
+
+      {/* Planning-range waarschuwing: projecten met project_weken buiten veilige periode */}
+      {planningRangeWarnings.length > 0 && (
+        <div
+          className="mb-3 rounded-lg border"
+          style={{
+            borderColor: "rgba(245,158,11,0.45)",
+            background: "rgba(245,158,11,0.08)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setRangeWaarschuwingOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" style={{ color: "#f59e0b" }} />
+              <span className="text-xs md:text-sm font-semibold text-foreground">
+                {planningRangeWarnings.length} project
+                {planningRangeWarnings.length === 1 ? "" : "en"} met planning buiten veilig venster
+                <span className="ml-1 font-normal text-muted-foreground">
+                  (te brede project_weken-range)
+                </span>
+              </span>
+            </div>
+            <ChevronDown
+              className="h-4 w-4 text-muted-foreground transition-transform"
+              style={{ transform: rangeWaarschuwingOpen ? "rotate(180deg)" : "rotate(0)" }}
+            />
+          </button>
+          {rangeWaarschuwingOpen && (
+            <div className="px-3 pb-3 pt-1 space-y-2">
+              {planningRangeWarnings.map((c) => (
+                <div
+                  key={c.projectId}
+                  className="rounded-md border bg-background/40 px-2.5 py-2"
+                  style={{ borderColor: "rgba(245,158,11,0.25)" }}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/plannen?project=${c.projectId}`)}
+                      className="text-xs md:text-sm font-semibold text-foreground hover:underline"
+                      title="Open in Plannen"
+                    >
+                      {c.projectLabel}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground tabular-nums">
+                        {c.firstDate?.toISOString().slice(0, 10)} →{" "}
+                        {c.lastDate?.toISOString().slice(0, 10)} · {c.weekCount} weken · range{" "}
+                        {c.rangeWeeks}
+                      </span>
+                      <PlanningCleanupButton
+                        projectId={c.projectId}
+                        projectLabel={c.projectLabel}
+                        onApplied={() => void fetchAllData(jaar)}
+                      />
+                    </div>
+                  </div>
+                  <ul className="mt-1 list-disc pl-5 text-[11px] text-amber-800/85 dark:text-amber-200/85">
+                    {c.reasons.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* Navigator + scale selector */}
       <div

@@ -969,7 +969,13 @@ const ProjectDetail = () => {
   return (
     <div className="space-y-3">
       {/* Planning-veiligheid: waarschuw als de planning buiten veilige grenzen valt */}
-      {id && <PlanningSafetyBanner projectId={id} />}
+      {id && (
+        <PlanningSafetyBanner
+          projectId={id}
+          projectLabel={get<string>("case_nummer") || get<string>("station_naam") || undefined}
+          showCleanup
+        />
+      )}
       {/* ============================================ */}
       {/* PROJECT HEADER / ACTION BAR                  */}
       {/* ============================================ */}

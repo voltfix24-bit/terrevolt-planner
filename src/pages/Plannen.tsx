@@ -2415,7 +2415,14 @@ const Plannen = () => {
       </div>
 
       {/* Planning-veiligheid: waarschuw als planning buiten veilige periode valt */}
-      <PlanningSafetyBanner weken={allWeken.length > 0 ? allWeken : weken} className="mx-8 mt-4" />
+      <PlanningSafetyBanner
+        weken={allWeken.length > 0 ? allWeken : weken}
+        projectId={projectId}
+        projectLabel={project.case_nummer || project.station_naam || undefined}
+        showCleanup
+        className="mx-8 mt-4"
+      />
+
 
       {/* Indicator: planning bestaat buiten het huidige venster */}
       {(outsideCellCount > 0 || outsideWeekCount > 0) && (
