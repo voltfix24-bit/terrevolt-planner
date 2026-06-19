@@ -152,6 +152,101 @@ export type Database = {
         }
         Relationships: []
       }
+      mandagen_exports: {
+        Row: {
+          aangemaakt_door: string | null
+          aangemaakt_op: string
+          bestandsnaam: string | null
+          dienstverband: string
+          id: string
+          periode_tot: string
+          periode_van: string
+          project_id: string
+          rij_count: number
+        }
+        Insert: {
+          aangemaakt_door?: string | null
+          aangemaakt_op?: string
+          bestandsnaam?: string | null
+          dienstverband: string
+          id?: string
+          periode_tot: string
+          periode_van: string
+          project_id: string
+          rij_count?: number
+        }
+        Update: {
+          aangemaakt_door?: string | null
+          aangemaakt_op?: string
+          bestandsnaam?: string | null
+          dienstverband?: string
+          id?: string
+          periode_tot?: string
+          periode_van?: string
+          project_id?: string
+          rij_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandagen_exports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandagen_regels: {
+        Row: {
+          datum: string
+          id: string
+          monteur_id: string
+          opmerking: string | null
+          project_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          uren: number
+        }
+        Insert: {
+          datum: string
+          id?: string
+          monteur_id: string
+          opmerking?: string | null
+          project_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          uren?: number
+        }
+        Update: {
+          datum?: string
+          id?: string
+          monteur_id?: string
+          opmerking?: string | null
+          project_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          uren?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandagen_regels_monteur_id_fkey"
+            columns: ["monteur_id"]
+            isOneToOne: false
+            referencedRelation: "monteurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandagen_regels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monteur_afwezigheid: {
         Row: {
           created_at: string | null
@@ -190,12 +285,66 @@ export type Database = {
           },
         ]
       }
+      monteur_register: {
+        Row: {
+          bedrijfsnaam: string | null
+          bsn: string | null
+          btw_nummer: string | null
+          geboortedatum: string | null
+          id_geldig_tot: string | null
+          id_nummer: string | null
+          id_type: string | null
+          kvk_nummer: string | null
+          monteur_id: string
+          nationaliteit: string | null
+          updated_at: string
+          uurtarief: number | null
+        }
+        Insert: {
+          bedrijfsnaam?: string | null
+          bsn?: string | null
+          btw_nummer?: string | null
+          geboortedatum?: string | null
+          id_geldig_tot?: string | null
+          id_nummer?: string | null
+          id_type?: string | null
+          kvk_nummer?: string | null
+          monteur_id: string
+          nationaliteit?: string | null
+          updated_at?: string
+          uurtarief?: number | null
+        }
+        Update: {
+          bedrijfsnaam?: string | null
+          bsn?: string | null
+          btw_nummer?: string | null
+          geboortedatum?: string | null
+          id_geldig_tot?: string | null
+          id_nummer?: string | null
+          id_type?: string | null
+          kvk_nummer?: string | null
+          monteur_id?: string
+          nationaliteit?: string | null
+          updated_at?: string
+          uurtarief?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monteur_register_monteur_id_fkey"
+            columns: ["monteur_id"]
+            isOneToOne: true
+            referencedRelation: "monteurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monteurs: {
         Row: {
           aanwijzing_ls: string | null
           aanwijzing_ms: string | null
           actief: boolean | null
           created_at: string | null
+          dienstverband: string
           id: string
           naam: string
           type: string
@@ -209,6 +358,7 @@ export type Database = {
           aanwijzing_ms?: string | null
           actief?: boolean | null
           created_at?: string | null
+          dienstverband?: string
           id?: string
           naam: string
           type: string
@@ -222,6 +372,7 @@ export type Database = {
           aanwijzing_ms?: string | null
           actief?: boolean | null
           created_at?: string | null
+          dienstverband?: string
           id?: string
           naam?: string
           type?: string
@@ -997,6 +1148,62 @@ export type Database = {
         }[]
       }
       is_planner_manager: { Args: { check_user_id?: string }; Returns: boolean }
+      iso_planning_date: {
+        Args: { p_dag_index: number; p_jaar: number; p_week: number }
+        Returns: string
+      }
+      log_mandagen_export: {
+        Args: {
+          p_bestandsnaam?: string
+          p_dienstverband: string
+          p_project_id: string
+          p_tot: string
+          p_van: string
+        }
+        Returns: {
+          aangemaakt_door: string | null
+          aangemaakt_op: string
+          bestandsnaam: string | null
+          dienstverband: string
+          id: string
+          periode_tot: string
+          periode_van: string
+          project_id: string
+          rij_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mandagen_exports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mandagenregister_export: {
+        Args: { p_project_id: string; p_tot: string; p_van: string }
+        Returns: {
+          activiteit_count: number
+          activiteiten: string
+          bedrijfsnaam: string
+          bsn: string
+          btw_nummer: string
+          compleet: boolean
+          datum: string
+          dienstverband: string
+          geboortedatum: string
+          id_geldig_tot: string
+          id_nummer: string
+          id_type: string
+          kvk_nummer: string
+          monteur_id: string
+          naam: string
+          nationaliteit: string
+          ontbrekende_velden: string[]
+          project_id: string
+          project_label: string
+          status: string
+          uren: number
+        }[]
+      }
       normalize_project_planning_window: {
         Args: {
           p_apply?: boolean
@@ -1050,6 +1257,33 @@ export type Database = {
           batch: string
           undone_count: number
         }[]
+      }
+      upsert_mandagen_regel: {
+        Args: {
+          p_datum: string
+          p_monteur_id: string
+          p_opmerking?: string
+          p_project_id: string
+          p_status?: string
+          p_uren: number
+        }
+        Returns: {
+          datum: string
+          id: string
+          monteur_id: string
+          opmerking: string | null
+          project_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          uren: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mandagen_regels"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
