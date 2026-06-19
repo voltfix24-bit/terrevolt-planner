@@ -434,12 +434,13 @@ const Plannen = () => {
   }, []);
 
   // ---------- data load ----------
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
     if (!projectId) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     const [projRes, wRes, aRes, mRes, atRes] = await Promise.all([
       supabase.from("projecten").select("*").eq("id", projectId).single(),
       supabase
