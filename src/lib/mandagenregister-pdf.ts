@@ -59,10 +59,12 @@ const fmtShortDate = (d: Date): string =>
 
 const fmtDay = (d: Date): string => String(d.getUTCDate()).padStart(2, "0");
 
-const fmtUren = (n: number): string => {
-  if (!n) return "-";
+const fmtTotalUren = (n: number): string => {
+  if (!n) return "0.0";
   return Number.isInteger(n) ? `${n}.0` : n.toFixed(2).replace(/\.0+$/, ".0").replace(/\.([1-9])0$/, ".$1");
 };
+
+const fmtCellUren = (n: number): string => (n ? fmtTotalUren(n) : "-");
 
 function isoWeekDates(weekKey: string): Date[] | null {
   const match = weekKey.match(/^(\d{4})-W(\d{2})$/);
@@ -97,8 +99,7 @@ function isoWeekLabel(weekKey: string): { badge: string; range: string; dayHeade
       (label, index) => `${label} (${fmtDay(dates[index])})`,
     ),
   };
-}
-
+}\n
 export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void {
   const { dienstverband, project, periodeVan, periodeTot, rows } = input;
   const preparedBy = input.preparedBy ?? "TerreVolt Planner";
@@ -126,8 +127,8 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
         <td class="naam">${escHtml(r.naam)}</td>
         <td class="status">Z</td>
         <td class="mono">${escHtml(r.kvk_nummer ?? "")}</td>
-        ${r.days.map((u) => `<td class="uren">${escHtml(fmtUren(u))}</td>`).join("")}
-        <td class="totaal">${escHtml(fmtUren(r.total))}</td>
+        ${r.days.map((u) => `<td class="uren">${escHtml(fmtCellUren(u))}</td>`).join("")}
+        <td class="totaal">${escHtml(fmtTotalUren(r.total))}</td>
         <td class="opmerking">${escHtml(r.opmerking)}</td>
       </tr>`;
     }
@@ -138,8 +139,8 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
       <td>${escHtml(r.id_type ?? "")}</td>
       <td class="mono">${escHtml(r.id_nummer ?? "")}</td>
       <td>${escHtml(fmtDate(r.id_geldig_tot))}</td>
-      ${r.days.map((u) => `<td class="uren">${escHtml(fmtUren(u))}</td>`).join("")}
-      <td class="totaal">${escHtml(fmtUren(r.total))}</td>
+      ${r.days.map((u) => `<td class="uren">${escHtml(fmtCellUren(u))}</td>`).join("")}
+      <td class="totaal">${escHtml(fmtTotalUren(r.total))}</td>
       <td class="opmerking">${escHtml(r.opmerking)}</td>
     </tr>`;
   };
@@ -164,8 +165,8 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
             <tfoot>
               <tr>
                 <td colspan="${baseHeader.length}" class="daily-label">Dagtotaal</td>
-                ${dayTotals.map((u) => `<td class="daily-total">${escHtml(fmtUren(u))}</td>`).join("")}
-                <td class="grand-total">${escHtml(fmtUren(weekTotal))}</td>
+                ${dayTotals.map((u) => `<td class="daily-total">${escHtml(fmtTotalUren(u))}</td>`).join("")}
+                <td class="grand-total">${escHtml(fmtTotalUren(weekTotal))}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -515,7 +516,7 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
           <span>Monteurs</span><span>${monteurCount}</span>
           <span>Weken</span><span>${weekKeys.length}</span>
           <span>Weekregels</span><span>${sortedRows.length}</span>
-          <div class="summary-total"><b>Totaal uren</b><b>${escHtml(fmtUren(totalAll))}</b></div>
+          <div class="summary-total"><b>Totaal uren</b><b>${escHtml(fmtTotalUren(totalAll))}</b></div>
         </div>
       </aside>
     </div>
