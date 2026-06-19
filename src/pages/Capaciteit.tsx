@@ -477,6 +477,16 @@ const Capaciteit = () => {
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-1">
+                          {isManager && (
+                            <button
+                              onClick={() => setRegisterMonteur(m)}
+                              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
+                              aria-label="Mandagenregister-gegevens"
+                              title="Mandagenregister-gegevens (manager)"
+                            >
+                              <BadgeCheck className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => openEdit(m)}
                             className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
@@ -485,6 +495,7 @@ const Capaciteit = () => {
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
+
                           <button
                             onClick={() => toggleActief(m)}
                             className={[
