@@ -892,7 +892,7 @@ const Plannen = () => {
     setAllWeken(effectiveWeeks);
     setAllCellsList(allCells);
 
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, [projectId, planningWindow]);
 
   useEffect(() => {
