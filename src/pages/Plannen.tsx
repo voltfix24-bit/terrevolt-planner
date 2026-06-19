@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  Sparkles,
   Trash2,
   Undo2,
   Users,
@@ -91,6 +92,7 @@ import {
 import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/planning-focus";
 import { useIsManager } from "@/hooks/use-is-manager";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
+import { PlanningCleanupButton } from "@/components/PlanningCleanupButton";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -405,6 +407,7 @@ const Plannen = () => {
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
   const skipHistoryRef = useRef(false);
   // Voorkomt dat dezelfde projectId tijdens één sessie meerdere keren tegelijk
   // weken gaat seeden (StrictMode dubbele mount, snelle navigatie, refetch).
@@ -2482,7 +2485,7 @@ const Plannen = () => {
                 className="flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold text-foreground hover:bg-fg/[0.06]"
               >
                 <ClipboardList className="h-4 w-4" />
-                <span>Mandagenregister</span>
+                <span className="hidden md:inline">Mandagenregister</span>
               </button>
             )}
             <button
@@ -2502,7 +2505,7 @@ const Plannen = () => {
               ].join(" ")}
             >
               <Crosshair className="h-4 w-4" />
-              <span>Ga naar eerste planning</span>
+              <span className="hidden md:inline">Ga naar eerste planning</span>
             </button>
             {history.length > 0 && (
               <button
@@ -2552,8 +2555,23 @@ const Plannen = () => {
                   <Printer className="h-4 w-4" />
                   <span>Printen</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setCleanupOpen(true)}
+                  className="gap-2"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>Planningvenster opschonen</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <PlanningCleanupButton
+              projectId={projectId}
+              projectLabel={project.case_nummer || project.station_naam || undefined}
+              open={cleanupOpen}
+              onOpenChange={setCleanupOpen}
+              onApplied={() => { void loadAll({ silent: true }); }}
+              className="hidden"
+            />
           </div>
         </div>
 
