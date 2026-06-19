@@ -168,6 +168,13 @@ export function MandagenregisterPanel({
     void fetchLogs();
   }, [fetchLogs]);
 
+  // Auto-load when projectId/range changes (initial open with default range).
+  useEffect(() => {
+    if (projectId && van && tot && tot >= van) {
+      void fetchRows();
+    }
+  }, [fetchRows, projectId, van, tot]);
+
   async function saveHours(row: Row, urenStr: string) {
     const uren = Number(urenStr);
     if (Number.isNaN(uren) || uren < 0 || uren > 24) {
