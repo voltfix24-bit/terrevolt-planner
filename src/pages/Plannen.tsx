@@ -81,7 +81,7 @@ import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwi
 import { useConfirm, describeShift, describeOverwrite } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
-import { hasCellContent, formatOverwritePrompt, prepareFillTargets } from "@/lib/cell-conflicts";
+import { hasCellContent, prepareFillTargets } from "@/lib/cell-conflicts";
 import { decideGapFill } from "@/lib/gap-fill";
 import {
   getPlanningWindow,
