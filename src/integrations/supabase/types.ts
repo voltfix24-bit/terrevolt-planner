@@ -997,6 +997,15 @@ export type Database = {
         }[]
       }
       is_planner_manager: { Args: { check_user_id?: string }; Returns: boolean }
+      normalize_project_planning_window: {
+        Args: {
+          p_apply?: boolean
+          p_project_id: string
+          p_weeks_after?: number
+          p_weeks_before?: number
+        }
+        Returns: Json
+      }
       normalize_project_weken: {
         Args: { p_project_id: string }
         Returns: undefined
