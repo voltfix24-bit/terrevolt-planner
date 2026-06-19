@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ClipboardList,
   Crosshair,
   GripVertical,
   History,
@@ -85,6 +86,7 @@ import {
   type PlanningWindow,
 } from "@/lib/planning-window";
 import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/planning-focus";
+import { useIsManager } from "@/hooks/use-is-manager";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
@@ -266,6 +268,7 @@ const Plannen = () => {
   const confirmShift = useConfirm();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project");
+  const { isManager } = useIsManager();
 
   const [project, setProject] = useState<Project | null>(null);
   const [weken, setWeken] = useState<Week[]>([]);
@@ -2479,6 +2482,17 @@ const Plannen = () => {
           >
             <Printer className="h-4 w-4" />
           </button>
+          {isManager && projectId && (
+            <button
+              type="button"
+              onClick={() => navigate(`/mandagenregister?project=${projectId}`)}
+              title="Open mandagenregister voor dit project"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold text-foreground hover:bg-fg/[0.06]"
+            >
+              <ClipboardList className="h-4 w-4" />
+              <span>Mandagenregister</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handleScrollToPlanned}

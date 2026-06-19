@@ -106,18 +106,32 @@ function downloadCsv(filename: string, header: string[], rows: (string | number 
 export function MandagenregisterPanel({
   projectId,
   projectLabel,
+  defaultVan,
+  defaultTot,
 }: {
   projectId: string;
   projectLabel?: string | null;
+  defaultVan?: string | null;
+  defaultTot?: string | null;
 }) {
   const today = useMemo(() => new Date(), []);
-  const [van, setVan] = useState<string>(() => fmt(isoMondayOfWeek(today)));
-  const [tot, setTot] = useState<string>(() => fmt(isoSundayOfWeek(today)));
+  const [van, setVan] = useState<string>(() => defaultVan || fmt(isoMondayOfWeek(today)));
+  const [tot, setTot] = useState<string>(() => defaultTot || fmt(isoSundayOfWeek(today)));
+  const [userTouchedRange, setUserTouchedRange] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const [logs, setLogs] = useState<ExportLog[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  // Sync incoming default range if user has not manually overridden it.
+  useEffect(() => {
+    if (userTouchedRange) return;
+    if (defaultVan) setVan(defaultVan);
+    if (defaultTot) setTot(defaultTot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultVan, defaultTot]);
+
 
   const fetchRows = useCallback(async () => {
     if (!projectId || !van || !tot) return;
@@ -153,6 +167,13 @@ export function MandagenregisterPanel({
   useEffect(() => {
     void fetchLogs();
   }, [fetchLogs]);
+
+  // Auto-load when projectId/range changes (initial open with default range).
+  useEffect(() => {
+    if (projectId && van && tot && tot >= van) {
+      void fetchRows();
+    }
+  }, [fetchRows, projectId, van, tot]);
 
   async function saveHours(row: Row, urenStr: string) {
     const uren = Number(urenStr);
@@ -323,16 +344,29 @@ export function MandagenregisterPanel({
       <div className="flex flex-wrap items-end gap-3 rounded-md border border-fg/10 bg-fg/[0.02] px-3 py-2.5">
         <div className="space-y-1">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Van</Label>
-          <Input type="date" value={van} onChange={(e) => setVan(e.target.value)} className="h-9 w-[160px]" />
+          <Input type="date" value={van} onChange={(e) => { setUserTouchedRange(true); setVan(e.target.value); }} className="h-9 w-[160px]" />
         </div>
         <div className="space-y-1">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">T/m</Label>
-          <Input type="date" value={tot} onChange={(e) => setTot(e.target.value)} className="h-9 w-[160px]" />
+          <Input type="date" value={tot} onChange={(e) => { setUserTouchedRange(true); setTot(e.target.value); }} className="h-9 w-[160px]" />
         </div>
         <Button onClick={fetchRows} disabled={loading} className="h-9">
           <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Register ophalen
         </Button>
+        {defaultVan && defaultTot && (defaultVan !== van || defaultTot !== tot) && (
+          <Button
+            variant="outline"
+            className="h-9"
+            onClick={() => {
+              setUserTouchedRange(false);
+              setVan(defaultVan);
+              setTot(defaultTot);
+            }}
+          >
+            Volledige planning
+          </Button>
+        )}
         <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <CalendarDays className="h-3.5 w-3.5" />
           {hasRows ? `${rows.length} regels` : "Geen data geladen"}

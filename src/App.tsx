@@ -17,6 +17,7 @@ import Activiteiten from "./pages/Activiteiten";
 import Capaciteit from "./pages/Capaciteit";
 import Instellingen from "./pages/Instellingen";
 import Overzicht from "./pages/Overzicht";
+import Mandagenregister from "./pages/Mandagenregister";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="/projecten/:id" element={<ProjectDetail />} />
                   <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
                   <Route path="/plannen" element={<Plannen />} />
+                  <Route path="/mandagenregister" element={<Mandagenregister />} />
                   <Route path="/activiteiten" element={<Activiteiten />} />
                   <Route path="/capaciteit" element={<Capaciteit />} />
                   <Route path="/instellingen" element={<Instellingen />} />
