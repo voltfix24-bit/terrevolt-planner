@@ -1297,12 +1297,14 @@ const Plannen = () => {
       const targetKey = cellKey(src.activiteit_id, targetWeekId, targetDagIndex);
       const targetCel = cellen.get(targetKey);
 
+      const overwritten: OverwrittenCell[] = [];
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
         if (hasCellContent(targetCel, targetMonteurs)) {
           const ok = window.confirm(formatOverwritePrompt(1));
           if (!ok) return;
         }
+        overwritten.push({ cel: targetCel, monteurIds: [...targetMonteurs] });
         const delMonteurs = await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
         const delCel = await supabase.from("planning_cellen").delete().eq("id", targetCel.id);
         if (delMonteurs.error || delCel.error) {
@@ -1324,6 +1326,8 @@ const Plannen = () => {
       }
 
       const oldKey = cellKey(src.activiteit_id, src.week_id, src.dag_index);
+      const oldWeekId = src.week_id;
+      const oldDagIndex = src.dag_index;
       const updated: Cel = { ...src, week_id: targetWeekId, dag_index: targetDagIndex };
       setCellen((prev) => {
         const m = new Map(prev);
@@ -1338,9 +1342,16 @@ const Plannen = () => {
       if (error) {
         toast.error("Verplaatsen mislukt");
         loadAll();
+        return;
       }
+      pushHistory({
+        type: "cells_moved",
+        label: "Cel verplaatst",
+        moves: [{ celId: src.id, oldWeekId, oldDagIndex, newWeekId: targetWeekId, newDagIndex: targetDagIndex }],
+        overwritten,
+      });
     },
-    [cellen, celMonteurs, loadAll, weken, confirmShift]
+    [cellen, celMonteurs, loadAll, weken, confirmShift, pushHistory]
   );
 
   // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
