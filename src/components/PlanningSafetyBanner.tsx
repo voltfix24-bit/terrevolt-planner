@@ -26,7 +26,10 @@ type Props = {
 };
 
 /** Hook: laad jaar/week_nr van een project en bereken assessment. */
-export function usePlanningAssessment(projectId: string | null | undefined): PlanningAssessment | null {
+export function usePlanningAssessment(
+  projectId: string | null | undefined,
+  reloadKey: number = 0,
+): PlanningAssessment | null {
   const [data, setData] = useState<PlanningAssessment | null>(null);
   useEffect(() => {
     if (!projectId) {
@@ -45,7 +48,7 @@ export function usePlanningAssessment(projectId: string | null | undefined): Pla
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, reloadKey]);
   return data;
 }
 
@@ -58,8 +61,13 @@ export function PlanningSafetyBanner({
   showCleanup = false,
   onCleaned,
 }: Props) {
-  const fetched = usePlanningAssessment(weken ? null : projectId ?? null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const fetched = usePlanningAssessment(weken ? null : projectId ?? null, reloadKey);
   const a = weken ? assessPlanningRange(weken) : fetched;
+  const handleCleaned = () => {
+    setReloadKey((k) => k + 1);
+    onCleaned?.();
+  };
   if (!a || a.status === "safe") return null;
 
   const range = `${a.firstDate?.toISOString().slice(0, 10)} → ${a.lastDate?.toISOString().slice(0, 10)}`;
@@ -97,7 +105,7 @@ export function PlanningSafetyBanner({
             <PlanningCleanupButton
               projectId={projectId}
               projectLabel={projectLabel}
-              onApplied={onCleaned}
+              onApplied={handleCleaned}
             />
           </div>
         )}
