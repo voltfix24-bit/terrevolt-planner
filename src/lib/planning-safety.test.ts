@@ -26,7 +26,7 @@ describe("isValidIsoWeek", () => {
   });
 
   it("rejects week 53 in years without ISO week 53", () => {
-    expect(isValidIsoWeek(2026, 53)).toBe(false);
+    expect(isValidIsoWeek(2025, 53)).toBe(false);
   });
 
   it("accepts week 53 in years that have ISO week 53", () => {
@@ -109,8 +109,8 @@ describe("assessPlanningRange", () => {
 
   it("ongeldige ISO-week → blocked", () => {
     const a = assessPlanningRange([
-      { jaar: 2026, week_nr: 36 },
-      { jaar: 2026, week_nr: 53 },
+      { jaar: 2025, week_nr: 36 },
+      { jaar: 2025, week_nr: 53 },
     ]);
     expect(a.status).toBe("blocked");
     expect(a.reasons.some((r) => r.includes("ongeldige ISO-week"))).toBe(true);

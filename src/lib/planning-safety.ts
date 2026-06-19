@@ -105,7 +105,7 @@ function addIntegrityReasons(weken: PlanningWeek[], reasons: string[]) {
   if (positioned.length === weken.length) {
     const sorted = [...positions].sort((a, b) => a - b);
     const contiguous = sorted.every((p, i) => p === i);
-    if (!contiguous) reasons.push("weekposities zijn niet aaneengesloten vanaf 0");
+    if (!contiguous) reasons.push("weekposities zijn niet-aaneengesloten vanaf 0");
   }
 }
 
