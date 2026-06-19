@@ -2404,7 +2404,7 @@ const Plannen = () => {
         }}
       >
         {/* Rij 1 — project + primaire acties */}
-        <div className="flex items-center justify-between gap-4 px-8 pt-3 pb-2">
+        <div className="flex items-center justify-between gap-4 px-8 pt-2 pb-1">
           <div className="flex min-w-0 items-center gap-4">
             <button
               onClick={() => navigate("/")}
@@ -2576,7 +2576,7 @@ const Plannen = () => {
         </div>
 
         {/* Rij 2 — periode-navigatie (compact, lichter) */}
-        <div className="flex items-center justify-end gap-1 px-8 pb-2">
+        <div className="flex items-center justify-end gap-1 px-8 pb-1">
           <div
             className="flex items-center gap-0.5 rounded-md border border-fg/10 px-1 py-0.5"
             title={`Periode ${planningWindow.startDate.toLocaleDateString("nl-NL")} – ${planningWindow.endDate.toLocaleDateString("nl-NL")}`}
@@ -2625,14 +2625,14 @@ const Plannen = () => {
         projectLabel={project.case_nummer || project.station_naam || undefined}
         showCleanup
         onCleaned={() => { void loadAll({ silent: true }); }}
-        className="mx-8 mt-4"
+        className="mx-8 mt-2"
       />
 
 
       {/* Indicator: planning bestaat buiten het huidige venster */}
       {(outsideCellCount > 0 || outsideWeekCount > 0) && (
         <div
-          className="mx-8 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2 text-[12px]"
+          className="mx-8 mt-2 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2 text-[12px]"
           style={{
             borderColor: "rgb(var(--fg-rgb) / 0.12)",
             backgroundColor: "rgb(var(--fg-rgb) / 0.04)",
@@ -2665,7 +2665,7 @@ const Plannen = () => {
       )}
 
       {/* Planning grid */}
-      <div className="px-8 py-6">
+      <div className="px-8 py-4">
         <div
           className="surface-card overflow-hidden"
           style={{ padding: 0 }}
