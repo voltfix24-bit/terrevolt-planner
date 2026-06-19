@@ -107,7 +107,7 @@ export function PlanningCleanupButton({
           ? `Planningvenster opgeschoond: ${removed} lege weken verwijderd`
           : "Planningvenster gecontroleerd: niets te verwijderen",
       );
-      setOpen(false);
+      setIsOpen(false);
       setDryRun(null);
       onApplied?.();
     } catch (e: unknown) {
@@ -140,7 +140,7 @@ export function PlanningCleanupButton({
         Planningvenster opschonen
       </button>
 
-      <AlertDialog open={open} onOpenChange={(v) => !applying && setOpen(v)}>
+      <AlertDialog open={isOpen} onOpenChange={(v) => !applying && setIsOpen(v)}>
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Planningvenster opschonen?</AlertDialogTitle>
