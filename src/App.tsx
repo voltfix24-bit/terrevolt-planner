@@ -9,6 +9,7 @@ import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import "@/lib/fill-handle-drag-guard";
 import "./styles/overzicht-fixes.css";
+import "./styles/mandagenregister-fixes.css";
 import Auth from "./pages/Auth";
 import Projecten from "./pages/Projecten";
 import ProjectDetail from "./pages/ProjectDetail";
