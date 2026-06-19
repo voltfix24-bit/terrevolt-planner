@@ -1360,7 +1360,7 @@ const Plannen = () => {
   // en de doel-(week, dag).
   // Kern: verschuif een set cellen met een vaste delta in slots (1 dag = 1 slot, 1 week = 5 slots)
   const moveCellsByDelta = useCallback(
-    async (sourceCelIds: string[], delta: number) => {
+    async (sourceCelIds: string[], delta: number, historyLabel?: string) => {
       if (delta === 0 || sourceCelIds.length === 0) return;
       const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
       const totalSlots = weken.length * 5;
@@ -1412,6 +1412,12 @@ const Plannen = () => {
         const ok = window.confirm(formatOverwritePrompt(conflicts.length));
         if (!ok) return;
       }
+
+      // Snapshot van overgeschreven cellen (incl. monteurs) voor undo
+      const overwritten: OverwrittenCell[] = conflicts.map((c) => ({
+        cel: c,
+        monteurIds: [...(celMonteurs.get(c.id) ?? [])],
+      }));
 
       // Verwijder conflict-cellen (db eerst, parallel). Bij fout: niets lokaal muteren,
       // herladen en stoppen — zo voorkomen we half-state met unique_cel-conflicten.
@@ -1467,9 +1473,22 @@ const Plannen = () => {
       if (updErr) {
         toast.error("Verplaatsen mislukt: " + updErr.message);
         loadAll();
+        return;
       }
+      pushHistory({
+        type: "cells_moved",
+        label: historyLabel ?? `${moves.length}× cel verplaatst (${delta > 0 ? "+" : ""}${delta} dag)`,
+        moves: moves.map((mv) => ({
+          celId: mv.src.id,
+          oldWeekId: mv.src.week_id,
+          oldDagIndex: mv.src.dag_index,
+          newWeekId: mv.newWeekId,
+          newDagIndex: mv.newDagIndex,
+        })),
+        overwritten,
+      });
     },
-    [cellen, celMonteurs, weken, loadAll]
+    [cellen, celMonteurs, weken, loadAll, pushHistory]
   );
 
   // Wrapper voor drag-and-drop: bepaalt delta op basis van anchor + doel-(week,dag)
