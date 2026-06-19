@@ -84,7 +84,7 @@ import {
   PLANNING_WINDOW_STEP_WEEKS,
   type PlanningWindow,
 } from "@/lib/planning-window";
-import { findInitialPlanningFocus } from "@/lib/planning-focus";
+import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/planning-focus";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
