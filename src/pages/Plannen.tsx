@@ -1311,7 +1311,7 @@ const Plannen = () => {
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
         if (hasCellContent(targetCel, targetMonteurs)) {
-          const ok = window.confirm(formatOverwritePrompt(1));
+          const ok = await confirmShift(describeOverwrite(1));
           if (!ok) return;
         }
         overwritten.push({ cel: targetCel, monteurIds: [...targetMonteurs] });
