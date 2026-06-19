@@ -70,10 +70,9 @@ describe("assessPlanningRange", () => {
   });
 
   it("limieten on the edge zijn nog safe", () => {
-    // 80 weken range = 80 weeks span (eerste tot laatste = 79 weken)
     const a = assessPlanningRange([
       { jaar: 2026, week_nr: 1 },
-      { jaar: 2027, week_nr: 28 }, // ~80 weken later
+      { jaar: 2027, week_nr: 27 }, // 79 weken later → range 80
     ]);
     expect(a.rangeWeeks).toBeLessThanOrEqual(PLANNING_SAFETY_LIMITS.maxRangeWeeks);
     expect(a.status).toBe("safe");
