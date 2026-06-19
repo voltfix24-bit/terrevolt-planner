@@ -123,6 +123,44 @@ export function MandagenregisterPanel({
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const [logs, setLogs] = useState<ExportLog[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [projectMeta, setProjectMeta] = useState<{
+    case_nummer: string | null;
+    station_naam: string | null;
+    locatie: string | null;
+    opdrachtgever: string | null;
+  }>({ case_nummer: null, station_naam: null, locatie: null, opdrachtgever: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!projectId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("projecten")
+        .select("case_nummer, station_naam, locatie, opdrachtgever_id")
+        .eq("id", projectId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      let opdrachtgeverNaam: string | null = null;
+      if (data.opdrachtgever_id) {
+        const { data: og } = await supabase
+          .from("opdrachtgevers")
+          .select("naam")
+          .eq("id", data.opdrachtgever_id)
+          .maybeSingle();
+        opdrachtgeverNaam = og?.naam ?? null;
+      }
+      if (cancelled) return;
+      setProjectMeta({
+        case_nummer: data.case_nummer ?? null,
+        station_naam: data.station_naam ?? null,
+        locatie: data.locatie ?? null,
+        opdrachtgever: opdrachtgeverNaam,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   // Sync incoming default range if user has not manually overridden it.
   useEffect(() => {
@@ -289,20 +327,76 @@ export function MandagenregisterPanel({
     const filename = `Mandagenregister_${d === "zzp" ? "ZZP" : "Loondienst"}_${projSlug}_${van}_${tot}.csv`;
 
     if (d === "zzp") {
+      // ZZP-export: dataminimalisatie. Pivot per (monteur, ISO-week).
+      // Kolommen: project-meta + naam + statuscode 'Z' + KvK + Ma..Zo + Totaal + Opmerking.
+      // BSN, geboortedatum, nationaliteit en ID-velden komen hier nooit in voor.
+      type WeekAgg = {
+        monteur_id: string;
+        naam: string;
+        kvk_nummer: string | null;
+        week: string;
+        days: number[]; // ma..zo
+        total: number;
+        opmerkingen: Set<string>;
+      };
+      const aggMap = new Map<string, WeekAgg>();
+      for (const r of filtered) {
+        const wk = weekKey(r.datum);
+        const key = `${r.monteur_id}::${wk}`;
+        let a = aggMap.get(key);
+        if (!a) {
+          a = {
+            monteur_id: r.monteur_id,
+            naam: r.naam,
+            kvk_nummer: r.kvk_nummer,
+            week: wk,
+            days: [0, 0, 0, 0, 0, 0, 0],
+            total: 0,
+            opmerkingen: new Set<string>(),
+          };
+          aggMap.set(key, a);
+        }
+        const di = dayIndex(r.datum);
+        const u = Number(r.uren) || 0;
+        a.days[di] += u;
+        a.total += u;
+        if (r.activiteiten) a.opmerkingen.add(r.activiteiten);
+      }
+      const aggs = [...aggMap.values()].sort(
+        (x, y) => x.naam.localeCompare(y.naam) || x.week.localeCompare(y.week),
+      );
       downloadCsv(
         filename,
         [
-          "naam", "bedrijfsnaam", "kvk_nummer", "btw_nummer", "nationaliteit",
-          "id_type", "id_nummer", "id_geldig_tot",
-          "datum", "uren", "activiteiten", "status",
+          "Hoofdaannemer/opdrachtgever",
+          "Projectnummer",
+          "Projectnaam",
+          "Locatie",
+          "Week",
+          "Naam zelfstandige",
+          "Statuscode",
+          "KvK-nummer",
+          "Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo",
+          "Totaal uren",
+          "Opmerking",
         ],
-        filtered.map((r) => [
-          r.naam, r.bedrijfsnaam, r.kvk_nummer, r.btw_nummer, r.nationaliteit,
-          r.id_type, r.id_nummer, r.id_geldig_tot,
-          r.datum, r.uren, r.activiteiten, r.status,
-        ])
+        aggs.map((a) => [
+          projectMeta.opdrachtgever,
+          projectMeta.case_nummer,
+          projectMeta.station_naam,
+          projectMeta.locatie,
+          a.week,
+          a.naam,
+          "Z",
+          a.kvk_nummer,
+          a.days[0] || "", a.days[1] || "", a.days[2] || "", a.days[3] || "",
+          a.days[4] || "", a.days[5] || "", a.days[6] || "",
+          a.total,
+          [...a.opmerkingen].join("; "),
+        ]),
       );
     } else {
+      // Loondienst-export blijft ongewijzigd: per dag met BSN + identiteit.
       downloadCsv(
         filename,
         [
