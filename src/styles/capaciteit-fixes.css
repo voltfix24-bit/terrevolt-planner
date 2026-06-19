@@ -1,0 +1,66 @@
+.capaciteit-page {
+  max-width: 112rem;
+  margin: 0 auto;
+}
+
+.capaciteit-page .surface-card {
+  border-radius: 0.5rem;
+}
+
+.capaciteit-page input,
+.capaciteit-page select,
+.capaciteit-page textarea {
+  min-height: 2.25rem;
+}
+
+.capaciteit-page table th,
+.capaciteit-page table td {
+  vertical-align: middle;
+}
+
+.capaciteit-page table thead th {
+  background: hsl(var(--background) / 0.55);
+}
+
+.capaciteit-page table tbody tr:last-child {
+  border-bottom: 0;
+}
+
+.capaciteit-page [role="dialog"] input,
+.capaciteit-page [role="dialog"] select,
+.capaciteit-page [role="dialog"] textarea {
+  color: hsl(var(--foreground));
+}
+
+[data-theme="dark"] .capaciteit-page input,
+[data-theme="dark"] .capaciteit-page select,
+[data-theme="dark"] .capaciteit-page textarea {
+  color: hsl(var(--foreground));
+  -webkit-text-fill-color: hsl(var(--foreground));
+  caret-color: hsl(var(--primary));
+}
+
+[data-theme="dark"] .capaciteit-page input::placeholder,
+[data-theme="dark"] .capaciteit-page textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+  -webkit-text-fill-color: hsl(var(--muted-foreground));
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .capaciteit-page input:disabled,
+[data-theme="dark"] .capaciteit-page select:disabled,
+[data-theme="dark"] .capaciteit-page textarea:disabled {
+  color: hsl(var(--muted-foreground));
+  -webkit-text-fill-color: hsl(var(--muted-foreground));
+  opacity: 0.8;
+}
+
+@media (max-width: 900px) {
+  .capaciteit-page {
+    padding-inline: 0.75rem;
+  }
+
+  .capaciteit-page .surface-card {
+    overflow-x: auto;
+  }
+}
