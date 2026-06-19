@@ -2428,7 +2428,8 @@ const Plannen = () => {
             type="button"
             onClick={handleUndo}
             disabled={history.length === 0}
-            title="Ongedaan maken (Ctrl+Z)"
+            title="Laatste celactie ongedaan maken (Ctrl+Z) — werkt alleen op lokale celacties in deze sessie"
+            aria-label="Laatste celactie ongedaan maken"
             className={[
               "flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent",
               history.length === 0
