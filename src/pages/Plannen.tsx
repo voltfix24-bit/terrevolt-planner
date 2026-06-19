@@ -1172,7 +1172,7 @@ const Plannen = () => {
       const { error } = await supabase.from("planning_cellen").delete().eq("id", cel.id);
       if (error) {
         toast.error("Wissen mislukt");
-        loadAll();
+        loadAll({ silent: true });
       }
     },
     [cellen, celMonteurs, removeCellLocal, loadAll, pushHistory]
@@ -1316,7 +1316,7 @@ const Plannen = () => {
         const delCel = await supabase.from("planning_cellen").delete().eq("id", targetCel.id);
         if (delMonteurs.error || delCel.error) {
           toast.error("Overschrijven mislukt: " + (delCel.error?.message ?? delMonteurs.error?.message));
-          loadAll();
+          loadAll({ silent: true });
           return;
         }
         setCelMonteurs((prev) => {
@@ -1348,7 +1348,7 @@ const Plannen = () => {
         .eq("id", src.id);
       if (error) {
         toast.error("Verplaatsen mislukt");
-        loadAll();
+        loadAll({ silent: true });
         return;
       }
       pushHistory({
@@ -1438,7 +1438,7 @@ const Plannen = () => {
         const delErr = delResults.find((r) => r.error)?.error;
         if (delErr) {
           toast.error("Overschrijven mislukt: " + delErr.message);
-          loadAll();
+          loadAll({ silent: true });
           return;
         }
       }
@@ -1479,7 +1479,7 @@ const Plannen = () => {
       const updErr = results.find((r) => r.error)?.error;
       if (updErr) {
         toast.error("Verplaatsen mislukt: " + updErr.message);
-        loadAll();
+        loadAll({ silent: true });
         return;
       }
       pushHistory({
@@ -1743,7 +1743,7 @@ const Plannen = () => {
             );
             if (results.some((r) => r.error)) {
               toast.error("Terugdraaien mislukt — vernieuwen…");
-              loadAll();
+              loadAll({ silent: true });
               return;
             }
             // Herstel overgeschreven cellen incl. monteurs
@@ -1766,7 +1766,7 @@ const Plannen = () => {
                 );
               }
             }
-            loadAll();
+            loadAll({ silent: true });
             break;
           }
           case "cells_filled": {
@@ -1795,7 +1795,7 @@ const Plannen = () => {
                 );
               }
             }
-            loadAll();
+            loadAll({ silent: true });
             break;
           }
         }
@@ -1906,7 +1906,7 @@ const Plannen = () => {
     const { error } = await supabase.from("project_weken").delete().eq("id", last.id);
     if (error) {
       toast.error("Week verwijderen mislukt");
-      loadAll();
+      loadAll({ silent: true });
       return;
     }
     const needsNorm = rawNext.some((w, i) => w.positie !== i);
@@ -1942,11 +1942,11 @@ const Plannen = () => {
       });
       if (error) {
         toast.error("Weeknummers opslaan mislukt: " + error.message);
-        loadAll();
+        loadAll({ silent: true });
         return;
       }
       // Eindstand altijd refreshen — DB is autoriteit.
-      loadAll();
+      loadAll({ silent: true });
     },
     [weken, loadAll, projectId],
   );
@@ -1975,7 +1975,7 @@ const Plannen = () => {
           .eq("id", existing.id);
         if (error) {
           toast.error("Week verwijderen mislukt");
-          loadAll();
+          loadAll({ silent: true });
           return;
         }
         const needsNorm = rawNext.some((w, i) => w.positie !== i);
@@ -2070,7 +2070,7 @@ const Plannen = () => {
     const { error } = await supabase.from("project_activiteiten").delete().eq("id", id);
     if (error) {
       toast.error("Verwijderen mislukt");
-      loadAll();
+      loadAll({ silent: true });
     }
   }, [loadAll]);
 
@@ -2136,7 +2136,7 @@ const Plannen = () => {
       const results = await Promise.all(updates);
       if (results.some((r) => r.error)) {
         toast.error("Volgorde opslaan mislukt");
-        loadAll();
+        loadAll({ silent: true });
       }
     },
     [activiteiten, loadAll]
@@ -2606,7 +2606,7 @@ const Plannen = () => {
         projectId={projectId}
         projectLabel={project.case_nummer || project.station_naam || undefined}
         showCleanup
-        onCleaned={() => { void loadAll(); }}
+        onCleaned={() => { void loadAll({ silent: true }); }}
         className="mx-8 mt-4"
       />
 
