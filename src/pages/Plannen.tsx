@@ -78,10 +78,10 @@ import {
   shortReason,
 } from "@/lib/monteur-beschikbaarheid";
 import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
-import { useConfirm, describeShift } from "@/components/ConfirmDialog";
+import { useConfirm, describeShift, describeOverwrite } from "@/components/ConfirmDialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
-import { hasCellContent, formatOverwritePrompt, prepareFillTargets } from "@/lib/cell-conflicts";
+import { hasCellContent, prepareFillTargets } from "@/lib/cell-conflicts";
 import { decideGapFill } from "@/lib/gap-fill";
 import {
   getPlanningWindow,
@@ -1311,7 +1311,7 @@ const Plannen = () => {
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
         if (hasCellContent(targetCel, targetMonteurs)) {
-          const ok = window.confirm(formatOverwritePrompt(1));
+          const ok = await confirmShift(describeOverwrite(1));
           if (!ok) return;
         }
         overwritten.push({ cel: targetCel, monteurIds: [...targetMonteurs] });
@@ -1419,7 +1419,7 @@ const Plannen = () => {
         if (hasCellContent(existing, monteurs)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
-        const ok = window.confirm(formatOverwritePrompt(conflicts.length));
+        const ok = await confirmShift(describeOverwrite(conflicts.length));
         if (!ok) return;
       }
 
@@ -1559,7 +1559,7 @@ const Plannen = () => {
         if (hasCellContent(existing, ms)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
-        const ok = window.confirm(formatOverwritePrompt(conflicts.length));
+        const ok = await confirmShift(describeOverwrite(conflicts.length));
         if (!ok) return;
       }
 
