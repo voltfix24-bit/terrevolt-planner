@@ -50,6 +50,7 @@ interface Monteur {
   werkdagen?: number[] | null;
   urenapp_sync_enabled?: boolean;
   urenapp_sync_exclusion_reason?: UrenappExclusionReason | null;
+  dienstverband?: "loondienst" | "zzp" | null;
 }
 
 interface Feestdag {
