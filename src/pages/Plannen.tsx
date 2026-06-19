@@ -1877,10 +1877,15 @@ const Plannen = () => {
   /* ----------------------------- week mgmt ----------------------------- */
   const addWeek = useCallback(async () => {
     if (!projectId) return;
+    const fallbackJaar = project?.jaar ?? new Date().getFullYear();
+    const guard = guardAddNextWeek(weken, fallbackJaar);
+    if (!guard.ok) {
+      toast.error(`Planningwijziging geblokkeerd: ${formatMutationGuardReasons(guard)}`);
+      return;
+    }
     const orderedWeeks = [...weken].sort(compareWeeksChronological);
     const lastWeek = orderedWeeks[orderedWeeks.length - 1];
     const newPos = orderedWeeks.length;
-    const fallbackJaar = project?.jaar ?? new Date().getFullYear();
     const next = lastWeek
       ? addIsoWeeks(lastWeek.jaar, lastWeek.week_nr, 1)
       : { jaar: fallbackJaar, week_nr: 1 };
