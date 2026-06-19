@@ -115,6 +115,7 @@ const Projecten = () => {
   const [opdrachtgevers, setOpdrachtgevers] = useState<Opdrachtgever[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [wekenByProject, setWekenByProject] = useState<Map<string, PlanningWeek[]>>(new Map());
 
   const [statusFilter, setStatusFilter] = useState<"alle" | Status>("alle");
   const [zoek, setZoek] = useState("");
@@ -122,13 +123,23 @@ const Projecten = () => {
 
   const loadAll = async () => {
     setLoading(true);
-    const [pRes, oRes] = await Promise.all([
+    const [pRes, oRes, wRes] = await Promise.all([
       supabase.from("projecten").select("*").order("created_at", { ascending: false }),
       supabase.from("opdrachtgevers").select("id, naam").order("positie"),
+      supabase.from("project_weken").select("project_id, jaar, week_nr"),
     ]);
     if (pRes.error) toast.error("Kon projecten niet laden");
     else setProjects((pRes.data ?? []) as unknown as Project[]);
     if (!oRes.error) setOpdrachtgevers((oRes.data ?? []) as Opdrachtgever[]);
+    if (!wRes.error) {
+      const map = new Map<string, PlanningWeek[]>();
+      for (const row of (wRes.data ?? []) as { project_id: string; jaar: number; week_nr: number }[]) {
+        const list = map.get(row.project_id) ?? [];
+        list.push({ jaar: row.jaar, week_nr: row.week_nr });
+        map.set(row.project_id, list);
+      }
+      setWekenByProject(map);
+    }
     setLoading(false);
   };
 
