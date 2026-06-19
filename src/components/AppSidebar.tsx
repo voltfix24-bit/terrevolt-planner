@@ -1,7 +1,8 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, LogOut, Moon, Settings, Sun, Users, Zap } from "lucide-react";
+import { CalendarDays, FolderKanban, LayoutDashboard, ListChecks, LogOut, Moon, Settings, Sun, Users } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/hooks/use-auth";
+import { TERREVOLT_ICON_DATA_URI } from "@/lib/brand-assets";
 
 const navItems = [
   { to: "/overzicht", label: "Overzicht", icon: LayoutDashboard },
@@ -40,8 +41,13 @@ export function AppSidebar({ collapsed = false }: AppSidebarProps) {
     >
       {/* Brand */}
       <div className={["flex items-center gap-2.5 py-5", collapsed ? "justify-center px-2" : "px-5"].join(" ")}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
-          <Zap className="h-5 w-5" strokeWidth={2.25} />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10">
+          <img
+            src={TERREVOLT_ICON_DATA_URI}
+            alt="TerreVolt"
+            className="h-7 w-7 object-contain"
+            draggable={false}
+          />
         </div>
         {!collapsed && (
           <div className="leading-tight">
