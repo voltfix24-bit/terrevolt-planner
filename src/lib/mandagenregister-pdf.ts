@@ -99,7 +99,8 @@ function isoWeekLabel(weekKey: string): { badge: string; range: string; dayHeade
       (label, index) => `${label} (${fmtDay(dates[index])})`,
     ),
   };
-}\n
+}
+
 export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void {
   const { dienstverband, project, periodeVan, periodeTot, rows } = input;
   const preparedBy = input.preparedBy ?? "TerreVolt Planner";
