@@ -26,7 +26,10 @@ type Props = {
 };
 
 /** Hook: laad jaar/week_nr van een project en bereken assessment. */
-export function usePlanningAssessment(projectId: string | null | undefined): PlanningAssessment | null {
+export function usePlanningAssessment(
+  projectId: string | null | undefined,
+  reloadKey: number = 0,
+): PlanningAssessment | null {
   const [data, setData] = useState<PlanningAssessment | null>(null);
   useEffect(() => {
     if (!projectId) {
@@ -45,7 +48,7 @@ export function usePlanningAssessment(projectId: string | null | undefined): Pla
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, reloadKey]);
   return data;
 }
 
