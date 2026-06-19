@@ -1513,8 +1513,9 @@ const Plannen = () => {
       if (delta === 0) return;
       const ok = await confirmShift(describeShift(delta, sourceCelIds.length, "cel"));
       if (!ok) return;
-      await setAuditLabel(`Sleep: ${sourceCelIds.length}× ${delta > 0 ? "+" : ""}${delta} dag`);
-      await moveCellsByDelta(sourceCelIds, delta);
+      const lbl = `Sleep: ${sourceCelIds.length}× ${delta > 0 ? "+" : ""}${delta} dag`;
+      await setAuditLabel(lbl);
+      await moveCellsByDelta(sourceCelIds, delta, lbl);
     },
     [cellen, weken, moveCellsByDelta, confirmShift]
   );
