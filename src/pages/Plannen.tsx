@@ -84,7 +84,7 @@ import {
   PLANNING_WINDOW_STEP_WEEKS,
   type PlanningWindow,
 } from "@/lib/planning-window";
-import { findInitialPlanningFocus } from "@/lib/planning-focus";
+import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/planning-focus";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
@@ -949,9 +949,93 @@ const Plannen = () => {
     }
   }, [projectId, project, loading, allWeken, allCellsList, windowOffsetWeeks]);
 
-  // Auto-scroll bij openen van een gepland project: spring naar de eerste week
-  // die planning_cellen bevat, zodat de gebruiker direct de planning ziet
-  // zonder handmatig te hoeven scrollen.
+  /**
+   * Bepaal de vroegste planning_cel (week_id + dag_index) op basis van de
+   * VOLLEDIGE sets (allWeken/allCellsList) — niet de gefilterde windowed sets.
+   * Zo vinden we de echte eerste planning ook als die buiten het rolling
+   * venster valt; daarna kan windowOffsetWeeks aangepast worden.
+   */
+  const firstPlanningTarget = useMemo<{ week_id: string; dag_index: number; jaar: number; week_nr: number } | null>(() => {
+    if (allWeken.length === 0 || allCellsList.length === 0) return null;
+    const weekById = new Map(allWeken.map((w) => [w.id, w]));
+    let bestKey = Number.POSITIVE_INFINITY;
+    let best: { week_id: string; dag_index: number; jaar: number; week_nr: number } | null = null;
+    for (const c of allCellsList) {
+      if (!c.week_id) continue;
+      const w = weekById.get(c.week_id);
+      if (!w) continue;
+      const monday = getMondayOfWeek(w.week_nr, w.jaar);
+      const key = monday.getTime() + c.dag_index * 86_400_000;
+      if (key < bestKey) {
+        bestKey = key;
+        best = { week_id: c.week_id, dag_index: c.dag_index, jaar: w.jaar, week_nr: w.week_nr };
+      }
+    }
+    return best;
+  }, [allWeken, allCellsList]);
+
+  /**
+   * Scroll de body+header zodat de cel met (week_id, dag_index) zichtbaar
+   * staat (~1 weekkolom marge links). Probeert eerst de DOM-locatie te
+   * vinden via data-attributen; valt anders terug op een berekening uit
+   * de chronologische week-index. Polt tot de grid gemonteerd is.
+   */
+  const scrollToTarget = useCallback(
+    (target: { week_id: string; dag_index: number } | null) => {
+      if (!target) return;
+      const apply = (left: number) => {
+        const clamped = Math.max(0, left);
+        if (headerScrollRef.current) headerScrollRef.current.scrollLeft = clamped;
+        if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = clamped;
+        setGridScrollLeft(clamped);
+      };
+      let tries = 0;
+      const maxTries = 60; // ~3s bij 50ms
+      const tick = () => {
+        const container = bodyScrollRef.current;
+        if (container) {
+          // Voorkeur: vind echte DOM-cel via data-attributen.
+          const cellEl = container.querySelector<HTMLElement>(
+            `[data-cel-week="${target.week_id}"][data-cel-dag="${target.dag_index}"]`,
+          );
+          if (cellEl) {
+            const containerRect = container.getBoundingClientRect();
+            const cellRect = cellEl.getBoundingClientRect();
+            // Positie van cel binnen de scroll-content
+            const cellLeftInContent =
+              cellRect.left - containerRect.left + container.scrollLeft;
+            // Houd ~1 weekkolom (5 dagen) marge zichtbaar links, zodat de
+            // gebruiker context ziet rond de eerste geplande cel.
+            const left = cellLeftInContent - 5 * CELL_W;
+            apply(left);
+            setTimeout(() => apply(left), 60);
+            setTimeout(() => apply(left), 220);
+            return;
+          }
+          // Fallback: bereken via chronologische week-index in `weken`.
+          const sorted = [...weken].sort(compareWeeksChronological);
+          const idx = sorted.findIndex((w) => w.id === target.week_id);
+          if (idx >= 0) {
+            const left = Math.max(0, idx - 1) * 5 * CELL_W;
+            if (container.scrollWidth > container.clientWidth + left - 1) {
+              apply(left);
+              setTimeout(() => apply(left), 60);
+              setTimeout(() => apply(left), 220);
+              return;
+            }
+          }
+        }
+        if (++tries < maxTries) setTimeout(tick, 50);
+      };
+      requestAnimationFrame(tick);
+    },
+    [weken],
+  );
+
+  // Auto-scroll bij openen van een gepland project: spring naar de eerste
+  // planning_cel zodat de gebruiker direct de planning ziet. Wacht tot het
+  // rolling venster bijgewerkt is door het focus-effect hierboven, zodat de
+  // doel-week ook daadwerkelijk in `weken` zit.
   const autoScrolledForProjectRef = useRef<string | null>(null);
   useEffect(() => {
     if (!projectId) {
@@ -959,83 +1043,39 @@ const Plannen = () => {
       return;
     }
     if (autoScrolledForProjectRef.current === projectId) return;
+    if (loading) return;
+    if (!firstPlanningTarget) return;
     if (weken.length === 0) return;
-    if (cellen.size === 0) return;
-    // Bouw set van week_ids die bij DIT project horen, zodat stale cellen
-    // van een eerder project ons niet voortijdig laten "klaar" markeren.
-    const projectWeekIds = new Set(weken.map((w) => w.id));
-    const weekHasCel = new Set<string>();
-    cellen.forEach((c) => {
-      if (projectWeekIds.has(c.week_id)) weekHasCel.add(c.week_id);
-    });
-    if (weekHasCel.size === 0) return; // cellen nog niet voor dit project geladen
-    const sorted = [...weken].sort(compareWeeksChronological);
-    const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
-    if (idx < 0) return;
-    // Schuif één week eerder zodat er wat context links van de geplande week
-    // zichtbaar is. Clamp op 0.
-    const targetIdx = Math.max(0, idx - 1);
-    const left = targetIdx * 5 * CELL_W;
-    const apply = () => {
-      if (headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
-      if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
-      setGridScrollLeft(left);
-    };
-    // Poll tot de scroll container daadwerkelijk gemonteerd is en breed
-    // genoeg is om te scrollen — voorkomt no-op als de ref nog niet bestaat
-    // of de grid nog geen layout heeft.
-    let tries = 0;
-    const maxTries = 40; // ~2s bij 50ms
-    const tick = () => {
-      const el = bodyScrollRef.current;
-      if (el && el.scrollWidth > el.clientWidth + left - 1) {
-        apply();
-        // Markeer pas als gedaan nadat scroll daadwerkelijk is toegepast.
-        autoScrolledForProjectRef.current = projectId;
-        // Extra passes voor browser layout settling.
-        setTimeout(apply, 50);
-        setTimeout(apply, 200);
-        return;
-      }
-      if (++tries < maxTries) setTimeout(tick, 50);
-    };
-    requestAnimationFrame(tick);
-  }, [projectId, weken, cellen]);
+    // Wacht tot doel-week binnen het huidige venster valt (focus-effect kan
+    // windowOffsetWeeks nog moeten aanpassen).
+    const targetInView = weken.some((w) => w.id === firstPlanningTarget.week_id);
+    if (!targetInView) return;
+    autoScrolledForProjectRef.current = projectId;
+    scrollToTarget(firstPlanningTarget);
+  }, [projectId, loading, firstPlanningTarget, weken, scrollToTarget]);
 
   /* ----------------------------- handmatige scroll naar planning ----------------------------- */
   const handleScrollToPlanned = useCallback(() => {
-    if (!projectId || weken.length === 0 || cellen.size === 0) return;
-    const projectWeekIds = new Set(weken.map((w) => w.id));
-    const weekHasCel = new Set<string>();
-    cellen.forEach((c) => {
-      if (projectWeekIds.has(c.week_id)) weekHasCel.add(c.week_id);
-    });
-    if (weekHasCel.size === 0) return;
-    const sorted = [...weken].sort(compareWeeksChronological);
-    const idx = sorted.findIndex((w) => weekHasCel.has(w.id));
-    if (idx < 0) return;
-    const targetIdx = Math.max(0, idx - 1);
-    const left = targetIdx * 5 * CELL_W;
-    const apply = () => {
-      if (headerScrollRef.current) headerScrollRef.current.scrollLeft = left;
-      if (bodyScrollRef.current) bodyScrollRef.current.scrollLeft = left;
-      setGridScrollLeft(left);
-    };
-    let tries = 0;
-    const maxTries = 40;
-    const tick = () => {
-      const el = bodyScrollRef.current;
-      if (el && el.scrollWidth > el.clientWidth + left - 1) {
-        apply();
-        autoScrolledForProjectRef.current = projectId;
-        setTimeout(apply, 50);
-        setTimeout(apply, 200);
+    if (!firstPlanningTarget) {
+      toast.info("Geen planning gevonden voor dit project");
+      return;
+    }
+    // Als de doel-week buiten het venster valt, spring eerst met het venster.
+    if (!weken.some((w) => w.id === firstPlanningTarget.week_id)) {
+      const offset = computeWindowOffsetForWeek(
+        firstPlanningTarget.jaar,
+        firstPlanningTarget.week_nr,
+        new Date(),
+      );
+      if (offset !== windowOffsetWeeks) {
+        setWindowOffsetWeeks(offset);
+        // De auto-scroll-effect pikt de nieuwe weken op en scrollt zelf.
+        autoScrolledForProjectRef.current = null;
         return;
       }
-      if (++tries < maxTries) setTimeout(tick, 50);
-    };
-    requestAnimationFrame(tick);
-  }, [projectId, weken, cellen]);
+    }
+    scrollToTarget(firstPlanningTarget);
+  }, [firstPlanningTarget, weken, windowOffsetWeeks, scrollToTarget]);
 
 
   /* ----------------------------- cell ops ----------------------------- */
@@ -2308,10 +2348,21 @@ const Plannen = () => {
           <button
             type="button"
             onClick={handleScrollToPlanned}
-            title="Scroll naar geplande data"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
+            disabled={!firstPlanningTarget}
+            title={
+              firstPlanningTarget
+                ? `Spring naar week ${firstPlanningTarget.week_nr} / ${firstPlanningTarget.jaar}`
+                : "Geen planning gevonden"
+            }
+            className={[
+              "flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold",
+              firstPlanningTarget
+                ? "text-foreground hover:bg-fg/[0.06]"
+                : "cursor-not-allowed text-muted-foreground opacity-50",
+            ].join(" ")}
           >
             <Crosshair className="h-4 w-4" />
+            <span>Ga naar eerste planning</span>
           </button>
           {/* divider */}
           <span
