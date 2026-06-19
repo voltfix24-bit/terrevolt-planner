@@ -85,6 +85,7 @@ import {
   type PlanningWindow,
 } from "@/lib/planning-window";
 import { findInitialPlanningFocus } from "@/lib/planning-focus";
+import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -2361,6 +2362,9 @@ const Plannen = () => {
           </div>
         </div>
       </div>
+
+      {/* Planning-veiligheid: waarschuw als planning buiten veilige periode valt */}
+      <PlanningSafetyBanner weken={allWeken.length > 0 ? allWeken : weken} className="mx-8 mt-4" />
 
       {/* Indicator: planning bestaat buiten het huidige venster */}
       {(outsideCellCount > 0 || outsideWeekCount > 0) && (

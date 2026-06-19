@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { ProjectTekeningen } from "@/components/ProjectTekeningen";
 import { ProjectConceptPlanning } from "@/components/ProjectConceptPlanning";
+import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 // =====================================================
 // Types
@@ -967,6 +968,8 @@ const ProjectDetail = () => {
 
   return (
     <div className="space-y-3">
+      {/* Planning-veiligheid: waarschuw als de planning buiten veilige grenzen valt */}
+      {id && <PlanningSafetyBanner projectId={id} />}
       {/* ============================================ */}
       {/* PROJECT HEADER / ACTION BAR                  */}
       {/* ============================================ */}

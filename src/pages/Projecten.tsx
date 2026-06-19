@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -28,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { assessPlanningRange, type PlanningWeek } from "@/lib/planning-safety";
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
 
@@ -113,6 +115,7 @@ const Projecten = () => {
   const [opdrachtgevers, setOpdrachtgevers] = useState<Opdrachtgever[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [wekenByProject, setWekenByProject] = useState<Map<string, PlanningWeek[]>>(new Map());
 
   const [statusFilter, setStatusFilter] = useState<"alle" | Status>("alle");
   const [zoek, setZoek] = useState("");
@@ -120,13 +123,23 @@ const Projecten = () => {
 
   const loadAll = async () => {
     setLoading(true);
-    const [pRes, oRes] = await Promise.all([
+    const [pRes, oRes, wRes] = await Promise.all([
       supabase.from("projecten").select("*").order("created_at", { ascending: false }),
       supabase.from("opdrachtgevers").select("id, naam").order("positie"),
+      supabase.from("project_weken").select("project_id, jaar, week_nr"),
     ]);
     if (pRes.error) toast.error("Kon projecten niet laden");
     else setProjects((pRes.data ?? []) as unknown as Project[]);
     if (!oRes.error) setOpdrachtgevers((oRes.data ?? []) as Opdrachtgever[]);
+    if (!wRes.error) {
+      const map = new Map<string, PlanningWeek[]>();
+      for (const row of (wRes.data ?? []) as { project_id: string; jaar: number; week_nr: number }[]) {
+        const list = map.get(row.project_id) ?? [];
+        list.push({ jaar: row.jaar, week_nr: row.week_nr });
+        map.set(row.project_id, list);
+      }
+      setWekenByProject(map);
+    }
     setLoading(false);
   };
 
@@ -282,12 +295,27 @@ const Projecten = () => {
                       {p.case_nummer || "Geen casenummer"}
                     </div>
                   </div>
-                  <span
-                    className="shrink-0 rounded-md px-2 py-1 text-[10px] font-display font-semibold uppercase tracking-wider"
-                    style={statusStyle(p.status)}
-                  >
-                    {statusLabel(p.status)}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span
+                      className="rounded-md px-2 py-1 text-[10px] font-display font-semibold uppercase tracking-wider"
+                      style={statusStyle(p.status)}
+                    >
+                      {statusLabel(p.status)}
+                    </span>
+                    {(() => {
+                      const a = assessPlanningRange(wekenByProject.get(p.id) ?? []);
+                      if (a.status !== "blocked") return null;
+                      return (
+                        <span
+                          title={`Planning loopt van ${a.firstDate?.toISOString().slice(0,10)} tot ${a.lastDate?.toISOString().slice(0,10)} — ${a.reasons.join("; ")}`}
+                          className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300"
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                          Planning {a.rangeWeeks}w
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5 text-xs text-muted-foreground">
