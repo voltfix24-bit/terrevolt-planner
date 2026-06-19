@@ -106,18 +106,32 @@ function downloadCsv(filename: string, header: string[], rows: (string | number 
 export function MandagenregisterPanel({
   projectId,
   projectLabel,
+  defaultVan,
+  defaultTot,
 }: {
   projectId: string;
   projectLabel?: string | null;
+  defaultVan?: string | null;
+  defaultTot?: string | null;
 }) {
   const today = useMemo(() => new Date(), []);
-  const [van, setVan] = useState<string>(() => fmt(isoMondayOfWeek(today)));
-  const [tot, setTot] = useState<string>(() => fmt(isoSundayOfWeek(today)));
+  const [van, setVan] = useState<string>(() => defaultVan || fmt(isoMondayOfWeek(today)));
+  const [tot, setTot] = useState<string>(() => defaultTot || fmt(isoSundayOfWeek(today)));
+  const [userTouchedRange, setUserTouchedRange] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const [logs, setLogs] = useState<ExportLog[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  // Sync incoming default range if user has not manually overridden it.
+  useEffect(() => {
+    if (userTouchedRange) return;
+    if (defaultVan) setVan(defaultVan);
+    if (defaultTot) setTot(defaultTot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultVan, defaultTot]);
+
 
   const fetchRows = useCallback(async () => {
     if (!projectId || !van || !tot) return;
