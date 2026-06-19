@@ -131,6 +131,6 @@ describe("assessPlanningRange", () => {
       { jaar: 2026, week_nr: 37, positie: 2 },
     ]);
     expect(a.status).toBe("blocked");
-    expect(a.reasons.some((r) => r.includes("niet aaneengesloten"))).toBe(true);
+    expect(a.reasons.some((r) => r.includes("niet-aaneengesloten"))).toBe(true);
   });
 });
