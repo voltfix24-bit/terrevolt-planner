@@ -229,13 +229,25 @@ const cellKey = (a: string, w: string, d: number) => `${a}|${w}|${d}`;
 
 const DAG_NAMEN_KORT = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
 
+type CellMove = {
+  celId: string;
+  oldWeekId: string;
+  oldDagIndex: number;
+  newWeekId: string;
+  newDagIndex: number;
+};
+
+type OverwrittenCell = { cel: Cel; monteurIds: string[] };
+
 type HistoryEntry =
   | { type: "cel_created"; cel: Cel }
   | { type: "cel_deleted"; cel: Cel; monteurIds: string[] }
   | { type: "cel_color_changed"; cel: Cel; prevColor: string | null }
   | { type: "cel_notitie_changed"; cel: Cel; prevNotitie: string | null }
   | { type: "monteur_added"; cel: Cel; monteurId: string }
-  | { type: "monteur_removed"; cel: Cel; monteurId: string };
+  | { type: "monteur_removed"; cel: Cel; monteurId: string }
+  | { type: "cells_moved"; label: string; moves: CellMove[]; overwritten: OverwrittenCell[] }
+  | { type: "cells_filled"; label: string; insertedCelIds: string[]; overwritten: OverwrittenCell[] };
 
 /* ----------------------------- Layout sizes ----------------------------- */
 const SIDEBAR_W = 240;
