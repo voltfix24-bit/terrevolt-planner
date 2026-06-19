@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import "@/lib/fill-handle-drag-guard";
+import "@/lib/toast-error-guard";
 import "./styles/overzicht-fixes.css";
 import "./styles/mandagenregister-fixes.css";
 import "./styles/form-control-fixes.css";
