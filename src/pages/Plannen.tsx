@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ClipboardList,
   Crosshair,
   GripVertical,
   History,
