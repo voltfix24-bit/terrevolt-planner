@@ -7,15 +7,22 @@ import {
   type PlanningWeek,
   type PlanningAssessment,
 } from "@/lib/planning-safety";
+import { PlanningCleanupButton } from "@/components/PlanningCleanupButton";
 
 type Props = {
   /** Direct meegegeven weken (gebruik dit als de pagina ze al heeft geladen). */
   weken?: PlanningWeek[];
   /** Anders: laad de weken zelf voor dit project. */
   projectId?: string | null;
+  /** Optioneel project-label voor het bevestigingsdialoog. */
+  projectLabel?: string | null;
   className?: string;
   /** Compact = badge-stijl; standaard = volledige banner. */
   variant?: "banner" | "badge";
+  /** Toon "Planningvenster opschonen" knop (alleen zinvol met projectId). */
+  showCleanup?: boolean;
+  /** Callback na succesvolle opschoning. */
+  onCleaned?: () => void;
 };
 
 /** Hook: laad jaar/week_nr van een project en bereken assessment. */
