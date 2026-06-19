@@ -1469,6 +1469,47 @@ export default function Overzicht() {
 
   const [verlofWaarschuwingOpen, setVerlofWaarschuwingOpen] = useState(true);
 
+  // ====== Planning-range waarschuwingen (project_weken buiten veilige periode) ======
+  type RangeWarn = {
+    projectId: string;
+    projectLabel: string;
+    rangeWeeks: number;
+    weekCount: number;
+    firstDate: Date | null;
+    lastDate: Date | null;
+    reasons: string[];
+  };
+  const planningRangeWarnings = useMemo<RangeWarn[]>(() => {
+    if (!weken.length || !projecten.length) return [];
+    const byProj = new Map<string, PlanningWeek[]>();
+    for (const w of weken) {
+      const arr = byProj.get(w.project_id);
+      if (arr) arr.push({ jaar: w.jaar, week_nr: w.week_nr });
+      else byProj.set(w.project_id, [{ jaar: w.jaar, week_nr: w.week_nr }]);
+    }
+    const out: RangeWarn[] = [];
+    for (const p of projecten) {
+      const ws = byProj.get(p.id);
+      if (!ws || !ws.length) continue;
+      const a = assessPlanningRange(ws);
+      if (a.status !== "blocked") continue;
+      out.push({
+        projectId: p.id,
+        projectLabel:
+          (p.case_nummer ? p.case_nummer + " · " : "") +
+          (p.station_naam ?? "—"),
+        rangeWeeks: a.rangeWeeks,
+        weekCount: a.weekCount,
+        firstDate: a.firstDate,
+        lastDate: a.lastDate,
+        reasons: a.reasons,
+      });
+    }
+    out.sort((a, b) => b.rangeWeeks - a.rangeWeeks);
+    return out;
+  }, [weken, projecten]);
+  const [rangeWaarschuwingOpen, setRangeWaarschuwingOpen] = useState(true);
+
 
 
 
