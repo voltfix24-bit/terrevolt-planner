@@ -97,8 +97,8 @@ export default function Mandagenregister() {
   }
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-center gap-3 border-b border-fg/10 pb-3">
+    <div className="mandagenregister-page space-y-4 p-4 md:p-6">
+      <div className="mandagenregister-header flex flex-wrap items-center gap-3 border-b border-fg/10 pb-3">
         <Button
           variant="outline"
           size="sm"
@@ -151,12 +151,14 @@ export default function Mandagenregister() {
         </div>
       )}
 
-      <MandagenregisterPanel
-        projectId={projectId}
-        projectLabel={projectLabel}
-        defaultVan={range?.first_planned ?? null}
-        defaultTot={range?.last_planned ?? null}
-      />
+      <div className="mandagenregister-workspace">
+        <MandagenregisterPanel
+          projectId={projectId}
+          projectLabel={projectLabel}
+          defaultVan={range?.first_planned ?? null}
+          defaultTot={range?.last_planned ?? null}
+        />
+      </div>
     </div>
   );
 }
