@@ -701,9 +701,25 @@ const Capaciteit = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {registerMonteur && (
+        <MonteurRegisterDialog
+          open={!!registerMonteur}
+          onOpenChange={(v) => { if (!v) setRegisterMonteur(null); }}
+          monteurId={registerMonteur.id}
+          monteurNaam={registerMonteur.naam}
+          initialDienstverband={(registerMonteur.dienstverband as "loondienst" | "zzp") ?? "loondienst"}
+          onSaved={(d) => {
+            setMonteurs((ms) =>
+              ms.map((x) => (x.id === registerMonteur.id ? { ...x, dienstverband: d } : x))
+            );
+          }}
+        />
+      )}
     </div>
   );
 };
+
 
 const EmptyState = ({
   onAdd,
