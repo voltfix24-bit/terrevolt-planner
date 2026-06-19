@@ -1,6 +1,6 @@
-/* Small layout fixes for the planning overview header.
-   The undo control can sit in the top-right corner; keep the page actions
-   clear of that area on wide screens. */
+/* Small layout fixes for action headers.
+   Some undo controls sit in the top-right corner; keep page actions clear
+   of that area on wide screens. */
 @media (min-width: 1024px) {
   body:has(#overzicht-grid-root) .font-sans > .mb-4.flex.flex-wrap.items-center.justify-between.gap-2 {
     padding-right: clamp(10rem, 14vw, 16rem);
@@ -9,10 +9,32 @@
   body:has(#overzicht-grid-root) .font-sans > .mb-4.flex.flex-wrap.items-center.justify-between.gap-2 > div:last-child {
     justify-content: flex-end;
   }
+
+  body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 > div:first-child {
+    padding-right: clamp(12rem, 17vw, 18rem);
+  }
+
+  body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 > div:first-child > div:last-child {
+    max-width: calc(100vw - 34rem);
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 1023px) {
-  body:has(#overzicht-grid-root) .font-sans > .mb-4.flex.flex-wrap.items-center.justify-between.gap-2 {
+  body:has(#overzicht-grid-root) .font-sans > .mb-4.flex.flex-wrap.items-center.justify-between.gap-2,
+  body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 > div:first-child {
     padding-right: 0;
+  }
+
+  body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body:has([title="Open mandagenregister voor dit project"]) .sticky.top-0.z-30 > div:first-child > div:last-child {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }
