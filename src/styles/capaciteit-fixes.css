@@ -3,45 +3,66 @@
   margin: 0 auto;
 }
 
-.capaciteit-page .surface-card {
+.capaciteit-page .surface-card,
+.surface-card:has(table) {
   border-radius: 0.5rem;
 }
 
 .capaciteit-page input,
 .capaciteit-page select,
-.capaciteit-page textarea {
+.capaciteit-page textarea,
+.surface-card input,
+.surface-card select,
+.surface-card textarea {
   min-height: 2.25rem;
 }
 
 .capaciteit-page table th,
-.capaciteit-page table td {
+.capaciteit-page table td,
+.surface-card table th,
+.surface-card table td {
   vertical-align: middle;
 }
 
-.capaciteit-page table thead th {
+.capaciteit-page table thead th,
+.surface-card table thead th {
   background: hsl(var(--background) / 0.55);
 }
 
-.capaciteit-page table tbody tr:last-child {
+.capaciteit-page table tbody tr:last-child,
+.surface-card table tbody tr:last-child {
   border-bottom: 0;
 }
 
 .capaciteit-page [role="dialog"] input,
 .capaciteit-page [role="dialog"] select,
-.capaciteit-page [role="dialog"] textarea {
+.capaciteit-page [role="dialog"] textarea,
+[role="dialog"] input,
+[role="dialog"] select,
+[role="dialog"] textarea {
   color: hsl(var(--foreground));
 }
 
 [data-theme="dark"] .capaciteit-page input,
 [data-theme="dark"] .capaciteit-page select,
-[data-theme="dark"] .capaciteit-page textarea {
+[data-theme="dark"] .capaciteit-page textarea,
+[data-theme="dark"] .surface-card input,
+[data-theme="dark"] .surface-card select,
+[data-theme="dark"] .surface-card textarea,
+[data-theme="dark"] [role="dialog"] input,
+[data-theme="dark"] [role="dialog"] select,
+[data-theme="dark"] [role="dialog"] textarea {
   color: hsl(var(--foreground));
   -webkit-text-fill-color: hsl(var(--foreground));
   caret-color: hsl(var(--primary));
 }
 
 [data-theme="dark"] .capaciteit-page input::placeholder,
-[data-theme="dark"] .capaciteit-page textarea::placeholder {
+[data-theme="dark"] .capaciteit-page textarea::placeholder,
+[data-theme="dark"] .surface-card input::placeholder,
+[data-theme="dark"] .surface-card textarea::placeholder,
+[data-theme="dark"] [role="dialog"] input::placeholder,
+[data-theme="dark"] [role="dialog"] textarea::placeholder {
   color: hsl(var(--muted-foreground));
   -webkit-text-fill-color: hsl(var(--muted-foreground));
   opacity: 0.7;
@@ -49,7 +70,13 @@
 
 [data-theme="dark"] .capaciteit-page input:disabled,
 [data-theme="dark"] .capaciteit-page select:disabled,
-[data-theme="dark"] .capaciteit-page textarea:disabled {
+[data-theme="dark"] .capaciteit-page textarea:disabled,
+[data-theme="dark"] .surface-card input:disabled,
+[data-theme="dark"] .surface-card select:disabled,
+[data-theme="dark"] .surface-card textarea:disabled,
+[data-theme="dark"] [role="dialog"] input:disabled,
+[data-theme="dark"] [role="dialog"] select:disabled,
+[data-theme="dark"] [role="dialog"] textarea:disabled {
   color: hsl(var(--muted-foreground));
   -webkit-text-fill-color: hsl(var(--muted-foreground));
   opacity: 0.8;
@@ -60,7 +87,8 @@
     padding-inline: 0.75rem;
   }
 
-  .capaciteit-page .surface-card {
+  .capaciteit-page .surface-card,
+  .surface-card:has(table) {
     overflow-x: auto;
   }
 }
