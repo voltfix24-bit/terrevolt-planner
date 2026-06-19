@@ -466,7 +466,7 @@ const Plannen = () => {
 
     if (projRes.error || !projRes.data) {
       toast.error("Project niet gevonden");
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
     setProject(projRes.data as Project);
