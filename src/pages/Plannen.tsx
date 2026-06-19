@@ -2482,6 +2482,17 @@ const Plannen = () => {
           >
             <Printer className="h-4 w-4" />
           </button>
+          {isManager && projectId && (
+            <button
+              type="button"
+              onClick={() => navigate(`/mandagenregister?project=${projectId}`)}
+              title="Open mandagenregister voor dit project"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold text-foreground hover:bg-fg/[0.06]"
+            >
+              <ClipboardList className="h-4 w-4" />
+              <span>Mandagenregister</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handleScrollToPlanned}
