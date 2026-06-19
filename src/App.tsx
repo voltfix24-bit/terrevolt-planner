@@ -17,6 +17,7 @@ import Activiteiten from "./pages/Activiteiten";
 import Capaciteit from "./pages/Capaciteit";
 import Instellingen from "./pages/Instellingen";
 import Overzicht from "./pages/Overzicht";
+import Mandagenregister from "./pages/Mandagenregister";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
