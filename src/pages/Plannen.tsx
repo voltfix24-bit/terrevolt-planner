@@ -85,6 +85,7 @@ import {
   type PlanningWindow,
 } from "@/lib/planning-window";
 import { findInitialPlanningFocus } from "@/lib/planning-focus";
+import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
