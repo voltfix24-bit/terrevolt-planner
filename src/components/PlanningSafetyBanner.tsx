@@ -61,8 +61,13 @@ export function PlanningSafetyBanner({
   showCleanup = false,
   onCleaned,
 }: Props) {
-  const fetched = usePlanningAssessment(weken ? null : projectId ?? null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const fetched = usePlanningAssessment(weken ? null : projectId ?? null, reloadKey);
   const a = weken ? assessPlanningRange(weken) : fetched;
+  const handleCleaned = () => {
+    setReloadKey((k) => k + 1);
+    onCleaned?.();
+  };
   if (!a || a.status === "safe") return null;
 
   const range = `${a.firstDate?.toISOString().slice(0, 10)} → ${a.lastDate?.toISOString().slice(0, 10)}`;
