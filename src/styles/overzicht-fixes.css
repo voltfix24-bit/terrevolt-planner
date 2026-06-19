@@ -1,0 +1,18 @@
+/* Small layout fixes for the planning overview header.
+   The undo control can sit in the top-right corner; keep the page actions
+   clear of that area on wide screens. */
+@media (min-width: 1024px) {
+  body:has(#overzicht-grid-root) .font-sans > .mb-4.flex.flex-wrap.items-center.justify-between.gap-2 {
+    padding-right: clamp(10rem, 14vw, 16rem);
+  }
+
+  body:has(#overzicht-grid-root) .font-sans > .mb-4.flex.flex-wrap.items-center.justify-between.gap-2 > div:last-child {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 1023px) {
+  body:has(#overzicht-grid-root) .font-sans > .mb-4.flex.flex-wrap.items-center.justify-between.gap-2 {
+    padding-right: 0;
+  }
+}
