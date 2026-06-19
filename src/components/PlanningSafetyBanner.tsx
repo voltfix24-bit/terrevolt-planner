@@ -25,7 +25,7 @@ type Props = {
   onCleaned?: () => void;
 };
 
-/** Hook: laad jaar/week_nr van een project en bereken assessment. */
+/** Hook: laad jaar/week_nr/positie van een project en bereken assessment. */
 export function usePlanningAssessment(
   projectId: string | null | undefined,
   reloadKey: number = 0,
@@ -40,7 +40,7 @@ export function usePlanningAssessment(
     (async () => {
       const { data: rows } = await supabase
         .from("project_weken")
-        .select("jaar, week_nr")
+        .select("jaar, week_nr, positie")
         .eq("project_id", projectId);
       if (cancelled) return;
       setData(assessPlanningRange((rows ?? []) as PlanningWeek[]));
