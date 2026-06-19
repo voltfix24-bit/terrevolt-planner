@@ -1125,12 +1125,27 @@ export default function Overzicht() {
       const naam = project?.station_naam ?? project?.case_nummer ?? "project";
       const ok = await confirmShift({
         title: `Hele planning van "${naam}" verschuiven?`,
-        description: `${projectCellen.length} planning-cellen worden ${Math.abs(deltaDays)} dag${Math.abs(deltaDays) === 1 ? "" : "en"} ${deltaDays > 0 ? "vooruit" : "terug"} verschoven. Dit kun je daarna ongedaan maken met de Undo-knop.`,
+        description: `${projectCellen.length} planning-cellen worden ${Math.abs(deltaDays)} dag${Math.abs(deltaDays) === 1 ? "" : "en"} ${deltaDays > 0 ? "vooruit" : "terug"} verschoven. Deze wijziging wordt vooraf bevestigd en gelogd, en er wordt een snapshot van de huidige planning gemaakt zodat een planner/manager hem desnoods kan herstellen. De Undo-knop in de bovenbalk draait deze bulkactie níet terug.`,
         confirmText: "Verschuiven",
         destructive: true,
       });
       if (!ok) return;
       await setAuditLabel(`Project "${naam}": ${deltaDays > 0 ? "+" : ""}${deltaDays} dag`);
+      // Snapshot van huidige planning vóór de bulkwijziging — basis voor herstel
+      // door planner/manager via planning_restore_snapshots.
+      try {
+        const { error: snapErr } = await supabase.rpc("snapshot_project_planning", {
+          p_project_id: projectId,
+          p_label: `pre-shift Overzicht delta=${deltaDays}`,
+          p_reason: `Bulk-shift project "${naam}" via Overzicht`,
+        });
+        if (snapErr) throw snapErr;
+        toast.success("Snapshot gemaakt — planner/manager kan deze later herstellen");
+      } catch (e) {
+        console.error("snapshot_project_planning failed", e);
+        toast.error("Kon geen snapshot maken — bulkactie afgebroken");
+        return;
+      }
 
 
       const weekIdByKey = new Map<string, string>();

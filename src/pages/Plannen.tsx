@@ -229,13 +229,25 @@ const cellKey = (a: string, w: string, d: number) => `${a}|${w}|${d}`;
 
 const DAG_NAMEN_KORT = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"];
 
+type CellMove = {
+  celId: string;
+  oldWeekId: string;
+  oldDagIndex: number;
+  newWeekId: string;
+  newDagIndex: number;
+};
+
+type OverwrittenCell = { cel: Cel; monteurIds: string[] };
+
 type HistoryEntry =
   | { type: "cel_created"; cel: Cel }
   | { type: "cel_deleted"; cel: Cel; monteurIds: string[] }
   | { type: "cel_color_changed"; cel: Cel; prevColor: string | null }
   | { type: "cel_notitie_changed"; cel: Cel; prevNotitie: string | null }
   | { type: "monteur_added"; cel: Cel; monteurId: string }
-  | { type: "monteur_removed"; cel: Cel; monteurId: string };
+  | { type: "monteur_removed"; cel: Cel; monteurId: string }
+  | { type: "cells_moved"; label: string; moves: CellMove[]; overwritten: OverwrittenCell[] }
+  | { type: "cells_filled"; label: string; insertedCelIds: string[]; overwritten: OverwrittenCell[] };
 
 /* ----------------------------- Layout sizes ----------------------------- */
 const SIDEBAR_W = 240;
@@ -1285,12 +1297,14 @@ const Plannen = () => {
       const targetKey = cellKey(src.activiteit_id, targetWeekId, targetDagIndex);
       const targetCel = cellen.get(targetKey);
 
+      const overwritten: OverwrittenCell[] = [];
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
         if (hasCellContent(targetCel, targetMonteurs)) {
           const ok = window.confirm(formatOverwritePrompt(1));
           if (!ok) return;
         }
+        overwritten.push({ cel: targetCel, monteurIds: [...targetMonteurs] });
         const delMonteurs = await supabase.from("cel_monteurs").delete().eq("cel_id", targetCel.id);
         const delCel = await supabase.from("planning_cellen").delete().eq("id", targetCel.id);
         if (delMonteurs.error || delCel.error) {
@@ -1312,6 +1326,8 @@ const Plannen = () => {
       }
 
       const oldKey = cellKey(src.activiteit_id, src.week_id, src.dag_index);
+      const oldWeekId = src.week_id;
+      const oldDagIndex = src.dag_index;
       const updated: Cel = { ...src, week_id: targetWeekId, dag_index: targetDagIndex };
       setCellen((prev) => {
         const m = new Map(prev);
@@ -1326,9 +1342,16 @@ const Plannen = () => {
       if (error) {
         toast.error("Verplaatsen mislukt");
         loadAll();
+        return;
       }
+      pushHistory({
+        type: "cells_moved",
+        label: "Cel verplaatst",
+        moves: [{ celId: src.id, oldWeekId, oldDagIndex, newWeekId: targetWeekId, newDagIndex: targetDagIndex }],
+        overwritten,
+      });
     },
-    [cellen, celMonteurs, loadAll, weken, confirmShift]
+    [cellen, celMonteurs, loadAll, weken, confirmShift, pushHistory]
   );
 
   // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
@@ -1337,7 +1360,7 @@ const Plannen = () => {
   // en de doel-(week, dag).
   // Kern: verschuif een set cellen met een vaste delta in slots (1 dag = 1 slot, 1 week = 5 slots)
   const moveCellsByDelta = useCallback(
-    async (sourceCelIds: string[], delta: number) => {
+    async (sourceCelIds: string[], delta: number, historyLabel?: string) => {
       if (delta === 0 || sourceCelIds.length === 0) return;
       const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
       const totalSlots = weken.length * 5;
@@ -1389,6 +1412,12 @@ const Plannen = () => {
         const ok = window.confirm(formatOverwritePrompt(conflicts.length));
         if (!ok) return;
       }
+
+      // Snapshot van overgeschreven cellen (incl. monteurs) voor undo
+      const overwritten: OverwrittenCell[] = conflicts.map((c) => ({
+        cel: c,
+        monteurIds: [...(celMonteurs.get(c.id) ?? [])],
+      }));
 
       // Verwijder conflict-cellen (db eerst, parallel). Bij fout: niets lokaal muteren,
       // herladen en stoppen — zo voorkomen we half-state met unique_cel-conflicten.
@@ -1444,9 +1473,22 @@ const Plannen = () => {
       if (updErr) {
         toast.error("Verplaatsen mislukt: " + updErr.message);
         loadAll();
+        return;
       }
+      pushHistory({
+        type: "cells_moved",
+        label: historyLabel ?? `${moves.length}× cel verplaatst (${delta > 0 ? "+" : ""}${delta} dag)`,
+        moves: moves.map((mv) => ({
+          celId: mv.src.id,
+          oldWeekId: mv.src.week_id,
+          oldDagIndex: mv.src.dag_index,
+          newWeekId: mv.newWeekId,
+          newDagIndex: mv.newDagIndex,
+        })),
+        overwritten,
+      });
     },
-    [cellen, celMonteurs, weken, loadAll]
+    [cellen, celMonteurs, weken, loadAll, pushHistory]
   );
 
   // Wrapper voor drag-and-drop: bepaalt delta op basis van anchor + doel-(week,dag)
@@ -1471,8 +1513,9 @@ const Plannen = () => {
       if (delta === 0) return;
       const ok = await confirmShift(describeShift(delta, sourceCelIds.length, "cel"));
       if (!ok) return;
-      await setAuditLabel(`Sleep: ${sourceCelIds.length}× ${delta > 0 ? "+" : ""}${delta} dag`);
-      await moveCellsByDelta(sourceCelIds, delta);
+      const lbl = `Sleep: ${sourceCelIds.length}× ${delta > 0 ? "+" : ""}${delta} dag`;
+      await setAuditLabel(lbl);
+      await moveCellsByDelta(sourceCelIds, delta, lbl);
     },
     [cellen, weken, moveCellsByDelta, confirmShift]
   );
@@ -1510,8 +1553,14 @@ const Plannen = () => {
         if (!ok) return;
       }
 
+      // Snapshot van overgeschreven cellen (incl. monteurs) voor undo
+      const overwritten: OverwrittenCell[] = conflicts.map((c) => ({
+        cel: c,
+        monteurIds: [...(celMonteurs.get(c.id) ?? [])],
+      }));
+
       // Atomic: 1 RPC-call doet alles in één transactie. Bij fout: niets gewijzigd.
-      const { error } = await supabase.rpc("fill_cell_range", {
+      const { data: inserted, error } = await supabase.rpc("fill_cell_range", {
         p_source_cel_id: src.id,
         p_targets: targets as unknown as never,
         p_overwrite_ids: conflicts.map((c) => c.id),
@@ -1530,10 +1579,19 @@ const Plannen = () => {
         loadAll();
         return;
       }
+      const insertedIds = Array.isArray(inserted)
+        ? (inserted as Array<{ id: string }>).map((r) => r.id).filter(Boolean)
+        : [];
+      pushHistory({
+        type: "cells_filled",
+        label: `Doortrekken: ${insertedIds.length} cel${insertedIds.length === 1 ? "" : "len"}`,
+        insertedCelIds: insertedIds,
+        overwritten,
+      });
       // Herlaad om nieuwe cellen + monteurs op te halen (eenvoudig en altijd consistent).
       loadAll();
     },
-    [cellen, celMonteurs, weken, loadAll]
+    [cellen, celMonteurs, weken, loadAll, pushHistory]
   );
 
 
@@ -1553,8 +1611,9 @@ const Plannen = () => {
       const days = deltaSlots; // 1 slot = 1 dag
       const ok = await confirmShift(describeShift(days, g.length, "cel"));
       if (!ok) return;
-      await setAuditLabel(`Planning: ${g.length}× ${days > 0 ? "+" : ""}${days} dag`);
-      await moveCellsByDelta(g, deltaSlots);
+      const lbl = `Planning: ${g.length}× ${days > 0 ? "+" : ""}${days} dag`;
+      await setAuditLabel(lbl);
+      await moveCellsByDelta(g, deltaSlots, lbl);
     },
     [selectedGroups, moveCellsByDelta, confirmShift]
   );
@@ -1624,6 +1683,79 @@ const Plannen = () => {
             await addMonteurToCell(entry.cel, entry.monteurId);
             break;
           }
+          case "cells_moved": {
+            // Verzet alle bewogen cellen terug naar hun oude (week_id, dag_index).
+            // Eerst lokaal: cellen weghalen op nieuwe key, en (na) terugzetten op oude key.
+            const moves = entry.moves;
+            // DB-updates in twee fases: zet eerst alles "neutraal" door cellen
+            // tijdelijk op hun nieuwe id te laten — postgres unique-constraint
+            // verbiedt botsende (activiteit_id, week_id, dag_index). We bouwen
+            // updates één voor één in volgorde; bij botsing valt het terug op loadAll.
+            const results = await Promise.all(
+              moves.map((mv) =>
+                supabase
+                  .from("planning_cellen")
+                  .update({ week_id: mv.oldWeekId, dag_index: mv.oldDagIndex })
+                  .eq("id", mv.celId)
+              )
+            );
+            if (results.some((r) => r.error)) {
+              toast.error("Terugdraaien mislukt — vernieuwen…");
+              loadAll();
+              return;
+            }
+            // Herstel overgeschreven cellen incl. monteurs
+            for (const ow of entry.overwritten) {
+              const { data } = await supabase
+                .from("planning_cellen")
+                .insert({
+                  activiteit_id: ow.cel.activiteit_id,
+                  week_id: ow.cel.week_id,
+                  dag_index: ow.cel.dag_index,
+                  kleur_code: ow.cel.kleur_code,
+                  notitie: ow.cel.notitie,
+                  capaciteit: ow.cel.capaciteit,
+                })
+                .select()
+                .single();
+              if (data && ow.monteurIds.length > 0) {
+                await supabase.from("cel_monteurs").insert(
+                  ow.monteurIds.map((mid) => ({ cel_id: (data as Cel).id, monteur_id: mid }))
+                );
+              }
+            }
+            loadAll();
+            break;
+          }
+          case "cells_filled": {
+            if (entry.insertedCelIds.length > 0) {
+              await supabase
+                .from("planning_cellen")
+                .delete()
+                .in("id", entry.insertedCelIds);
+            }
+            for (const ow of entry.overwritten) {
+              const { data } = await supabase
+                .from("planning_cellen")
+                .insert({
+                  activiteit_id: ow.cel.activiteit_id,
+                  week_id: ow.cel.week_id,
+                  dag_index: ow.cel.dag_index,
+                  kleur_code: ow.cel.kleur_code,
+                  notitie: ow.cel.notitie,
+                  capaciteit: ow.cel.capaciteit,
+                })
+                .select()
+                .single();
+              if (data && ow.monteurIds.length > 0) {
+                await supabase.from("cel_monteurs").insert(
+                  ow.monteurIds.map((mid) => ({ cel_id: (data as Cel).id, monteur_id: mid }))
+                );
+              }
+            }
+            loadAll();
+            break;
+          }
         }
       } finally {
         skipHistoryRef.current = false;
@@ -1636,6 +1768,7 @@ const Plannen = () => {
       updateCellNotitie,
       addMonteurToCell,
       removeMonteurFromCell,
+      loadAll,
     ]
   );
 
@@ -2295,7 +2428,8 @@ const Plannen = () => {
             type="button"
             onClick={handleUndo}
             disabled={history.length === 0}
-            title="Ongedaan maken (Ctrl+Z)"
+            title="Laatste celactie ongedaan maken (Ctrl+Z) — werkt alleen op lokale celacties in deze sessie"
+            aria-label="Laatste celactie ongedaan maken"
             className={[
               "flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent",
               history.length === 0
@@ -4502,6 +4636,9 @@ const dotColor = (type: HistoryEntry["type"]): string => {
       return "#feb300";
     case "cel_notitie_changed":
       return "#7cc1ff";
+    case "cells_moved":
+    case "cells_filled":
+      return "#a78bfa";
   }
 };
 
@@ -4537,6 +4674,10 @@ const describeEntry = (
       }`;
     case "cel_notitie_changed":
       return "Notitie gewijzigd";
+    case "cells_moved":
+      return entry.label;
+    case "cells_filled":
+      return entry.label;
   }
 };
 
