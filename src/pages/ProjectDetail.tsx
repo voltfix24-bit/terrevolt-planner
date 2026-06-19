@@ -13,7 +13,10 @@ import {
   Layers,
   Wrench,
   Target,
+  ClipboardList,
 } from "lucide-react";
+import { MandagenregisterPanel } from "@/components/MandagenregisterPanel";
+import { useIsManager } from "@/hooks/use-is-manager";
 import { format, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -461,6 +464,8 @@ const TemplatePicker: React.FC<{
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isManager } = useIsManager();
+
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -936,8 +941,12 @@ const ProjectDetail = () => {
     { id: "deel-c", key: "C", label: "Tijdelijke situatie", sub: "Deel C", icon: <Wrench className="h-3.5 w-3.5" /> },
     { id: "deel-d", key: "D", label: "Gewenste situatie", sub: "Deel D", icon: <Target className="h-3.5 w-3.5" /> },
     { id: "concept-planning", key: "X", label: "Concept-planning", sub: "Fictieve weken", icon: <CalendarRange className="h-3.5 w-3.5" /> },
+    ...(isManager
+      ? [{ id: "mandagenregister", key: "X" as const, label: "Mandagenregister", sub: "Uren & PII", icon: <ClipboardList className="h-3.5 w-3.5" /> }]
+      : []),
     { id: "archief", key: "X", label: "Project Archief", sub: "Documenten", icon: <Archive className="h-3.5 w-3.5" />, soon: true },
   ];
+
 
   // Summary chips
   const summaryChips: { label: string; value: string }[] = [];
@@ -2181,6 +2190,37 @@ const ProjectDetail = () => {
             </div>
             <ProjectConceptPlanning projectId={id!} />
           </section>
+
+          {/* ============================================ */}
+          {/* MANDAGENREGISTER (manager-only)              */}
+          {/* ============================================ */}
+          {isManager && (
+            <section
+              id="mandagenregister"
+              className="surface-card scroll-mt-24 relative overflow-hidden rounded-lg border border-fg/10 px-4 py-3.5"
+            >
+              <div className="absolute left-0 top-0 h-full w-[3px] bg-primary/50" />
+              <div className="mb-3 flex items-center gap-2">
+                <ClipboardList className="h-3.5 w-3.5 text-primary" />
+                <h2 className="font-display text-base font-bold tracking-tight text-foreground">
+                  Mandagenregister
+                </h2>
+                <span className="hidden text-[11px] text-muted-foreground md:inline">
+                  · Uren & PII per monteur · alleen voor managers
+                </span>
+              </div>
+              <MandagenregisterPanel
+                projectId={id!}
+                projectLabel={
+                  [get<string>("case_nummer"), get<string>("station_naam")]
+                    .filter(Boolean)
+                    .join(" · ") || null
+                }
+              />
+            </section>
+          )}
+
+
 
           {/* ============================================ */}
           {/* PROJECT ARCHIEF (placeholder)                */}

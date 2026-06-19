@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit2, Plus, Power, Trash2, X } from "lucide-react";
+import { BadgeCheck, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit2, Plus, Power, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { VrijeDagenExport } from "@/components/VrijeDagenExport";
+import { MonteurRegisterDialog } from "@/components/MonteurRegisterDialog";
+import { useIsManager } from "@/hooks/use-is-manager";
+
 
 // Cast for tables not yet in generated types (feestdagen, monteur_afwezigheid)
 // and for monteurs.werkdagen column added in migration.
@@ -47,6 +50,7 @@ interface Monteur {
   werkdagen?: number[] | null;
   urenapp_sync_enabled?: boolean;
   urenapp_sync_exclusion_reason?: UrenappExclusionReason | null;
+  dienstverband?: "loondienst" | "zzp" | null;
 }
 
 interface Feestdag {
@@ -181,6 +185,9 @@ const Capaciteit = () => {
   const [toonInactieven, setToonInactieven] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Monteur | null>(null);
+  const [registerMonteur, setRegisterMonteur] = useState<Monteur | null>(null);
+  const { isManager } = useIsManager();
+
 
   // tabs
   const [tab, setTab] = useState<"monteurs" | "ploegen" | "tijdlijn" | "beschikbaarheid" | "vrije-dagen">("monteurs");
@@ -470,6 +477,16 @@ const Capaciteit = () => {
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-1">
+                          {isManager && (
+                            <button
+                              onClick={() => setRegisterMonteur(m)}
+                              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
+                              aria-label="Mandagenregister-gegevens"
+                              title="Mandagenregister-gegevens (manager)"
+                            >
+                              <BadgeCheck className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => openEdit(m)}
                             className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
@@ -478,6 +495,7 @@ const Capaciteit = () => {
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
+
                           <button
                             onClick={() => toggleActief(m)}
                             className={[
@@ -683,9 +701,25 @@ const Capaciteit = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {registerMonteur && (
+        <MonteurRegisterDialog
+          open={!!registerMonteur}
+          onOpenChange={(v) => { if (!v) setRegisterMonteur(null); }}
+          monteurId={registerMonteur.id}
+          monteurNaam={registerMonteur.naam}
+          initialDienstverband={(registerMonteur.dienstverband as "loondienst" | "zzp") ?? "loondienst"}
+          onSaved={(d) => {
+            setMonteurs((ms) =>
+              ms.map((x) => (x.id === registerMonteur.id ? { ...x, dienstverband: d } : x))
+            );
+          }}
+        />
+      )}
     </div>
   );
 };
+
 
 const EmptyState = ({
   onAdd,
