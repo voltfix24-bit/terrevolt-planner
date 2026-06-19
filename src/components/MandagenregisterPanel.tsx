@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   CalendarDays,
   Download,
+  FileText,
   History,
   RefreshCw,
 } from "lucide-react";
@@ -12,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { exportMandagenregisterPDF } from "@/lib/mandagenregister-pdf";
 
 type Dienstverband = "loondienst" | "zzp";
 
@@ -313,58 +315,95 @@ export function MandagenregisterPanel({
     return out;
   }, [grouped]);
 
-  async function handleDownload(d: Dienstverband) {
+  function aggregateByMonteurWeek(filtered: Row[]) {
+    type WeekAgg = {
+      monteur_id: string;
+      naam: string;
+      kvk_nummer: string | null;
+      bsn: string | null;
+      geboortedatum: string | null;
+      id_type: string | null;
+      id_nummer: string | null;
+      id_geldig_tot: string | null;
+      week: string;
+      days: number[];
+      total: number;
+      opmerkingen: Set<string>;
+    };
+    const aggMap = new Map<string, WeekAgg>();
+    for (const r of filtered) {
+      const wk = weekKey(r.datum);
+      const key = `${r.monteur_id}::${wk}`;
+      let a = aggMap.get(key);
+      if (!a) {
+        a = {
+          monteur_id: r.monteur_id,
+          naam: r.naam,
+          kvk_nummer: r.kvk_nummer,
+          bsn: r.bsn,
+          geboortedatum: r.geboortedatum,
+          id_type: r.id_type,
+          id_nummer: r.id_nummer,
+          id_geldig_tot: r.id_geldig_tot,
+          week: wk,
+          days: [0, 0, 0, 0, 0, 0, 0],
+          total: 0,
+          opmerkingen: new Set<string>(),
+        };
+        aggMap.set(key, a);
+      }
+      const di = dayIndex(r.datum);
+      const u = Number(r.uren) || 0;
+      a.days[di] += u;
+      a.total += u;
+      if (r.activiteiten) a.opmerkingen.add(r.activiteiten);
+    }
+    return [...aggMap.values()].sort(
+      (x, y) => x.naam.localeCompare(y.naam) || x.week.localeCompare(y.week),
+    );
+  }
+
+  function preflightExport(d: Dienstverband): { ok: boolean; filtered: Row[]; baseSlug: string } | null {
     const filtered = rows.filter((r) => r.dienstverband === d);
     if (filtered.length === 0) {
       toast.info(`Geen ${d === "zzp" ? "ZZP" : "loondienst"}-regels in deze periode`);
-      return;
+      return null;
     }
     if (incompleteByDienst[d].length > 0 && !allowIncomplete) {
       toast.error("Er ontbreken nog gegevens — corrigeer of vink override aan");
-      return;
+      return null;
     }
-    const projSlug = (projectLabel || projectId).replace(/[^\w-]+/g, "_").slice(0, 40);
-    const filename = `Mandagenregister_${d === "zzp" ? "ZZP" : "Loondienst"}_${projSlug}_${van}_${tot}.csv`;
+    const baseSlug = (projectLabel || projectId).replace(/[^\w-]+/g, "_").slice(0, 40);
+    return { ok: true, filtered, baseSlug };
+  }
+
+  async function logExport(d: Dienstverband, filename: string) {
+    const { error } = await supabase.rpc("log_mandagen_export", {
+      p_project_id: projectId,
+      p_van: van,
+      p_tot: tot,
+      p_dienstverband: d,
+      p_bestandsnaam: filename,
+    });
+    if (error) {
+      toast.warning(`Bestand aangemaakt, maar log mislukte: ${error.message}`);
+    } else {
+      toast.success(
+        d === "zzp" ? "Mandagenregister ZZP gelogd" : "Mandagenregister Loondienst gelogd",
+      );
+      void fetchLogs();
+      void fetchRows();
+    }
+  }
+
+  async function handleDownload(d: Dienstverband) {
+    const pre = preflightExport(d);
+    if (!pre) return;
+    const { filtered, baseSlug } = pre;
+    const filename = `Mandagenregister_${d === "zzp" ? "ZZP" : "Loondienst"}_${baseSlug}_${van}_${tot}.csv`;
 
     if (d === "zzp") {
-      // ZZP-export: dataminimalisatie. Pivot per (monteur, ISO-week).
-      // Kolommen: project-meta + naam + statuscode 'Z' + KvK + Ma..Zo + Totaal + Opmerking.
-      // BSN, geboortedatum, nationaliteit en ID-velden komen hier nooit in voor.
-      type WeekAgg = {
-        monteur_id: string;
-        naam: string;
-        kvk_nummer: string | null;
-        week: string;
-        days: number[]; // ma..zo
-        total: number;
-        opmerkingen: Set<string>;
-      };
-      const aggMap = new Map<string, WeekAgg>();
-      for (const r of filtered) {
-        const wk = weekKey(r.datum);
-        const key = `${r.monteur_id}::${wk}`;
-        let a = aggMap.get(key);
-        if (!a) {
-          a = {
-            monteur_id: r.monteur_id,
-            naam: r.naam,
-            kvk_nummer: r.kvk_nummer,
-            week: wk,
-            days: [0, 0, 0, 0, 0, 0, 0],
-            total: 0,
-            opmerkingen: new Set<string>(),
-          };
-          aggMap.set(key, a);
-        }
-        const di = dayIndex(r.datum);
-        const u = Number(r.uren) || 0;
-        a.days[di] += u;
-        a.total += u;
-        if (r.activiteiten) a.opmerkingen.add(r.activiteiten);
-      }
-      const aggs = [...aggMap.values()].sort(
-        (x, y) => x.naam.localeCompare(y.naam) || x.week.localeCompare(y.week),
-      );
+      const aggs = aggregateByMonteurWeek(filtered);
       downloadCsv(
         filename,
         [
@@ -396,7 +435,6 @@ export function MandagenregisterPanel({
         ]),
       );
     } else {
-      // Loondienst-export blijft ongewijzigd: per dag met BSN + identiteit.
       downloadCsv(
         filename,
         [
@@ -408,27 +446,49 @@ export function MandagenregisterPanel({
           r.naam, r.bsn, r.geboortedatum, r.nationaliteit,
           r.id_type, r.id_nummer, r.id_geldig_tot,
           r.datum, r.uren, r.activiteiten, r.status,
-        ])
+        ]),
       );
     }
 
-    const { error } = await supabase.rpc("log_mandagen_export", {
-      p_project_id: projectId,
-      p_van: van,
-      p_tot: tot,
-      p_dienstverband: d,
-      p_bestandsnaam: filename,
-    });
-    if (error) {
-      toast.warning(`Bestand gedownload, maar log mislukte: ${error.message}`);
-    } else {
-      toast.success(
-        d === "zzp" ? "Mandagenregister ZZP gelogd" : "Mandagenregister Loondienst gelogd"
-      );
-      void fetchLogs();
-      void fetchRows();
-    }
+    await logExport(d, filename);
   }
+
+  async function handleDownloadPdf(d: Dienstverband) {
+    const pre = preflightExport(d);
+    if (!pre) return;
+    const { filtered, baseSlug } = pre;
+    const filename = `Mandagenregister_${d === "zzp" ? "ZZP" : "Loondienst"}_${baseSlug}_${van}_${tot}.pdf`;
+    const aggs = aggregateByMonteurWeek(filtered);
+    try {
+      exportMandagenregisterPDF({
+        dienstverband: d,
+        project: projectMeta,
+        periodeVan: van,
+        periodeTot: tot,
+        rows: aggs.map((a) => ({
+          monteur_id: a.monteur_id,
+          naam: a.naam,
+          // ZZP: alleen KvK; expliciet geen BSN/ID-velden meegeven.
+          kvk_nummer: d === "zzp" ? a.kvk_nummer : null,
+          bsn: d === "loondienst" ? a.bsn : null,
+          geboortedatum: d === "loondienst" ? a.geboortedatum : null,
+          id_type: d === "loondienst" ? a.id_type : null,
+          id_nummer: d === "loondienst" ? a.id_nummer : null,
+          id_geldig_tot: d === "loondienst" ? a.id_geldig_tot : null,
+          week: a.week,
+          days: a.days,
+          total: a.total,
+          opmerking: [...a.opmerkingen].join("; "),
+        })),
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "PDF kon niet worden geopend";
+      toast.error(msg);
+      return;
+    }
+    await logExport(d, filename);
+  }
+
 
   const hasRows = rows.length > 0;
 
@@ -482,15 +542,31 @@ export function MandagenregisterPanel({
                       ({monteurs.length} monteur{monteurs.length === 1 ? "" : "s"})
                     </span>
                   </h3>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDownload(d)}
-                    disabled={incomplete.length > 0 && !allowIncomplete}
-                  >
-                    <Download className="mr-1.5 h-3.5 w-3.5" />
-                    Download CSV
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownload(d)}
+                      disabled={incomplete.length > 0 && !allowIncomplete}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" />
+                      Download CSV
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadPdf(d)}
+                      disabled={incomplete.length > 0 && !allowIncomplete}
+                      title={
+                        d === "zzp"
+                          ? "Open een nette PDF-versie (A4 liggend) — zonder BSN of ID-velden"
+                          : "Open een nette PDF-versie (A4 liggend) — inclusief BSN/identiteit"
+                      }
+                    >
+                      <FileText className="mr-1.5 h-3.5 w-3.5" />
+                      Download PDF {d === "zzp" ? "ZZP" : "Loondienst"}
+                    </Button>
+                  </div>
                 </div>
 
                 {incomplete.length > 0 && (
