@@ -80,9 +80,6 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   const { dienstverband, project, periodeVan, periodeTot, rows } = input;
   const preparedBy = input.preparedBy ?? "TerreVolt Planner";
   const titel = dienstverband === "zzp" ? "Mandagenregister ZZP" : "Mandagenregister Loondienst";
-  const now = new Date();
-  const todayLabel = now.toLocaleDateString("nl-NL", { year: "numeric", month: "long", day: "numeric" });
-  const exportTs = now.toLocaleString("nl-NL");
   const projectLabel = [project.case_nummer, project.station_naam].filter(Boolean).join(" - ");
 
   const zzpHeaders = [
@@ -323,21 +320,6 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   }
   .totals b { color: var(--accent-dark); }
 
-  .notice {
-    margin-top: 10px;
-    padding: 7px 9px;
-    border: 0.5px solid #bbf7d0;
-    border-radius: 4px;
-    background: #f0fdf4 !important;
-    color: #065f46;
-    font-size: 9px;
-  }
-  .notice.loondienst {
-    border-color: #fde68a;
-    background: #fffbeb !important;
-    color: #92400e;
-  }
-
   .prepared {
     margin-top: 12px;
     padding-top: 6px;
@@ -376,7 +358,6 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
     .week-section,
     table,
     .totals,
-    .notice,
     .prepared,
     .footer {
       visibility: visible !important;
@@ -405,7 +386,6 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
         <div>${escHtml(projectLabel || "Project")}</div>
       </div>
       <div class="doc-meta">
-        <div><b>Exportdatum:</b> ${escHtml(todayLabel)}</div>
         <div><b>Periode:</b> ${escHtml(fmtDate(periodeVan))} - ${escHtml(fmtDate(periodeTot))}</div>
       </div>
     </header>
@@ -425,17 +405,13 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
       · ${sortedRows.length} weekregel${sortedRows.length === 1 ? "" : "s"}
     </div>
 
-    ${dienstverband === "zzp"
-      ? `<div class="notice">AVG/dataminimalisatie: deze ZZP-export bevat geen BSN, geboortedatum, nationaliteit of identiteitsdocumenten. Alleen naam, statuscode Z, KvK-nummer en uren worden verwerkt.</div>`
-      : `<div class="notice loondienst">Bevat persoonsgegevens van werknemers. Vertrouwelijk — alleen verstrekken aan geautoriseerde verwerkers.</div>`}
-
     <div class="prepared">
-      Opgesteld door <b>${escHtml(preparedBy)}</b> op ${escHtml(todayLabel)}.
+      Opgesteld door <b>${escHtml(preparedBy)}</b>.
     </div>
 
     <footer class="footer">
       <div>TerreVolt Planner · ${escHtml(titel)}</div>
-      <div>Geëxporteerd ${escHtml(exportTs)}</div>
+      <div>${escHtml(projectLabel || "Project")}</div>
     </footer>
   </main>
 </body>
