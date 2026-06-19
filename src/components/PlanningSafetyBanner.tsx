@@ -52,8 +52,11 @@ export function usePlanningAssessment(projectId: string | null | undefined): Pla
 export function PlanningSafetyBanner({
   weken,
   projectId,
+  projectLabel,
   className = "",
   variant = "banner",
+  showCleanup = false,
+  onCleaned,
 }: Props) {
   const fetched = usePlanningAssessment(weken ? null : projectId ?? null);
   const a = weken ? assessPlanningRange(weken) : fetched;
@@ -89,6 +92,15 @@ export function PlanningSafetyBanner({
             <li key={i}>{r}</li>
           ))}
         </ul>
+        {showCleanup && projectId && (
+          <div className="mt-2">
+            <PlanningCleanupButton
+              projectId={projectId}
+              projectLabel={projectLabel}
+              onApplied={onCleaned}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
