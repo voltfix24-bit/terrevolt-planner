@@ -13,7 +13,10 @@ import {
   Layers,
   Wrench,
   Target,
+  ClipboardList,
 } from "lucide-react";
+import { MandagenregisterPanel } from "@/components/MandagenregisterPanel";
+import { useIsManager } from "@/hooks/use-is-manager";
 import { format, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
