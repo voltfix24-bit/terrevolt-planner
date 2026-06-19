@@ -407,6 +407,7 @@ const Plannen = () => {
   // History stack — session only, max 30 entries
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
   const skipHistoryRef = useRef(false);
   // Voorkomt dat dezelfde projectId tijdens één sessie meerdere keren tegelijk
   // weken gaat seeden (StrictMode dubbele mount, snelle navigatie, refetch).
