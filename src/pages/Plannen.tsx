@@ -1914,6 +1914,11 @@ const Plannen = () => {
     const orderedWeeks = [...weken].sort(compareWeeksChronological);
     const last = orderedWeeks[orderedWeeks.length - 1];
     if (!last) return;
+    const guard = guardRemoveLastWeek(weken);
+    if (!guard.ok) {
+      toast.error(`Planningwijziging geblokkeerd: ${formatMutationGuardReasons(guard)}`);
+      return;
+    }
     const rawNext = orderedWeeks.filter((w) => w.id !== last.id);
     const next = rawNext.map((w, i) => ({ ...w, positie: i }));
     setWeken(next);
