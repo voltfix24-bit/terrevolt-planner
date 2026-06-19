@@ -93,6 +93,12 @@ import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/plan
 import { useIsManager } from "@/hooks/use-is-manager";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 import { PlanningCleanupButton } from "@/components/PlanningCleanupButton";
+import {
+  guardAddNextWeek,
+  guardRemoveLastWeek,
+  guardShiftWeeks,
+  formatMutationGuardReasons,
+} from "@/lib/planning-mutation-guard";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
