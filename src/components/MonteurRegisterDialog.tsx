@@ -39,20 +39,22 @@ function isValidBsn(bsn: string): boolean {
 
 function calcMissing(d: Dienstverband, r: Register): string[] {
   const m: string[] = [];
+  if (d === "zzp") {
+    // Dataminimalisatie: alleen KvK is verplicht voor ZZP-export.
+    if (!r.kvk_nummer?.trim()) m.push("KvK-nummer");
+    return m;
+  }
+  // Loondienst: BSN + identiteit blijven verplicht.
   if (!r.geboortedatum) m.push("geboortedatum");
   if (!r.nationaliteit?.trim()) m.push("nationaliteit");
   if (!r.id_type) m.push("ID-type");
   if (!r.id_nummer?.trim()) m.push("ID-nummer");
   if (!r.id_geldig_tot) m.push("ID geldig tot");
   if (r.id_geldig_tot && new Date(r.id_geldig_tot) < new Date()) m.push("ID verlopen");
-  if (d === "zzp") {
-    if (!r.bedrijfsnaam?.trim()) m.push("bedrijfsnaam");
-    if (!r.kvk_nummer?.trim()) m.push("KvK");
-  } else {
-    if (!r.bsn?.trim()) m.push("BSN");
-  }
+  if (!r.bsn?.trim()) m.push("BSN");
   return m;
 }
+
 
 export function MonteurRegisterDialog({
   open,
