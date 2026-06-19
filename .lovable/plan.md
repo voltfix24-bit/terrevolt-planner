@@ -1,62 +1,65 @@
-# Globale Undo + bevestiging bij verschuiven
+## Doel
 
-## 1. Database — audit log (persistent)
+Optimistic UI + silent refresh consistent toepassen in de hele app. Kleine acties knipperen niet meer; globale loader alleen bij eerste laad, projectwissel of bulkacties.
 
-Nieuwe tabel `public.audit_log`:
-- `id`, `created_at`, `user_id` (nullable)
-- `table_name` (text)
-- `operation` (`INSERT` | `UPDATE` | `DELETE`)
-- `row_pk` (jsonb) — primary key(s) van de rij
-- `old_data` (jsonb) — bij UPDATE/DELETE
-- `new_data` (jsonb) — bij INSERT/UPDATE
-- `label` (text, nullable) — vrije beschrijving (bijv. "Project X met 3 dagen verschoven")
-- `batch_id` (uuid) — groepeert mutaties die bij dezelfde actie horen, zodat één undo de hele groep terugdraait
-- `undone` (boolean, default false)
+## Aanpak per pagina
 
-Generieke trigger `public.audit_trigger()` (SECURITY DEFINER) op alle datatabellen die de UI muteert:
-`planning_cellen`, `cel_monteurs`, `project_concept_planning`, `project_concept_monteurs`, `project_weken`, `projecten`, `project_activiteiten`, `project_ls_kabels`, `project_ms_kabels`, `project_tekeningen`, `monteurs`, `monteur_afwezigheid`, `ploegen`, `ploeg_monteurs`, `activiteit_types`, `opdrachtgevers`, `percelen`, `feestdagen`, `project_templates`.
+### 1. `src/pages/Plannen.tsx`
+`loadAll({ silent })` bestaat al (van vorige refactor). Uitbreiden naar alle mutaties:
+- `setCelKleur`, `setCelNotitie`, `setCelActiviteit`, `setCelCapaciteit`: optimistisch `setCellen` updaten vóór RPC. Bij error: revert + toast. Op succes: geen reload.
+- `addMonteurToCel` / `removeMonteurFromCel`: lokaal `setCelMonteurs` muteren, daarna RPC, revert bij fout.
+- `clearCel` / `deleteCel`: lokaal verwijderen, daarna RPC.
+- Drag-move cel: lokaal verplaatsen vóór RPC.
+- "Weken beheren" toggles (week toevoegen/verwijderen): lokaal `setWeken` updaten, dan RPC, bij succes `loadAll({ silent: true })` voor positie-normalisatie.
+- Globale `setLoading(true)` blijft alleen in `loadAll` zonder `silent`, aangeroepen bij mount en bij projectwissel.
 
-Helper-functie `public.undo_last(batch_uuid uuid default null)`:
-- Pakt laatste niet-undone `batch_id` (of meegegeven id) en draait per record terug:
-  - `INSERT` → `DELETE` op pk
-  - `DELETE` → `INSERT` met `old_data`
-  - `UPDATE` → `UPDATE` met `old_data`
-- Markeert rijen als `undone = true`.
-- De trigger logt zelf niet tijdens undo (session-variabele `app.suppress_audit = 'on'`).
+### 2. `src/pages/Overzicht.tsx`
+- Statuswijziging project: rij lokaal updaten, dan UPDATE, revert bij fout.
+- Planning verschuiven (week-shift): lokaal `projecten`/`weken` aanpassen, RPC, silent refresh op succes.
+- Sortering: pure client-side, geen loader.
+- Geen volledig herladen na elke actie.
 
-RLS: `SELECT/UPDATE` op `audit_log` voor `authenticated`; `INSERT` alleen via trigger.
+### 3. `src/pages/Mandagenregister.tsx` + `MandagenregisterPanel.tsx`
+- Uren-cel edit: lokaal `regels` muteren onmiddellijk, dan upsert, revert bij fout.
+- Exportlog refresh: alleen die lijst silent refetchen, geen paginalader.
 
-## 2. Frontend — batch-helper
+### 4. `src/pages/Capaciteit.tsx`
+- Monteurgegevens edits (naam, ploeg, etc.): optimistisch, revert bij fout.
+- Beschikbaarheid toggles (afwezigheid aan/uit): lokaal toggle, dan insert/delete, revert bij fout.
+- Registergegevens via `MonteurRegisterDialog`: dialoog sluit direct, lijst lokaal updaten.
 
-Nieuw bestand `src/lib/audit.ts`:
-- `withBatch(label, fn)` zet vóór de mutaties een `batch_id` via `select set_config('app.audit_batch', uuid, true)` en `set_config('app.audit_label', label, true)`, voert `fn()` uit, en geeft het batch-id terug.
-- `undoLast()` → roept rpc `undo_last` aan.
-- `useUndoStack()` hook: laadt recente niet-undone batches voor UI-lijst, realtime refresh.
+## Patroon (code-conventie)
 
-Alle bestaande mutatie-helpers in `Plannen.tsx`, `Overzicht.tsx`, `ProjectConceptPlanning.tsx`, `Projecten.tsx`, `ProjectDetail.tsx`, `Activiteiten.tsx`, `Capaciteit.tsx`, `Instellingen.tsx` worden in `withBatch("…")` gewikkeld zodat elke actie één duidelijke entry krijgt.
+```ts
+const prev = state;
+setState(next);                       // optimistic
+try {
+  const { error } = await supabase...;
+  if (error) throw error;
+  void reload({ silent: true });      // optioneel
+} catch (e) {
+  setState(prev);                     // revert
+  toast.error("Opslaan mislukt");
+}
+```
 
-## 3. UI — Undo-knop
+Alle bestaande `setLoading(true)` rondom enkelvoudige mutaties wordt verwijderd. `loadAll/load*` krijgen overal een `{ silent?: boolean }` optie zoals al in `Plannen.tsx`.
 
-In `src/components/AppLayout.tsx` (topbar) een knop `↶ Ongedaan maken`:
-- Toont laatste actie-label als tooltip.
-- Disabled wanneer er geen batch is.
-- Dropdown met laatste 20 acties → klik = die specifieke batch terugdraaien (waarschuwing als er nieuwere acties bovenop liggen).
-- Sneltoets `Ctrl/Cmd+Z`.
+## Behoud van UI-state
 
-## 4. Bevestigingsdialogs bij ALLE verschuif-acties
+- Geen `key` resets op containers na een mutatie.
+- Geen `window.scrollTo` calls toevoegen.
+- Dialogen niet automatisch sluiten/heropenen door reload.
+- Filters/sortering/expansions blijven in component-state — niet refetchen.
 
-Generieke `ConfirmDialog` (shadcn `AlertDialog` wrapper) in `src/components/ConfirmDialog.tsx`.
+## Verificatie
 
-Toegepast op:
-- `Overzicht.tsx` → `shiftProjectPlanning` (drag op projectbalk én elke `shiftDay`-actie).
-- `Plannen.tsx` → `shiftGroup` (toolbar +/-1/-5), drag-and-drop verplaatsen van 1 of meer cellen.
-- `ProjectConceptPlanning.tsx` → `shiftSelection` (toolbar +/-1/-5).
+- `npx tsc --noEmit` schoon.
+- Bestaande tests draaien (`vitest run`).
+- Handmatig: cel-acties op /plannen knipperen niet; status op /overzicht switcht direct; uren-edit op /mandagenregister voelt instant; afwezigheid-toggle op /capaciteit zonder loader.
 
-Dialog toont: aantal cellen/projecten, richting (vooruit/achteruit), aantal dagen. Bevat checkbox "Deze sessie niet meer vragen voor 1-dag verschuivingen" (opt-out per sessie, persisted in `sessionStorage`) zodat het niet te irritant wordt voor losse cellen.
+## Out of scope
 
-## Technische details
-- Audit-trigger draait altijd, ook buiten `withBatch`: dan krijgt elke statement een eigen `batch_id` (`gen_random_uuid()`), nog steeds undo-baar.
-- Drag-and-drop in Plannen voert al meerdere updates uit binnen één callback → die hele callback in één `withBatch` zodat één Undo de complete sleep terugdraait.
-- `undo_last` draait records in omgekeerde volgorde terug om FK-volgordeproblemen te voorkomen.
-- Geen wijzigingen aan bestaande tabel-schema's; alleen triggers toevoegen.
-- Realtime: undo-stack ververst via Supabase realtime kanaal op `audit_log`.
+- Geen schema-/RPC-wijzigingen.
+- Geen visuele redesign.
+- Undo-flow blijft zoals nu (history push gebeurt na succesvolle mutatie).
