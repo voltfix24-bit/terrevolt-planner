@@ -5,10 +5,13 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Crosshair,
   GripVertical,
   History,
+  MoreHorizontal,
   Pencil,
   Plus,
   Printer,
@@ -2352,189 +2355,186 @@ const Plannen = () => {
           })}
         </div>
       )}
-      {/* Project info bar (sticky) */}
+      {/* Project info bar (sticky) — twee rijen */}
       <div
-        className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b px-8 py-3"
+        className="sticky top-0 z-30 border-b"
         style={{
           backgroundColor: "rgb(var(--surface-rgb) / 0.85)",
           borderColor: "rgb(var(--fg-rgb) / 0.08)",
           backdropFilter: "blur(14px)",
         }}
       >
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/")}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
-            title="Terug naar projecten"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="font-display text-xl font-extrabold text-primary">
-            {project.case_nummer || "—"}
-          </div>
-          <div className="font-display text-sm font-semibold text-foreground">
-            {project.station_naam || ""}
-          </div>
-          {project.tijdelijke_situatie && project.tijdelijke_situatie !== "geen" && (
-            <span className="inline-flex items-center rounded-md border border-fg/15 px-2 py-0.5 text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
-              {project.tijdelijke_situatie}
-            </span>
-          )}
-          {(project.gsu_datum || project.geu_datum) && (() => {
-            const fmt = (d: string | null) => {
-              if (!d) return "—";
-              const dt = new Date(d);
-              if (isNaN(dt.getTime())) return "—";
-              return dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "2-digit" });
-            };
-            return (
-              <span
-                className="inline-flex items-center gap-1.5 text-[11px] font-display font-medium text-muted-foreground/80"
-                title="GSU – GEU"
-              >
-                <span className="opacity-60">GSU</span>
-                <span className="text-foreground/80">{fmt(project.gsu_datum)}</span>
-                <span className="opacity-40">→</span>
-                <span className="opacity-60">GEU</span>
-                <span className="text-foreground/80">{fmt(project.geu_datum)}</span>
-              </span>
-            );
-          })()}
-          {project.status && (
-            <span
-              className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-display font-semibold"
-              style={{
-                backgroundColor:
-                  project.status === "in_uitvoering"
-                    ? "#10b981"
-                    : project.status === "gepland"
-                    ? "#feb300"
-                    : "rgb(var(--fg-rgb) / 0.08)",
-                color:
-                  project.status === "in_uitvoering" || project.status === "gepland"
-                    ? "var(--surface-solid)"
-                    : "rgb(var(--fg-rgb) / 0.6)",
-              }}
+        {/* Rij 1 — project + primaire acties */}
+        <div className="flex items-center justify-between gap-4 px-8 pt-3 pb-2">
+          <div className="flex min-w-0 items-center gap-4">
+            <button
+              onClick={() => navigate("/")}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-fg/[0.06] hover:text-foreground"
+              title="Terug naar projecten"
             >
-              {project.status === "in_uitvoering"
-                ? "In uitvoering"
-                : project.status === "gepland"
-                ? "Gepland"
-                : project.status === "afgerond"
-                ? "Afgerond"
-                : "Concept"}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleUndo}
-            disabled={history.length === 0}
-            title="Laatste celactie ongedaan maken (Ctrl+Z) — werkt alleen op lokale celacties in deze sessie"
-            aria-label="Laatste celactie ongedaan maken"
-            className={[
-              "flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent",
-              history.length === 0
-                ? "cursor-not-allowed opacity-30"
-                : "text-foreground hover:bg-fg/[0.06]",
-            ].join(" ")}
-          >
-            <Undo2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setHistoryOpen(true)}
-            title="Geschiedenis"
-            className="flex h-8 items-center justify-center rounded-md border border-fg/15 bg-transparent px-2 text-foreground hover:bg-fg/[0.06]"
-          >
-            <History className="h-4 w-4" />
-            {history.length > 0 && (
-              <span className="ml-1 font-display text-xs font-semibold">
-                {history.length}
-              </span>
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="flex min-w-0 flex-col leading-tight">
+              <div className="flex items-baseline gap-3">
+                <div className="font-display text-xl font-extrabold text-primary">
+                  {project.case_nummer || "—"}
+                </div>
+                <div className="truncate font-display text-sm font-semibold text-foreground">
+                  {project.station_naam || ""}
+                </div>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {project.status && (
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-display font-semibold"
+                    style={{
+                      backgroundColor:
+                        project.status === "in_uitvoering"
+                          ? "#10b981"
+                          : project.status === "gepland"
+                          ? "#feb300"
+                          : "rgb(var(--fg-rgb) / 0.08)",
+                      color:
+                        project.status === "in_uitvoering" || project.status === "gepland"
+                          ? "var(--surface-solid)"
+                          : "rgb(var(--fg-rgb) / 0.6)",
+                    }}
+                  >
+                    {project.status === "in_uitvoering"
+                      ? "In uitvoering"
+                      : project.status === "gepland"
+                      ? "Gepland"
+                      : project.status === "afgerond"
+                      ? "Afgerond"
+                      : "Concept"}
+                  </span>
+                )}
+                {project.tijdelijke_situatie && project.tijdelijke_situatie !== "geen" && (
+                  <span className="inline-flex items-center rounded-md border border-fg/15 px-2 py-0.5 text-[11px] font-display font-semibold uppercase tracking-wider text-muted-foreground">
+                    {project.tijdelijke_situatie}
+                  </span>
+                )}
+                {(project.gsu_datum || project.geu_datum) && (() => {
+                  const fmt = (d: string | null) => {
+                    if (!d) return "—";
+                    const dt = new Date(d);
+                    if (isNaN(dt.getTime())) return "—";
+                    return dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "2-digit" });
+                  };
+                  return (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-[11px] font-display font-medium text-muted-foreground/80"
+                      title="GSU – GEU"
+                    >
+                      <span className="opacity-60">GSU</span>
+                      <span className="text-foreground/80">{fmt(project.gsu_datum)}</span>
+                      <span className="opacity-40">→</span>
+                      <span className="opacity-60">GEU</span>
+                      <span className="text-foreground/80">{fmt(project.geu_datum)}</span>
+                    </span>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {isManager && projectId && (
+              <button
+                type="button"
+                onClick={() => navigate(`/mandagenregister?project=${projectId}`)}
+                title="Open mandagenregister voor dit project"
+                className="flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold text-foreground hover:bg-fg/[0.06]"
+              >
+                <ClipboardList className="h-4 w-4" />
+                <span>Mandagenregister</span>
+              </button>
             )}
-          </button>
-          {/* divider */}
-          <span
-            aria-hidden
-            className="inline-block"
-            style={{
-              width: 1,
-              height: 20,
-              backgroundColor: "rgb(var(--fg-rgb) / 0.08)",
-              marginInline: 2,
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => setWeekModalOpen(true)}
-            title="Weken beheren"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
-          >
-            <CalendarDays className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            title="Afdrukken"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
-          >
-            <Printer className="h-4 w-4" />
-          </button>
-          {isManager && projectId && (
             <button
               type="button"
-              onClick={() => navigate(`/mandagenregister?project=${projectId}`)}
-              title="Open mandagenregister voor dit project"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold text-foreground hover:bg-fg/[0.06]"
+              onClick={handleScrollToPlanned}
+              disabled={!firstPlanningTarget}
+              title={
+                firstPlanningTarget
+                  ? `Spring naar week ${firstPlanningTarget.week_nr} / ${firstPlanningTarget.jaar}`
+                  : "Geen planning gevonden"
+              }
+              className={[
+                "flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold",
+                firstPlanningTarget
+                  ? "text-foreground hover:bg-fg/[0.06]"
+                  : "cursor-not-allowed text-muted-foreground opacity-50",
+              ].join(" ")}
             >
-              <ClipboardList className="h-4 w-4" />
-              <span>Mandagenregister</span>
+              <Crosshair className="h-4 w-4" />
+              <span>Ga naar eerste planning</span>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleScrollToPlanned}
-            disabled={!firstPlanningTarget}
-            title={
-              firstPlanningTarget
-                ? `Spring naar week ${firstPlanningTarget.week_nr} / ${firstPlanningTarget.jaar}`
-                : "Geen planning gevonden"
-            }
-            className={[
-              "flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-2.5 font-display text-[12px] font-semibold",
-              firstPlanningTarget
-                ? "text-foreground hover:bg-fg/[0.06]"
-                : "cursor-not-allowed text-muted-foreground opacity-50",
-            ].join(" ")}
-          >
-            <Crosshair className="h-4 w-4" />
-            <span>Ga naar eerste planning</span>
-          </button>
-          {/* divider */}
-          <span
-            aria-hidden
-            className="inline-block"
-            style={{
-              width: 1,
-              height: 20,
-              backgroundColor: "rgb(var(--fg-rgb) / 0.08)",
-              marginInline: 2,
-            }}
-          />
-          {/* Rolling planning-venster navigatie */}
+            {history.length > 0 && (
+              <button
+                type="button"
+                onClick={handleUndo}
+                title="Laatste celactie ongedaan maken (Ctrl+Z) — werkt alleen op lokale celacties in deze sessie"
+                aria-label="Laatste celactie ongedaan maken"
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
+              >
+                <Undo2 className="h-4 w-4" />
+              </button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  title="Meer acties"
+                  aria-label="Meer acties"
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-fg/15 bg-transparent text-foreground hover:bg-fg/[0.06]"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Meer acties</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setHistoryOpen(true)}
+                  className="gap-2"
+                >
+                  <History className="h-4 w-4" />
+                  <span>Geschiedenis</span>
+                  {history.length > 0 && (
+                    <span className="ml-auto font-display text-xs font-semibold text-muted-foreground">
+                      {history.length}
+                    </span>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setWeekModalOpen(true)}
+                  className="gap-2"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  <span>Weken beheren</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.print()} className="gap-2">
+                  <Printer className="h-4 w-4" />
+                  <span>Printen</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Rij 2 — periode-navigatie (compact, lichter) */}
+        <div className="flex items-center justify-end gap-1 px-8 pb-2">
           <div
-            className="flex items-center gap-1 rounded-md border border-fg/15 px-1 py-0.5"
+            className="flex items-center gap-0.5 rounded-md border border-fg/10 px-1 py-0.5"
             title={`Periode ${planningWindow.startDate.toLocaleDateString("nl-NL")} – ${planningWindow.endDate.toLocaleDateString("nl-NL")}`}
           >
             <button
               type="button"
               onClick={() => setWindowOffsetWeeks((o) => o - PLANNING_WINDOW_STEP_WEEKS)}
-              className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground"
               title="Vorige periode (~3 maanden terug)"
+              aria-label="Vorige periode"
             >
-              ◀
+              <ChevronLeft className="h-3.5 w-3.5" />
             </button>
             <button
               type="button"
@@ -2553,14 +2553,16 @@ const Plannen = () => {
             <button
               type="button"
               onClick={() => setWindowOffsetWeeks((o) => o + PLANNING_WINDOW_STEP_WEEKS)}
-              className="rounded px-1.5 py-0.5 text-[11px] font-display font-semibold text-foreground hover:bg-fg/[0.08]"
+              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground"
               title="Volgende periode (~3 maanden vooruit)"
+              aria-label="Volgende periode"
             >
-              ▶
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </div>
+
 
       {/* Planning-veiligheid: waarschuw als planning buiten veilige periode valt */}
       <PlanningSafetyBanner
