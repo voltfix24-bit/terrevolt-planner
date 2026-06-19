@@ -295,12 +295,27 @@ const Projecten = () => {
                       {p.case_nummer || "Geen casenummer"}
                     </div>
                   </div>
-                  <span
-                    className="shrink-0 rounded-md px-2 py-1 text-[10px] font-display font-semibold uppercase tracking-wider"
-                    style={statusStyle(p.status)}
-                  >
-                    {statusLabel(p.status)}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span
+                      className="rounded-md px-2 py-1 text-[10px] font-display font-semibold uppercase tracking-wider"
+                      style={statusStyle(p.status)}
+                    >
+                      {statusLabel(p.status)}
+                    </span>
+                    {(() => {
+                      const a = assessPlanningRange(wekenByProject.get(p.id) ?? []);
+                      if (a.status !== "blocked") return null;
+                      return (
+                        <span
+                          title={`Planning loopt van ${a.firstDate?.toISOString().slice(0,10)} tot ${a.lastDate?.toISOString().slice(0,10)} — ${a.reasons.join("; ")}`}
+                          className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300"
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                          Planning {a.rangeWeeks}w
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5 text-xs text-muted-foreground">
