@@ -1,25 +1,63 @@
+import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   assessPlanningRange,
   formatPlanningRange,
   type PlanningWeek,
+  type PlanningAssessment,
 } from "@/lib/planning-safety";
 
 type Props = {
-  weken: PlanningWeek[];
+  /** Direct meegegeven weken (gebruik dit als de pagina ze al heeft geladen). */
+  weken?: PlanningWeek[];
+  /** Anders: laad de weken zelf voor dit project. */
+  projectId?: string | null;
   className?: string;
   /** Compact = badge-stijl; standaard = volledige banner. */
   variant?: "banner" | "badge";
 };
 
-export function PlanningSafetyBanner({ weken, className = "", variant = "banner" }: Props) {
-  const a = assessPlanningRange(weken);
-  if (a.status === "safe") return null;
+/** Hook: laad jaar/week_nr van een project en bereken assessment. */
+export function usePlanningAssessment(projectId: string | null | undefined): PlanningAssessment | null {
+  const [data, setData] = useState<PlanningAssessment | null>(null);
+  useEffect(() => {
+    if (!projectId) {
+      setData(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await supabase
+        .from("project_weken")
+        .select("jaar, week_nr")
+        .eq("project_id", projectId);
+      if (cancelled) return;
+      setData(assessPlanningRange((rows ?? []) as PlanningWeek[]));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+  return data;
+}
+
+export function PlanningSafetyBanner({
+  weken,
+  projectId,
+  className = "",
+  variant = "banner",
+}: Props) {
+  const fetched = usePlanningAssessment(weken ? null : projectId ?? null);
+  const a = weken ? assessPlanningRange(weken) : fetched;
+  if (!a || a.status === "safe") return null;
+
+  const range = `${a.firstDate?.toISOString().slice(0, 10)} → ${a.lastDate?.toISOString().slice(0, 10)}`;
 
   if (variant === "badge") {
     return (
       <span
-        title={`Planning loopt van ${a.firstDate?.toISOString().slice(0,10)} tot ${a.lastDate?.toISOString().slice(0,10)} — ${a.reasons.join("; ")}`}
+        title={`Planning loopt van ${range} — ${a.reasons.join("; ")}`}
         className={`inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300 ${className}`}
       >
         <AlertTriangle className="h-3 w-3" />
