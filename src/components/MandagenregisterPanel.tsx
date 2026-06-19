@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { exportMandagenregisterPDF } from "@/lib/mandagenregister-pdf";
+import { logTechnicalError, toUserFacingError } from "@/lib/user-facing-error";
 
 type Dienstverband = "loondienst" | "zzp";
 
@@ -187,7 +188,8 @@ export function MandagenregisterPanel({
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message || "Kon mandagenregister niet ophalen");
+      logTechnicalError("mandagenregister.fetchRows", error);
+      toast.error(toUserFacingError(error, "Kon mandagenregister niet ophalen"));
       setRows([]);
       return;
     }
@@ -202,6 +204,7 @@ export function MandagenregisterPanel({
       .order("aangemaakt_op", { ascending: false })
       .limit(10);
     if (!error) setLogs((data ?? []) as ExportLog[]);
+    else logTechnicalError("mandagenregister.fetchLogs", error);
   }, [projectId]);
 
   useEffect(() => {
@@ -233,7 +236,8 @@ export function MandagenregisterPanel({
     });
     setSavingKey(null);
     if (error) {
-      toast.error(error.message || "Kon uren niet opslaan");
+      logTechnicalError("mandagenregister.saveHours", error);
+      toast.error(toUserFacingError(error, "Kon uren niet opslaan"));
       return;
     }
     setRows((rs) =>
@@ -386,21 +390,20 @@ export function MandagenregisterPanel({
       p_bestandsnaam: filename,
     });
     if (error) {
-      toast.warning(`Bestand aangemaakt, maar log mislukte: ${error.message}`);
-    } else {
-      toast.success(
-        d === "zzp" ? "Mandagenregister ZZP gelogd" : "Mandagenregister Loondienst gelogd",
-      );
-      void fetchLogs();
-      void fetchRows();
+      logTechnicalError("mandagenregister.logExport", error);
+      toast.warning("Bestand aangemaakt, maar het exportlog kon niet worden bijgewerkt.");
+      return;
     }
+
+    toast.success("Mandagenregister gelogd");
+    void fetchLogs();
   }
 
   async function handleDownload(d: Dienstverband) {
     const pre = preflightExport(d);
     if (!pre) return;
     const { filtered, baseSlug } = pre;
-    const filename = `Mandagenregister_${d === "zzp" ? "ZZP" : "Loondienst"}_${baseSlug}_${van}_${tot}.csv`;
+    const filename = `Mandagenregister_${baseSlug}_${van}_${tot}_${d === "zzp" ? "zelfstandigen" : "loondienst"}.csv`;
 
     if (d === "zzp") {
       const aggs = aggregateByMonteurWeek(filtered);
@@ -457,7 +460,7 @@ export function MandagenregisterPanel({
     const pre = preflightExport(d);
     if (!pre) return;
     const { filtered, baseSlug } = pre;
-    const filename = `Mandagenregister_${d === "zzp" ? "ZZP" : "Loondienst"}_${baseSlug}_${van}_${tot}.pdf`;
+    const filename = `Mandagenregister_${baseSlug}_${van}_${tot}_${d === "zzp" ? "zelfstandigen" : "loondienst"}.pdf`;
     const aggs = aggregateByMonteurWeek(filtered);
     try {
       exportMandagenregisterPDF({
@@ -482,8 +485,8 @@ export function MandagenregisterPanel({
         })),
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "PDF kon niet worden geopend";
-      toast.error(msg);
+      logTechnicalError("mandagenregister.downloadPdf", e);
+      toast.error(toUserFacingError(e, "PDF kon niet worden geopend"));
       return;
     }
     await logExport(d, filename);
@@ -564,7 +567,7 @@ export function MandagenregisterPanel({
                       }
                     >
                       <FileText className="mr-1.5 h-3.5 w-3.5" />
-                      Download PDF {d === "zzp" ? "ZZP" : "Loondienst"}
+                      Download PDF
                     </Button>
                   </div>
                 </div>
