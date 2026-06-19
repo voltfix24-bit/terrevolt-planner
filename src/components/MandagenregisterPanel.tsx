@@ -542,15 +542,31 @@ export function MandagenregisterPanel({
                       ({monteurs.length} monteur{monteurs.length === 1 ? "" : "s"})
                     </span>
                   </h3>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDownload(d)}
-                    disabled={incomplete.length > 0 && !allowIncomplete}
-                  >
-                    <Download className="mr-1.5 h-3.5 w-3.5" />
-                    Download CSV
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownload(d)}
+                      disabled={incomplete.length > 0 && !allowIncomplete}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" />
+                      Download CSV
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadPdf(d)}
+                      disabled={incomplete.length > 0 && !allowIncomplete}
+                      title={
+                        d === "zzp"
+                          ? "Open een nette PDF-versie (A4 liggend) — zonder BSN of ID-velden"
+                          : "Open een nette PDF-versie (A4 liggend) — inclusief BSN/identiteit"
+                      }
+                    >
+                      <FileText className="mr-1.5 h-3.5 w-3.5" />
+                      Download PDF {d === "zzp" ? "ZZP" : "Loondienst"}
+                    </Button>
+                  </div>
                 </div>
 
                 {incomplete.length > 0 && (
