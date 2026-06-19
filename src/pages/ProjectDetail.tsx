@@ -464,6 +464,8 @@ const TemplatePicker: React.FC<{
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isManager } = useIsManager();
+
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
