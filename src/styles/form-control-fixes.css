@@ -1,0 +1,41 @@
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  color: hsl(var(--foreground));
+  -webkit-text-fill-color: hsl(var(--foreground));
+  caret-color: hsl(var(--primary));
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+  -webkit-text-fill-color: hsl(var(--muted-foreground));
+  opacity: 0.75;
+}
+
+[data-theme="dark"] input:disabled,
+[data-theme="dark"] textarea:disabled,
+[data-theme="dark"] select:disabled {
+  color: hsl(var(--muted-foreground));
+  -webkit-text-fill-color: hsl(var(--muted-foreground));
+  opacity: 0.85;
+}
+
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.75);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  outline: none;
+}
