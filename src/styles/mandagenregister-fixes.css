@@ -15,3 +15,67 @@
   box-shadow: 0 0 0 1px hsl(var(--primary) / 0.35);
   outline: none;
 }
+
+.mandagenregister-page {
+  max-width: 112rem;
+  margin: 0 auto;
+}
+
+.mandagenregister-header {
+  min-height: 3.5rem;
+}
+
+.mandagenregister-workspace > .space-y-4 > div:first-child {
+  align-items: center;
+  gap: 0.75rem;
+  background: hsl(var(--background) / 0.45);
+  padding: 0.625rem 0.75rem;
+}
+
+.mandagenregister-workspace > .space-y-4 > div:first-child label {
+  letter-spacing: 0.04em;
+}
+
+.mandagenregister-workspace > .space-y-4 > div:first-child input[type="date"] {
+  height: 2.125rem;
+  min-width: 9.5rem;
+}
+
+.mandagenregister-workspace > .space-y-4 > div:first-child button {
+  height: 2.125rem;
+}
+
+.mandagenregister-workspace > .space-y-4 > div:last-child {
+  max-height: 13.5rem;
+  overflow: auto;
+  background: hsl(var(--background) / 0.35);
+}
+
+.mandagenregister-workspace > .space-y-4 > div:last-child table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: hsl(var(--background));
+}
+
+.mandagenregister-workspace > .space-y-4 > div:last-child td:last-child {
+  max-width: 34rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .mandagenregister-page {
+    padding-inline: 0.75rem;
+  }
+
+  .mandagenregister-workspace > .space-y-4 > div:first-child {
+    align-items: stretch;
+  }
+
+  .mandagenregister-workspace > .space-y-4 > div:first-child > div:last-child {
+    margin-left: 0;
+    width: 100%;
+  }
+}
