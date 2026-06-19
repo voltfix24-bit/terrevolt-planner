@@ -1683,6 +1683,79 @@ const Plannen = () => {
             await addMonteurToCell(entry.cel, entry.monteurId);
             break;
           }
+          case "cells_moved": {
+            // Verzet alle bewogen cellen terug naar hun oude (week_id, dag_index).
+            // Eerst lokaal: cellen weghalen op nieuwe key, en (na) terugzetten op oude key.
+            const moves = entry.moves;
+            // DB-updates in twee fases: zet eerst alles "neutraal" door cellen
+            // tijdelijk op hun nieuwe id te laten — postgres unique-constraint
+            // verbiedt botsende (activiteit_id, week_id, dag_index). We bouwen
+            // updates één voor één in volgorde; bij botsing valt het terug op loadAll.
+            const results = await Promise.all(
+              moves.map((mv) =>
+                supabase
+                  .from("planning_cellen")
+                  .update({ week_id: mv.oldWeekId, dag_index: mv.oldDagIndex })
+                  .eq("id", mv.celId)
+              )
+            );
+            if (results.some((r) => r.error)) {
+              toast.error("Terugdraaien mislukt — vernieuwen…");
+              loadAll();
+              return;
+            }
+            // Herstel overgeschreven cellen incl. monteurs
+            for (const ow of entry.overwritten) {
+              const { data } = await supabase
+                .from("planning_cellen")
+                .insert({
+                  activiteit_id: ow.cel.activiteit_id,
+                  week_id: ow.cel.week_id,
+                  dag_index: ow.cel.dag_index,
+                  kleur_code: ow.cel.kleur_code,
+                  notitie: ow.cel.notitie,
+                  capaciteit: ow.cel.capaciteit,
+                })
+                .select()
+                .single();
+              if (data && ow.monteurIds.length > 0) {
+                await supabase.from("cel_monteurs").insert(
+                  ow.monteurIds.map((mid) => ({ cel_id: (data as Cel).id, monteur_id: mid }))
+                );
+              }
+            }
+            loadAll();
+            break;
+          }
+          case "cells_filled": {
+            if (entry.insertedCelIds.length > 0) {
+              await supabase
+                .from("planning_cellen")
+                .delete()
+                .in("id", entry.insertedCelIds);
+            }
+            for (const ow of entry.overwritten) {
+              const { data } = await supabase
+                .from("planning_cellen")
+                .insert({
+                  activiteit_id: ow.cel.activiteit_id,
+                  week_id: ow.cel.week_id,
+                  dag_index: ow.cel.dag_index,
+                  kleur_code: ow.cel.kleur_code,
+                  notitie: ow.cel.notitie,
+                  capaciteit: ow.cel.capaciteit,
+                })
+                .select()
+                .single();
+              if (data && ow.monteurIds.length > 0) {
+                await supabase.from("cel_monteurs").insert(
+                  ow.monteurIds.map((mid) => ({ cel_id: (data as Cel).id, monteur_id: mid }))
+                );
+              }
+            }
+            loadAll();
+            break;
+          }
         }
       } finally {
         skipHistoryRef.current = false;
@@ -1695,6 +1768,7 @@ const Plannen = () => {
       updateCellNotitie,
       addMonteurToCell,
       removeMonteurFromCell,
+      loadAll,
     ]
   );
 
