@@ -184,6 +184,9 @@ const Capaciteit = () => {
   const [toonInactieven, setToonInactieven] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Monteur | null>(null);
+  const [registerMonteur, setRegisterMonteur] = useState<Monteur | null>(null);
+  const { isManager } = useIsManager();
+
 
   // tabs
   const [tab, setTab] = useState<"monteurs" | "ploegen" | "tijdlijn" | "beschikbaarheid" | "vrije-dagen">("monteurs");
