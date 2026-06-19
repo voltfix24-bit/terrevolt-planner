@@ -123,6 +123,35 @@ export function MandagenregisterPanel({
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const [logs, setLogs] = useState<ExportLog[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [projectMeta, setProjectMeta] = useState<{
+    case_nummer: string | null;
+    station_naam: string | null;
+    locatie: string | null;
+    opdrachtgever: string | null;
+  }>({ case_nummer: null, station_naam: null, locatie: null, opdrachtgever: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!projectId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("projecten")
+        .select("case_nummer, station_naam, locatie, opdrachtgever:opdrachtgevers(naam)")
+        .eq("id", projectId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const og = (data as { opdrachtgever: { naam: string | null } | null }).opdrachtgever;
+      setProjectMeta({
+        case_nummer: (data as { case_nummer: string | null }).case_nummer ?? null,
+        station_naam: (data as { station_naam: string | null }).station_naam ?? null,
+        locatie: (data as { locatie: string | null }).locatie ?? null,
+        opdrachtgever: og?.naam ?? null,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   // Sync incoming default range if user has not manually overridden it.
   useEffect(() => {
