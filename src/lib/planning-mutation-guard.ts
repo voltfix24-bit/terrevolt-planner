@@ -28,7 +28,7 @@ function result(
   nextWeeks: WeekWithId[],
 ): PlanningMutationGuardResult {
   const normalized = withNormalizedPositions(nextWeeks);
-  const before = assessPlanningRange(currentWeeks);
+  const before = assessPlanningRange([...currentWeeks]);
   const after = assessPlanningRange(normalized);
   return {
     ok: after.status === "safe",

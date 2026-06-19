@@ -93,6 +93,12 @@ import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/plan
 import { useIsManager } from "@/hooks/use-is-manager";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 import { PlanningCleanupButton } from "@/components/PlanningCleanupButton";
+import {
+  guardAddNextWeek,
+  guardRemoveLastWeek,
+  guardShiftWeeks,
+  formatMutationGuardReasons,
+} from "@/lib/planning-mutation-guard";
 
 /* ----------------------------- Current week (ISO) ----------------------------- */
 function getCurrentISOWeek(): number {
@@ -1871,10 +1877,15 @@ const Plannen = () => {
   /* ----------------------------- week mgmt ----------------------------- */
   const addWeek = useCallback(async () => {
     if (!projectId) return;
+    const fallbackJaar = project?.jaar ?? new Date().getFullYear();
+    const guard = guardAddNextWeek(weken, fallbackJaar);
+    if (!guard.ok) {
+      toast.error(`Planningwijziging geblokkeerd: ${formatMutationGuardReasons(guard)}`);
+      return;
+    }
     const orderedWeeks = [...weken].sort(compareWeeksChronological);
     const lastWeek = orderedWeeks[orderedWeeks.length - 1];
     const newPos = orderedWeeks.length;
-    const fallbackJaar = project?.jaar ?? new Date().getFullYear();
     const next = lastWeek
       ? addIsoWeeks(lastWeek.jaar, lastWeek.week_nr, 1)
       : { jaar: fallbackJaar, week_nr: 1 };
@@ -1903,6 +1914,11 @@ const Plannen = () => {
     const orderedWeeks = [...weken].sort(compareWeeksChronological);
     const last = orderedWeeks[orderedWeeks.length - 1];
     if (!last) return;
+    const guard = guardRemoveLastWeek(weken);
+    if (!guard.ok) {
+      toast.error(`Planningwijziging geblokkeerd: ${formatMutationGuardReasons(guard)}`);
+      return;
+    }
     const rawNext = orderedWeeks.filter((w) => w.id !== last.id);
     const next = rawNext.map((w, i) => ({ ...w, positie: i }));
     setWeken(next);
@@ -1927,6 +1943,12 @@ const Plannen = () => {
       if (target.jaar === newJaar && target.week_nr === newNr) return;
       const delta = weekDeltaIso(target.jaar, target.week_nr, newJaar, newNr);
       if (delta === 0 || !projectId) return;
+
+      const guard = guardShiftWeeks(weken, week_id, newJaar, newNr);
+      if (!guard.ok) {
+        toast.error(`Planningwijziging geblokkeerd: ${formatMutationGuardReasons(guard)}`);
+        return;
+      }
 
       // Optimistic UI: bereken de nieuwe staat lokaal zodat de gebruiker direct iets ziet.
       const shifted = weken.map((w) => {
