@@ -1419,7 +1419,7 @@ const Plannen = () => {
         if (hasCellContent(existing, monteurs)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
-        const ok = window.confirm(formatOverwritePrompt(conflicts.length));
+        const ok = await confirmShift(describeOverwrite(conflicts.length));
         if (!ok) return;
       }
 
