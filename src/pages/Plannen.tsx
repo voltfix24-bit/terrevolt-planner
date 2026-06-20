@@ -283,6 +283,28 @@ const groupColor = (idx: number): string => GROUP_COLORS[idx % GROUP_COLORS.leng
 const Plannen = () => {
   const navigate = useNavigate();
   const confirmShift = useConfirm();
+
+  /**
+   * Controleer of een set (cel, monteur)-combinaties al impact heeft in
+   * de urenboek-app. Toont een waarschuwing wanneer nodig.
+   * Retourneert true wanneer de actie door mag gaan, false bij annuleren.
+   */
+  const confirmUrenboekImpact = useCallback(
+    async (externalIds: string[]): Promise<boolean> => {
+      if (externalIds.length === 0) return true;
+      const results = await checkUrenboekImpact(externalIds);
+      const decision = decideImpactWarning(results);
+      if (!decision.needsConfirm) return true;
+      return await confirmShift({
+        title: decision.title,
+        description: decision.message,
+        confirmText: "Toch doorgaan",
+        cancelText: "Annuleren",
+        destructive: decision.severity === "sterk" || decision.severity === "fail_safe",
+      });
+    },
+    [confirmShift],
+  );
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project");
   const { isManager } = useIsManager();
