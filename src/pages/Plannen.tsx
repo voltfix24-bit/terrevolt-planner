@@ -1547,7 +1547,7 @@ const Plannen = () => {
         overwritten,
       });
     },
-    [cellen, celMonteurs, weken, loadAll, pushHistory]
+    [cellen, celMonteurs, weken, loadAll, pushHistory, confirmShift, confirmUrenboekImpact]
   );
 
   // Wrapper voor drag-and-drop: bepaalt delta op basis van anchor + doel-(week,dag)
