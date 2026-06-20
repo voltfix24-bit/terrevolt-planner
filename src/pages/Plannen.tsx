@@ -79,6 +79,12 @@ import {
 } from "@/lib/monteur-beschikbaarheid";
 import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
 import { useConfirm, describeShift, describeOverwrite } from "@/components/ConfirmDialog";
+import {
+  checkUrenboekImpact,
+  buildExternalId,
+  buildExternalIdsForCell,
+} from "@/lib/urenboek-impact";
+import { decideImpactWarning } from "@/lib/urenboek-impact-dialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
 import { hasCellContent, prepareFillTargets } from "@/lib/cell-conflicts";
@@ -277,6 +283,28 @@ const groupColor = (idx: number): string => GROUP_COLORS[idx % GROUP_COLORS.leng
 const Plannen = () => {
   const navigate = useNavigate();
   const confirmShift = useConfirm();
+
+  /**
+   * Controleer of een set (cel, monteur)-combinaties al impact heeft in
+   * de urenboek-app. Toont een waarschuwing wanneer nodig.
+   * Retourneert true wanneer de actie door mag gaan, false bij annuleren.
+   */
+  const confirmUrenboekImpact = useCallback(
+    async (externalIds: string[]): Promise<boolean> => {
+      if (externalIds.length === 0) return true;
+      const results = await checkUrenboekImpact(externalIds);
+      const decision = decideImpactWarning(results);
+      if (!decision.needsConfirm) return true;
+      return await confirmShift({
+        title: decision.title,
+        description: decision.message,
+        confirmText: "Toch doorgaan",
+        cancelText: "Annuleren",
+        destructive: decision.severity === "sterk" || decision.severity === "fail_safe",
+      });
+    },
+    [confirmShift],
+  );
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project");
   const { isManager } = useIsManager();
@@ -1171,6 +1199,9 @@ const Plannen = () => {
       const cel = cellen.get(k);
       if (!cel) return;
       const monteurIds = celMonteurs.get(cel.id) ?? [];
+      // Check urenboek-impact vóór destructieve actie.
+      const ok = await confirmUrenboekImpact(buildExternalIdsForCell(cel.id, monteurIds));
+      if (!ok) return;
       pushHistory({ type: "cel_deleted", cel, monteurIds: [...monteurIds] });
       removeCellLocal(activiteit_id, week_id, dag_index);
       setCelMonteurs((prev) => {
@@ -1184,7 +1215,7 @@ const Plannen = () => {
         loadAll({ silent: true });
       }
     },
-    [cellen, celMonteurs, removeCellLocal, loadAll, pushHistory]
+    [cellen, celMonteurs, removeCellLocal, loadAll, pushHistory, confirmUrenboekImpact]
   );
 
   const updateCellColor = useCallback(
@@ -1257,6 +1288,9 @@ const Plannen = () => {
   }, [pushHistory]);
 
   const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    // Check urenboek-impact vóór destructieve actie.
+    const ok = await confirmUrenboekImpact([buildExternalId(cel.id, monteur_id)]);
+    if (!ok) return;
     const prevArr = (celMonteurs.get(cel.id) ?? []).slice();
     setCelMonteurs((prev) => {
       const m = new Map(prev);
@@ -1279,7 +1313,7 @@ const Plannen = () => {
       });
       toast.error("Monteur verwijderen mislukt: " + error.message);
     }
-  }, [celMonteurs, pushHistory]);
+  }, [celMonteurs, pushHistory, confirmUrenboekImpact]);
 
 
 
