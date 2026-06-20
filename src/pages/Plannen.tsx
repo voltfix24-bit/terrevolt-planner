@@ -1690,7 +1690,7 @@ const Plannen = () => {
       // Stille background refresh — geen globale loader.
       void loadAll({ silent: true });
     },
-    [cellen, celMonteurs, weken, loadAll, pushHistory]
+    [cellen, celMonteurs, weken, loadAll, pushHistory, confirmShift, confirmUrenboekImpact]
   );
 
 
