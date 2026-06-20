@@ -25,12 +25,27 @@ export type UrenStatus =
   | "afgekeurd"
   | "gemengd";
 
+export type ImpactLevel = "safe" | "warning" | "strong" | "unknown";
+
 export interface ImpactResult {
   external_id: string;
   status: ImpactStatus;
   uren_totaal: number;
   status_uren: UrenStatus;
   laatste_boeking_at: string | null;
+}
+
+export interface ImpactSummary {
+  level: ImpactLevel;
+  requiresConfirmation: boolean;
+  title: string;
+  description: string;
+  totalIds: number;
+  syncedCount: number;
+  bookedCount: number;
+  unknownCount: number;
+  totalHours: number;
+  statuses: UrenStatus[];
 }
 
 /** Bouw een stabiele external_id voor een (cel, monteur)-combinatie. */
@@ -43,7 +58,98 @@ export function buildExternalIdsForCell(
   celId: string,
   monteurIds: readonly string[],
 ): string[] {
-  return monteurIds.map((m) => buildExternalId(celId, m));
+  return dedupeExternalIds(monteurIds.map((m) => buildExternalId(celId, m)));
+}
+
+export function dedupeExternalIds(externalIds: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const raw of externalIds) {
+    const externalId = String(raw ?? "").trim();
+    if (!externalId || seen.has(externalId)) continue;
+    seen.add(externalId);
+    result.push(externalId);
+  }
+
+  return result;
+}
+
+export function summarizeImpact(results: readonly ImpactResult[]): ImpactSummary {
+  const totalIds = results.length;
+  const totalHours = results.reduce((sum, row) => sum + Number(row.uren_totaal || 0), 0);
+  const unknownCount = results.filter((row) => row.status === "onbekend").length;
+  const bookedCount = results.filter((row) => row.status === "uren_geregistreerd").length;
+  const syncedCount = results.filter(
+    (row) => row.status === "gesynced_geen_uren" || row.status === "uren_geregistreerd",
+  ).length;
+  const statuses = Array.from(
+    new Set(
+      results
+        .map((row) => row.status_uren)
+        .filter((status): status is UrenStatus => status !== "geen"),
+    ),
+  );
+
+  if (unknownCount > 0) {
+    return {
+      level: "unknown",
+      requiresConfirmation: true,
+      title: "Impact op urenboek onbekend",
+      description:
+        "De urenboek-check kon niet bepalen of hier al uren op staan. Controleer dit bewust voordat je doorgaat.",
+      totalIds,
+      syncedCount,
+      bookedCount,
+      unknownCount,
+      totalHours,
+      statuses,
+    };
+  }
+
+  if (bookedCount > 0) {
+    return {
+      level: "strong",
+      requiresConfirmation: true,
+      title: "Deze planning heeft geregistreerde uren",
+      description: `Er staan ${formatHours(totalHours)} uur in het urenboek gekoppeld aan deze planning. Wijzigen kan verschillen veroorzaken tussen planning en urenregistratie.`,
+      totalIds,
+      syncedCount,
+      bookedCount,
+      unknownCount,
+      totalHours,
+      statuses,
+    };
+  }
+
+  if (syncedCount > 0) {
+    return {
+      level: "warning",
+      requiresConfirmation: true,
+      title: "Deze planning is al zichtbaar in het urenboek",
+      description:
+        "Er zijn nog geen uren geregistreerd, maar de regel is wel al gesynchroniseerd. De monteur kan de wijziging terugzien in de urenboek-app.",
+      totalIds,
+      syncedCount,
+      bookedCount,
+      unknownCount,
+      totalHours,
+      statuses,
+    };
+  }
+
+  return {
+    level: "safe",
+    requiresConfirmation: false,
+    title: "Geen urenboek-impact",
+    description: "Deze planning is nog niet gesynchroniseerd met het urenboek.",
+    totalIds,
+    syncedCount,
+    bookedCount,
+    unknownCount,
+    totalHours,
+    statuses,
+  };
 }
 
 const REQUEST_TIMEOUT_MS = 6_000;
@@ -63,46 +169,73 @@ function isImpactResult(x: unknown): x is ImpactResult {
   const r = x as Record<string, unknown>;
   return (
     typeof r.external_id === "string" &&
-    typeof r.status === "string" &&
+    isImpactStatus(r.status) &&
     typeof r.uren_totaal === "number" &&
-    typeof r.status_uren === "string"
+    isUrenStatus(r.status_uren)
   );
 }
 
 /**
  * Vraag de impactstatus op voor een set external_ids.
- * Input wordt gededupliceerd. Lege input → [].
+ * Input wordt gededupliceerd. Lege input -> [].
  * Onbekende of ontbrekende ids in het antwoord krijgen status "onbekend".
  */
 export async function checkUrenboekImpact(
   externalIds: readonly string[],
 ): Promise<ImpactResult[]> {
-  const unique = Array.from(new Set(externalIds.filter((x) => typeof x === "string" && x.length > 0)));
+  const unique = dedupeExternalIds(externalIds);
   if (unique.length === 0) return [];
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<ImpactResult[]>((resolve) => {
+    timer = setTimeout(() => resolve(onbekendFor(unique)), REQUEST_TIMEOUT_MS);
+  });
+
+  const request = supabase.functions
+    .invoke("urenboek-impact-check", {
+      body: { external_ids: unique },
+    })
+    .then(({ data, error }) => {
+      if (error) return onbekendFor(unique);
+
+      const raw = (data as { results?: unknown })?.results;
+      if (!Array.isArray(raw)) return onbekendFor(unique);
+
+      const byId = new Map<string, ImpactResult>();
+      for (const item of raw) {
+        if (isImpactResult(item)) byId.set(item.external_id, item);
+      }
+      return unique.map((id) => byId.get(id) ?? onbekendFor([id])[0]);
+    })
+    .catch(() => onbekendFor(unique));
 
   try {
-    const { data, error } = await supabase.functions.invoke(
-      "urenboek-impact-check",
-      {
-        body: { external_ids: unique },
-      },
-    );
-    if (error) return onbekendFor(unique);
-
-    const raw = (data as { results?: unknown })?.results;
-    if (!Array.isArray(raw)) return onbekendFor(unique);
-
-    const byId = new Map<string, ImpactResult>();
-    for (const item of raw) {
-      if (isImpactResult(item)) byId.set(item.external_id, item);
-    }
-    return unique.map((id) => byId.get(id) ?? onbekendFor([id])[0]);
-  } catch {
-    return onbekendFor(unique);
+    return await Promise.race([request, timeout]);
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
   }
+}
+
+function isImpactStatus(status: unknown): status is ImpactStatus {
+  return (
+    status === "niet_gesynced" ||
+    status === "gesynced_geen_uren" ||
+    status === "uren_geregistreerd" ||
+    status === "onbekend"
+  );
+}
+
+function isUrenStatus(status: unknown): status is UrenStatus {
+  return (
+    status === "geen" ||
+    status === "concept" ||
+    status === "ingediend" ||
+    status === "goedgekeurd" ||
+    status === "afgekeurd" ||
+    status === "gemengd"
+  );
+}
+
+function formatHours(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
