@@ -1351,6 +1351,10 @@ const Plannen = () => {
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
         if (hasCellContent(targetCel, targetMonteurs)) {
+          const impactOk = await confirmUrenboekImpact(
+            buildExternalIdsForCell(targetCel.id, targetMonteurs)
+          );
+          if (!impactOk) return;
           const ok = await confirmShift(describeOverwrite(1));
           if (!ok) return;
         }
@@ -1401,7 +1405,7 @@ const Plannen = () => {
         overwritten,
       });
     },
-    [cellen, celMonteurs, loadAll, weken, confirmShift, pushHistory]
+    [cellen, celMonteurs, loadAll, weken, confirmShift, confirmUrenboekImpact, pushHistory]
   );
 
   // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
@@ -1459,6 +1463,11 @@ const Plannen = () => {
         if (hasCellContent(existing, monteurs)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
+        const conflictExternalIds = conflicts.flatMap((c) =>
+          buildExternalIdsForCell(c.id, celMonteurs.get(c.id) ?? [])
+        );
+        const impactOk = await confirmUrenboekImpact(conflictExternalIds);
+        if (!impactOk) return;
         const ok = await confirmShift(describeOverwrite(conflicts.length));
         if (!ok) return;
       }
@@ -1538,7 +1547,7 @@ const Plannen = () => {
         overwritten,
       });
     },
-    [cellen, celMonteurs, weken, loadAll, pushHistory]
+    [cellen, celMonteurs, weken, loadAll, pushHistory, confirmShift, confirmUrenboekImpact]
   );
 
   // Wrapper voor drag-and-drop: bepaalt delta op basis van anchor + doel-(week,dag)
@@ -1599,6 +1608,11 @@ const Plannen = () => {
         if (hasCellContent(existing, ms)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
+        const conflictExternalIds = conflicts.flatMap((c) =>
+          buildExternalIdsForCell(c.id, celMonteurs.get(c.id) ?? [])
+        );
+        const impactOk = await confirmUrenboekImpact(conflictExternalIds);
+        if (!impactOk) return;
         const ok = await confirmShift(describeOverwrite(conflicts.length));
         if (!ok) return;
       }
@@ -1676,7 +1690,7 @@ const Plannen = () => {
       // Stille background refresh — geen globale loader.
       void loadAll({ silent: true });
     },
-    [cellen, celMonteurs, weken, loadAll, pushHistory]
+    [cellen, celMonteurs, weken, loadAll, pushHistory, confirmShift, confirmUrenboekImpact]
   );
 
 
