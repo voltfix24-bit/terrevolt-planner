@@ -1405,7 +1405,7 @@ const Plannen = () => {
         overwritten,
       });
     },
-    [cellen, celMonteurs, loadAll, weken, confirmShift, pushHistory]
+    [cellen, celMonteurs, loadAll, weken, confirmShift, confirmUrenboekImpact, pushHistory]
   );
 
   // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
