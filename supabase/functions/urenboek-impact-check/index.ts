@@ -1,6 +1,7 @@
 // Planner-side proxy voor de read-only urenboek impact-check.
 // Houdt de gedeelde URENAPP_SYNC_SECRET server-side, zodat het geheim
 // nooit in de browser komt. Vertaalt fouten naar een veilig "onbekend".
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3.23.8";
 
 const corsHeaders = {
@@ -51,9 +52,26 @@ const onbekend = (ids: string[]): ImpactResult[] =>
     laatste_boeking_at: null,
   }));
 
+async function isManager(req: Request): Promise<boolean> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const authorization = req.headers.get("Authorization");
+  if (!supabaseUrl || !anonKey || !authorization) return false;
+
+  const client = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false },
+  });
+
+  const { data, error } = await client.rpc("is_planner_manager");
+  return !error && data === true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
+
+  if (!(await isManager(req))) return json(403, { error: "forbidden" });
 
   let parsed: z.infer<typeof BodySchema>;
   try {
