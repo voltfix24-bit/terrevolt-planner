@@ -1288,6 +1288,9 @@ const Plannen = () => {
   }, [pushHistory]);
 
   const removeMonteurFromCell = useCallback(async (cel: Cel, monteur_id: string) => {
+    // Check urenboek-impact vóór destructieve actie.
+    const ok = await confirmUrenboekImpact([buildExternalId(cel.id, monteur_id)]);
+    if (!ok) return;
     const prevArr = (celMonteurs.get(cel.id) ?? []).slice();
     setCelMonteurs((prev) => {
       const m = new Map(prev);
@@ -1310,7 +1313,7 @@ const Plannen = () => {
       });
       toast.error("Monteur verwijderen mislukt: " + error.message);
     }
-  }, [celMonteurs, pushHistory]);
+  }, [celMonteurs, pushHistory, confirmUrenboekImpact]);
 
 
 
