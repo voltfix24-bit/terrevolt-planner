@@ -79,6 +79,12 @@ import {
 } from "@/lib/monteur-beschikbaarheid";
 import { checkCelVoldoet, voldoetAanwijzing, type Aanwijzing } from "@/lib/aanwijzing";
 import { useConfirm, describeShift, describeOverwrite } from "@/components/ConfirmDialog";
+import {
+  checkUrenboekImpact,
+  buildExternalId,
+  buildExternalIdsForCell,
+} from "@/lib/urenboek-impact";
+import { decideImpactWarning } from "@/lib/urenboek-impact-dialog";
 import { setAuditLabel } from "@/lib/audit";
 import { normalizeProjectWeeks } from "@/lib/project-weken";
 import { hasCellContent, prepareFillTargets } from "@/lib/cell-conflicts";
