@@ -1463,6 +1463,11 @@ const Plannen = () => {
         if (hasCellContent(existing, monteurs)) conflicts.push(existing);
       }
       if (conflicts.length > 0) {
+        const conflictExternalIds = conflicts.flatMap((c) =>
+          buildExternalIdsForCell(c.id, celMonteurs.get(c.id) ?? [])
+        );
+        const impactOk = await confirmUrenboekImpact(conflictExternalIds);
+        if (!impactOk) return;
         const ok = await confirmShift(describeOverwrite(conflicts.length));
         if (!ok) return;
       }
