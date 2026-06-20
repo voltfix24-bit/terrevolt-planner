@@ -1351,6 +1351,10 @@ const Plannen = () => {
       if (targetCel) {
         const targetMonteurs = celMonteurs.get(targetCel.id) ?? [];
         if (hasCellContent(targetCel, targetMonteurs)) {
+          const impactOk = await confirmUrenboekImpact(
+            buildExternalIdsForCell(targetCel.id, targetMonteurs)
+          );
+          if (!impactOk) return;
           const ok = await confirmShift(describeOverwrite(1));
           if (!ok) return;
         }
