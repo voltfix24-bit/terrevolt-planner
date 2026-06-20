@@ -1199,6 +1199,9 @@ const Plannen = () => {
       const cel = cellen.get(k);
       if (!cel) return;
       const monteurIds = celMonteurs.get(cel.id) ?? [];
+      // Check urenboek-impact vóór destructieve actie.
+      const ok = await confirmUrenboekImpact(buildExternalIdsForCell(cel.id, monteurIds));
+      if (!ok) return;
       pushHistory({ type: "cel_deleted", cel, monteurIds: [...monteurIds] });
       removeCellLocal(activiteit_id, week_id, dag_index);
       setCelMonteurs((prev) => {
@@ -1212,7 +1215,7 @@ const Plannen = () => {
         loadAll({ silent: true });
       }
     },
-    [cellen, celMonteurs, removeCellLocal, loadAll, pushHistory]
+    [cellen, celMonteurs, removeCellLocal, loadAll, pushHistory, confirmUrenboekImpact]
   );
 
   const updateCellColor = useCallback(
