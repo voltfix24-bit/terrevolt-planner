@@ -2924,9 +2924,9 @@ export default function Overzicht() {
                             toggleProjectHidden(p.id);
                           }}
                           title={hiddenProjectIds.has(p.id)
-                            ? "Project weer tonen in overzicht"
-                            : "Project tijdelijk verbergen in overzicht (alleen voor jou)"}
-                          aria-label={hiddenProjectIds.has(p.id) ? "Project tonen" : "Project verbergen"}
+                            ? "Tekst weer leesbaar maken"
+                            : "Tekst onleesbaar maken (alleen voor jou — project blijft op zijn plek)"}
+                          aria-label={hiddenProjectIds.has(p.id) ? "Tekst weer leesbaar maken" : "Tekst onleesbaar maken"}
                           className="absolute right-5 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded hover:bg-fg/[0.08] transition-opacity"
                           style={{
                             opacity: hiddenProjectIds.has(p.id) ? 0.7 : 0,
