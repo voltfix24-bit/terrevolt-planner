@@ -1965,6 +1965,59 @@ export default function Overzicht() {
                     <option value="afgerond">Afgerond</option>
                   </select>
                 </label>
+                <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">
+                  Opdrachtgever
+                  <select
+                    value={filterOpdrachtgeverId}
+                    onChange={(e) => setFilterOpdrachtgeverId(e.target.value)}
+                    className="h-10 rounded-md border bg-fg/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgb(var(--fg-rgb) / 0.12)" }}
+                  >
+                    <option value="">Alle opdrachtgevers</option>
+                    {opdrachtgevers.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.naam}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div
+                  className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5"
+                  style={{ borderColor: "rgb(var(--fg-rgb) / 0.12)", background: "rgb(var(--fg-rgb) / 0.04)" }}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-foreground">
+                      Verborgen projecten tonen
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {hiddenCount === 0
+                        ? "Geen projecten verborgen"
+                        : `${hiddenCount} project${hiddenCount === 1 ? "" : "en"} verborgen`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowHidden((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
+                    style={{
+                      borderColor: showHidden ? "rgba(16,185,129,0.4)" : "rgb(var(--fg-rgb) / 0.12)",
+                      background: showHidden ? "rgba(16,185,129,0.12)" : "rgb(var(--fg-rgb) / 0.04)",
+                      color: showHidden ? "#10b981" : "rgb(var(--fg-rgb) / 0.85)",
+                    }}
+                  >
+                    {showHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {showHidden ? "Aan" : "Uit"}
+                  </button>
+                </div>
+                {hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setHiddenProjectIds(new Set())}
+                    className="self-start text-xs font-semibold text-primary hover:underline"
+                  >
+                    Alle verborgen projecten weer tonen ({hiddenCount})
+                  </button>
+                )}
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
