@@ -406,8 +406,7 @@ export default function Overzicht() {
     (filterProjectId ? 1 : 0) +
     (filterMonteurId ? 1 : 0) +
     (filterStatus ? 1 : 0) +
-    (filterOpdrachtgeverId ? 1 : 0) +
-    (hiddenCount > 0 && !showHidden ? 1 : 0);
+    (filterOpdrachtgeverId ? 1 : 0);
   const clearFilters = () => {
     setFilterProjectId("");
     setFilterMonteurId("");
@@ -900,10 +899,9 @@ export default function Overzicht() {
       if (filterProjectId && p.id !== filterProjectId) return false;
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
       if (filterOpdrachtgeverId && p.opdrachtgever_id !== filterOpdrachtgeverId) return false;
-      if (!showHidden && hiddenProjectIds.has(p.id)) return false;
       return true;
     });
-  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus, filterOpdrachtgeverId, showHidden, hiddenProjectIds]);
+  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus, filterOpdrachtgeverId]);
 
   // ====== Handmatige sortering (drag & drop binnen dezelfde bucket) ======
   const [dragProjectId, setDragProjectId] = useState<string | null>(null);
@@ -1987,37 +1985,30 @@ export default function Overzicht() {
                 >
                   <div className="flex flex-col">
                     <span className="text-xs font-semibold text-foreground">
-                      Verborgen projecten tonen
+                      Onleesbaar gemaakte projecten
                     </span>
                     <span className="text-[11px] text-muted-foreground">
                       {hiddenCount === 0
-                        ? "Geen projecten verborgen"
-                        : `${hiddenCount} project${hiddenCount === 1 ? "" : "en"} verborgen`}
+                        ? "Geen projecten onleesbaar"
+                        : `${hiddenCount} project${hiddenCount === 1 ? "" : "en"} onleesbaar — klik op het oogje in de lijst om te herstellen`}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowHidden((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
-                    style={{
-                      borderColor: showHidden ? "rgba(16,185,129,0.4)" : "rgb(var(--fg-rgb) / 0.12)",
-                      background: showHidden ? "rgba(16,185,129,0.12)" : "rgb(var(--fg-rgb) / 0.04)",
-                      color: showHidden ? "#10b981" : "rgb(var(--fg-rgb) / 0.85)",
-                    }}
-                  >
-                    {showHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    {showHidden ? "Aan" : "Uit"}
-                  </button>
+                  {hiddenCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setHiddenProjectIds(new Set())}
+                      className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
+                      style={{
+                        borderColor: "rgba(16,185,129,0.4)",
+                        background: "rgba(16,185,129,0.12)",
+                        color: "#10b981",
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Alles herstellen
+                    </button>
+                  )}
                 </div>
-                {hiddenCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setHiddenProjectIds(new Set())}
-                    className="self-start text-xs font-semibold text-primary hover:underline"
-                  >
-                    Alle verborgen projecten weer tonen ({hiddenCount})
-                  </button>
-                )}
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
@@ -2793,7 +2784,7 @@ export default function Overzicht() {
                               }}
                             />
                           </button>
-                          <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
+                          <div style={{ overflow: "hidden", flex: 1, minWidth: 0, filter: hiddenProjectIds.has(p.id) ? "blur(4px)" : undefined, transition: "filter 0.15s ease" }}>
                             {/* Top row: case nummer chip + status pill */}
                             <div
                               style={{
@@ -2933,9 +2924,9 @@ export default function Overzicht() {
                             toggleProjectHidden(p.id);
                           }}
                           title={hiddenProjectIds.has(p.id)
-                            ? "Project weer tonen in overzicht"
-                            : "Project tijdelijk verbergen in overzicht (alleen voor jou)"}
-                          aria-label={hiddenProjectIds.has(p.id) ? "Project tonen" : "Project verbergen"}
+                            ? "Tekst weer leesbaar maken"
+                            : "Tekst onleesbaar maken (alleen voor jou — project blijft op zijn plek)"}
+                          aria-label={hiddenProjectIds.has(p.id) ? "Tekst weer leesbaar maken" : "Tekst onleesbaar maken"}
                           className="absolute right-5 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded hover:bg-fg/[0.08] transition-opacity"
                           style={{
                             opacity: hiddenProjectIds.has(p.id) ? 0.7 : 0,
@@ -3156,7 +3147,7 @@ export default function Overzicht() {
                 const acts = activiteitenByProject.get(p.id) ?? [];
                 const conflictSet = projectSlotConflicts.get(p.id);
                 return (
-                  <div key={p.id}>
+                  <div key={p.id} style={{ filter: hiddenProjectIds.has(p.id) ? "blur(4px)" : undefined, transition: "filter 0.15s ease" }}>
                     {/* Project bar row */}
                     <div
                       onClick={(e) => {
