@@ -3147,7 +3147,7 @@ export default function Overzicht() {
                 const acts = activiteitenByProject.get(p.id) ?? [];
                 const conflictSet = projectSlotConflicts.get(p.id);
                 return (
-                  <div key={p.id}>
+                  <div key={p.id} style={{ filter: hiddenProjectIds.has(p.id) ? "blur(4px)" : undefined, transition: "filter 0.15s ease" }}>
                     {/* Project bar row */}
                     <div
                       onClick={(e) => {
