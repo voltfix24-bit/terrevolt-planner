@@ -2924,6 +2924,33 @@ export default function Overzicht() {
                           </div>
                         </>
                       )}
+                      {/* Eye toggle: tijdelijk verbergen (lokaal opgeslagen) */}
+                      {!sidebarCollapsed && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleProjectHidden(p.id);
+                          }}
+                          title={hiddenProjectIds.has(p.id)
+                            ? "Project weer tonen in overzicht"
+                            : "Project tijdelijk verbergen in overzicht (alleen voor jou)"}
+                          aria-label={hiddenProjectIds.has(p.id) ? "Project tonen" : "Project verbergen"}
+                          className="absolute right-5 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded hover:bg-fg/[0.08] transition-opacity"
+                          style={{
+                            opacity: hiddenProjectIds.has(p.id) ? 0.7 : 0,
+                            color: hiddenProjectIds.has(p.id) ? "#10b981" : "rgb(var(--fg-rgb) / 0.55)",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = hiddenProjectIds.has(p.id) ? "0.7" : "0";
+                          }}
+                        >
+                          {hiddenProjectIds.has(p.id)
+                            ? <EyeOff className="h-3.5 w-3.5" />
+                            : <Eye className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
                       {/* Hover arrow indicator (positioned absolutely so it doesn't affect layout) */}
                       {!sidebarCollapsed && (
                         <ArrowRight
