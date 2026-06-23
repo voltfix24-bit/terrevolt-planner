@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
@@ -128,6 +128,29 @@ interface Project {
   asbest_dagen: number | null;
   planning_sort_order: number | null;
   planning_sort_bucket: string | null;
+  opdrachtgever_id: string | null;
+}
+
+interface Opdrachtgever {
+  id: string;
+  naam: string;
+}
+
+// LocalStorage keys for client-side "hide project" preferences.
+const LS_HIDDEN_PROJECTS = "overzicht.hiddenProjectIds";
+const LS_SHOW_HIDDEN = "overzicht.showHidden";
+const LS_FILTER_OPDRACHTGEVER = "overzicht.filterOpdrachtgeverId";
+
+function loadHiddenSet(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(LS_HIDDEN_PROJECTS);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr.filter((x): x is string => typeof x === "string")) : new Set();
+  } catch {
+    return new Set();
+  }
 }
 
 interface Week {
@@ -336,12 +359,60 @@ export default function Overzicht() {
   const [filterProjectId, setFilterProjectId] = useState<string>("");
   const [filterMonteurId, setFilterMonteurId] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterOpdrachtgeverId, setFilterOpdrachtgeverId] = useState<string>(() =>
+    typeof window !== "undefined" ? window.localStorage.getItem(LS_FILTER_OPDRACHTGEVER) ?? "" : "",
+  );
+  const [opdrachtgevers, setOpdrachtgevers] = useState<Opdrachtgever[]>([]);
+  const [hiddenProjectIds, setHiddenProjectIds] = useState<Set<string>>(() => loadHiddenSet());
+  const [showHidden, setShowHidden] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.localStorage.getItem(LS_SHOW_HIDDEN) === "1" : false,
+  );
+
+  // Persist hide/filter preferences to localStorage.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(LS_HIDDEN_PROJECTS, JSON.stringify([...hiddenProjectIds]));
+  }, [hiddenProjectIds]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(LS_SHOW_HIDDEN, showHidden ? "1" : "0");
+  }, [showHidden]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (filterOpdrachtgeverId) {
+      window.localStorage.setItem(LS_FILTER_OPDRACHTGEVER, filterOpdrachtgeverId);
+    } else {
+      window.localStorage.removeItem(LS_FILTER_OPDRACHTGEVER);
+    }
+  }, [filterOpdrachtgeverId]);
+
+  const toggleProjectHidden = useCallback((projectId: string) => {
+    setHiddenProjectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }, []);
+
+  const hiddenCount = useMemo(() => {
+    // Only count hidden projects that still exist in the dataset.
+    let n = 0;
+    for (const p of projecten) if (hiddenProjectIds.has(p.id)) n++;
+    return n;
+  }, [projecten, hiddenProjectIds]);
+
   const activeFilterCount =
-    (filterProjectId ? 1 : 0) + (filterMonteurId ? 1 : 0) + (filterStatus ? 1 : 0);
+    (filterProjectId ? 1 : 0) +
+    (filterMonteurId ? 1 : 0) +
+    (filterStatus ? 1 : 0) +
+    (filterOpdrachtgeverId ? 1 : 0) +
+    (hiddenCount > 0 && !showHidden ? 1 : 0);
   const clearFilters = () => {
     setFilterProjectId("");
     setFilterMonteurId("");
     setFilterStatus("");
+    setFilterOpdrachtgeverId("");
   };
 
   // Scroll sync between sticky header and vertically-scrolling body
@@ -550,10 +621,10 @@ export default function Overzicht() {
 
   // ====== Fetch all data once (gedeelde fetch voor initial + focus) ======
   const fetchAllData = useCallback(async (targetJaar: number, signal?: AbortSignal) => {
-    const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes, afwRes] = await Promise.all([
+    const [pRes, wRes, aRes, cRes, mRes, cmRes, fRes, afwRes, oRes] = await Promise.all([
       supabase
         .from("projecten")
-        .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen, planning_sort_order, planning_sort_bucket")
+        .select("id, case_nummer, station_naam, status, jaar, created_at, gsu_datum, geu_datum, bouwkundig_benodigd, bouwkundig_dagen, asbest_benodigd, asbest_dagen, planning_sort_order, planning_sort_bucket, opdrachtgever_id")
         .order("created_at", { ascending: true }),
       supabase.from("project_weken").select("id, project_id, week_nr, jaar, positie"),
       supabase.from("project_activiteiten").select("id, project_id, naam, capaciteit_type, positie"),
@@ -576,6 +647,7 @@ export default function Overzicht() {
       supabase
         .from("monteur_afwezigheid")
         .select("monteur_id, datum_van, datum_tot, type, omschrijving"),
+      supabase.from("opdrachtgevers").select("id, naam").order("naam", { ascending: true }),
     ]);
     if (signal?.aborted) return;
     setProjecten((pRes.data ?? []) as Project[]);
@@ -586,6 +658,7 @@ export default function Overzicht() {
     setCelMonteurs((cmRes.data ?? []) as CelMonteur[]);
     setFeestdagen((fRes.data ?? []) as { datum: string; naam: string }[]);
     setAfwezigheid((afwRes.data ?? []) as { monteur_id: string; datum_van: string; datum_tot: string; type: string; omschrijving: string | null }[]);
+    setOpdrachtgevers((oRes.data ?? []) as Opdrachtgever[]);
   }, []);
 
   // Initial load + her-fetch wanneer jaar wijzigt
@@ -826,9 +899,11 @@ export default function Overzicht() {
     return sorted.filter((p) => {
       if (filterProjectId && p.id !== filterProjectId) return false;
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
+      if (filterOpdrachtgeverId && p.opdrachtgever_id !== filterOpdrachtgeverId) return false;
+      if (!showHidden && hiddenProjectIds.has(p.id)) return false;
       return true;
     });
-  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus]);
+  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus, filterOpdrachtgeverId, showHidden, hiddenProjectIds]);
 
   // ====== Handmatige sortering (drag & drop binnen dezelfde bucket) ======
   const [dragProjectId, setDragProjectId] = useState<string | null>(null);
@@ -1890,6 +1965,59 @@ export default function Overzicht() {
                     <option value="afgerond">Afgerond</option>
                   </select>
                 </label>
+                <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted-foreground">
+                  Opdrachtgever
+                  <select
+                    value={filterOpdrachtgeverId}
+                    onChange={(e) => setFilterOpdrachtgeverId(e.target.value)}
+                    className="h-10 rounded-md border bg-fg/[0.04] px-3 text-sm text-foreground"
+                    style={{ borderColor: "rgb(var(--fg-rgb) / 0.12)" }}
+                  >
+                    <option value="">Alle opdrachtgevers</option>
+                    {opdrachtgevers.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.naam}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div
+                  className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5"
+                  style={{ borderColor: "rgb(var(--fg-rgb) / 0.12)", background: "rgb(var(--fg-rgb) / 0.04)" }}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-foreground">
+                      Verborgen projecten tonen
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {hiddenCount === 0
+                        ? "Geen projecten verborgen"
+                        : `${hiddenCount} project${hiddenCount === 1 ? "" : "en"} verborgen`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowHidden((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
+                    style={{
+                      borderColor: showHidden ? "rgba(16,185,129,0.4)" : "rgb(var(--fg-rgb) / 0.12)",
+                      background: showHidden ? "rgba(16,185,129,0.12)" : "rgb(var(--fg-rgb) / 0.04)",
+                      color: showHidden ? "#10b981" : "rgb(var(--fg-rgb) / 0.85)",
+                    }}
+                  >
+                    {showHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {showHidden ? "Aan" : "Uit"}
+                  </button>
+                </div>
+                {hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setHiddenProjectIds(new Set())}
+                    className="self-start text-xs font-semibold text-primary hover:underline"
+                  >
+                    Alle verborgen projecten weer tonen ({hiddenCount})
+                  </button>
+                )}
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
@@ -2795,6 +2923,33 @@ export default function Overzicht() {
                             )}
                           </div>
                         </>
+                      )}
+                      {/* Eye toggle: tijdelijk verbergen (lokaal opgeslagen) */}
+                      {!sidebarCollapsed && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleProjectHidden(p.id);
+                          }}
+                          title={hiddenProjectIds.has(p.id)
+                            ? "Project weer tonen in overzicht"
+                            : "Project tijdelijk verbergen in overzicht (alleen voor jou)"}
+                          aria-label={hiddenProjectIds.has(p.id) ? "Project tonen" : "Project verbergen"}
+                          className="absolute right-5 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded hover:bg-fg/[0.08] transition-opacity"
+                          style={{
+                            opacity: hiddenProjectIds.has(p.id) ? 0.7 : 0,
+                            color: hiddenProjectIds.has(p.id) ? "#10b981" : "rgb(var(--fg-rgb) / 0.55)",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = hiddenProjectIds.has(p.id) ? "0.7" : "0";
+                          }}
+                        >
+                          {hiddenProjectIds.has(p.id)
+                            ? <EyeOff className="h-3.5 w-3.5" />
+                            : <Eye className="h-3.5 w-3.5" />}
+                        </button>
                       )}
                       {/* Hover arrow indicator (positioned absolutely so it doesn't affect layout) */}
                       {!sidebarCollapsed && (
