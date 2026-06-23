@@ -2784,7 +2784,7 @@ export default function Overzicht() {
                               }}
                             />
                           </button>
-                          <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
+                          <div style={{ overflow: "hidden", flex: 1, minWidth: 0, filter: hiddenProjectIds.has(p.id) ? "blur(4px)" : undefined, transition: "filter 0.15s ease" }}>
                             {/* Top row: case nummer chip + status pill */}
                             <div
                               style={{
