@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
@@ -128,6 +128,29 @@ interface Project {
   asbest_dagen: number | null;
   planning_sort_order: number | null;
   planning_sort_bucket: string | null;
+  opdrachtgever_id: string | null;
+}
+
+interface Opdrachtgever {
+  id: string;
+  naam: string;
+}
+
+// LocalStorage keys for client-side "hide project" preferences.
+const LS_HIDDEN_PROJECTS = "overzicht.hiddenProjectIds";
+const LS_SHOW_HIDDEN = "overzicht.showHidden";
+const LS_FILTER_OPDRACHTGEVER = "overzicht.filterOpdrachtgeverId";
+
+function loadHiddenSet(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(LS_HIDDEN_PROJECTS);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr.filter((x): x is string => typeof x === "string")) : new Set();
+  } catch {
+    return new Set();
+  }
 }
 
 interface Week {
