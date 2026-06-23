@@ -899,9 +899,11 @@ export default function Overzicht() {
     return sorted.filter((p) => {
       if (filterProjectId && p.id !== filterProjectId) return false;
       if (filterStatus && (p.status ?? "concept") !== filterStatus) return false;
+      if (filterOpdrachtgeverId && p.opdrachtgever_id !== filterOpdrachtgeverId) return false;
+      if (!showHidden && hiddenProjectIds.has(p.id)) return false;
       return true;
     });
-  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus]);
+  }, [projecten, projectCellDates, todayMs, filterProjectId, filterStatus, filterOpdrachtgeverId, showHidden, hiddenProjectIds]);
 
   // ====== Handmatige sortering (drag & drop binnen dezelfde bucket) ======
   const [dragProjectId, setDragProjectId] = useState<string | null>(null);
