@@ -1985,37 +1985,30 @@ export default function Overzicht() {
                 >
                   <div className="flex flex-col">
                     <span className="text-xs font-semibold text-foreground">
-                      Verborgen projecten tonen
+                      Onleesbaar gemaakte projecten
                     </span>
                     <span className="text-[11px] text-muted-foreground">
                       {hiddenCount === 0
-                        ? "Geen projecten verborgen"
-                        : `${hiddenCount} project${hiddenCount === 1 ? "" : "en"} verborgen`}
+                        ? "Geen projecten onleesbaar"
+                        : `${hiddenCount} project${hiddenCount === 1 ? "" : "en"} onleesbaar — klik op het oogje in de lijst om te herstellen`}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowHidden((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
-                    style={{
-                      borderColor: showHidden ? "rgba(16,185,129,0.4)" : "rgb(var(--fg-rgb) / 0.12)",
-                      background: showHidden ? "rgba(16,185,129,0.12)" : "rgb(var(--fg-rgb) / 0.04)",
-                      color: showHidden ? "#10b981" : "rgb(var(--fg-rgb) / 0.85)",
-                    }}
-                  >
-                    {showHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    {showHidden ? "Aan" : "Uit"}
-                  </button>
+                  {hiddenCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setHiddenProjectIds(new Set())}
+                      className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
+                      style={{
+                        borderColor: "rgba(16,185,129,0.4)",
+                        background: "rgba(16,185,129,0.12)",
+                        color: "#10b981",
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Alles herstellen
+                    </button>
+                  )}
                 </div>
-                {hiddenCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setHiddenProjectIds(new Set())}
-                    className="self-start text-xs font-semibold text-primary hover:underline"
-                  >
-                    Alle verborgen projecten weer tonen ({hiddenCount})
-                  </button>
-                )}
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
