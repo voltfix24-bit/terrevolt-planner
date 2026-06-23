@@ -359,12 +359,60 @@ export default function Overzicht() {
   const [filterProjectId, setFilterProjectId] = useState<string>("");
   const [filterMonteurId, setFilterMonteurId] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterOpdrachtgeverId, setFilterOpdrachtgeverId] = useState<string>(() =>
+    typeof window !== "undefined" ? window.localStorage.getItem(LS_FILTER_OPDRACHTGEVER) ?? "" : "",
+  );
+  const [opdrachtgevers, setOpdrachtgevers] = useState<Opdrachtgever[]>([]);
+  const [hiddenProjectIds, setHiddenProjectIds] = useState<Set<string>>(() => loadHiddenSet());
+  const [showHidden, setShowHidden] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.localStorage.getItem(LS_SHOW_HIDDEN) === "1" : false,
+  );
+
+  // Persist hide/filter preferences to localStorage.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(LS_HIDDEN_PROJECTS, JSON.stringify([...hiddenProjectIds]));
+  }, [hiddenProjectIds]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(LS_SHOW_HIDDEN, showHidden ? "1" : "0");
+  }, [showHidden]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (filterOpdrachtgeverId) {
+      window.localStorage.setItem(LS_FILTER_OPDRACHTGEVER, filterOpdrachtgeverId);
+    } else {
+      window.localStorage.removeItem(LS_FILTER_OPDRACHTGEVER);
+    }
+  }, [filterOpdrachtgeverId]);
+
+  const toggleProjectHidden = useCallback((projectId: string) => {
+    setHiddenProjectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }, []);
+
+  const hiddenCount = useMemo(() => {
+    // Only count hidden projects that still exist in the dataset.
+    let n = 0;
+    for (const p of projecten) if (hiddenProjectIds.has(p.id)) n++;
+    return n;
+  }, [projecten, hiddenProjectIds]);
+
   const activeFilterCount =
-    (filterProjectId ? 1 : 0) + (filterMonteurId ? 1 : 0) + (filterStatus ? 1 : 0);
+    (filterProjectId ? 1 : 0) +
+    (filterMonteurId ? 1 : 0) +
+    (filterStatus ? 1 : 0) +
+    (filterOpdrachtgeverId ? 1 : 0) +
+    (hiddenCount > 0 && !showHidden ? 1 : 0);
   const clearFilters = () => {
     setFilterProjectId("");
     setFilterMonteurId("");
     setFilterStatus("");
+    setFilterOpdrachtgeverId("");
   };
 
   // Scroll sync between sticky header and vertically-scrolling body
