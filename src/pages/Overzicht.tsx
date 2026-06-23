@@ -406,8 +406,7 @@ export default function Overzicht() {
     (filterProjectId ? 1 : 0) +
     (filterMonteurId ? 1 : 0) +
     (filterStatus ? 1 : 0) +
-    (filterOpdrachtgeverId ? 1 : 0) +
-    (hiddenCount > 0 && !showHidden ? 1 : 0);
+    (filterOpdrachtgeverId ? 1 : 0);
   const clearFilters = () => {
     setFilterProjectId("");
     setFilterMonteurId("");
