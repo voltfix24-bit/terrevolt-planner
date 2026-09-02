@@ -111,7 +111,7 @@ function formatDateShort(s: string | null): string {
   return `${d.getDate()} ${NL_MONTHS[d.getMonth()].toLowerCase()}${withYear ? ` '${String(d.getFullYear()).slice(2)}` : ""}`;
 }
 
-type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
+type Status = "concept" | "gepland" | "in_uitvoering" | "on_hold" | "afgerond";
 
 interface Project {
   id: string;
@@ -265,6 +265,8 @@ function statusColor(status: Status | null): { bg: string; text: string; label: 
       return { bg: "var(--status-gepland-bg)", text: "var(--status-gepland-fg)", label: "Gepland" };
     case "in_uitvoering":
       return { bg: "var(--status-uitvoering-bg)", text: "var(--status-uitvoering-fg)", label: "In uitvoering" };
+    case "on_hold":
+      return { bg: "rgb(var(--fg-rgb) / 0.12)", text: "rgb(var(--fg-rgb) / 0.65)", label: "On hold" };
     case "afgerond":
       return { bg: "rgb(var(--fg-rgb) / 0.15)", text: "rgb(var(--fg-rgb) / 0.6)", label: "Afgerond" };
     case "concept":
@@ -693,6 +695,20 @@ export default function Overzicht() {
     return m;
   }, [weken]);
 
+  // Cellen van projecten met status "on hold": planning blijft zichtbaar,
+  // maar telt niet mee als capaciteitsreservering of conflict.
+  const onHoldCelIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const c of cellen) {
+      if (!c.activiteit_id) continue;
+      const act = activiteitById.get(c.activiteit_id);
+      const pid = act?.project_id;
+      if (!pid) continue;
+      if (projectById.get(pid)?.status === "on_hold") ids.add(c.id);
+    }
+    return ids;
+  }, [cellen, activiteitById, projectById]);
+
   // Set van cel-id's die in een relevant jaar (huidig jaar ± 2) vallen.
   // Voorkomt dat we bij grote historische datasets duizenden oude cellen meenemen
   // in slot/segment-berekeningen. Visuele output verandert hierdoor niet.
@@ -728,6 +744,7 @@ export default function Overzicht() {
     const m = new Map<string, Map<string, Set<string>>>();
     for (const c of cellen) {
       if (!relevantCelIds.has(c.id)) continue;
+      if (onHoldCelIds.has(c.id)) continue;
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
@@ -746,7 +763,7 @@ export default function Overzicht() {
       }
     }
     return m;
-  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds, jaar]);
+  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds, onHoldCelIds, jaar]);
 
   // dayKey → Set<monteurId> double-booked on that day
   // dayKey → monteurId → reden ("dubbel" | "verlof" | "vrije_dag")
@@ -1045,6 +1062,7 @@ export default function Overzicht() {
     const m = new Map<string, Set<number>>();
     for (const c of cellen) {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
+      if (onHoldCelIds.has(c.id)) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
       if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
@@ -1063,7 +1081,7 @@ export default function Overzicht() {
       s.add(si);
     }
     return m;
-  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot, visibleWeekNrSet, jaar]);
+  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot, visibleWeekNrSet, onHoldCelIds, jaar]);
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
   // Excludes feestdagen consistently (both in possible and planned).
@@ -1104,6 +1122,7 @@ export default function Overzicht() {
     const planned = new Set<string>();
     for (const cel of cellen) {
       if (!cel.week_id) continue;
+      if (onHoldCelIds.has(cel.id)) continue;
       const week = weekById.get(cel.week_id);
       if (!week) continue;
       if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
@@ -1117,7 +1136,7 @@ export default function Overzicht() {
     }
 
     return Math.round((planned.size / totalPossible) * 100);
-  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById, feestdagMap]);
+  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById, feestdagMap, onHoldCelIds]);
 
   // Vrije dagen per monteur in zichtbare periode
   // (werkdagen exclusief feestdagen − dagen met inplanning op niet-feestdagen)
@@ -1139,6 +1158,7 @@ export default function Overzicht() {
       const planned = new Set<string>();
       for (const cel of cellen) {
         if (!cel.week_id) continue;
+        if (onHoldCelIds.has(cel.id)) continue;
         const week = weekById.get(cel.week_id);
         if (!week) continue;
         if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
@@ -1150,7 +1170,7 @@ export default function Overzicht() {
       map.set(m.id, totalDays - planned.size);
     }
     return map;
-  }, [monteurs, visibleWeekNrSet, cellen, weekById, monteurIdsByCel, jaar, feestdagMap]);
+  }, [monteurs, visibleWeekNrSet, cellen, weekById, monteurIdsByCel, jaar, feestdagMap, onHoldCelIds]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
@@ -1960,6 +1980,7 @@ export default function Overzicht() {
                     <option value="concept">Concept</option>
                     <option value="gepland">Gepland</option>
                     <option value="in_uitvoering">In uitvoering</option>
+                    <option value="on_hold">On hold</option>
                     <option value="afgerond">Afgerond</option>
                   </select>
                 </label>
