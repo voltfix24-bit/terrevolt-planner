@@ -3268,7 +3268,13 @@ export default function Overzicht() {
                                         ? "0 0 0 1px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.4)"
                                         : undefined,
                                     }}
-                                    title={segHasConflict ? "Conflict: monteur dubbel ingepland, op verlof of vrije dag" : undefined}
+                                    title={
+                                      segHasConflict
+                                        ? "Conflict: monteur dubbel ingepland, op verlof of vrije dag"
+                                        : p.status === "on_hold"
+                                          ? "On hold: planning blijft staan maar telt niet mee als capaciteitsreservering"
+                                          : undefined
+                                    }
                                   >
                                     {segHasConflict && (
                                       <span
