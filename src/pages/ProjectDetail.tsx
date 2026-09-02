@@ -44,7 +44,7 @@ import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
 // =====================================================
 // Types
 // =====================================================
-type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
+type Status = "concept" | "gepland" | "in_uitvoering" | "on_hold" | "afgerond";
 type SectionState = "empty" | "partial" | "complete";
 
 interface Lookup {
@@ -1303,6 +1303,7 @@ const ProjectDetail = () => {
                       { value: "concept", label: "Concept" },
                       { value: "gepland", label: "Gepland" },
                       { value: "in_uitvoering", label: "In uitvoering" },
+                      { value: "on_hold", label: "On hold" },
                       { value: "afgerond", label: "Afgerond" },
                     ]}
                   />

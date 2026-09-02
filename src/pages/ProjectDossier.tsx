@@ -114,6 +114,10 @@ const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
     label: "In Uitvoering",
     cls: "border-primary/40 bg-primary/[0.10] text-primary",
   },
+  on_hold: {
+    label: "On Hold",
+    cls: "border-muted-foreground/30 bg-fg/[0.05] text-muted-foreground",
+  },
   afgerond: {
     label: "Afgerond",
     cls: "border-primary/30 bg-primary/[0.08] text-primary",

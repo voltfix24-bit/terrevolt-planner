@@ -841,7 +841,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
         projectIds.length
           ? supabase
               .from("projecten")
-              .select("id, case_nummer")
+              .select("id, case_nummer, status")
               .in("id", projectIds)
           : Promise.resolve({ data: [], error: null } as any),
       ]);
@@ -913,6 +913,8 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
       cms.forEach((cm) => {
         const cel = celById[cm.cel_id];
         if (!cel || !cel.project_id) return;
+        // On hold: planning blijft bestaan maar telt niet mee als capaciteitsreservering.
+        if (onHoldProjectIds.has(cel.project_id)) return;
         const monday = weekNrToMonday[`${cel.jaar}-${cel.week_nr}`];
         if (!monday) return;
         const date = addDays(monday, cel.dag_index);
@@ -929,6 +931,12 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
           finalMap[mid][k] = Array.from(set);
         });
       });
+
+      const onHoldProjectIds = new Set(
+        ((projRes.data ?? []) as { id: string; status: string | null }[])
+          .filter((p) => p.status === "on_hold")
+          .map((p) => p.id),
+      );
 
       const projMap: Record<string, ProjectInfo> = {};
       ((projRes.data ?? []) as ProjectInfo[]).forEach((p) => {

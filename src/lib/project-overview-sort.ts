@@ -1,6 +1,6 @@
 import { getMondayOfWeek } from "./planning-types";
 
-export type OverviewStatus = "gepland" | "in_uitvoering" | "afgerond" | "concept" | null | undefined;
+export type OverviewStatus = "gepland" | "in_uitvoering" | "on_hold" | "afgerond" | "concept" | null | undefined;
 export type PlanningCategory = "future" | "past" | "none";
 
 export interface OverviewProject {
@@ -37,7 +37,8 @@ export function statusRank(status: OverviewStatus): number {
     case "in_uitvoering": return 0;
     case "gepland": return 1;
     case "concept": return 2;
-    case "afgerond": return 3;
+    case "on_hold": return 3;
+    case "afgerond": return 4;
     default: return 2;
   }
 }

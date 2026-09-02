@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { assessPlanningRange, type PlanningWeek } from "@/lib/planning-safety";
 
-type Status = "concept" | "gepland" | "in_uitvoering" | "afgerond";
+type Status = "concept" | "gepland" | "in_uitvoering" | "on_hold" | "afgerond";
 
 interface Opdrachtgever {
   id: string;
@@ -64,6 +64,7 @@ const STATUS_FILTERS: { key: "alle" | Status; label: string }[] = [
   { key: "concept", label: "Concept" },
   { key: "gepland", label: "Gepland" },
   { key: "in_uitvoering", label: "In uitvoering" },
+  { key: "on_hold", label: "On hold" },
   { key: "afgerond", label: "Afgerond" },
 ];
 
@@ -72,6 +73,8 @@ const statusLabel = (s: Status | null) =>
     ? "Gepland"
     : s === "in_uitvoering"
     ? "In uitvoering"
+    : s === "on_hold"
+    ? "On hold"
     : s === "afgerond"
     ? "Afgerond"
     : "Concept";
@@ -79,6 +82,8 @@ const statusLabel = (s: Status | null) =>
 const statusStyle = (s: Status | null): React.CSSProperties => {
   if (s === "gepland") return { backgroundColor: "#feb300", color: "var(--surface-solid)" };
   if (s === "in_uitvoering") return { backgroundColor: "#10b981", color: "var(--surface-solid)" };
+  if (s === "on_hold")
+    return { backgroundColor: "rgb(var(--fg-rgb) / 0.12)", color: "rgb(var(--fg-rgb) / 0.7)" };
   return { backgroundColor: "rgb(var(--fg-rgb) / 0.08)", color: "rgb(var(--fg-rgb) / 0.6)" };
 };
 

@@ -2513,6 +2513,8 @@ const Plannen = () => {
                       ? "In uitvoering"
                       : project.status === "gepland"
                       ? "Gepland"
+                      : project.status === "on_hold"
+                      ? "On hold"
                       : project.status === "afgerond"
                       ? "Afgerond"
                       : "Concept"}

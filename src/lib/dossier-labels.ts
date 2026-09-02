@@ -67,6 +67,7 @@ const LABEL_MAPS: Record<string, Record<string, string>> = {
     concept: "Concept",
     gepland: "Gepland",
     in_uitvoering: "In uitvoering",
+    on_hold: "On hold",
     afgerond: "Afgerond",
   },
 };
