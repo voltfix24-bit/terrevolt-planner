@@ -939,11 +939,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
         });
       });
 
-      const onHoldProjectIds = new Set(
-        ((projRes.data ?? []) as { id: string; status: string | null }[])
-          .filter((p) => p.status === "on_hold")
-          .map((p) => p.id),
-      );
+
 
       const projMap: Record<string, ProjectInfo> = {};
       ((projRes.data ?? []) as ProjectInfo[]).forEach((p) => {
