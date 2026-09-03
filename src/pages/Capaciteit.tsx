@@ -907,8 +907,15 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
         weekNrToMonday[`${w.jaar}-${w.week}`] = w.monday;
       });
 
+      const onHoldProjectIds = new Set(
+        ((projRes.data ?? []) as { id: string; status: string | null }[])
+          .filter((p) => p.status === "on_hold")
+          .map((p) => p.id),
+      );
+
       // Build monteur_id → date_key → Set<project_id>
       const map: Record<string, Record<string, Set<string>>> = {};
+
       const cms = (celMonteurs ?? []) as { cel_id: string; monteur_id: string }[];
       cms.forEach((cm) => {
         const cel = celById[cm.cel_id];
@@ -932,11 +939,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
         });
       });
 
-      const onHoldProjectIds = new Set(
-        ((projRes.data ?? []) as { id: string; status: string | null }[])
-          .filter((p) => p.status === "on_hold")
-          .map((p) => p.id),
-      );
+
 
       const projMap: Record<string, ProjectInfo> = {};
       ((projRes.data ?? []) as ProjectInfo[]).forEach((p) => {
