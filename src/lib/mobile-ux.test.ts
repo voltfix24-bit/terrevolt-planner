@@ -2,9 +2,67 @@ import { describe, expect, it } from "vitest";
 import type { MobilePlanningDay, MonteurDayState } from "./mobile-planning";
 import { caseTitle, caseSection, matchesSearch, normalizeForSearch, freshnessLabel, mobileDataState, unavailableLabel, sortCaseWeekOptions, activeFilterCount, casePlanningLabel, classifyResourceWeek, compareCases, EMPTY_CASE_FILTERS, formatWeekParam, groupResourcesForWeek, nextActivePlanningAfter, parseWeekParam, planningEmptyState, showPlanningStats, unitLabel } from "./mobile-ux";
 import { capacityLink, formatMobileView, mobileBackTarget, mobileTodayContext, parseMobileView, selectMobileWeek, splitMobileWeeks } from "./mobile-ux";
+import { activityCellLabel, activityTypes, conceptManDays, hasRegisteredAbsence, latentOnHoldOverlap, parseMobileDay, shortActivityType, sortResourcesForDay, weekExceptions } from "./mobile-ux";
 
 const day = (projectId: string, iso: string, week = 44, dayIndex = 0): MobilePlanningDay => ({ projectId, activityId: "a", activity: "X", cellId: projectId + iso, year: 2026, week, dayIndex, date: new Date(iso + "T00:00:00"), colorCode: "c1", monteurIds: [] });
 const st = (kind: MonteurDayState["kind"], conflict = false): Pick<MonteurDayState, "kind" | "conflict" | "plannedWhileUnavailable"> => ({ kind, conflict, plannedWhileUnavailable: false });
+
+describe("mobile operational signals", () => {
+  const week = { jaar: 2026, week_nr: 43 };
+  const d = (projectId: string, ids: string[] = [], index = 0) => ({ ...day(projectId, `2026-10-${19 + index}`, 43, index), monteurIds: ids });
+  const resources = [{ id: "m", werkdagen: [1, 2, 3, 4, 5] }, { id: "free", werkdagen: [1, 2, 3, 4, 5] }];
+  it("deduplicates double bookings and crewless case-days, ignoring on hold and other weeks", () => {
+    const days = [d("a", ["m"]), d("a", ["m"]), d("b", ["m"]), d("empty"), d("empty"), d("hold"), { ...d("other", ["m"]), week: 44 }];
+    const result = weekExceptions(days, week, resources, [], [], new Set(["hold"]));
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ type: "dubbel", dayIndex: 0, monteurId: "m", projectIds: ["a", "b"] });
+    expect(result[1]).toMatchObject({ type: "geen-ploeg", projectIds: ["empty"] });
+    expect(days).toHaveLength(7);
+  });
+  it("reports absence separately from double booking and never unplanned absence", () => {
+    const absence = [{ monteur_id: "m", datum_van: "2026-10-19", datum_tot: "2026-10-19", type: "verlof", omschrijving: null }];
+    expect(weekExceptions([d("a", ["m"]), d("b", ["m"])], week, resources, absence, []).map((e) => e.type)).toEqual(["dubbel", "afwezig"]);
+    expect(weekExceptions([], week, resources, absence, [])).toEqual([]);
+    expect(weekExceptions([d("hold", ["m"])], week, resources, absence, [], new Set(["hold"]))).toEqual([]);
+  });
+  it.each([["Montagedagen", "Montage"], ["Schakeldagen", "Schakel"], ["Schakelen", "Schakel"], ["Diverse", "Diverse"], ["Blokkade", "Blokkade"], ["Uitgevoerd", "Gereed"], ["Transport", "Transport"], ["Bouwkunde", "Bouwk."], ["Levering", "Levering"], ["Civiel", "Civiel"], ["Asbest", "Asbest"], ["Overig", "Overig"], ["unknown", "Overig"]])("maps %s to %s", (input, expected) => {
+    expect(shortActivityType(input)).toBe(expected);
+  });
+  it("uses desktop color category, deduplicates synonyms and retains asbestos", () => {
+    expect(activityCellLabel(["c5", "c11"], ["Diverse"])).toBe("Montage +1");
+    expect(activityTypes(["c2", "c4", "c11"])).toEqual(["Schakel", "Asbest"]);
+    expect(activityCellLabel([], ["Bouwkunde"])).toBe("Bouwk.");
+  });
+  it("sorts by selected day, free then planned then unavailable, preserving equal ranks", () => {
+    const items = [{ id: "p" }, { id: "u" }, { id: "f" }, { id: "f2" }];
+    const states = new Map(items.map((m) => [m.id, [{ dayIndex: 2, kind: m.id === "p" ? "planned" as const : m.id === "u" ? "unavailable" as const : "free" as const }]]));
+    expect(sortResourcesForDay(items, states, 2).map((m) => m.id)).toEqual(["f", "f2", "p", "u"]);
+    expect(items.map((m) => m.id)).toEqual(["p", "u", "f", "f2"]);
+    expect(parseMobileDay("0")).toBe(0); expect(parseMobileDay("4")).toBe(4);
+    for (const invalid of [null, "", "5", "-1", "2x", "00"]) expect(parseMobileDay(invalid)).toBeNull();
+  });
+  it("counts unique concept resource-days without excluding concepts from active planning", () => {
+    const projects = new Map([["a", { status: "concept" }], ["b", { status: "concept" }], ["c", { status: "gepland" }], ["hold", { status: "concept" }]]);
+    const days = [d("a", ["m"]), d("a", ["m"]), d("b", ["m"]), d("a", ["m"], 1), d("c", ["free"]), d("hold", ["free"]), { ...d("a", ["free"]), week: 44 }];
+    expect(conceptManDays(days, week, projects, new Set(["hold"]))).toBe(2);
+    expect(weekExceptions([d("a", ["m"]), d("c", ["m"])], week, resources, [], []).some((e) => e.type === "dubbel")).toBe(true);
+  });
+  it("counts latent overlaps once per resource-date against active cases only", () => {
+    const days = [d("hold", ["m"]), d("hold", ["m"]), d("a", ["m"]), d("b", ["m"]), d("other-hold", ["free"]), d("hold", ["free"]), d("hold", ["m"], 1)];
+    const holds = new Set(["hold", "other-hold"]);
+    expect(latentOnHoldOverlap(days, "hold", holds)).toMatchObject({ count: 1, rows: [{ monteurId: "m", projectIds: ["a", "b"] }] });
+    expect(latentOnHoldOverlap(days, "a", holds)).toEqual({ count: 0, rows: [] });
+    expect(weekExceptions(days, week, resources, [], [], holds)).toHaveLength(1);
+  });
+  it("checks registered absence for existing resources on weekdays, not roster or holidays", () => {
+    const ids = new Set(["m"]);
+    expect(hasRegisteredAbsence(week, [], ids)).toBe(false);
+    const a = { monteur_id: "m", datum_van: "2026-10-18", datum_tot: "2026-10-19", type: "verlof", omschrijving: null };
+    expect(hasRegisteredAbsence(week, [a], ids)).toBe(true);
+    expect(hasRegisteredAbsence(week, [{ ...a, datum_tot: "2026-10-18" }], ids)).toBe(false);
+    expect(hasRegisteredAbsence(week, [{ ...a, monteur_id: "inactive" }], ids)).toBe(false);
+  });
+});
 
 describe("mobile structure and navigation", () => {
   const now = new Date("2026-10-06T12:00:00");
