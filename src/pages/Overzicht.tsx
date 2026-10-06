@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -4249,7 +4249,7 @@ function GanttPrintMenu({
   const opdrachtgeverNaam = opdrachtgeverNaamById.get(opdrachtgeverId);
   const canExport = !busy && gekozenProjecten.length > 0 && gekozenWeekCount > 0 && (exportMode === "intern" || Boolean(opdrachtgeverId));
 
-  const SectionTitle = ({ children }: { children: string }) => (
+  const SectionTitle = ({ children }: { children: ReactNode }) => (
     <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{children}</h3>
   );
   const Segment = <T extends string>({ value, options, onChange }: { value: T; options: Array<{ value: T; label: string; sub?: string }>; onChange: (value: T) => void }) => (

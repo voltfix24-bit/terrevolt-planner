@@ -54,7 +54,7 @@ export interface ProjectRowGroup {
   continued: boolean;
 }
 
-export const WEEKS_PER_LAYOUT: Record<GanttPrintLayout, number> = {
+export const WEEKS_PER_LAYOUT: Record<GanttPrintLayout, 4 | 6 | 8> = {
   detail: 4,
   standaard: 6,
   compact: 8,
