@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { assessPlanningRange, type PlanningWeek } from "@/lib/planning-safety";
 import { buildProjectCellDates } from "@/lib/project-overview-sort";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "on_hold" | "afgerond";
 
@@ -109,6 +110,7 @@ const fmtRange = (dates: number[] | undefined) => {
 const Projecten = () => {
   const navigate = useNavigate();
   const setSelectedProjectId = useSelectedProject((s) => s.setProjectId);
+  const isMobile = useIsMobile();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [opdrachtgevers, setOpdrachtgevers] = useState<Opdrachtgever[]>([]);
@@ -270,7 +272,7 @@ const Projecten = () => {
         <Button
           onClick={handleNewProject}
           disabled={creating}
-          className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+          className="hidden font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md md:inline-flex"
         >
           <Plus className="mr-1.5 h-4 w-4" strokeWidth={2.5} /> Project toevoegen
         </Button>
@@ -283,7 +285,7 @@ const Projecten = () => {
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
               className={[
-                "rounded-md px-3.5 py-1.5 text-xs font-display font-semibold tracking-wide transition-all",
+                "min-h-11 rounded-md px-3.5 py-1.5 text-xs font-display font-semibold tracking-wide transition-all md:min-h-0",
                 statusFilter === f.key
                   ? "bg-primary text-primary-foreground"
                   : "bg-fg/[0.04] text-muted-foreground hover:bg-fg/[0.08] hover:text-foreground",
@@ -299,7 +301,7 @@ const Projecten = () => {
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
             placeholder="Zoek op casenummer, station, straat, postcode of plaats"
-            className="rounded-md border-fg/10 bg-fg/[0.04] pl-9 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary"
+          className="h-11 rounded-md border-fg/10 bg-fg/[0.04] pl-9 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-primary"
           />
         </div>
       </div>
@@ -351,7 +353,7 @@ const Projecten = () => {
                     <div
                       key={p.id}
                       onClick={() => openProject(p)}
-                      className="group grid cursor-pointer grid-cols-1 gap-1.5 border-b border-fg/5 px-4 py-2.5 transition-colors last:border-b-0 hover:bg-fg/[0.04] md:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1.6fr)_auto] md:items-center md:gap-3"
+                      className="group grid min-h-20 cursor-pointer grid-cols-1 gap-1.5 border-b border-fg/5 px-4 py-3 transition-colors last:border-b-0 hover:bg-fg/[0.04] md:min-h-0 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1.6fr)_auto] md:items-center md:gap-3 md:py-2.5"
                     >
                       <div className="min-w-0">
                         <div className="truncate font-display text-sm font-bold text-foreground">
@@ -388,16 +390,17 @@ const Projecten = () => {
                         <span className="truncate">{fmtRange(dates)}</span>
                       </div>
 
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-start gap-1.5 md:justify-end">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/projecten/${p.id}/dossier`);
                           }}
-                          className="rounded-md border border-fg/10 bg-fg/[0.03] p-1.5 text-foreground/80 transition-colors hover:bg-fg/[0.07]"
+                          className="flex min-h-11 items-center gap-2 rounded-md border border-fg/10 bg-fg/[0.03] px-3 text-foreground/80 transition-colors hover:bg-fg/[0.07]"
                           title="Open dossier"
                         >
                           <FileText className="h-3.5 w-3.5" />
+                          <span className="text-xs md:hidden">Dossier</span>
                         </button>
                         <button
                           onClick={(e) => {
@@ -405,12 +408,13 @@ const Projecten = () => {
                             setSelectedProjectId(p.id);
                             navigate(`/plannen?project=${p.id}`);
                           }}
-                          className="rounded-md bg-primary/15 p-1.5 text-primary transition-colors hover:bg-primary/25"
+                          className="flex min-h-11 items-center gap-2 rounded-md bg-primary/15 px-3 text-primary transition-colors hover:bg-primary/25"
                           title="Inplannen"
                         >
                           <CalendarDays className="h-3.5 w-3.5" />
+                          <span className="text-xs md:hidden">Planning bekijken</span>
                         </button>
-                        <button
+                        {!isMobile && <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setDeleteTarget(p);
@@ -419,7 +423,7 @@ const Projecten = () => {
                           title="Verwijderen"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        </button>}
                         <ChevronRight className="h-4 w-4 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
                       </div>
                     </div>

@@ -28,6 +28,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileToday } from "@/components/mobile/MobileToday";
 import { MobileWeekPlanning } from "@/components/mobile/MobileWeekPlanning";
 import { MobileCapacity } from "@/components/mobile/MobileCapacity";
+import { MobileProjectDetail } from "@/components/mobile/MobileProjectDetail";
 
 const queryClient = new QueryClient();
 
@@ -49,7 +50,7 @@ const App = () => (
                   <Route path="/" element={<Navigate to="/overzicht" replace />} />
                   <Route path="/overzicht" element={<ResponsivePage desktop={<Overzicht />} mobile={<MobileToday />} />} />
                   <Route path="/projecten" element={<Projecten />} />
-                  <Route path="/projecten/:id" element={<ProjectDetail />} />
+                  <Route path="/projecten/:id" element={<ResponsivePage desktop={<ProjectDetail />} mobile={<MobileProjectDetail />} />} />
                   <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
                   <Route path="/plannen" element={<ResponsivePage desktop={<Plannen />} mobile={<MobileWeekPlanning />} />} />
                   <Route path="/mandagenregister" element={<Mandagenregister />} />
