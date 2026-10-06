@@ -291,7 +291,10 @@ export function buildGanttHtml(input: GanttExportInput): string {
   const printableProjects = orderedProjects.filter((project) => visibleProjectIds.has(project.id));
   if (printableProjects.length === 0) throw new Error("Geen geplande activiteiten in deze selectie");
   const printableIds = new Set(printableProjects.map((project) => project.id));
-  const printableActivities = input.activiteiten.filter((activity) => printableIds.has(activity.project_id));
+  const plannedActivityIds = new Set(input.cellen.map((cell) => cell.activiteit_id));
+  const printableActivities = input.activiteiten.filter(
+    (activity) => printableIds.has(activity.project_id) && plannedActivityIds.has(activity.id),
+  );
   const rowPages = paginateProjectRows(printableProjects, printableActivities, 16);
   const weekPages = chunkWeken(input.weken, WEEKS_PER_LAYOUT[layout]);
   const cellMap = new Map(input.cellen.map((cell) => [`${cell.activiteit_id}|${cell.week_nr}|${cell.dag_index}`, cell]));

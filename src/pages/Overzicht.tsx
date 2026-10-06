@@ -4051,9 +4051,9 @@ function GanttPrintMenu({
   // Unieke week-nummers uit alle projecten, gesorteerd
   const beschikbareWeken = useMemo(() => {
     const seen = new Set<number>();
-    weken.forEach((w) => seen.add(w.week_nr));
+    weken.filter((week) => week.jaar === jaar).forEach((week) => seen.add(week.week_nr));
     return Array.from(seen).sort((a, b) => a - b);
-  }, [weken]);
+  }, [weken, jaar]);
 
   // Huidig ISO-weeknummer (voor presets)
   const huidigeWeek = useMemo(() => {
@@ -4147,7 +4147,7 @@ function GanttPrintMenu({
 
       // weken-tabel → lookup id → week_nr
       const weekIdToNr = new Map<string, number>();
-      weken.forEach((w) => weekIdToNr.set(w.id, w.week_nr));
+      weken.filter((week) => week.jaar === jaar).forEach((week) => weekIdToNr.set(week.id, week.week_nr));
 
       // activiteit_id → project_id (via activiteiten-tabel)
       const actIdToProj = new Map<string, string>();
