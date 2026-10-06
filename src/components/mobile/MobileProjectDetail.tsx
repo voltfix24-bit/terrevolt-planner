@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarDays, ChevronDown, FileText, MapPin } from "lucide-r
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { groupDayBlocks, projectPlanningSummary, uniqueMonteursForProject } from "@/lib/mobile-planning";
-import { capacityLink, caseTitle, formatWeekParam, mobileBackTarget, selectMobileWeek, showPlanningStats, splitMobileWeeks } from "@/lib/mobile-ux";
+import { capacityLink, caseTitle, formatWeekParam, mobileBackTarget, selectMobileWeek, showPlanningStats, splitMobileWeeks, latentOnHoldOverlap } from "@/lib/mobile-ux";
 import { MobileDataGate, formatShort, StatusChip } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
 
@@ -14,6 +14,7 @@ export function MobileProjectDetail() {
   const project = id ? data.projectById.get(id) : undefined;
   const days = useMemo(() => (id ? data.daysByProject.get(id) : undefined) ?? [], [data.daysByProject, id]);
   const blocks = useMemo(() => groupDayBlocks(days), [days]);
+  const overlap = useMemo(() => id ? latentOnHoldOverlap(data.days, id, data.onHoldProjectIds) : { count: 0, rows: [] }, [data.days, id, data.onHoldProjectIds]);
   const summary = useMemo(() => projectPlanningSummary(days), [days]);
   const crew = useMemo(() => id ? uniqueMonteursForProject(days, id) : new Map<string, number>(), [days, id]);
   const weekGroups = useMemo(() => {
@@ -37,6 +38,7 @@ export function MobileProjectDetail() {
     <section><div className="flex items-start justify-between gap-3"><div><h1 className="break-words font-display text-xl font-bold">{caseTitle(project)}</h1></div><StatusChip status={project.status} /></div><p className="mt-2 text-sm text-muted-foreground">{project.opdrachtgever_id ? data.opdrachtgeverNameById.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p></section>
     <div className="flex flex-wrap gap-2">{project.status !== "on_hold" && <Button className="min-h-11" onClick={() => navigate(`/plannen?project=${project.id}&week=${formatWeekParam(caseWeek)}`)}><CalendarDays className="h-4 w-4" />Planning bekijken</Button>}<Button variant="outline" className="min-h-11" onClick={() => navigate(`/projecten/${project.id}/dossier`)}><FileText className="h-4 w-4" />Dossier</Button>{address && <Button variant="outline" className="min-h-11" asChild><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer"><MapPin className="h-4 w-4" />Navigeer</a></Button>}</div>
     {project.status === "on_hold" && <p role="status" className="border-l-2 border-warning-text pl-3 text-sm">Niet opgenomen in actuele planning/capaciteit.</p>}
+    {project.status === "on_hold" && <section className="border-l-2 border-warning-text pl-3 text-sm text-warning-text"><p>Bij heractivering overlapt deze planning met {overlap.count} monteurdagen op andere actieve cases</p>{overlap.rows.slice(0, 5).map((row) => <p key={`${row.monteurId}-${row.date.toISOString()}`} className="mt-2 text-xs">{data.monteurNameById.get(row.monteurId) ?? "Monteur"} · {formatShort(row.date)} · {row.projectIds.map((id) => caseTitle(data.projectById.get(id))).join(" + ")}</p>)}</section>}
     {showPlanningStats(summary) && <section className="rounded-lg border border-border bg-card p-4"><div className="grid grid-cols-2 gap-3 text-sm">
       <div><span className="block text-[11px] text-muted-foreground">Eerste dag</span><strong>{fmtDate(summary.first)}</strong></div>
       <div><span className="block text-[11px] text-muted-foreground">Laatste dag</span><strong>{fmtDate(summary.last)}</strong></div>

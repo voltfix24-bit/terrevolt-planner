@@ -90,10 +90,11 @@ export const CELL_TONE = {
   free: "border border-dashed border-border bg-background text-muted-foreground",
   unavailable: "bg-muted text-foreground/80 [background-image:repeating-linear-gradient(135deg,transparent_0_6px,hsl(var(--border))_6px_7px)]",
   conflict: "bg-destructive/10 text-destructive-text ring-1 ring-inset ring-destructive-text",
+  absentPlanned: "bg-warning/10 text-warning-text ring-1 ring-inset ring-warning-text",
 } as const;
 
 export function CellLegend({ withUnavailable = true }: { withUnavailable?: boolean }) {
-  const items: [keyof typeof CELL_TONE, string][] = [["planned", "Gepland"], ["free", "Vrij"], ...(withUnavailable ? [["unavailable", "Niet beschikbaar"] as [keyof typeof CELL_TONE, string]] : []), ["conflict", "Conflict"]];
+  const items: [keyof typeof CELL_TONE, string][] = [["planned", "Gepland"], ["free", "Vrij"], ...(withUnavailable ? [["unavailable", "Niet beschikbaar"] as [keyof typeof CELL_TONE, string]] : []), ["conflict", "Dubbel gepland"], ["absentPlanned", "Afwezig ingepland"]];
   return <ul aria-label="Legenda" className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">{items.map(([k, l]) => <li key={k} className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${CELL_TONE[k]}`} aria-hidden="true" />{l}</li>)}</ul>;
 }
 
