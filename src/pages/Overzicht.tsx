@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -12,7 +14,9 @@ import {
 import { toast } from "sonner";
 import {
   exportGanttPDF,
+  type GanttExportMode,
   type GanttMonteurWeergave,
+  type GanttPrintLayout,
 } from "@/lib/gantt-export";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -682,6 +686,11 @@ export default function Overzicht() {
     for (const p of projecten) m.set(p.id, p);
     return m;
   }, [projecten]);
+
+  const opdrachtgeverNaamById = useMemo(
+    () => new Map(opdrachtgevers.map((opdrachtgever) => [opdrachtgever.id, opdrachtgever.naam] as const)),
+    [opdrachtgevers],
+  );
 
   const activiteitById = useMemo(() => {
     const m = new Map<string, Activiteit>();
@@ -2059,6 +2068,8 @@ export default function Overzicht() {
 
           <GanttPrintMenu
             projecten={projecten}
+            opdrachtgevers={opdrachtgevers}
+            actiefOpdrachtgeverId={filterOpdrachtgeverId}
             weken={weken}
             activiteiten={activiteiten}
             cellen={cellen}
@@ -2858,6 +2869,11 @@ export default function Overzicht() {
                             >
                               {p.station_naam ?? "—"}
                             </p>
+                            {p.opdrachtgever_id && opdrachtgeverNaamById.get(p.opdrachtgever_id) && (
+                              <span className="mt-0.5 block truncate text-[9px] font-medium text-muted-foreground">
+                                {opdrachtgeverNaamById.get(p.opdrachtgever_id)}
+                              </span>
+                            )}
                             {/* GSU / GEU + optional BK/AS badges */}
                             {(p.gsu_datum || p.geu_datum || p.bouwkundig_benodigd === "ja" || p.asbest_benodigd === "ja") && (
                               <div
@@ -3956,6 +3972,8 @@ function ActiviteitCellsRow({
 
 interface GanttPrintMenuProps {
   projecten: Project[];
+  opdrachtgevers: Opdrachtgever[];
+  actiefOpdrachtgeverId: string;
   weken: Week[];
   activiteiten: Activiteit[];
   cellen: Cel[];
@@ -3967,6 +3985,8 @@ interface GanttPrintMenuProps {
 
 function GanttPrintMenu({
   projecten,
+  opdrachtgevers,
+  actiefOpdrachtgeverId,
   weken,
   activiteiten,
   cellen,
@@ -3978,18 +3998,62 @@ function GanttPrintMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [monteurWeergave, setMonteurWeergave] = useState<GanttMonteurWeergave>("initialen");
+  const [exportMode, setExportMode] = useState<GanttExportMode>("opdrachtgever");
+  const [opdrachtgeverId, setOpdrachtgeverId] = useState("");
+  const [printLayout, setPrintLayout] = useState<GanttPrintLayout>("standaard");
   // selectie van week-nummers; lege set = alle weken
   const [selWeeks, setSelWeeks] = useState<Set<number>>(new Set());
   const [toonDetails, setToonDetails] = useState(false);
   const [uitgeslotenProjecten, setUitgeslotenProjecten] = useState<Set<string>>(new Set());
   const [verbergLegeWeken, setVerbergLegeWeken] = useState(false);
 
+  const opdrachtgeverNaamById = useMemo(
+    () => new Map(opdrachtgevers.map((item) => [item.id, item.naam] as const)),
+    [opdrachtgevers],
+  );
+
+  const selecteerbareProjecten = useMemo(
+    () => exportMode === "opdrachtgever"
+      ? projecten.filter((project) => opdrachtgeverId && project.opdrachtgever_id === opdrachtgeverId)
+      : projecten,
+    [exportMode, opdrachtgeverId, projecten],
+  );
+
+  const gekozenProjecten = useMemo(
+    () => selecteerbareProjecten.filter((project) => !uitgeslotenProjecten.has(project.id)),
+    [selecteerbareProjecten, uitgeslotenProjecten],
+  );
+
+  const zonderOpdrachtgeverCount = useMemo(
+    () => gekozenProjecten.filter((project) => !project.opdrachtgever_id).length,
+    [gekozenProjecten],
+  );
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) return;
+    const nextClientId = actiefOpdrachtgeverId || "";
+    setExportMode("opdrachtgever");
+    setOpdrachtgeverId(nextClientId);
+    setUitgeslotenProjecten(new Set());
+  };
+
+  const handleModeChange = (mode: GanttExportMode) => {
+    setExportMode(mode);
+    setUitgeslotenProjecten(new Set());
+  };
+
+  const handleOpdrachtgeverChange = (id: string) => {
+    setOpdrachtgeverId(id);
+    setUitgeslotenProjecten(new Set());
+  };
+
   // Unieke week-nummers uit alle projecten, gesorteerd
   const beschikbareWeken = useMemo(() => {
     const seen = new Set<number>();
-    weken.forEach((w) => seen.add(w.week_nr));
+    weken.filter((week) => week.jaar === jaar).forEach((week) => seen.add(week.week_nr));
     return Array.from(seen).sort((a, b) => a - b);
-  }, [weken]);
+  }, [weken, jaar]);
 
   // Huidig ISO-weeknummer (voor presets)
   const huidigeWeek = useMemo(() => {
@@ -4065,16 +4129,25 @@ function GanttPrintMenu({
         return;
       }
 
-      const gekozenProjecten = projecten.filter((p) => !uitgeslotenProjecten.has(p.id));
       if (gekozenProjecten.length === 0) {
         toast.error("Selecteer minimaal één project");
         return;
+      }
+      if (exportMode === "opdrachtgever") {
+        if (!opdrachtgeverId) {
+          toast.error("Kies eerst een opdrachtgever");
+          return;
+        }
+        if (gekozenProjecten.some((project) => project.opdrachtgever_id !== opdrachtgeverId)) {
+          toast.error("Export geblokkeerd: de projectselectie hoort niet volledig bij deze opdrachtgever");
+          return;
+        }
       }
       const projIdSet = new Set(gekozenProjecten.map((p) => p.id));
 
       // weken-tabel → lookup id → week_nr
       const weekIdToNr = new Map<string, number>();
-      weken.forEach((w) => weekIdToNr.set(w.id, w.week_nr));
+      weken.filter((week) => week.jaar === jaar).forEach((week) => weekIdToNr.set(week.id, week.week_nr));
 
       // activiteit_id → project_id (via activiteiten-tabel)
       const actIdToProj = new Map<string, string>();
@@ -4126,6 +4199,8 @@ function GanttPrintMenu({
         case_nummer: p.case_nummer,
         station_naam: p.station_naam,
         wv_naam: null,
+        opdrachtgever_id: p.opdrachtgever_id,
+        opdrachtgever_naam: p.opdrachtgever_id ? opdrachtgeverNaamById.get(p.opdrachtgever_id) ?? null : null,
       }));
 
       const ganttActiviteiten = activiteiten
@@ -4140,7 +4215,9 @@ function GanttPrintMenu({
       const ganttMonteurs = monteurs.map((m) => ({ id: m.id, naam: m.naam }));
 
       exportGanttPDF({
-        titel: `Planning Gantt — ${jaar}`,
+        titel: exportMode === "opdrachtgever"
+          ? `Projectplanning — ${opdrachtgeverNaamById.get(opdrachtgeverId) ?? "Opdrachtgever"}`
+          : "Intern planningsoverzicht",
         weken: ganttWeken,
         projecten: ganttProjecten,
         activiteiten: ganttActiviteiten,
@@ -4148,6 +4225,10 @@ function GanttPrintMenu({
         cellen: ganttCellen,
         monteurWeergave,
         feestdagen,
+        exportMode,
+        opdrachtgeverId: exportMode === "opdrachtgever" ? opdrachtgeverId : undefined,
+        opdrachtgeverNaam: exportMode === "opdrachtgever" ? opdrachtgeverNaamById.get(opdrachtgeverId) : undefined,
+        printLayout,
       });
       setOpen(false);
     } catch (e) {
@@ -4163,223 +4244,113 @@ function GanttPrintMenu({
       ? `alle weken (${beschikbareWeken.length})`
       : `${selWeeks.size} ${selWeeks.size === 1 ? "week" : "weken"}`;
 
+  const gekozenWeekCount = selWeeks.size === 0 ? beschikbareWeken.length : Array.from(selWeeks).filter((week) => beschikbareWeken.includes(week)).length;
+  const pageBlocks = Math.max(1, Math.ceil(gekozenWeekCount / ({ detail: 4, standaard: 6, compact: 8 }[printLayout])));
+  const opdrachtgeverNaam = opdrachtgeverNaamById.get(opdrachtgeverId);
+  const canExport = !busy && gekozenProjecten.length > 0 && gekozenWeekCount > 0 && (exportMode === "intern" || Boolean(opdrachtgeverId));
+
+  const SectionTitle = ({ children }: { children: ReactNode }) => (
+    <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{children}</h3>
+  );
+  const Segment = <T extends string>({ value, options, onChange }: { value: T; options: Array<{ value: T; label: string; sub?: string }>; onChange: (value: T) => void }) => (
+    <div className={`grid gap-1 rounded-md bg-muted p-1 ${options.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+      {options.map((option) => (
+        <Button key={option.value} type="button" variant={value === option.value ? "default" : "ghost"} className="h-auto min-h-9 flex-col gap-0.5 whitespace-normal px-2 py-1.5" onClick={() => onChange(option.value)}>
+          <span>{option.label}</span>{option.sub && <span className="text-[10px] font-normal opacity-75">{option.sub}</span>}
+        </Button>
+      ))}
+    </div>
+  );
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={busy}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-fg/15 bg-transparent px-3 text-sm text-foreground hover:bg-fg/[0.06] disabled:opacity-50"
-        >
-          <Printer className="h-4 w-4" />
-          <span className="font-display font-semibold">Gantt printen</span>
-          <ChevronDown className="h-3 w-3 opacity-70" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
-          <span className="text-sm font-semibold">Gantt printen</span>
-          {selWeeks.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelWeeks(new Set())}
-              className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-            >
-              Wis filter
-            </button>
-          )}
-        </div>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm" disabled={busy} className="h-8 font-display font-semibold">
+          <Printer className="h-4 w-4" /> Gantt printen
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="flex max-h-[92vh] w-[calc(100vw-1rem)] max-w-[820px] flex-col gap-0 overflow-hidden p-0 sm:rounded-lg">
+        <DialogHeader className="border-b px-5 py-4 pr-12 text-left">
+          <DialogTitle>Gantt printen</DialogTitle>
+          <DialogDescription>Stel een veilige, leesbare A3-uitdraai samen.</DialogDescription>
+        </DialogHeader>
+        <div className="overflow-y-auto px-5 py-4">
+          <div className="grid gap-5 lg:grid-cols-2">
+            <section>
+              <SectionTitle>Exporttype</SectionTitle>
+              <Segment<GanttExportMode> value={exportMode} onChange={handleModeChange} options={[
+                { value: "opdrachtgever", label: "Opdrachtgever", sub: "Eén klant, veilig gefilterd" },
+                { value: "intern", label: "Intern", sub: "Alle opdrachtgevers mogelijk" },
+              ]} />
+            </section>
 
-        <div className="px-3 py-2 text-[11px] text-muted-foreground border-b border-border/60">
-          Selectie: {selectieLabel} · {monteurWeergave === "geen" ? "geen monteurs" : monteurWeergave === "initialen" ? "initialen" : "namen"}.
-        </div>
-
-        {/* Monteur-weergave */}
-        <div className="px-3 py-2 border-b border-border/60">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-            Monteurs in cellen
-          </div>
-          <div className="grid grid-cols-3 gap-1">
-            {(["geen", "initialen", "namen"] as const).map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => setMonteurWeergave(opt)}
-                className={[
-                  "rounded-sm px-2 py-1.5 text-xs font-medium border transition-colors",
-                  monteurWeergave === opt
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-transparent text-foreground border-fg/15 hover:bg-fg/[0.06]",
-                ].join(" ")}
-              >
-                {opt === "geen" ? "Geen" : opt === "initialen" ? "Initialen" : "Namen"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Weken */}
-        <div className="px-3 py-2 border-b border-border/60">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Periode</span>
-            <button
-              type="button"
-              onClick={() => setSelWeeks(new Set())}
-              className="text-[11px] text-muted-foreground hover:text-foreground"
-            >
-              Alle weken
-            </button>
-          </div>
-
-          {/* Snelkeuze-presets */}
-          <div className="grid grid-cols-2 gap-1 mb-2">
-            <button
-              type="button"
-              onClick={() => presetVolgende(4)}
-              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
-            >
-              Volgende 4 wk
-            </button>
-            <button
-              type="button"
-              onClick={() => presetVolgende(8)}
-              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
-            >
-              Volgende 8 wk
-            </button>
-            <button
-              type="button"
-              onClick={() => presetVolgende(12)}
-              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
-            >
-              Volgende 12 wk
-            </button>
-            <button
-              type="button"
-              onClick={() => zetRange(huidigeWeek, maxWeek)}
-              className="rounded-sm border border-fg/15 px-2 py-1 text-[11px] hover:bg-fg/[0.06]"
-            >
-              Vanaf nu
-            </button>
-          </div>
-
-          {/* Van / t/m selectors */}
-          <div className="flex items-center gap-2">
-            <label className="flex flex-1 items-center gap-1 text-[11px] text-muted-foreground">
-              Van
-              <select
-                value={huidigeRange.van}
-                onChange={(e) => zetRange(Number(e.target.value), huidigeRange.tot)}
-                className="flex-1 rounded-sm border border-fg/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
-              >
-                {beschikbareWeken.map((w) => (
-                  <option key={w} value={w} className="bg-popover text-popover-foreground">Week {w}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-1 items-center gap-1 text-[11px] text-muted-foreground">
-              t/m
-              <select
-                value={huidigeRange.tot}
-                onChange={(e) => zetRange(huidigeRange.van, Number(e.target.value))}
-                className="flex-1 rounded-sm border border-fg/15 bg-popover px-1.5 py-1 text-xs text-popover-foreground"
-              >
-                {beschikbareWeken.map((w) => (
-                  <option key={w} value={w} className="bg-popover text-popover-foreground">Week {w}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {/* Detail-toggles voor losse weken */}
-          {beschikbareWeken.length > 0 && (
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={() => setToonDetails((v) => !v)}
-                className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-              >
-                {toonDetails ? "Verberg" : "Fijnafstemming per week"}
-              </button>
-              {toonDetails && (
-                <div className="mt-1 max-h-40 overflow-y-auto -mx-1 px-1 border-t border-border/40 pt-1">
-                  {beschikbareWeken.map((wnr) => {
-                    const checked = selWeeks.size === 0 || selWeeks.has(wnr);
-                    return (
-                      <label
-                        key={wnr}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer rounded hover:bg-accent"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleWeek(wnr)}
-                          className="h-3.5 w-3.5 accent-primary"
-                        />
-                        <span>Week {wnr}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+            <section>
+              <SectionTitle>{exportMode === "opdrachtgever" ? "Opdrachtgever" : "Interne selectie"}</SectionTitle>
+              {exportMode === "opdrachtgever" ? (
+                <>
+                  <select value={opdrachtgeverId} onChange={(event) => handleOpdrachtgeverChange(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground">
+                    <option value="">Kies een opdrachtgever…</option>
+                    {opdrachtgevers.map((opdrachtgever) => <option key={opdrachtgever.id} value={opdrachtgever.id}>{opdrachtgever.naam}</option>)}
+                  </select>
+                  {!opdrachtgeverId && <p className="mt-2 text-xs text-destructive">Kies een opdrachtgever om projecten te selecteren en de export te openen.</p>}
+                </>
+              ) : (
+                <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Projecten worden in de uitdraai per opdrachtgever gegroepeerd.
+                  {zonderOpdrachtgeverCount > 0 && ` ${zonderOpdrachtgeverCount} geselecteerd zonder opdrachtgever.`}
+                </p>
               )}
-            </div>
-          )}
-        </div>
+            </section>
 
-        {/* Projecten */}
-        <div className="px-3 py-2 border-b border-border/60">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Projecten ({projecten.length - uitgeslotenProjecten.size}/{projecten.length})
-            </span>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setUitgeslotenProjecten(new Set())} className="text-[11px] text-muted-foreground hover:text-foreground">Alle</button>
-              <button type="button" onClick={() => setUitgeslotenProjecten(new Set(projecten.map((p) => p.id)))} className="text-[11px] text-muted-foreground hover:text-foreground">Geen</button>
-            </div>
+            <section className="lg:col-span-2">
+              <div className="flex items-center justify-between"><SectionTitle>Periode</SectionTitle><Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={() => setSelWeeks(new Set())}>Alle weken</Button></div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[4, 8, 12].map((count) => <Button key={count} type="button" variant="outline" size="sm" onClick={() => presetVolgende(count)}>Volgende {count} wk</Button>)}
+                <Button type="button" variant="outline" size="sm" onClick={() => zetRange(huidigeWeek, maxWeek)}>Vanaf nu</Button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label className="text-xs text-muted-foreground">Van<select value={huidigeRange.van} onChange={(event) => zetRange(Number(event.target.value), huidigeRange.tot)} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground">{beschikbareWeken.map((week) => <option key={week} value={week}>Week {week}</option>)}</select></label>
+                <label className="text-xs text-muted-foreground">Tot en met<select value={huidigeRange.tot} onChange={(event) => zetRange(huidigeRange.van, Number(event.target.value))} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground">{beschikbareWeken.map((week) => <option key={week} value={week}>Week {week}</option>)}</select></label>
+              </div>
+              <Button type="button" variant="link" className="mt-2 h-auto p-0 text-xs" onClick={() => setToonDetails((value) => !value)}>{toonDetails ? "Fijnafstemming verbergen" : "Fijnafstemming per week"}</Button>
+              {toonDetails && <div className="mt-2 grid max-h-28 grid-cols-3 gap-1 overflow-y-auto rounded-md border p-2 sm:grid-cols-6">{beschikbareWeken.map((week) => <label key={week} className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-1 text-xs hover:bg-muted"><Checkbox checked={selWeeks.size === 0 || selWeeks.has(week)} onCheckedChange={() => toggleWeek(week)} />W{week}</label>)}</div>}
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between"><SectionTitle>Projecten ({gekozenProjecten.length}/{selecteerbareProjecten.length})</SectionTitle><div className="flex gap-1"><Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={() => setUitgeslotenProjecten(new Set())}>Alle</Button><Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={() => setUitgeslotenProjecten(new Set(selecteerbareProjecten.map((project) => project.id)))}>Geen</Button></div></div>
+              <div className="h-48 overflow-y-auto rounded-md border p-2">
+                {selecteerbareProjecten.length === 0 ? <p className="p-3 text-center text-xs text-muted-foreground">{exportMode === "opdrachtgever" && !opdrachtgeverId ? "Kies eerst een opdrachtgever." : "Geen projecten beschikbaar."}</p> : selecteerbareProjecten.map((project) => (
+                  <label key={project.id} className="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 hover:bg-muted">
+                    <Checkbox checked={!uitgeslotenProjecten.has(project.id)} onCheckedChange={() => setUitgeslotenProjecten((previous) => { const next = new Set(previous); if (next.has(project.id)) next.delete(project.id); else next.add(project.id); return next; })} />
+                    <span className="min-w-0 flex-1 text-xs"><span className="block truncate font-medium text-foreground">{[project.case_nummer, project.station_naam].filter(Boolean).join(" · ") || "Naamloos project"}</span>{exportMode === "intern" && <span className="block truncate text-[10px] text-muted-foreground">{project.opdrachtgever_id ? opdrachtgeverNaamById.get(project.opdrachtgever_id) ?? "Onbekende opdrachtgever" : "Geen opdrachtgever"}</span>}</span>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <SectionTitle>Weergave / printindeling</SectionTitle>
+              <p className="mb-1.5 text-xs text-muted-foreground">Weken per A3-pagina</p>
+              <Segment<GanttPrintLayout> value={printLayout} onChange={setPrintLayout} options={[
+                { value: "detail", label: "Detail", sub: "4 weken" }, { value: "standaard", label: "Standaard", sub: "6 weken" }, { value: "compact", label: "Compact", sub: "8 weken" },
+              ]} />
+              <p className="mb-1.5 mt-4 text-xs text-muted-foreground">Monteurs</p>
+              <Segment<GanttMonteurWeergave> value={monteurWeergave} onChange={setMonteurWeergave} options={[
+                { value: "geen", label: "Geen" }, { value: "initialen", label: "Initialen" }, { value: "namen", label: "Initialen + namenlijst" },
+              ]} />
+              <label className="mt-4 flex cursor-pointer items-center gap-2 text-xs"><Checkbox checked={verbergLegeWeken} onCheckedChange={(checked) => setVerbergLegeWeken(checked === true)} />Lege weken niet weergeven</label>
+            </section>
           </div>
-          <div className="max-h-44 overflow-y-auto -mx-1 px-1">
-            {projecten.map((p) => (
-              <label key={p.id} className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer rounded hover:bg-accent">
-                <input
-                  type="checkbox"
-                  checked={!uitgeslotenProjecten.has(p.id)}
-                  onChange={() =>
-                    setUitgeslotenProjecten((prev) => {
-                      const n = new Set(prev);
-                      if (n.has(p.id)) n.delete(p.id); else n.add(p.id);
-                      return n;
-                    })
-                  }
-                  className="h-3.5 w-3.5 accent-primary"
-                />
-                <span className="truncate">{[p.case_nummer, p.station_naam].filter(Boolean).join(" · ") || "Naamloos project"}</span>
-              </label>
-            ))}
+        </div>
+        <div className="border-t bg-muted/30 px-5 py-4">
+          <div className="mb-3 text-xs text-muted-foreground">
+            <strong className="text-foreground">{exportMode === "opdrachtgever" ? opdrachtgeverNaam ?? "Nog geen opdrachtgever" : "Intern planningsoverzicht"}</strong>
+            {` · ${gekozenProjecten.length} projecten · ${selectieLabel} · A3 liggend · ${pageBlocks} weekblok${pageBlocks === 1 ? "" : "ken"}`}
           </div>
+          <div className="flex justify-end"><Button type="button" onClick={run} disabled={!canExport}><Printer className="h-4 w-4" /> Open print-preview</Button></div>
         </div>
-
-        <label className="flex items-center gap-2 px-3 py-2 border-b border-border/60 text-xs cursor-pointer">
-          <input
-            type="checkbox"
-            checked={verbergLegeWeken}
-            onChange={(e) => setVerbergLegeWeken(e.target.checked)}
-            className="h-3.5 w-3.5 accent-primary"
-          />
-          Lege weken niet weergeven
-        </label>
-
-        <div className="p-1">
-          <button
-            type="button"
-            onClick={run}
-            disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-sm bg-primary px-2 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            <Printer className="h-4 w-4" /> Open print-preview
-          </button>
-        </div>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
 
