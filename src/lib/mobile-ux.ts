@@ -1,5 +1,6 @@
-import { activeMobilePlanningDays, type IsoWeek, type MobilePlanningDay, type MonteurDayState } from "./mobile-planning";
-import { addIsoWeeks, isoWeekPartsOf } from "./planning-types";
+import { activeMobilePlanningDays, groupDayBlocks, monteurWeekStates, type MobileCapacityMonteur, type IsoWeek, type MobilePlanningDay, type MonteurDayState } from "./mobile-planning";
+import { addIsoWeeks, COLOR_MAP, getMondayOfWeek, isoWeekPartsOf } from "./planning-types";
+import { ymd, type AfwezigheidPeriode, type FeestdagItem } from "./monteur-beschikbaarheid";
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
@@ -171,3 +172,81 @@ export function splitMobileWeeks<T extends { year: number; week: number }>(weeks
 
 export const mobileBackTarget = (index: unknown, fallback: string): -1 | string => typeof index === "number" && index > 0 ? -1 : fallback;
 export const capacityLink = (week: IsoWeek, monteur?: string) => `/capaciteit?week=${formatWeekParam(week)}${monteur ? `&monteur=${encodeURIComponent(monteur)}` : ""}`;
+
+export interface WeekException {
+  type: "dubbel" | "afwezig" | "geen-ploeg";
+  dayIndex: number;
+  date: Date;
+  monteurId?: string;
+  projectIds: string[];
+}
+
+/** One exception per resource-day/type or crewless case-day; never per activity cell. */
+export function weekExceptions(days: MobilePlanningDay[], week: IsoWeek, monteurs: MobileCapacityMonteur[], absences: AfwezigheidPeriode[], holidays: FeestdagItem[], onHold: ReadonlySet<string> = new Set()): WeekException[] {
+  const active = activeMobilePlanningDays(days, onHold).filter((d) => d.year === week.jaar && d.week === week.week_nr);
+  const result: WeekException[] = [];
+  const states = monteurWeekStates(active, week.jaar, week.week_nr, monteurs, absences, holidays);
+  for (const [monteurId, list] of states) for (const state of list) {
+    const entry = { dayIndex: state.dayIndex, date: state.date, monteurId, projectIds: state.entries.map((e) => e.projectId).sort() };
+    if (state.conflict) result.push({ ...entry, type: "dubbel" });
+    if (state.plannedWhileUnavailable) result.push({ ...entry, type: "afwezig" });
+  }
+  for (const block of groupDayBlocks(active)) if (!block.monteurIds.length) result.push({ type: "geen-ploeg", dayIndex: block.dayIndex, date: block.date, projectIds: [block.projectId] });
+  const rank = { dubbel: 0, afwezig: 1, "geen-ploeg": 2 };
+  return result.sort((a, b) => a.dayIndex - b.dayIndex || rank[a.type] - rank[b.type] || (a.monteurId ?? a.projectIds[0]).localeCompare(b.monteurId ?? b.projectIds[0]));
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  montagedagen: "Montage", montage: "Montage", schakeldagen: "Schakel", schakelen: "Schakel",
+  diverse: "Diverse", blokkade: "Blokkade", uitgevoerd: "Gereed", transport: "Transport",
+  bouwkunde: "Bouwk.", levering: "Levering", civiel: "Civiel", asbest: "Asbest", overig: "Overig",
+};
+export const shortActivityType = (name: string) => ACTIVITY_LABELS[name.trim().toLowerCase()] ?? "Overig";
+/** Color code is authoritative, matching the desktop palette, not the activity row name. */
+export function activityTypes(colorCodes: string[], activities: string[] = []) {
+  return [...new Set((colorCodes.length ? colorCodes.map((code) => COLOR_MAP[code]?.naam ?? "Overig") : activities).map(shortActivityType))];
+}
+export function activityCellLabel(colorCodes: string[], activities: string[] = []) {
+  const labels = activityTypes(colorCodes, activities);
+  return `${labels[0] ?? "Overig"}${labels.length > 1 ? ` +${labels.length - 1}` : ""}`;
+}
+export const parseMobileDay = (value: string | null): number | null => value !== null && /^[0-4]$/.test(value) ? Number(value) : null;
+
+/** Stable free → planned → unavailable ordering, independent of names or week grouping. */
+export function sortResourcesForDay<M extends { id: string }>(resources: M[], states: ReadonlyMap<string, Pick<MonteurDayState, "kind" | "dayIndex">[]>, dayIndex: number) {
+  const rank = { free: 0, planned: 1, unavailable: 2 };
+  const score = (m: M) => rank[states.get(m.id)?.find((s) => s.dayIndex === dayIndex)?.kind ?? "unavailable"];
+  return [...resources].sort((a, b) => score(a) - score(b));
+}
+
+/** Unique resource-day subtotal, even across multiple concept cases/activities. */
+export function conceptManDays(days: MobilePlanningDay[], week: IsoWeek, projects: ReadonlyMap<string, { status: string | null }>, onHold: ReadonlySet<string> = new Set()) {
+  const slots = new Set<string>();
+  for (const day of activeMobilePlanningDays(days, onHold)) if (day.year === week.jaar && day.week === week.week_nr && projects.get(day.projectId)?.status === "concept") {
+    for (const id of day.monteurIds) slots.add(`${id}|${day.dayIndex}`);
+  }
+  return slots.size;
+}
+
+export function hasRegisteredAbsence(week: IsoWeek, absences: AfwezigheidPeriode[], resourceIds: ReadonlySet<string>) {
+  const monday = getMondayOfWeek(week.week_nr, week.jaar);
+  return Array.from({ length: 5 }, (_, index) => { const date = new Date(monday); date.setDate(date.getDate() + index); return ymd(date); })
+    .some((date) => absences.some((a) => resourceIds.has(a.monteur_id) && a.datum_van <= date && a.datum_tot >= date));
+}
+
+/** Raw on-hold records are used here only, never merged into active planning. */
+export function latentOnHoldOverlap(days: MobilePlanningDay[], projectId: string, onHold: ReadonlySet<string>) {
+  if (!onHold.has(projectId)) return { count: 0, rows: [] as { monteurId: string; date: Date; projectIds: string[] }[] };
+  const activeSlots = new Map<string, Set<string>>();
+  const slotKey = (d: MobilePlanningDay, id: string) => `${ymd(d.date)}|${id}`;
+  for (const day of activeMobilePlanningDays(days, onHold)) for (const id of day.monteurIds) {
+    const key = slotKey(day, id); const projects = activeSlots.get(key) ?? new Set<string>(); projects.add(day.projectId); activeSlots.set(key, projects);
+  }
+  const overlaps = new Map<string, { monteurId: string; date: Date; projectIds: string[] }>();
+  for (const day of days) if (day.projectId === projectId) for (const id of day.monteurIds) {
+    const key = slotKey(day, id); const projects = activeSlots.get(key);
+    if (projects?.size) overlaps.set(key, { monteurId: id, date: day.date, projectIds: [...projects].sort() });
+  }
+  const rows = [...overlaps.values()].sort((a, b) => a.date.getTime() - b.date.getTime() || a.monteurId.localeCompare(b.monteurId));
+  return { count: rows.length, rows };
+}
