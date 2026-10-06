@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getMondayOfWeek, isoWeekPartsOf } from "@/lib/planning-types";
 import type { IsoWeek } from "@/lib/mobile-planning";
-import { FreshnessCompact, formatShort } from "./MobileShared";
+import { formatShort } from "./MobileShared";
 import type { MobilePlanningData } from "./useMobilePlanningData";
 
 /** Compacte sticky weekbalk onder de vaste topbalk (h-12): week, pijlen, actualiteit en optionele toggle. */
@@ -15,7 +15,6 @@ export function MobileWeekNavigation({ selected, onMove, onSelect, data, childre
       <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => onMove(-1)} aria-label="Vorige week"><ChevronLeft /></Button>
       <Button variant="ghost" className="h-11 min-w-0 flex-1 px-1" onClick={() => onSelect(isoWeekPartsOf(new Date()))} aria-label="Naar huidige week"><span className="text-center"><strong className="block text-sm">Week {selected.week_nr} · {selected.jaar}</strong><span className="block text-xs text-muted-foreground">{formatShort(monday)}–{formatShort(friday)}</span></span></Button>
       <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => onMove(1)} aria-label="Volgende week"><ChevronRight /></Button>
-      {data && <FreshnessCompact data={data} />}
     </div>
     {children}
   </div>;

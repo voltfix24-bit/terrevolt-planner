@@ -65,6 +65,8 @@ export function useMobilePlanningData() {
     queryKey: MOBILE_PLANNING_QUERY_KEY,
     queryFn: loadMobilePlanning,
     staleTime: 45_000,
+    networkMode: "always",
+    retry: 1,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -81,6 +83,8 @@ export function useMobilePlanningData() {
   const monteurNameById = useMemo(() => new Map((raw?.monteurs ?? []).map((m) => [m.id, m.naam])), [raw]);
   const opdrachtgeverNameById = useMemo(() => new Map((raw?.opdrachtgevers ?? []).map((o) => [o.id, o.naam])), [raw]);
   return {
+    hasData: raw !== undefined,
+    isStale: raw !== undefined && query.isError,
     loading: query.isPending,
     fetching: query.isFetching,
     error: query.error ? String(query.error) : null,

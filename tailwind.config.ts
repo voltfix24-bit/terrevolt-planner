@@ -24,6 +24,9 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "primary-text": "var(--primary-text)",
+        "destructive-text": "var(--destructive-text)",
+        "warning-text": "var(--warning-text)",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
