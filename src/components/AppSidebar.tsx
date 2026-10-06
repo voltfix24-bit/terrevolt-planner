@@ -15,9 +15,15 @@ const navItems = [
 
 interface AppSidebarProps {
   collapsed?: boolean;
+  /** Mobiele read-only modus: alleen veilige raadpleeg-items, geen beheer. */
+  mobile?: boolean;
+  onNavigate?: () => void;
 }
 
-export function AppSidebar({ collapsed = false }: AppSidebarProps) {
+const MOBILE_HIDDEN = new Set(["/activiteiten", "/instellingen"]);
+
+export function AppSidebar({ collapsed = false, mobile = false, onNavigate }: AppSidebarProps) {
+  const items = mobile ? navItems.filter((item) => !MOBILE_HIDDEN.has(item.to)) : navItems;
   const { pathname } = useLocation();
   const { theme, toggle } = useTheme();
   const { signOut, user } = useAuth();
@@ -62,12 +68,13 @@ export function AppSidebar({ collapsed = false }: AppSidebarProps) {
       {/* Nav */}
       <nav className={["flex-1", collapsed ? "px-2" : "px-3"].join(" ")}>
         <ul className="space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => {
+          {items.map(({ to, label, icon: Icon }) => {
             const active = isItemActive(to);
             return (
               <li key={to}>
                 <NavLink
                   to={to}
+                  onClick={onNavigate}
                   title={collapsed ? label : undefined}
                   className={[
                     "group relative flex items-center rounded-md text-sm font-medium transition-colors",
@@ -95,6 +102,12 @@ export function AppSidebar({ collapsed = false }: AppSidebarProps) {
             );
           })}
         </ul>
+        {mobile && (
+          <div className="mt-4 rounded-md bg-fg/[0.03] px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
+            <div className="mb-1 font-display text-xs font-semibold text-foreground">Meer</div>
+            Mobiel is alleen-lezen. Activiteiten, instellingen en planning bewerken kan op desktop.
+          </div>
+        )}
       </nav>
 
       {/* Theme toggle */}

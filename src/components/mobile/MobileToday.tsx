@@ -1,21 +1,55 @@
 import { useMemo, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { capacityForWeek } from "@/lib/mobile-planning";
+import { capacityForWeek, groupDayBlocks } from "@/lib/mobile-planning";
 import { getMondayOfWeek, isoWeekPartsOf } from "@/lib/planning-types";
+import { DAY_LABELS, DAY_NAMES, FreshnessBar, StatusChip, SwipeArea } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
 
-const labels = ["Ma", "Di", "Wo", "Do", "Vr"];
 export function MobileToday() {
-  const navigate = useNavigate(); const data = useMobilePlanningData(); const now = new Date(); const current = isoWeekPartsOf(now); const monday = getMondayOfWeek(current.week_nr, current.jaar);
-  const initialDay = Math.min(4, Math.max(0, (now.getDay() + 6) % 7)); const [dayIndex, setDayIndex] = useState(initialDay);
-  const projects = new Map(data.projects.map((p) => [p.id, p])); const clients = new Map(data.opdrachtgevers.map((o) => [o.id, o.naam])); const names = new Map(data.monteurs.map((m) => [m.id, m.naam]));
-  const selectedDays = useMemo(() => data.days.filter((d) => d.year === current.jaar && d.week === current.week_nr && d.dayIndex === dayIndex), [data.days, current.jaar, current.week_nr, dayIndex]);
-  const grouped = [...new Set(selectedDays.map((d) => d.projectId))].map((id) => ({ project: projects.get(id), days: selectedDays.filter((d) => d.projectId === id) })).filter((x) => x.project);
-  const cap = capacityForWeek(data.days, current.jaar, current.week_nr, data.monteurs, data.absences, data.holidays, new Set(data.projects.filter((p) => p.status === "on_hold").map((p) => p.id)));
+  const navigate = useNavigate(); const data = useMobilePlanningData();
+  const now = new Date(); const current = isoWeekPartsOf(now); const monday = getMondayOfWeek(current.week_nr, current.jaar);
+  const todayIndex = (now.getDay() + 6) % 7; const isWeekday = todayIndex <= 4;
+  const initialDay = isWeekday ? todayIndex : 0;
+  const [dayIndex, setDayIndex] = useState(initialDay);
+  const weekDays = data.daysByWeek.get(`${current.jaar}-${current.week_nr}`);
+  const blocksByProject = useMemo(() => {
+    const blocks = groupDayBlocks((weekDays ?? []).filter((d) => d.dayIndex === dayIndex));
+    return blocks.filter((b) => data.projectById.has(b.projectId));
+  }, [weekDays, dayIndex, data.projectById]);
+  const cap = useMemo(() => capacityForWeek(weekDays ?? [], current.jaar, current.week_nr, data.monteurs, data.absences, data.holidays, data.onHoldProjectIds), [weekDays, current.jaar, current.week_nr, data.monteurs, data.absences, data.holidays, data.onHoldProjectIds]);
+  const dayCap = cap.days[dayIndex];
   const date = new Date(monday); date.setDate(date.getDate() + dayIndex);
-  return <div className="space-y-4"><div><h1 className="font-display text-2xl font-bold">Vandaag</h1><p className="text-sm capitalize text-muted-foreground">{date.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</p></div>
-    <div className="grid grid-cols-5 gap-1">{labels.map((label, index) => { const d = new Date(monday); d.setDate(d.getDate() + index); return <button key={label} onClick={() => setDayIndex(index)} className={`min-h-14 rounded-md text-center ${dayIndex === index ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}><strong className="block text-xs">{label}</strong><span className="text-xs">{d.getDate()}</span></button>; })}</div>
-    <section className="rounded-lg border border-border bg-card p-4"><div className="flex justify-between"><span className="text-sm font-medium">Capaciteit week {current.week_nr}</span><span className="text-sm font-bold">{cap.percentage}% bezet</span></div><div className="mt-2 h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.min(100, cap.percentage)}%` }}/></div><p className="mt-2 text-xs text-muted-foreground">{cap.planned} ingepland · {cap.free} vrij van {cap.available} monteur-dagen</p></section>
-    {data.loading ? <p className="py-10 text-center text-sm text-muted-foreground">Vandaag laden…</p> : grouped.length === 0 ? <p className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">Geen projecten gepland op deze dag</p> : grouped.map(({ project, days }) => project && <button key={project.id} onClick={() => navigate(`/projecten/${project.id}`)} className="w-full rounded-lg border border-border bg-card p-4 text-left"><div className="flex items-start justify-between gap-2"><strong>{project.case_nummer || "Geen casenummer"} · {project.station_naam || "Naamloos station"}</strong><span className="rounded bg-muted px-2 py-1 text-[10px] uppercase">{project.status?.replace("_", " ")}</span></div><p className="mt-1 text-xs text-muted-foreground">{project.opdrachtgever_id ? clients.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p><div className="mt-3 space-y-2">{days.map((d) => <div key={d.cellId}><span className="text-sm font-medium">{d.activity}</span><p className="text-sm text-muted-foreground">{d.monteurIds.map((id) => names.get(id)).filter(Boolean).join(", ") || "Nog geen monteurs"}</p></div>)}</div></button>)}
+  const isToday = isWeekday && dayIndex === todayIndex;
+  const swipe = (dir: -1 | 1) => setDayIndex((i) => Math.min(4, Math.max(0, i + dir)));
+
+  return <div className="space-y-4">
+    <div className="flex items-start justify-between gap-2">
+      <div><h1 className="font-display text-2xl font-bold">{isToday ? "Vandaag" : DAY_NAMES[dayIndex]}</h1><p className="text-sm capitalize text-muted-foreground">{date.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</p></div>
+      {!isToday && isWeekday && <button type="button" onClick={() => setDayIndex(todayIndex)} className="min-h-11 rounded-md border border-border bg-card px-4 text-sm font-medium text-primary">Vandaag</button>}
+    </div>
+    <div className="grid grid-cols-5 gap-1" role="tablist" aria-label="Werkdag kiezen">{DAY_LABELS.map((label, index) => { const d = new Date(monday); d.setDate(d.getDate() + index); const active = dayIndex === index; return <button key={label} role="tab" aria-selected={active} onClick={() => setDayIndex(index)} className={`min-h-14 rounded-md text-center ${active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"} ${isWeekday && index === todayIndex && !active ? "ring-1 ring-primary" : ""}`}><strong className="block text-xs">{label}</strong><span className="text-xs">{d.getDate()}</span></button>; })}</div>
+    <SwipeArea onSwipe={swipe} label="Veeg om van werkdag te wisselen">
+      <div className="space-y-4">
+        {dayCap && <section className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center justify-between"><span className="text-sm font-medium">Capaciteit {isToday ? "vandaag" : DAY_NAMES[dayIndex].toLowerCase()}</span>{dayCap.conflicts.length > 0 && <span className="flex items-center gap-1 text-xs font-semibold text-destructive"><AlertTriangle className="h-3.5 w-3.5" />{dayCap.conflicts.length} {dayCap.conflicts.length === 1 ? "conflict" : "conflicten"}</span>}</div>
+          {dayCap.holidayName && <p className="mt-1 text-xs font-medium text-primary">Feestdag: {dayCap.holidayName}</p>}
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div><strong className="block text-lg">{dayCap.available}</strong><span className="text-[11px] text-muted-foreground">beschikbaar</span></div>
+            <div><strong className="block text-lg">{dayCap.plannedUnique}</strong><span className="text-[11px] text-muted-foreground">ingepland</span></div>
+            <div><strong className="block text-lg">{dayCap.free}</strong><span className="text-[11px] text-muted-foreground">vrij</span></div>
+          </div>
+          {dayCap.overplannedUnavailable > 0 && <p className="mt-2 text-xs text-destructive">{dayCap.overplannedUnavailable} ingepland terwijl niet beschikbaar</p>}
+        </section>}
+        {data.loading ? <p className="py-10 text-center text-sm text-muted-foreground">Planning laden…</p> : blocksByProject.length === 0 ? <p className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">Geen projecten gepland op deze dag</p> : blocksByProject.map((block) => { const project = data.projectById.get(block.projectId)!; return <button key={block.key} onClick={() => navigate(`/projecten/${project.id}`)} className="w-full rounded-lg border border-border bg-card p-4 text-left">
+          <div className="flex items-start justify-between gap-2"><strong className="min-w-0">{project.case_nummer || "Geen casenummer"} · {project.station_naam || "Naamloos station"}</strong><StatusChip status={project.status} /></div>
+          <p className="mt-1 text-xs text-muted-foreground">{project.opdrachtgever_id ? data.opdrachtgeverNameById.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p>
+          <p className="mt-3 text-sm font-medium">{block.activities.join(" · ")}</p>
+          <p className="text-sm text-muted-foreground">{block.monteurIds.map((id) => data.monteurNameById.get(id)).filter(Boolean).join(", ") || "Nog geen monteurs"}</p>
+        </button>; })}
+      </div>
+    </SwipeArea>
+    <p className="text-center text-xs text-muted-foreground">Week {current.week_nr} · {cap.percentage}% bezet{cap.conflicts > 0 ? ` · ${cap.conflicts} conflicten` : ""}</p>
+    <FreshnessBar data={data} />
   </div>;
 }

@@ -11,3 +11,15 @@
 - [x] Guard planning drag/fill/week mutations and replace the mobile editor with a read-only route.
 - [x] Add mobile aggregation tests and run mobile/desktop QA.
 - [x] Align mobile capacity with werkdagen, afwezigheid and feestdagen, then revalidate mobile views.
+
+## Mobiel ronde 2
+- [x] Read-only consistentie (geen Undo, sidebar zonder beheer, beheerroutes desktop-only)
+- [x] /plannen?project= context + doelweek
+- [x] Case-detail: unieke werkdagen, dagblokken, week-accordion
+- [x] Capaciteit: plannedAvailable/free, onbeschikbaar ingepland, conflicten
+- [x] Vandaag: dynamische titel, dag-capaciteit, weekcontext
+- [x] Per monteur-weergave
+- [x] Swipe dagen/weken
+- [x] Gedeelde cache + "Bijgewerkt" + vernieuwen
+- [x] PWA (manifest, iconen, guarded service worker zonder datacache)
+- [x] Cases: filters wissen, volgende/afgelopen datum

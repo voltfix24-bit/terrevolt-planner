@@ -28,6 +28,7 @@ import {
 import { assessPlanningRange, type PlanningWeek } from "@/lib/planning-safety";
 import { buildProjectCellDates } from "@/lib/project-overview-sort";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { isoWeekPartsOf } from "@/lib/planning-types";
 
 type Status = "concept" | "gepland" | "in_uitvoering" | "on_hold" | "afgerond";
 
@@ -86,6 +87,17 @@ const statusStyle = (s: Status | null): React.CSSProperties => {
 };
 
 const DAY_MS = 86_400_000;
+
+/** Mobiel: eerstvolgende geplande dag, anders "Afgelopen" met laatste dag. */
+function mobilePlanningLabel(dates: number[] | undefined): string {
+  if (!dates || dates.length === 0) return "Geen planning";
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const sorted = [...dates].sort((a, b) => a - b);
+  const next = sorted.find((ms) => ms >= today.getTime());
+  const fmt = (ms: number) => new Date(ms).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" });
+  if (next !== undefined) return `Volgende: ${fmt(next)} · week ${isoWeekPartsOf(new Date(next)).week_nr}`;
+  return `Afgelopen · laatste ${fmt(sorted[sorted.length - 1])}`;
+}
 
 type GroupKey = "deze_week" | "binnenkort" | "later" | "verleden" | "geen";
 
@@ -180,10 +192,8 @@ const Projecten = () => {
       if (weekFilter !== "alle") {
         const [year, week] = weekFilter.split("-").map(Number);
         const matches = (cellDates.get(p.id) ?? []).some((ms) => {
-          const date = new Date(ms); const first = new Date(date.getFullYear(), 0, 4);
-          const day = (date.getDay() + 6) % 7; const thursday = new Date(date); thursday.setDate(date.getDate() - day + 3);
-          const firstDay = (first.getDay() + 6) % 7; first.setDate(first.getDate() - firstDay + 3);
-          return thursday.getFullYear() === year && 1 + Math.round((thursday.getTime() - first.getTime()) / (7 * DAY_MS)) === week;
+          const w = isoWeekPartsOf(new Date(ms));
+          return w.jaar === year && w.week_nr === week;
         });
         if (!matches) return false;
       }
@@ -199,13 +209,11 @@ const Projecten = () => {
   const mobileWeeks = useMemo(() => {
     const values = new Map<string, string>();
     for (const dates of cellDates.values()) for (const ms of dates) {
-      const date = new Date(ms); const first = new Date(date.getFullYear(), 0, 4);
-      const day = (date.getDay() + 6) % 7; const thursday = new Date(date); thursday.setDate(date.getDate() - day + 3);
-      const firstDay = (first.getDay() + 6) % 7; first.setDate(first.getDate() - firstDay + 3);
-      const week = 1 + Math.round((thursday.getTime() - first.getTime()) / (7 * DAY_MS));
-      values.set(`${thursday.getFullYear()}-${week}`, `Week ${week} · ${thursday.getFullYear()}`);
+      const w = isoWeekPartsOf(new Date(ms));
+      values.set(`${w.jaar}-${w.week_nr}`, `Week ${w.week_nr} · ${w.jaar}`);
     }
-    return [...values].sort(([a], [b]) => a.localeCompare(b));
+    const ord = (key: string) => { const [y, w] = key.split("-").map(Number); return y * 100 + w; };
+    return [...values].sort(([a], [b]) => ord(a) - ord(b));
   }, [cellDates]);
 
   const grouped = useMemo(() => {
@@ -327,6 +335,11 @@ const Projecten = () => {
           <select aria-label="Filter week" value={weekFilter} onChange={(e) => setWeekFilter(e.target.value)} className="h-11 rounded-md border border-input bg-background px-3 text-sm">
             <option value="alle">Alle weken</option>{mobileWeeks.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
+          {(opdrachtgeverFilter !== "alle" || weekFilter !== "alle") && (
+            <button type="button" onClick={() => { setOpdrachtgeverFilter("alle"); setWeekFilter("alle"); }} className="col-span-2 min-h-11 rounded-md border border-border text-sm font-medium text-primary">
+              Filters wissen
+            </button>
+          )}
         </div>
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -420,7 +433,8 @@ const Projecten = () => {
 
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{fmtRange(dates)}</span>
+                        <span className="hidden truncate md:inline">{fmtRange(dates)}</span>
+                        <span className="truncate md:hidden">{mobilePlanningLabel(dates)}</span>
                       </div>
 
                       <div className="flex items-center justify-start gap-1.5 md:justify-end">

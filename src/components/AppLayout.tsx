@@ -4,11 +4,13 @@ import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { UndoButton } from "./UndoButton";
 import { MobileBottomNav } from "./mobile/MobileBottomNav";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const STORAGE_KEY = "terrevolt-nav-collapsed";
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(STORAGE_KEY) === "1";
@@ -47,7 +49,8 @@ export function AppLayout() {
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
         <div className="font-display text-sm font-bold tracking-tight">TerreVolt Planner</div>
-        <UndoButton />
+        {/* Undo is muterend: niet tonen in de read-only mobiele modus. */}
+        <div className="h-11 w-11" aria-hidden="true" />
       </div>
 
       {/* Sidebar wrapper: slide on mobile, static on desktop. */}
@@ -58,7 +61,7 @@ export function AppLayout() {
         ].join(" ")}
         style={{ width: mobileOpen ? 220 : sidebarW }}
       >
-        <AppSidebar collapsed={collapsed && !mobileOpen} />
+        <AppSidebar collapsed={collapsed && !mobileOpen} mobile={isMobile} onNavigate={() => setMobileOpen(false)} />
       </div>
 
       {/* Desktop collapse toggle — floats on the sidebar edge */}
@@ -79,9 +82,11 @@ export function AppLayout() {
       </button>
 
       {/* Floating Undo button (desktop) */}
-      <div className="hidden md:block fixed top-4 right-4 z-[55]">
-        <UndoButton />
-      </div>
+      {!isMobile && (
+        <div className="hidden md:block fixed top-4 right-4 z-[55]">
+          <UndoButton />
+        </div>
+      )}
 
       {/* Mobile overlay */}
       {mobileOpen && (
