@@ -38,7 +38,7 @@ describe("mobile planning aggregation", () => {
     const unavailable = [{ monteur_id: "m1", datum_van: "2026-10-05", datum_tot: "2026-10-09", type: "Verlof" }];
     const plannedDays = Array.from({ length: 2 }, (_, index) => ({ ...aggregateMobilePlanning(weeks, acts, cells, links)[0], cellId: `x${index}`, dayIndex: index, monteurIds: ["m1"] }));
     const cap = capacityForWeek(plannedDays, 2026, 41, [{ id: "m1", werkdagen: null }, { id: "m2", werkdagen: [1] }], unavailable, []);
-    expect(cap).toMatchObject({ planned: 2, available: 1, free: 0, percentage: 200 });
+    expect(cap).toMatchObject({ planned: 2, plannedUnique: 2, plannedAvailable: 0, overplannedUnavailable: 2, available: 1, free: 1, percentage: 200 });
   });
   it("crosses the ISO year boundary", () => {
     expect(mobileWeekSequence(new Date(2026, 11, 31), 2)).toEqual([{ jaar: 2026, week_nr: 53 }, { jaar: 2027, week_nr: 1 }]);

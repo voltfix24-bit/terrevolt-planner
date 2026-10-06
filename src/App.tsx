@@ -29,8 +29,9 @@ import { MobileToday } from "@/components/mobile/MobileToday";
 import { MobileWeekPlanning } from "@/components/mobile/MobileWeekPlanning";
 import { MobileCapacity } from "@/components/mobile/MobileCapacity";
 import { MobileProjectDetail } from "@/components/mobile/MobileProjectDetail";
+import { DesktopOnly } from "@/components/mobile/MobileShared";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } });
 
 const ResponsivePage = ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) =>
   useIsMobile() ? mobile : desktop;
@@ -53,10 +54,10 @@ const App = () => (
                   <Route path="/projecten/:id" element={<ResponsivePage desktop={<ProjectDetail />} mobile={<MobileProjectDetail />} />} />
                   <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
                   <Route path="/plannen" element={<ResponsivePage desktop={<Plannen />} mobile={<MobileWeekPlanning />} />} />
-                  <Route path="/mandagenregister" element={<Mandagenregister />} />
-                  <Route path="/activiteiten" element={<Activiteiten />} />
+                  <Route path="/mandagenregister" element={<ResponsivePage desktop={<Mandagenregister />} mobile={<DesktopOnly title="Mandagenregister" />} />} />
+                  <Route path="/activiteiten" element={<ResponsivePage desktop={<Activiteiten />} mobile={<DesktopOnly title="Activiteiten" />} />} />
                   <Route path="/capaciteit" element={<ResponsivePage desktop={<Capaciteit />} mobile={<MobileCapacity />} />} />
-                  <Route path="/instellingen" element={<Instellingen />} />
+                  <Route path="/instellingen" element={<ResponsivePage desktop={<Instellingen />} mobile={<DesktopOnly title="Instellingen" />} />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
