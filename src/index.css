@@ -30,6 +30,18 @@
     --primary-text: 163 94% 24%;
     --destructive-text: 4 76% 40%;
     --warning-text: 26 90% 37%;
+    --activity-c1: #00642f;
+    --activity-c2: #fdcb35;
+    --activity-c3: #1a4a2e;
+    --activity-c4: #0f766e;
+    --activity-c5: #1d4ed8;
+    --activity-c6: #dc2626;
+    --activity-c7: #9333ea;
+    --activity-c8: #ea580c;
+    --activity-c9: #0891b2;
+    --activity-c10: #65a30d;
+    --activity-c11: #be185d;
+    --activity-c12: #78716c;
 
     /* secondary = deep emerald #064E3B */
     --secondary: 158 84% 16%;
@@ -162,6 +174,18 @@
 }
 
 @layer components {
+  .activity-c1 { background-color: var(--activity-c1); }
+  .activity-c2 { background-color: var(--activity-c2); }
+  .activity-c3 { background-color: var(--activity-c3); }
+  .activity-c4 { background-color: var(--activity-c4); }
+  .activity-c5 { background-color: var(--activity-c5); }
+  .activity-c6 { background-color: var(--activity-c6); }
+  .activity-c7 { background-color: var(--activity-c7); }
+  .activity-c8 { background-color: var(--activity-c8); }
+  .activity-c9 { background-color: var(--activity-c9); }
+  .activity-c10 { background-color: var(--activity-c10); }
+  .activity-c11 { background-color: var(--activity-c11); }
+  .activity-c12 { background-color: var(--activity-c12); }
   .surface-card {
     background-color: rgb(var(--surface-rgb) / 0.7);
     border: 1px solid rgb(var(--fg-rgb) / 0.08);
