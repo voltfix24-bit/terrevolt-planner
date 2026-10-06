@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, EyeOff, GripVertical, PanelLeftClose, PanelLeftOpen, Printer, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -12,7 +14,9 @@ import {
 import { toast } from "sonner";
 import {
   exportGanttPDF,
+  type GanttExportMode,
   type GanttMonteurWeergave,
+  type GanttPrintLayout,
 } from "@/lib/gantt-export";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -682,6 +686,11 @@ export default function Overzicht() {
     for (const p of projecten) m.set(p.id, p);
     return m;
   }, [projecten]);
+
+  const opdrachtgeverNaamById = useMemo(
+    () => new Map(opdrachtgevers.map((opdrachtgever) => [opdrachtgever.id, opdrachtgever.naam] as const)),
+    [opdrachtgevers],
+  );
 
   const activiteitById = useMemo(() => {
     const m = new Map<string, Activiteit>();
@@ -2059,6 +2068,8 @@ export default function Overzicht() {
 
           <GanttPrintMenu
             projecten={projecten}
+            opdrachtgevers={opdrachtgevers}
+            actiefOpdrachtgeverId={filterOpdrachtgeverId}
             weken={weken}
             activiteiten={activiteiten}
             cellen={cellen}
@@ -2858,6 +2869,11 @@ export default function Overzicht() {
                             >
                               {p.station_naam ?? "—"}
                             </p>
+                            {p.opdrachtgever_id && opdrachtgeverNaamById.get(p.opdrachtgever_id) && (
+                              <span className="mt-0.5 block truncate text-[9px] font-medium text-muted-foreground">
+                                {opdrachtgeverNaamById.get(p.opdrachtgever_id)}
+                              </span>
+                            )}
                             {/* GSU / GEU + optional BK/AS badges */}
                             {(p.gsu_datum || p.geu_datum || p.bouwkundig_benodigd === "ja" || p.asbest_benodigd === "ja") && (
                               <div
