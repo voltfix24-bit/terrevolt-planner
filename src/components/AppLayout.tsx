@@ -34,7 +34,7 @@ export function AppLayout() {
       <div
         className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-12 border-b"
         style={{
-          backgroundColor: "rgb(var(--surface-rgb) / 0.85)",
+          backgroundColor: "rgb(var(--surface-rgb) / 0.98)",
           borderColor: "rgb(var(--fg-rgb) / 0.08)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
