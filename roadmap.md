@@ -10,3 +10,4 @@
 - [x] Build mobile Today, Cases, global Planning, case-detail and Capacity read views.
 - [x] Guard planning drag/fill/week mutations and replace the mobile editor with a read-only route.
 - [x] Add mobile aggregation tests and run mobile/desktop QA.
+- [x] Align mobile capacity with werkdagen, afwezigheid and feestdagen, then revalidate mobile views.

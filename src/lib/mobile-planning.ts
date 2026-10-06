@@ -1,9 +1,25 @@
 import { addIsoWeeks, getMondayOfWeek, isoWeekPartsOf } from "./planning-types";
+import {
+  checkBeschikbaarheid,
+  type AfwezigheidPeriode,
+  type FeestdagItem,
+} from "./monteur-beschikbaarheid";
 
 export interface MobileWeek { id: string; project_id: string | null; jaar: number; week_nr: number }
 export interface MobileActivity { id: string; project_id: string | null; naam: string }
 export interface MobileCell { id: string; activiteit_id: string | null; week_id: string | null; dag_index: number; kleur_code: string | null }
 export interface MobileCellMonteur { cel_id: string; monteur_id: string }
+export interface MobileCapacityMonteur { id: string; werkdagen: number[] | null | undefined }
+
+export interface MobileAvailabilityDay {
+  year: number;
+  week: number;
+  dayIndex: number;
+  date: Date;
+  holidayName: string | null;
+  availableMonteurIds: string[];
+  unavailableMonteurIds: string[];
+}
 
 export interface MobilePlanningDay {
   projectId: string; activityId: string; activity: string; cellId: string;
@@ -36,13 +52,58 @@ export function uniqueMonteursForProject(days: MobilePlanningDay[], projectId: s
   return new Map([...result].map(([id, dates]) => [id, dates.size]));
 }
 
-export function capacityForWeek(days: MobilePlanningDay[], year: number, week: number, activeMonteurIds: string[], onHoldProjectIds = new Set<string>()) {
+export function availableMonteurSlotsForWeek(
+  year: number,
+  week: number,
+  monteurs: MobileCapacityMonteur[],
+  absences: AfwezigheidPeriode[],
+  holidays: FeestdagItem[],
+): MobileAvailabilityDay[] {
+  const holidayMap = new Map(holidays.map((holiday) => [holiday.datum, holiday.naam]));
+  return Array.from({ length: 5 }, (_, dayIndex) => {
+    const date = getMondayOfWeek(week, year);
+    date.setDate(date.getDate() + dayIndex);
+    const availableMonteurIds: string[] = [];
+    const unavailableMonteurIds: string[] = [];
+    for (const monteur of monteurs) {
+      const result = checkBeschikbaarheid({
+        monteurId: monteur.id,
+        werkdagen: monteur.werkdagen,
+        weekNr: week,
+        jaar: year,
+        dagIndex: dayIndex,
+        afwezigheid: absences,
+        feestdagenMap: holidayMap,
+      });
+      (result.beschikbaar ? availableMonteurIds : unavailableMonteurIds).push(monteur.id);
+    }
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    return { year, week, dayIndex, date, holidayName: holidayMap.get(dateKey) ?? null, availableMonteurIds, unavailableMonteurIds };
+  });
+}
+
+export function capacityForWeek(
+  days: MobilePlanningDay[],
+  year: number,
+  week: number,
+  monteurs: MobileCapacityMonteur[],
+  absences: AfwezigheidPeriode[],
+  holidays: FeestdagItem[],
+  onHoldProjectIds = new Set<string>(),
+) {
   const planned = new Set<string>();
   for (const day of days) if (day.year === year && day.week === week && !onHoldProjectIds.has(day.projectId)) {
     for (const monteurId of day.monteurIds) planned.add(`${monteurId}|${day.dayIndex}`);
   }
-  const available = activeMonteurIds.length * 5;
-  return { planned: planned.size, available, free: Math.max(0, available - planned.size), percentage: available ? Math.round(planned.size / available * 100) : 0 };
+  const availability = availableMonteurSlotsForWeek(year, week, monteurs, absences, holidays);
+  const available = availability.reduce((total, day) => total + day.availableMonteurIds.length, 0);
+  return {
+    planned: planned.size,
+    available,
+    free: Math.max(0, available - planned.size),
+    percentage: available ? Math.round(planned.size / available * 100) : planned.size ? 100 : 0,
+    days: availability,
+  };
 }
 
 export function mobileWeekSequence(from: Date, count: number) {

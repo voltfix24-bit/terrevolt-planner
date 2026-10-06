@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateMobilePlanning, capacityForWeek, mobileWeekSequence, uniqueMonteursForProject } from "./mobile-planning";
+import { aggregateMobilePlanning, availableMonteurSlotsForWeek, capacityForWeek, mobileWeekSequence, uniqueMonteursForProject } from "./mobile-planning";
 
 const weeks = [{ id: "w", project_id: "p", jaar: 2026, week_nr: 41 }];
 const acts = [{ id: "a", project_id: "p", naam: "Montage" }];
@@ -16,8 +16,29 @@ describe("mobile planning aggregation", () => {
   });
   it("calculates capacity and excludes on-hold projects", () => {
     const days = aggregateMobilePlanning(weeks, acts, cells, links);
-    expect(capacityForWeek(days, 2026, 41, ["m1", "m2"])).toMatchObject({ planned: 2, available: 10, free: 8, percentage: 20 });
-    expect(capacityForWeek(days, 2026, 41, ["m1", "m2"], new Set(["p"]))).toMatchObject({ planned: 0, free: 10 });
+    const monteurs = [{ id: "m1", werkdagen: null }, { id: "m2", werkdagen: null }];
+    expect(capacityForWeek(days, 2026, 41, monteurs, [], [])).toMatchObject({ planned: 2, available: 10, free: 8, percentage: 20 });
+    expect(capacityForWeek(days, 2026, 41, monteurs, [], [], new Set(["p"]))).toMatchObject({ planned: 0, free: 10 });
+  });
+  it("excludes a part-time fixed day off from available slots", () => {
+    const result = availableMonteurSlotsForWeek(2026, 41, [{ id: "m1", werkdagen: [1, 2, 3, 4] }], [], []);
+    expect(result[4].availableMonteurIds).toEqual([]);
+    expect(result.reduce((sum, day) => sum + day.availableMonteurIds.length, 0)).toBe(4);
+  });
+  it("reduces availability for an absence period", () => {
+    const cap = capacityForWeek([], 2026, 41, [{ id: "m1", werkdagen: null }], [{ monteur_id: "m1", datum_van: "2026-10-06", datum_tot: "2026-10-07", type: "Verlof" }], []);
+    expect(cap.available).toBe(3);
+  });
+  it("reduces availability for a public holiday", () => {
+    const cap = capacityForWeek([], 2026, 41, [{ id: "m1", werkdagen: null }, { id: "m2", werkdagen: null }], [], [{ datum: "2026-10-05", naam: "Testfeestdag" }]);
+    expect(cap.available).toBe(8);
+    expect(cap.days[0].holidayName).toBe("Testfeestdag");
+  });
+  it("shows overplanning when someone is planned while unavailable", () => {
+    const unavailable = [{ monteur_id: "m1", datum_van: "2026-10-05", datum_tot: "2026-10-09", type: "Verlof" }];
+    const plannedDays = Array.from({ length: 2 }, (_, index) => ({ ...aggregateMobilePlanning(weeks, acts, cells, links)[0], cellId: `x${index}`, dayIndex: index, monteurIds: ["m1"] }));
+    const cap = capacityForWeek(plannedDays, 2026, 41, [{ id: "m1", werkdagen: null }, { id: "m2", werkdagen: [1] }], unavailable, []);
+    expect(cap).toMatchObject({ planned: 2, available: 1, free: 0, percentage: 200 });
   });
   it("crosses the ISO year boundary", () => {
     expect(mobileWeekSequence(new Date(2026, 11, 31), 2)).toEqual([{ jaar: 2026, week_nr: 53 }, { jaar: 2027, week_nr: 1 }]);
