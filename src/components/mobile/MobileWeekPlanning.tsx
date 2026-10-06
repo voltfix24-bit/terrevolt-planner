@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { capacityForWeek, caseWeekMatrix, mobileProjectContext, monteurWeekStates, targetWeekForDays, type IsoWeek } from "@/lib/mobile-planning";
+import { capacityForWeek, caseWeekMatrix, mobileProjectContext, monteurWeekStates, targetWeekForDays, type IsoWeek, type MonteurDayState } from "@/lib/mobile-planning";
 import { addIsoWeeks, isoWeekPartsOf } from "@/lib/planning-types";
 import { FreshnessBar, SwipeArea } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
@@ -35,7 +35,7 @@ export function MobileWeekPlanning() {
     if (!projectId && term && !hay.includes(term)) return [];
     return [{ ...row, project }];
   }).sort((a, b) => (a.project.case_nummer ?? "").localeCompare(b.project.case_nummer ?? "", "nl")), [weekDays, selected, projectId, term, data.projectById, data.opdrachtgeverNameById]);
-  const monteurStates = useMemo(() => mode === "monteur" ? monteurWeekStates(weekDays, selected.jaar, selected.week_nr, data.monteurs, data.absences, data.holidays) : new Map(), [mode, weekDays, selected, data.monteurs, data.absences, data.holidays]);
+  const monteurStates = useMemo(() => mode === "monteur" ? monteurWeekStates(weekDays, selected.jaar, selected.week_nr, data.monteurs, data.absences, data.holidays) : new Map<string, MonteurDayState[]>(), [mode, weekDays, selected, data.monteurs, data.absences, data.holidays]);
   const monteurRows = useMemo(() => data.monteurs.filter((monteur) => {
     if (!term || monteur.naam.toLowerCase().includes(term)) return true;
     return (monteurStates.get(monteur.id) ?? []).some((state: { entries: { projectId: string }[] }) => state.entries.some((entry) => {

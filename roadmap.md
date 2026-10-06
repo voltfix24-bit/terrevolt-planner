@@ -25,8 +25,8 @@
 - [x] Cases: filters wissen, volgende/afgelopen datum
 
 ## Compacte mobiele weekkalenders
-- [ ] Centrale actieve planningfilter en geblokkeerde on-hold context
-- [ ] Compacte casekalender en monteurkalender met uitklapdetails
-- [ ] Capaciteit standaard weekkalender; komende weken behouden
-- [ ] Vandaag en case-detail consequent on-hold behandelen
-- [ ] Regressietests en mobiele/desktop browsercontrole
+- [x] Centrale actieve planningfilter en geblokkeerde on-hold context
+- [x] Compacte casekalender en monteurkalender met uitklapdetails
+- [x] Capaciteit standaard weekkalender; komende weken behouden
+- [x] Vandaag en case-detail consequent on-hold behandelen
+- [x] Regressietests en mobiele/desktop browsercontrole
