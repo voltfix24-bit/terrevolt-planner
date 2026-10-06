@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { capacityForWeek, groupDayBlocks }
-import { formatWeekParam, nextActivePlanningAfter, unitLabel } from "@/lib/mobile-ux"; from "@/lib/mobile-planning";
+import { capacityForWeek, groupDayBlocks } from "@/lib/mobile-planning";
+import { formatWeekParam, nextActivePlanningAfter, unitLabel } from "@/lib/mobile-ux";
 import { getMondayOfWeek, isoWeekPartsOf } from "@/lib/planning-types";
 import { DAY_LABELS, DAY_NAMES, FreshnessBar, StatusChip, SwipeArea } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
