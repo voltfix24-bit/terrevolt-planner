@@ -20,10 +20,13 @@ interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
+/** Mobiel: exact dezelfde namen als de onderste navigatie. Desktop-labels blijven ongewijzigd. */
+const MOBILE_LABELS: Record<string, string> = { "/overzicht": "Vandaag", "/projecten": "Cases", "/plannen": "Planning", "/capaciteit": "Capaciteit" };
+
 const MOBILE_HIDDEN = new Set(["/activiteiten", "/instellingen"]);
 
 export function AppSidebar({ collapsed = false, mobile = false, onNavigate }: AppSidebarProps) {
-  const items = mobile ? navItems.filter((item) => !MOBILE_HIDDEN.has(item.to)) : navItems;
+  const items = mobile ? navItems.filter((item) => !MOBILE_HIDDEN.has(item.to)).map((item) => ({ ...item, label: MOBILE_LABELS[item.to] ?? item.label })) : navItems;
   const { pathname } = useLocation();
   const { theme, toggle } = useTheme();
   const { signOut, user } = useAuth();
