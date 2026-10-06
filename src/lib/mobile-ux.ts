@@ -1,4 +1,5 @@
 import { activeMobilePlanningDays, type IsoWeek, type MobilePlanningDay, type MonteurDayState } from "./mobile-planning";
+import { addIsoWeeks, isoWeekPartsOf } from "./planning-types";
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
@@ -135,3 +136,38 @@ export function sortCaseWeekOptions(weeks: string[], current: IsoWeek) {
     return aFuture !== bFuture ? (aFuture ? -1 : 1) : aFuture ? a.localeCompare(b) : b.localeCompare(a);
   });
 }
+
+export function selectMobileWeek(url: string | null, stored: IsoWeek | null, now = new Date()): IsoWeek {
+  return parseWeekParam(url) ?? stored ?? isoWeekPartsOf(now);
+}
+
+export function parseMobileView(params: URLSearchParams) {
+  return { week: parseWeekParam(params.get("week")), query: params.get("q") ?? "", open: params.get("open"), mode: params.get("weergave") === "komend" ? "overview" as const : "week" as const };
+}
+
+export function formatMobileView(params: URLSearchParams, state: { week: IsoWeek; query: string; open: string | null; mode?: "week" | "overview" }) {
+  const next = new URLSearchParams(params);
+  next.set("week", formatWeekParam(state.week));
+  if (state.query) next.set("q", state.query); else next.delete("q");
+  if (state.open) next.set("open", state.open); else next.delete("open");
+  if (state.mode === "overview") next.set("weergave", "komend"); else next.delete("weergave");
+  return next;
+}
+
+export function mobileTodayContext(now: Date) {
+  const index = (now.getDay() + 6) % 7;
+  const weekend = index > 4;
+  const week = isoWeekPartsOf(now);
+  return { week: weekend ? addIsoWeeks(week.jaar, week.week_nr, 1) : week, dayIndex: weekend ? 0 : index, weekend };
+}
+
+export function splitMobileWeeks<T extends { year: number; week: number }>(weeks: T[], now = new Date()) {
+  const current = formatWeekParam(isoWeekPartsOf(now));
+  const key = (w: T) => formatWeekParam({ jaar: w.year, week_nr: w.week });
+  const upcoming = weeks.filter((w) => key(w) >= current).sort((a, b) => key(a).localeCompare(key(b)));
+  const earlier = weeks.filter((w) => key(w) < current).sort((a, b) => key(b).localeCompare(key(a)));
+  return { upcoming, earlier, defaultOpen: upcoming[0] ? key(upcoming[0]) : null };
+}
+
+export const mobileBackTarget = (index: unknown, fallback: string): -1 | string => typeof index === "number" && index > 0 ? -1 : fallback;
+export const capacityLink = (week: IsoWeek, monteur?: string) => `/capaciteit?week=${formatWeekParam(week)}${monteur ? `&monteur=${encodeURIComponent(monteur)}` : ""}`;

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserRound } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { UndoButton } from "./UndoButton";
 import { MobileTopbarFreshness } from "./mobile/MobileShared";
 import { MobileBottomNav } from "./mobile/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileAccountPanel } from "./mobile/MobileAccountPanel";
+import { Button } from "./ui/button";
 
 const STORAGE_KEY = "terrevolt-nav-collapsed";
 
@@ -41,21 +43,22 @@ export function AppLayout() {
           WebkitBackdropFilter: "blur(14px)",
         }}
       >
-        <button
+        <Button variant="ghost"
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
           className="flex h-11 w-11 items-center justify-center rounded-md text-foreground hover:bg-fg/[0.06]"
-          aria-label={mobileOpen ? "Menu sluiten" : "Menu openen"}
+          aria-label="Account en instellingen"
+          aria-expanded={mobileOpen}
         >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+          <UserRound className="h-5 w-5" />
+        </Button>
         <div className="min-w-0 truncate px-1 font-display text-sm font-bold">TerreVolt Planner</div>
         {/* Undo is muterend: niet tonen in de read-only mobiele modus. */}
         {isMobile && <MobileTopbarFreshness />}
       </div>
 
       {/* Sidebar wrapper: slide on mobile, static on desktop. */}
-      <div
+      {!isMobile && <div
         className={[
           "fixed inset-y-0 left-0 z-50 transition-[transform,width] duration-200 md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
@@ -63,7 +66,8 @@ export function AppLayout() {
         style={{ width: mobileOpen ? 220 : sidebarW }}
       >
         <AppSidebar collapsed={collapsed && !mobileOpen} mobile={isMobile} onNavigate={() => setMobileOpen(false)} />
-      </div>
+      </div>}
+      {isMobile && mobileOpen && <MobileAccountPanel onClose={() => setMobileOpen(false)} />}
 
       {/* Desktop collapse toggle — floats on the sidebar edge */}
       <button

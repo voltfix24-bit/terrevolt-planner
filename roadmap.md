@@ -45,3 +45,11 @@
 - [x] Ondubbelzinnige beschikbaarheid en contrastrijke teksttokens
 - [x] Synchrone mobiele detectie, titels/zoeken en Cases-secties
 - [x] Licht manifest, architectuurregels, volledige tests en mobiele QA
+
+## Mobiele structuur en navigatie — fase 2
+- [x] Signaaltokens met opacity-ondersteuning
+- [x] Planning alleen per case, gedeelde week en URL-staat
+- [x] Accountpaneel en contextbewuste terugnavigatie
+- [x] Kruislinks, monteurfocus en geordend case-detail
+- [x] Vandaag: komende week in weekend, cases eerst en vrije namen
+- [x] Pure helpertests, volledige tests en mobiele/desktop QA (215 tests; automatische typecheck/build OK; 390×844 zonder overflow; amber rand en heen/terug-context gecontroleerd)

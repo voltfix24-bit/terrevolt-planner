@@ -27,9 +27,9 @@
     --primary: 160 84% 39%;
     --primary-foreground: 0 0% 100%;
 
-    --primary-text: #047857;
-    --destructive-text: #B42318;
-    --warning-text: #B45309;
+    --primary-text: 163 94% 24%;
+    --destructive-text: 4 76% 40%;
+    --warning-text: 26 90% 37%;
 
     /* secondary = deep emerald #064E3B */
     --secondary: 158 84% 16%;
@@ -93,9 +93,9 @@
     --popover: 215 65% 11%;
     --popover-foreground: 210 40% 98%;
     --primary: 140 100% 62%;
-    --primary-text: hsl(var(--primary));
-    --destructive-text: #F87171;
-    --warning-text: #FBBF24;
+    --primary-text: var(--primary);
+    --destructive-text: 0 91% 71%;
+    --warning-text: 43 96% 56%;
     --primary-foreground: 217 82% 7%;
     --secondary: 215 40% 16%;
     --secondary-foreground: 210 40% 98%;

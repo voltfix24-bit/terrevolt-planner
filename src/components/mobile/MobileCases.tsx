@@ -3,7 +3,8 @@ import { CalendarDays, ChevronDown, FileText, Search, SlidersHorizontal, X } fro
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { caseTitle, caseSection, matchesSearch, sortCaseWeekOptions, activeFilterCount, casePlanningLabel, compareCases, EMPTY_CASE_FILTERS, type CaseFilters, type CasePlanningLabel } from "@/lib/mobile-ux";
+import { caseTitle, caseSection, formatWeekParam, matchesSearch, sortCaseWeekOptions, activeFilterCount, casePlanningLabel, compareCases, EMPTY_CASE_FILTERS, type CaseFilters, type CasePlanningLabel } from "@/lib/mobile-ux";
+import { targetWeekForDays } from "@/lib/mobile-planning";
 import { isoWeekPartsOf } from "@/lib/planning-types";
 import { MobileSearchEmpty, MobileDataGate, StatusChip } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
@@ -73,7 +74,7 @@ export function MobileCases() {
         </button>
         <div className="flex border-t border-border text-xs">
           <button type="button" onClick={() => navigate(`/projecten/${project.id}/dossier`)} className="flex h-11 flex-1 items-center justify-center gap-1.5 text-muted-foreground"><FileText className="h-3.5 w-3.5" />Dossier</button>
-          {project.status !== "on_hold" && <button type="button" onClick={() => navigate(`/plannen?project=${project.id}`)} className="flex h-11 flex-1 items-center justify-center gap-1.5 border-l border-border text-primary-text"><CalendarDays className="h-3.5 w-3.5" />Planning</button>}
+          {project.status !== "on_hold" && <Button variant="ghost" onClick={() => navigate(`/plannen?project=${project.id}&week=${formatWeekParam(targetWeekForDays(data.activeDaysByProject.get(project.id) ?? [], today))}`)} className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-none border-l border-border text-xs text-primary-text"><CalendarDays className="h-3.5 w-3.5" />Planning</Button>}
         </div>
       </li>)}</ul></section>)}</div>}
   </div></MobileDataGate>;

@@ -10,3 +10,6 @@
 - Use primary-text, destructive-text and warning-text semantic tokens for mobile signal text/icons/rings; retain original button/background tokens so desktop appearance is unchanged.
 - Keep caseTitle, matchesSearch/normalizeForSearch, freshness, unavailable labels and case section/week ordering pure in mobile-ux.ts with Vitest coverage; normalize only display/search, never stored data.
 - Mount shared-cache freshness only in the mobile topbar and initialize useIsMobile synchronously at the md breakpoint, to avoid duplicate freshness and initial desktop queries on phones.
+- Use useMobileWeekView once per mobile Planning/Capacity screen: URL owns query/open/mode with replace, a shared Zustand week uses URL > store > current precedence, so deep links and back navigation retain context.
+- Keep resource-row planning exclusively in Capacity and isolate the mobile account panel from AppSidebar, so navigation simplification never changes desktop editors or settings.
+- Keep weekend selection, URL state, history fallback and current/earlier week splitting pure in mobile-ux.ts with regression coverage, so mobile navigation has one tested interpretation.
