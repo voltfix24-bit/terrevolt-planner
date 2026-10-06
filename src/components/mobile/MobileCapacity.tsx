@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, ChevronDown } from "lucide-react";
-import { capacityForWeek, mobileWeekSequence, monteurWeekStates, type IsoWeek } from "@/lib/mobile-planning";
+import { capacityForWeek, mobileWeekSequence, monteurWeekStates, splitMonteursByWeekActivity, type IsoWeek } from "@/lib/mobile-planning";
 import { addIsoWeeks, getMondayOfWeek, isoWeekPartsOf } from "@/lib/planning-types";
 import { FreshnessBar, SwipeArea } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
 
 import { Button } from "@/components/ui/button";
 import { MobileWeekNavigation } from "./MobileWeekNavigation";
-import { MonteurWeekCard } from "./MobileWeekCards";
+import { FreeMonteursRow, MonteurWeekCard } from "./MobileWeekCards";
 
 export function MobileCapacity() {
   const data = useMobilePlanningData(); const [count, setCount] = useState(8); const [open, setOpen] = useState<string | null>(null);
@@ -17,6 +17,7 @@ export function MobileCapacity() {
   const selectedDays = useMemo(() => data.activeDaysByWeek.get(`${selected.jaar}-${selected.week_nr}`) ?? [], [data.activeDaysByWeek, selected]);
   const selectedCapacity = useMemo(() => capacityForWeek(selectedDays, selected.jaar, selected.week_nr, data.monteurs, data.absences, data.holidays), [selectedDays, selected, data.monteurs, data.absences, data.holidays]);
   const states = useMemo(() => monteurWeekStates(selectedDays, selected.jaar, selected.week_nr, data.monteurs, data.absences, data.holidays), [selectedDays, selected, data.monteurs, data.absences, data.holidays]);
+  const split = useMemo(() => splitMonteursByWeekActivity(data.monteurs, states), [data.monteurs, states]);
   const move = (delta: number) => { setSelected((week) => addIsoWeeks(week.jaar, week.week_nr, delta)); setOpenMonteur(null); setOpen(null); };
   const weeks = useMemo(() => mobileWeekSequence(getMondayOfWeek(selected.week_nr, selected.jaar), count).map((w) => {
     const days = data.activeDaysByWeek.get(`${w.jaar}-${w.week_nr}`) ?? [];
@@ -29,10 +30,10 @@ export function MobileCapacity() {
     <MobileWeekNavigation selected={selected} onMove={move} onSelect={(week) => { setSelected(week); setOpenMonteur(null); setOpen(null); }} />
     <div className="grid grid-cols-2 rounded-lg bg-muted p-1" role="tablist" aria-label="Capaciteitsweergave">{(["week", "overview"] as const).map((value) => <Button variant="ghost" key={value} role="tab" aria-selected={mode === value} onClick={() => { setMode(value); setOpenMonteur(null); }} className={`h-11 ${mode === value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>{value === "week" ? "Weekkalender" : "Komende weken"}</Button>)}</div>
     {mode === "week" ? <>
-      <div className="grid grid-cols-4 gap-1 border-y border-border py-3 text-center">{[[selectedCapacity.available, "beschikbaar"], [selectedCapacity.plannedUnique, "ingepland"], [selectedCapacity.free, "vrij"], [selectedCapacity.conflicts, "conflicten"]].map(([value, label]) => <div key={label} className={label === "conflicten" && selectedCapacity.conflicts > 0 ? "text-destructive" : "text-foreground"}><strong className="block text-lg">{value}</strong><span className="text-[10px] text-muted-foreground">{label}</span></div>)}</div>
+      <div className="grid grid-cols-4 gap-1 border-y border-border py-3 text-center">{[[selectedCapacity.available, "beschikbaar (mandagen)"], [selectedCapacity.plannedUnique, "ingepland"], [selectedCapacity.free, "vrij"], [selectedCapacity.conflicts, "conflicten"]].map(([value, label]) => <div key={label} className={label === "conflicten" && selectedCapacity.conflicts > 0 ? "text-destructive" : "text-foreground"}><strong className="block text-lg">{value}</strong><span className="text-[10px] text-muted-foreground">{label}</span></div>)}</div>
       {selectedCapacity.overplannedUnavailable > 0 && <p className="text-xs text-destructive">{selectedCapacity.overplannedUnavailable} ingepland terwijl niet beschikbaar</p>}
       {selectedCapacity.days.filter((day) => day.holidayName).map((day) => <p key={day.dayIndex} className="text-xs text-muted-foreground">{day.date.toLocaleDateString("nl-NL", { weekday: "long" })}: {day.holidayName}</p>)}
-      <SwipeArea onSwipe={move} label="Capaciteit weekkalender"><div className="space-y-2">{data.loading ? <p className="py-12 text-center text-sm text-muted-foreground">Capaciteit laden…</p> : data.monteurs.map((monteur) => <MonteurWeekCard key={monteur.id} name={monteur.naam} states={states.get(monteur.id) ?? []} data={data} open={openMonteur === monteur.id} onToggle={() => setOpenMonteur(openMonteur === monteur.id ? null : monteur.id)} />)}</div></SwipeArea>
+      <SwipeArea onSwipe={move} label="Capaciteit weekkalender"><div className="space-y-2">{data.loading ? <p className="py-12 text-center text-sm text-muted-foreground">Capaciteit laden…</p> : <>{split.busy.map((monteur) => <MonteurWeekCard key={monteur.id} name={monteur.naam} states={states.get(monteur.id) ?? []} data={data} open={openMonteur === monteur.id} onToggle={() => setOpenMonteur(openMonteur === monteur.id ? null : monteur.id)} />)}<FreeMonteursRow names={split.free.map((m) => m.naam)} open={openMonteur === "__free"} onToggle={() => setOpenMonteur(openMonteur === "__free" ? null : "__free")} /></>}</div></SwipeArea>
     </> : <>
     <div className="grid grid-cols-3 rounded-lg bg-muted p-1">{[6, 8, 12].map((n) => <Button variant="ghost" key={n} className={`min-h-11 rounded-md text-sm font-medium ${count === n ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => setCount(n)}>{n} weken</Button>)}</div>
     {data.loading ? <p className="py-12 text-center text-sm text-muted-foreground">Capaciteit laden…</p> : weeks.map(({ jaar, week_nr, days, cap }) => {
