@@ -356,3 +356,21 @@ export function swipeDirection(dx: number, dy: number, threshold = 60): -1 | 0 |
   if (Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
   return dx < 0 ? 1 : -1;
 }
+
+/** Eerstvolgende actieve planningdag vanaf vandaag (inclusief), of null. Verwacht al gefilterde actieve dagen. */
+export function nextActivePlanningDay<T extends Pick<MobilePlanningDay, "date">>(days: T[], today: Date): T | null {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  let best: T | null = null;
+  for (const day of days) if (day.date.getTime() >= start && (!best || day.date < best.date)) best = day;
+  return best;
+}
+
+/** Splitst monteurs: met planning/afwezigheid/conflict eerst, daarna monteurs die de hele week vrij zijn. */
+export function splitMonteursByWeekActivity<M extends { id: string }>(monteurs: M[], states: Map<string, Pick<MonteurDayState, "kind">[]>): { busy: M[]; free: M[] } {
+  const busy: M[] = []; const free: M[] = [];
+  for (const m of monteurs) {
+    const s = states.get(m.id) ?? [];
+    (s.length > 0 && s.every((d) => d.kind === "free") ? free : busy).push(m);
+  }
+  return { busy, free };
+}
