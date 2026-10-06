@@ -295,7 +295,7 @@ export function buildGanttHtml(input: GanttExportInput): string {
   const printableActivities = input.activiteiten.filter(
     (activity) => printableIds.has(activity.project_id) && plannedActivityIds.has(activity.id),
   );
-  const rowPages = paginateProjectRows(printableProjects, printableActivities, 16);
+  const rowPages = paginateProjectRows(printableProjects, printableActivities, 24);
   const weekPages = chunkWeken(input.weken, WEEKS_PER_LAYOUT[layout]);
   const cellMap = new Map(input.cellen.map((cell) => [`${cell.activiteit_id}|${cell.week_nr}|${cell.dag_index}`, cell]));
   const monteurById = new Map(input.monteurs.map((monteur) => [monteur.id, monteur]));

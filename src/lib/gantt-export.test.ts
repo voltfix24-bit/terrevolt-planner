@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertClientSafeExport,
+  buildGanttHtml,
   chunkWeken,
   filterProjectsForExport,
   groupProjectsByOpdrachtgever,
@@ -24,6 +25,16 @@ describe("Gantt export safety", () => {
   it("never includes a project without opdrachtgever in client mode", () => {
     expect(filterProjectsForExport(projects, "opdrachtgever", "client-a")).not.toContainEqual(expect.objectContaining({ id: "c" }));
     expect(() => assertClientSafeExport([projects[0], projects[2]], "client-a")).toThrow(/geblokkeerd/);
+  });
+
+  it("blocks mixed client data before rendering any HTML", () => {
+    expect(() => buildGanttHtml({
+      titel: "Klantplanning",
+      weken: [{ week_nr: 40, jaar: 2026 }],
+      projecten: [projects[0], projects[1]],
+      activiteiten: [], monteurs: [], cellen: [], monteurWeergave: "geen",
+      exportMode: "opdrachtgever", opdrachtgeverId: "client-a", opdrachtgeverNaam: "A",
+    })).toThrow(/geblokkeerd/);
   });
 
   it("groups internal projects by opdrachtgever and puts missing last", () => {
