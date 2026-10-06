@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { capacityForWeek, caseWeekMatrix, mobileProjectContext, targetWeekForDays, type IsoWeek } from "@/lib/mobile-planning";
+import { capacityForWeek, caseWeekMatrix, mobileProjectContext, type IsoWeek } from "@/lib/mobile-planning";
 import { caseTitle, matchesSearch, capacityLink, mobileBackTarget, planningEmptyState } from "@/lib/mobile-ux";
 import { addIsoWeeks } from "@/lib/planning-types";
 import { CellLegend, MobileSearchEmpty, MobileDataGate, SwipeArea } from "./MobileShared";
@@ -19,8 +19,7 @@ export function MobileWeekPlanning() {
   const [params, setParams] = useSearchParams(); const projectId = params.get("project");
   const contextProject = projectId ? data.projectById.get(projectId) : undefined;
   const contextState = mobileProjectContext(contextProject);
-  const preferred = projectId && data.hasData && contextState !== "blocked" ? targetWeekForDays(data.activeDaysByProject.get(projectId) ?? [], new Date()) : undefined;
-  const state = useMobileWeekView(preferred, !projectId || data.hasData);
+  const state = useMobileWeekView();
   const { selected, query, open, update } = state;
   const setQuery = (query: string) => update({ query });
   const setOpen = (open: string | null) => update({ open });
