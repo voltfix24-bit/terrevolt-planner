@@ -1,65 +1,48 @@
+# Professionele, klantveilige Gantt-export
+
 ## Doel
+De bestaande Gantt-export wordt een ruime, duidelijke exportdialoog met een veilige klantmodus en een flexibele interne modus. De PDF gebruikt altijd leesbare A3-landscape pagina’s, zonder database- of planningwijzigingen.
 
-Optimistic UI + silent refresh consistent toepassen in de hele app. Kleine acties knipperen niet meer; globale loader alleen bij eerste laad, projectwissel of bulkacties.
+## Aanpak
 
-## Aanpak per pagina
+### 1. Exportveiligheid en selectie
+- Voeg exporttype **Opdrachtgever** (standaard) en **Intern** toe.
+- Selecteer bij openen automatisch het actieve opdrachtgeverfilter, indien aanwezig; anders blijft opdrachtgever verplicht leeg.
+- Beperk in opdrachtgevermodus zowel de zichtbare projectlijst als de uiteindelijke exportdata strikt tot exact één gekozen opdrachtgever.
+- Voeg direct vóór renderen een tweede pure veiligheidscontrole toe die gemengde, ontbrekende of afwijkende opdrachtgever-ID’s blokkeert.
+- Interne modus staat gemengde en ontbrekende opdrachtgevers toe, groepeert projecten per opdrachtgever en toont “Geen opdrachtgever” waar nodig.
 
-### 1. `src/pages/Plannen.tsx`
-`loadAll({ silent })` bestaat al (van vorige refactor). Uitbreiden naar alle mutaties:
-- `setCelKleur`, `setCelNotitie`, `setCelActiviteit`, `setCelCapaciteit`: optimistisch `setCellen` updaten vóór RPC. Bij error: revert + toast. Op succes: geen reload.
-- `addMonteurToCel` / `removeMonteurFromCel`: lokaal `setCelMonteurs` muteren, daarna RPC, revert bij fout.
-- `clearCel` / `deleteCel`: lokaal verwijderen, daarna RPC.
-- Drag-move cel: lokaal verplaatsen vóór RPC.
-- "Weken beheren" toggles (week toevoegen/verwijderen): lokaal `setWeken` updaten, dan RPC, bij succes `loadAll({ silent: true })` voor positie-normalisatie.
-- Globale `setLoading(true)` blijft alleen in `loadAll` zonder `silent`, aangeroepen bij mount en bij projectwissel.
+### 2. Ruime exportdialoog
+- Vervang de kleine popover door een responsive dialoog van circa 800 px breed met vaste secties: exporttype, opdrachtgever, periode, projecten, weergave, samenvatting en actie.
+- Behoud 4/8/12-wekenpresets, vanaf nu, van/tot, weekfijnafstemming, projectselectie, lege-wekenfilter en monteursweergave.
+- Voeg printindeling toe: Detail (4), Standaard (6, standaard) en Compact (8 weken per A3-pagina).
+- Toon tellingen, lege toestanden, waarschuwingen voor projecten zonder opdrachtgever en een live samenvatting.
+- Hernoem “Namen” naar **Initialen + namenlijst** zonder de bestaande interne waarde te breken.
 
-### 2. `src/pages/Overzicht.tsx`
-- Statuswijziging project: rij lokaal updaten, dan UPDATE, revert bij fout.
-- Planning verschuiven (week-shift): lokaal `projecten`/`weken` aanpassen, RPC, silent refresh op succes.
-- Sortering: pure client-side, geen loader.
-- Geen volledig herladen na elke actie.
+### 3. Expliciete A3-paginering
+- Splits weken met pure chunklogica in blokken van 4/6/8.
+- Paginateer projectgroepen daarnaast verticaal met een vast row-budget: een projectkop blijft bij minimaal één activiteit, passende groepen blijven heel en grote projecten splitsen alleen tussen activiteiten met herhaalde projectkop.
+- Bouw iedere pagina expliciet op met eigen documentheader, week-/dagheaders, tabel, relevante monteurslegenda en footer “Pagina X / Y”.
+- Verwijder A2-keuze, primaire transform-scaling en de ondertekenregel.
 
-### 3. `src/pages/Mandagenregister.tsx` + `MandagenregisterPanel.tsx`
-- Uren-cel edit: lokaal `regels` muteren onmiddellijk, dan upsert, revert bij fout.
-- Exportlog refresh: alleen die lijst silent refetchen, geen paginalader.
+### 4. Leesbaarheid en branding
+- Toon `WEEK 40` en dag + datum, bijvoorbeeld `MA 05/10`.
+- Houd project-/activiteittekst ruim leesbaar, weekgrenzen sterk en statuskleuren exact printbaar; voeg randen/patronen als extra niet-kleurcodering toe.
+- Externe export krijgt opdrachtgever in titel/header/samenvatting en klantbranding zonder interne vertrouwelijkheidsmelding.
+- Interne export krijgt “Intern planningsoverzicht”, opdrachtgever per groep/project en “Intern gebruik”.
+- Monteurmodus “Initialen + namenlijst” toont volledige namen afdrukbaar per pagina, nooit alleen via tooltips.
 
-### 4. `src/pages/Capaciteit.tsx`
-- Monteurgegevens edits (naam, ploeg, etc.): optimistisch, revert bij fout.
-- Beschikbaarheid toggles (afwezigheid aan/uit): lokaal toggle, dan insert/delete, revert bij fout.
-- Registergegevens via `MonteurRegisterDialog`: dialoog sluit direct, lijst lokaal updaten.
+### 5. Opdrachtgever herkenbaar in Overzicht
+- Voeg in uitgeklapte projectregels een subtiele opdrachtgeverregel/chip toe via de bestaande lookup.
+- Houd de ingeklapte sidebar compact en verander geen bestaande filters of planninginteracties.
 
-## Patroon (code-conventie)
+## Technische details
+- Breid de exporttypes uit met `opdrachtgever_id`, opdrachtgevernaam, exportmodus en weekindeling.
+- Houd filter-, groeps-, weekchunk- en rowchunk-logica als pure geëxporteerde helpers zodat deze gericht testbaar zijn.
+- De export gebruikt uitsluitend reeds geladen data; er komen geen writes, migrations of schemawijzigingen.
 
-```ts
-const prev = state;
-setState(next);                       // optimistic
-try {
-  const { error } = await supabase...;
-  if (error) throw error;
-  void reload({ silent: true });      // optioneel
-} catch (e) {
-  setState(prev);                     // revert
-  toast.error("Opslaan mislukt");
-}
-```
-
-Alle bestaande `setLoading(true)` rondom enkelvoudige mutaties wordt verwijderd. `loadAll/load*` krijgen overal een `{ silent?: boolean }` optie zoals al in `Plannen.tsx`.
-
-## Behoud van UI-state
-
-- Geen `key` resets op containers na een mutatie.
-- Geen `window.scrollTo` calls toevoegen.
-- Dialogen niet automatisch sluiten/heropenen door reload.
-- Filters/sortering/expansions blijven in component-state — niet refetchen.
-
-## Verificatie
-
-- `npx tsc --noEmit` schoon.
-- Bestaande tests draaien (`vitest run`).
-- Handmatig: cel-acties op /plannen knipperen niet; status op /overzicht switcht direct; uren-edit op /mandagenregister voelt instant; afwezigheid-toggle op /capaciteit zonder loader.
-
-## Out of scope
-
-- Geen schema-/RPC-wijzigingen.
-- Geen visuele redesign.
-- Undo-flow blijft zoals nu (history push gebeurt na succesvolle mutatie).
+## Controle
+- Unit tests voor externe klantfiltering, uitsluiting van null-opdrachtgever, weekchunks 4/6/8, interne opdrachtgeversgroepering en verticale projectgroeppaginering.
+- Bestaande relevante tests plus TypeScript-check.
+- Browsercontrole van de dialoog op desktop en mobiel, inclusief disabled klant-export zonder opdrachtgever.
+- Print-HTML controleren op A3, expliciete pagina’s, dagdatums, klant-/intern-labels en afwezigheid van A2/ondertekenregel.
