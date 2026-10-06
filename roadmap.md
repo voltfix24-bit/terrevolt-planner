@@ -23,3 +23,10 @@
 - [x] Gedeelde cache + "Bijgewerkt" + vernieuwen
 - [x] PWA (manifest, iconen, guarded service worker zonder datacache)
 - [x] Cases: filters wissen, volgende/afgelopen datum
+
+## Compacte mobiele weekkalenders
+- [ ] Centrale actieve planningfilter en geblokkeerde on-hold context
+- [ ] Compacte casekalender en monteurkalender met uitklapdetails
+- [ ] Capaciteit standaard weekkalender; komende weken behouden
+- [ ] Vandaag en case-detail consequent on-hold behandelen
+- [ ] Regressietests en mobiele/desktop browsercontrole
