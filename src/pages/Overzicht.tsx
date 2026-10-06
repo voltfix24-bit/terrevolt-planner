@@ -3981,6 +3981,8 @@ function GanttPrintMenu({
   // selectie van week-nummers; lege set = alle weken
   const [selWeeks, setSelWeeks] = useState<Set<number>>(new Set());
   const [toonDetails, setToonDetails] = useState(false);
+  const [uitgeslotenProjecten, setUitgeslotenProjecten] = useState<Set<string>>(new Set());
+  const [verbergLegeWeken, setVerbergLegeWeken] = useState(false);
 
   // Unieke week-nummers uit alle projecten, gesorteerd
   const beschikbareWeken = useMemo(() => {
@@ -4063,8 +4065,12 @@ function GanttPrintMenu({
         return;
       }
 
-      // weken → {week_nr, jaar}; jaar nemen we uit de pagina-state.
-      const ganttWeken = gekozenWeken.map((wnr) => ({ week_nr: wnr, jaar }));
+      const gekozenProjecten = projecten.filter((p) => !uitgeslotenProjecten.has(p.id));
+      if (gekozenProjecten.length === 0) {
+        toast.error("Selecteer minimaal één project");
+        return;
+      }
+      const projIdSet = new Set(gekozenProjecten.map((p) => p.id));
 
       // weken-tabel → lookup id → week_nr
       const weekIdToNr = new Map<string, number>();
@@ -4091,7 +4097,7 @@ function GanttPrintMenu({
           const wnr = c.week_id ? weekIdToNr.get(c.week_id) : undefined;
           const projectId = c.activiteit_id ? actIdToProj.get(c.activiteit_id) : undefined;
           if (wnr === undefined || projectId === undefined || !c.activiteit_id) return null;
-          if (!weekNrSet.has(wnr)) return null;
+          if (!weekNrSet.has(wnr) || !projIdSet.has(projectId)) return null;
           return {
             project_id: projectId,
             activiteit_id: c.activiteit_id,
@@ -4103,7 +4109,19 @@ function GanttPrintMenu({
         })
         .filter((x): x is NonNullable<typeof x> => !!x);
 
-      const ganttProjecten = projecten.map((p) => ({
+      let printWeken = gekozenWeken;
+      if (verbergLegeWeken) {
+        const gevuld = new Set(ganttCellen.map((c) => c.week_nr));
+        printWeken = gekozenWeken.filter((w) => gevuld.has(w));
+        if (printWeken.length === 0) {
+          toast.error("Geen geplande weken voor deze selectie");
+          return;
+        }
+      }
+      // weken → {week_nr, jaar}; jaar nemen we uit de pagina-state.
+      const ganttWeken = printWeken.map((wnr) => ({ week_nr: wnr, jaar }));
+
+      const ganttProjecten = gekozenProjecten.map((p) => ({
         id: p.id,
         case_nummer: p.case_nummer,
         station_naam: p.station_naam,
@@ -4111,7 +4129,7 @@ function GanttPrintMenu({
       }));
 
       const ganttActiviteiten = activiteiten
-        .filter((a) => !!a.project_id)
+        .filter((a) => !!a.project_id && projIdSet.has(a.project_id))
         .map((a) => ({
           id: a.id,
           project_id: a.project_id as string,
@@ -4307,6 +4325,48 @@ function GanttPrintMenu({
             </div>
           )}
         </div>
+
+        {/* Projecten */}
+        <div className="px-3 py-2 border-b border-border/60">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Projecten ({projecten.length - uitgeslotenProjecten.size}/{projecten.length})
+            </span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setUitgeslotenProjecten(new Set())} className="text-[11px] text-muted-foreground hover:text-foreground">Alle</button>
+              <button type="button" onClick={() => setUitgeslotenProjecten(new Set(projecten.map((p) => p.id)))} className="text-[11px] text-muted-foreground hover:text-foreground">Geen</button>
+            </div>
+          </div>
+          <div className="max-h-44 overflow-y-auto -mx-1 px-1">
+            {projecten.map((p) => (
+              <label key={p.id} className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer rounded hover:bg-accent">
+                <input
+                  type="checkbox"
+                  checked={!uitgeslotenProjecten.has(p.id)}
+                  onChange={() =>
+                    setUitgeslotenProjecten((prev) => {
+                      const n = new Set(prev);
+                      if (n.has(p.id)) n.delete(p.id); else n.add(p.id);
+                      return n;
+                    })
+                  }
+                  className="h-3.5 w-3.5 accent-primary"
+                />
+                <span className="truncate">{[p.case_nummer, p.station_naam].filter(Boolean).join(" · ") || "Naamloos project"}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 px-3 py-2 border-b border-border/60 text-xs cursor-pointer">
+          <input
+            type="checkbox"
+            checked={verbergLegeWeken}
+            onChange={(e) => setVerbergLegeWeken(e.target.checked)}
+            className="h-3.5 w-3.5 accent-primary"
+          />
+          Lege weken niet weergeven
+        </label>
 
         <div className="p-1">
           <button
