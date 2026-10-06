@@ -1,22 +1,9 @@
-/**
- * Gantt-export — print/PDF van de planning per project.
- *
- * X-as: geselecteerde weken × 5 dagen (MA t/m VR).
- * Y-as: projecten (alleen die ingeplande cellen hebben in de gekozen weken).
- *       Per project één regel per activiteit.
- *
- * Cel-kleuren komen uit COLOR_MAP. Inhoud van een cel kan zijn:
- *   - "geen": leeg
- *   - "initialen": initialen van toegewezen monteurs
- *   - "namen": volledige namen (worden getrunceerd indien nodig)
- *
- * De output is een nieuw venster met geoptimaliseerde print-CSS;
- * de browser print-dialog opent zelf, gebruiker kiest "Opslaan als PDF".
- */
-
-import { COLOR_MAP, COLOR_CODES, DAG_LABELS, getMondayOfWeek, formatDate, initialen } from "./planning-types";
+/** Client-safe, explicitly paginated Gantt print export. */
+import { COLOR_CODES, COLOR_MAP, DAG_LABELS, getMondayOfWeek, initialen } from "./planning-types";
 
 export type GanttMonteurWeergave = "geen" | "initialen" | "namen";
+export type GanttExportMode = "opdrachtgever" | "intern";
+export type GanttPrintLayout = "detail" | "standaard" | "compact";
 
 export interface GanttCel {
   project_id: string;
@@ -32,6 +19,8 @@ export interface GanttProject {
   case_nummer: string | null;
   station_naam: string | null;
   wv_naam: string | null;
+  opdrachtgever_id: string | null;
+  opdrachtgever_naam: string | null;
 }
 
 export interface GanttActiviteit {
@@ -41,43 +30,8 @@ export interface GanttActiviteit {
   positie: number | null;
 }
 
-export interface GanttMonteur {
-  id: string;
-  naam: string;
-}
-
-export interface GanttWeek {
-  week_nr: number;
-  jaar: number;
-}
-
-/**
- * Documentvarianten voor de export. Elk preset bevat consistente bedrijfsnaam,
- * titelopmaak, accent-kleur en footer-tekst — toegepast op ALLE pagina's
- * (fixed page-header en page-footer) zodat de corporate stijl overal hetzelfde is.
- */
-export type GanttDocumentVariant =
-  | "terrevolt"          // Default: blauw accent, "Planning Terrevolt {jaar}"
-  | "internal-memo"      // Donkergrijs accent, compactere titel
-  | "client-deliverable" // Groen accent, formele "Projectplanning"
-  | "custom";            // Volledig vrij in te vullen via documentBranding
-
-export interface GanttDocumentBranding {
-  /** Bedrijfsnaam in titel (default per variant) */
-  bedrijfsnaam?: string;
-  /** Titel-template; ondersteunt placeholders {bedrijf} en {jaar} */
-  titelTemplate?: string;
-  /** Accent-kleur (hex) voor titel, header-onderlijn en project-row top-border */
-  accentKleur?: string;
-  /** Naam-label onder "Opgesteld door" */
-  preparedBy?: string;
-  /** Prefix voor het Ref-nummer in de page-footer (default "PLAN") */
-  refPrefix?: string;
-  /** Copyright-tekst links in de page-footer; ondersteunt placeholder {jaar} */
-  copyright?: string;
-  /** Toon "Confidential Internal Document" badge in de page-footer */
-  toonConfidential?: boolean;
-}
+export interface GanttMonteur { id: string; naam: string }
+export interface GanttWeek { week_nr: number; jaar: number }
 
 export interface GanttExportInput {
   titel: string;
@@ -87,856 +41,291 @@ export interface GanttExportInput {
   monteurs: GanttMonteur[];
   cellen: GanttCel[];
   monteurWeergave: GanttMonteurWeergave;
-  /** Map van YYYY-MM-DD → feestdag-naam. Optioneel. */
   feestdagen?: Map<string, string>;
-  /** Documentvariant — bepaalt de huisstijl op iedere pagina. Default: "terrevolt". */
-  documentVariant?: GanttDocumentVariant;
-  /** Optionele branding-overrides; gecombineerd met de variant-defaults. */
-  documentBranding?: GanttDocumentBranding;
+  exportMode: GanttExportMode;
+  opdrachtgeverId?: string;
+  opdrachtgeverNaam?: string;
+  printLayout?: GanttPrintLayout;
 }
 
-interface ResolvedBranding {
-  bedrijfsnaam: string;
-  titelTemplate: string;
-  accentKleur: string;
-  preparedBy: string;
-  refPrefix: string;
-  copyright: string;
-  toonConfidential: boolean;
+export interface ProjectRowGroup {
+  project: GanttProject;
+  activiteiten: GanttActiviteit[];
+  continued: boolean;
 }
 
-const VARIANT_DEFAULTS: Record<GanttDocumentVariant, ResolvedBranding> = {
-  "terrevolt": {
-    bedrijfsnaam: "Terrevolt",
-    titelTemplate: "Planning {bedrijf} {jaar}",
-    accentKleur: "#004ac6",
-    preparedBy: "Hoofd Projectplanning",
-    refPrefix: "PLAN",
-    copyright: "© {jaar} Terrevolt — Operations Management",
-    toonConfidential: true,
-  },
-  "internal-memo": {
-    bedrijfsnaam: "Terrevolt",
-    titelTemplate: "Interne Planningsmemo — {jaar}",
-    accentKleur: "#434655",
-    preparedBy: "Planningscoördinator",
-    refPrefix: "MEMO",
-    copyright: "© {jaar} Terrevolt — Uitsluitend voor intern gebruik",
-    toonConfidential: true,
-  },
-  "client-deliverable": {
-    bedrijfsnaam: "Terrevolt",
-    titelTemplate: "Projectplanning — {bedrijf} {jaar}",
-    accentKleur: "#15803d",
-    preparedBy: "Projectmanager",
-    refPrefix: "DEL",
-    copyright: "© {jaar} Terrevolt — Opgesteld voor klantbeoordeling",
-    toonConfidential: false,
-  },
-  "custom": {
-    bedrijfsnaam: "Terrevolt",
-    titelTemplate: "Planning {bedrijf} {jaar}",
-    accentKleur: "#004ac6",
-    preparedBy: "Hoofd Projectplanning",
-    refPrefix: "PLAN",
-    copyright: "© {jaar} Terrevolt",
-    toonConfidential: true,
-  },
+export const WEEKS_PER_LAYOUT: Record<GanttPrintLayout, number> = {
+  detail: 4,
+  standaard: 6,
+  compact: 8,
 };
 
-function resolveBranding(
-  variant: GanttDocumentVariant | undefined,
-  overrides: GanttDocumentBranding | undefined,
-): ResolvedBranding {
-  const base = VARIANT_DEFAULTS[variant ?? "terrevolt"];
-  return { ...base, ...(overrides ?? {}) };
+export function chunkWeken<T>(items: T[], size: 4 | 6 | 8): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  return chunks;
 }
 
-function ymd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+export function filterProjectsForExport(
+  projects: GanttProject[],
+  mode: GanttExportMode,
+  opdrachtgeverId?: string,
+): GanttProject[] {
+  if (mode === "intern") return [...projects];
+  if (!opdrachtgeverId) return [];
+  return projects.filter((project) => project.opdrachtgever_id === opdrachtgeverId);
 }
 
-const escHtml = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) =>
-    c === "&" ? "&amp;"
-    : c === "<" ? "&lt;"
-    : c === ">" ? "&gt;"
-    : c === '"' ? "&quot;"
-    : "&#39;",
+export function assertClientSafeExport(projects: GanttProject[], opdrachtgeverId?: string): void {
+  if (!opdrachtgeverId) throw new Error("Kies eerst een opdrachtgever");
+  if (projects.length === 0) throw new Error("Selecteer minimaal één project van deze opdrachtgever");
+  const unsafe = projects.some(
+    (project) => !project.opdrachtgever_id || project.opdrachtgever_id !== opdrachtgeverId,
   );
-
-/** Zwart of wit op gegeven hex achtergrond, voor leesbaarheid. */
-function readableTextColor(hex: string): string {
-  const m = hex.replace("#", "");
-  if (m.length !== 6) return "#000";
-  const r = parseInt(m.slice(0, 2), 16);
-  const g = parseInt(m.slice(2, 4), 16);
-  const b = parseInt(m.slice(4, 6), 16);
-  // relative luminance
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum > 0.6 ? "#0b1220" : "#ffffff";
+  if (unsafe) {
+    throw new Error("Export geblokkeerd: de selectie bevat een project van een andere of onbekende opdrachtgever");
+  }
 }
 
-function projectLabel(p: GanttProject): string {
-  const parts: string[] = [];
-  if (p.case_nummer) parts.push(p.case_nummer);
-  if (p.station_naam) parts.push(p.station_naam);
-  if (p.wv_naam && parts.length === 0) parts.push(p.wv_naam);
-  return parts.join(" — ") || "Onbekend project";
+export function groupProjectsByOpdrachtgever(projects: GanttProject[]): Array<{
+  opdrachtgever: string;
+  projects: GanttProject[];
+}> {
+  const groups = new Map<string, GanttProject[]>();
+  for (const project of projects) {
+    const label = project.opdrachtgever_naam?.trim() || "Geen opdrachtgever";
+    const current = groups.get(label) ?? [];
+    current.push(project);
+    groups.set(label, current);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => {
+      if (a === "Geen opdrachtgever") return 1;
+      if (b === "Geen opdrachtgever") return -1;
+      return a.localeCompare(b, "nl");
+    })
+    .map(([opdrachtgever, groupedProjects]) => ({ opdrachtgever, projects: groupedProjects }));
+}
+
+/** Project header costs one row; a project header always stays with its first activity. */
+export function paginateProjectRows(
+  projects: GanttProject[],
+  activities: GanttActiviteit[],
+  rowBudget = 16,
+): ProjectRowGroup[][] {
+  if (rowBudget < 2) throw new Error("Row budget moet minimaal 2 zijn");
+  const activitiesByProject = new Map<string, GanttActiviteit[]>();
+  for (const activity of activities) {
+    const list = activitiesByProject.get(activity.project_id) ?? [];
+    list.push(activity);
+    activitiesByProject.set(activity.project_id, list);
+  }
+  activitiesByProject.forEach((list) => list.sort((a, b) => (a.positie ?? 0) - (b.positie ?? 0)));
+
+  const pages: ProjectRowGroup[][] = [];
+  let page: ProjectRowGroup[] = [];
+  let remaining = rowBudget;
+  const flush = () => {
+    if (page.length > 0) pages.push(page);
+    page = [];
+    remaining = rowBudget;
+  };
+
+  for (const project of projects) {
+    const projectActivities = activitiesByProject.get(project.id) ?? [];
+    if (projectActivities.length === 0) continue;
+    const fullCost = 1 + projectActivities.length;
+    if (fullCost <= remaining) {
+      page.push({ project, activiteiten: projectActivities, continued: false });
+      remaining -= fullCost;
+      continue;
+    }
+    if (fullCost <= rowBudget) {
+      flush();
+      page.push({ project, activiteiten: projectActivities, continued: false });
+      remaining -= fullCost;
+      continue;
+    }
+
+    let cursor = 0;
+    let continued = false;
+    while (cursor < projectActivities.length) {
+      if (remaining < 2) flush();
+      const take = Math.min(remaining - 1, projectActivities.length - cursor);
+      page.push({
+        project,
+        activiteiten: projectActivities.slice(cursor, cursor + take),
+        continued,
+      });
+      remaining -= 1 + take;
+      cursor += take;
+      continued = true;
+      if (cursor < projectActivities.length) flush();
+    }
+  }
+  flush();
+  return pages;
+}
+
+const esc = (value: string): string => value.replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+}[char] ?? char));
+
+const ymd = (date: Date): string => [
+  date.getFullYear(),
+  String(date.getMonth() + 1).padStart(2, "0"),
+  String(date.getDate()).padStart(2, "0"),
+].join("-");
+
+const shortDate = (date: Date): string =>
+  `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const projectLabel = (project: GanttProject): string =>
+  [project.case_nummer, project.station_naam, project.wv_naam].filter(Boolean).slice(0, 2).join(" — ") || "Onbekend project";
+
+function readableTextColor(hex: string): string {
+  const raw = hex.replace("#", "");
+  if (raw.length !== 6) return "#111827";
+  const [r, g, b] = [raw.slice(0, 2), raw.slice(2, 4), raw.slice(4, 6)].map((part) => parseInt(part, 16));
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? "#111827" : "#ffffff";
+}
+
+function renderPageHeader(
+  input: GanttExportInput,
+  weeks: GanttWeek[],
+  projectCount: number,
+  legend: string,
+): string {
+  const first = weeks[0];
+  const last = weeks[weeks.length - 1];
+  const start = getMondayOfWeek(first.week_nr, first.jaar);
+  const end = new Date(getMondayOfWeek(last.week_nr, last.jaar));
+  end.setDate(end.getDate() + 4);
+  const audience = input.exportMode === "opdrachtgever"
+    ? esc(input.opdrachtgeverNaam ?? "Opdrachtgever")
+    : "Intern planningsoverzicht";
+  return `<header class="doc-head">
+    <div class="brand"><span class="brand-mark"></span><div><strong>TERREVOLT</strong><small>Projectplanning</small></div></div>
+    <div class="doc-title"><h1>${esc(input.titel)}</h1><strong>${audience}</strong></div>
+    <div class="doc-meta"><b>${shortDate(start)}–${shortDate(end)}</b><span>Week ${first.week_nr}–${last.week_nr}</span><span>Gegenereerd ${new Date().toLocaleDateString("nl-NL")}</span></div>
+    <div class="summary">${projectCount} ${projectCount === 1 ? "project" : "projecten"} · A3 liggend</div>
+    <div class="legend"><b>Status</b>${legend}</div>
+  </header>`;
+}
+
+function usedLegend(cells: GanttCel[], weeks: GanttWeek[], holidays: Map<string, string>): string {
+  const weekSet = new Set(weeks.map((week) => week.week_nr));
+  const used = new Set(cells.filter((cell) => weekSet.has(cell.week_nr)).map((cell) => cell.kleur_code).filter(Boolean));
+  const items = COLOR_CODES.filter((code) => used.has(code)).map((code) =>
+    `<span><i style="--swatch:${COLOR_MAP[code].hex}"></i>${esc(COLOR_MAP[code].naam)}</span>`,
+  );
+  const hasHoliday = weeks.some((week) => {
+    const monday = getMondayOfWeek(week.week_nr, week.jaar);
+    return DAG_LABELS.some((_, index) => {
+      const day = new Date(monday); day.setDate(day.getDate() + index);
+      return holidays.has(ymd(day));
+    });
+  });
+  if (hasHoliday) items.push(`<span><i class="holiday-swatch"></i>Feestdag</span>`);
+  return items.join("");
+}
+
+function renderTable(
+  input: GanttExportInput,
+  weeks: GanttWeek[],
+  rowGroups: ProjectRowGroup[],
+  cellMap: Map<string, GanttCel>,
+  monteurById: Map<string, GanttMonteur>,
+): { table: string; monteurs: Set<string> } {
+  const pageMonteurs = new Set<string>();
+  const weekHeader = weeks.map((week) => `<th colspan="5" class="week">WEEK ${week.week_nr}</th>`).join("");
+  const dayHeader = weeks.map((week) => {
+    const monday = getMondayOfWeek(week.week_nr, week.jaar);
+    return DAG_LABELS.map((day, index) => {
+      const date = new Date(monday); date.setDate(date.getDate() + index);
+      const holiday = input.feestdagen?.get(ymd(date));
+      return `<th class="day ${index === 0 ? "week-start" : ""} ${index === 4 ? "week-end" : ""} ${holiday ? "holiday" : ""}">${day}<small>${shortDate(date)}</small></th>`;
+    }).join("");
+  }).join("");
+
+  let previousCustomer = "";
+  const body = rowGroups.map((group) => {
+    const customer = group.project.opdrachtgever_naam?.trim() || "Geen opdrachtgever";
+    const customerRow = input.exportMode === "intern" && customer !== previousCustomer
+      ? `<tr class="customer-row"><td colspan="${1 + weeks.length * 5}">Opdrachtgever · ${esc(customer)}</td></tr>`
+      : "";
+    previousCustomer = customer;
+    const header = `<tr class="project-row"><td>${esc(projectLabel(group.project))}${group.continued ? " <small>(vervolg)</small>" : ""}</td><td colspan="${weeks.length * 5}"><span>${esc(customer)}</span></td></tr>`;
+    const activities = group.activiteiten.map((activity) => {
+      const days = weeks.map((week) => DAG_LABELS.map((_, dayIndex) => {
+        const date = getMondayOfWeek(week.week_nr, week.jaar); date.setDate(date.getDate() + dayIndex);
+        const holiday = input.feestdagen?.has(ymd(date));
+        const cell = cellMap.get(`${activity.id}|${week.week_nr}|${dayIndex}`);
+        if (!cell) return `<td class="slot ${dayIndex === 0 ? "week-start" : ""} ${dayIndex === 4 ? "week-end" : ""} ${holiday ? "holiday" : ""}"></td>`;
+        const color = cell.kleur_code && COLOR_MAP[cell.kleur_code] ? COLOR_MAP[cell.kleur_code].hex : "#94a3b8";
+        const names = cell.monteur_ids.map((id) => monteurById.get(id)?.naam).filter((name): name is string => Boolean(name));
+        names.forEach((name) => pageMonteurs.add(name));
+        const label = input.monteurWeergave === "geen" ? "" : names.map(initialen).join(" ");
+        return `<td class="slot ${dayIndex === 0 ? "week-start" : ""} ${dayIndex === 4 ? "week-end" : ""} ${holiday ? "holiday" : ""}"><span class="work" style="--work:${color};--work-fg:${readableTextColor(color)}">${esc(label)}</span></td>`;
+      }).join("")).join("");
+      return `<tr class="activity-row"><td>${esc(activity.naam)}</td>${days}</tr>`;
+    }).join("");
+    return customerRow + header + activities;
+  }).join("");
+  return {
+    table: `<table class="gantt"><thead><tr><th rowspan="2" class="label">Project &amp; activiteit</th>${weekHeader}</tr><tr>${dayHeader}</tr></thead><tbody>${body}</tbody></table>`,
+    monteurs: pageMonteurs,
+  };
+}
+
+export function buildGanttHtml(input: GanttExportInput): string {
+  if (input.weken.length === 0) throw new Error("Geen weken geselecteerd");
+  if (input.projecten.length === 0) throw new Error("Selecteer minimaal één project");
+  if (input.exportMode === "opdrachtgever") assertClientSafeExport(input.projecten, input.opdrachtgeverId);
+
+  const layout = input.printLayout ?? "standaard";
+  const orderedProjects = input.exportMode === "intern"
+    ? groupProjectsByOpdrachtgever(input.projecten).flatMap((group) => group.projects)
+    : input.projecten;
+  const visibleProjectIds = new Set(input.cellen.map((cell) => cell.project_id));
+  const printableProjects = orderedProjects.filter((project) => visibleProjectIds.has(project.id));
+  if (printableProjects.length === 0) throw new Error("Geen geplande activiteiten in deze selectie");
+  const printableIds = new Set(printableProjects.map((project) => project.id));
+  const printableActivities = input.activiteiten.filter((activity) => printableIds.has(activity.project_id));
+  const rowPages = paginateProjectRows(printableProjects, printableActivities, 16);
+  const weekPages = chunkWeken(input.weken, WEEKS_PER_LAYOUT[layout]);
+  const cellMap = new Map(input.cellen.map((cell) => [`${cell.activiteit_id}|${cell.week_nr}|${cell.dag_index}`, cell]));
+  const monteurById = new Map(input.monteurs.map((monteur) => [monteur.id, monteur]));
+  const holidays = input.feestdagen ?? new Map<string, string>();
+  const pages: Array<{ weeks: GanttWeek[]; rows: ProjectRowGroup[] }> = [];
+  for (const weeks of weekPages) for (const rows of rowPages) pages.push({ weeks, rows });
+  const ref = `${input.exportMode === "intern" ? "INT" : "KLANT"}-${input.weken[0].jaar}-W${input.weken[0].week_nr}-W${input.weken[input.weken.length - 1].week_nr}`;
+
+  const pageHtml = pages.map((page, index) => {
+    const { table, monteurs: pageMonteurs } = renderTable(input, page.weeks, page.rows, cellMap, monteurById);
+    const names = input.monteurWeergave === "namen"
+      ? [...pageMonteurs].sort((a, b) => a.localeCompare(b, "nl")).map((name) => `<span><b>${esc(initialen(name))}</b> ${esc(name)}</span>`).join("")
+      : "";
+    return `<section class="print-page">
+      ${renderPageHeader(input, page.weeks, printableProjects.length, usedLegend(input.cellen, page.weeks, holidays))}
+      ${table}
+      ${names ? `<aside class="people"><strong>Monteurs</strong>${names}</aside>` : ""}
+      <footer><span>${input.exportMode === "intern" ? "Intern gebruik" : `Voor ${esc(input.opdrachtgeverNaam ?? "opdrachtgever")}`}</span><span>Ref ${esc(ref)}</span><b>Pagina ${index + 1} / ${pages.length}</b></footer>
+    </section>`;
+  }).join("");
+
+  const dayWidth = layout === "detail" ? 42 : layout === "standaard" ? 31 : 24;
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>${esc(input.titel)}</title><style>
+    @page{size:A3 landscape;margin:9mm}*{box-sizing:border-box}html,body{margin:0;background:#e8ebef;color:#18202a;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.toolbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid #ccd3db}.toolbar button{border:0;border-radius:4px;padding:8px 14px;background:#166534;color:#fff;font-weight:700;cursor:pointer}.toolbar span{color:#586574}.print-page{width:396mm;min-height:279mm;margin:16px auto;padding:9mm;background:#fff;display:flex;flex-direction:column;page-break-after:always;break-after:page}.print-page:last-child{page-break-after:auto}.doc-head{display:grid;grid-template-columns:180px 1fr 220px;gap:8px 18px;align-items:end;border-bottom:2px solid #166534;padding-bottom:8px;margin-bottom:8px}.brand{display:flex;gap:9px;align-items:center}.brand-mark{width:24px;height:24px;border-radius:3px;background:#166534;border:4px solid #d9eadf}.brand strong{display:block;letter-spacing:.08em}.brand small{display:block;color:#66717d}.doc-title{text-align:center}.doc-title h1{font-size:17px;margin:0 0 2px}.doc-title strong{font-size:11px;color:#166534}.doc-meta{text-align:right;display:flex;flex-direction:column;font-size:10px}.summary{font-size:9px;color:#66717d}.legend{grid-column:2/4;display:flex;align-items:center;justify-content:flex-end;gap:9px;font-size:8px;flex-wrap:wrap}.legend span{display:inline-flex;align-items:center;gap:3px}.legend i{width:9px;height:9px;border:1px solid #374151;background:var(--swatch);display:inline-block}.holiday-swatch{background:repeating-linear-gradient(45deg,#a3aab4,#a3aab4 2px,#fff 2px,#fff 4px)!important}.gantt{width:auto;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}.gantt th,.gantt td{border:1px solid #c9d0d8;text-align:center;padding:0;height:25px}.gantt .label{width:285px;min-width:285px;text-align:left;padding:7px 10px;text-transform:uppercase;letter-spacing:.06em}.week{height:23px;background:#dce8df;color:#123b21;letter-spacing:.08em}.day{width:${dayWidth}px;min-width:${dayWidth}px;background:#f0f3f5;font-size:8px}.day small{display:block;font-size:7px;font-weight:400;color:#596572;margin-top:2px}.week-start{border-left:2px solid #66717d!important}.week-end{border-right:2px solid #66717d!important}.holiday{background:repeating-linear-gradient(45deg,#edf0f2,#edf0f2 3px,#fff 3px,#fff 6px)}.customer-row td{text-align:left;height:20px;padding:3px 8px;background:#27313b;color:#fff;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.project-row td{height:23px;background:#e9eef1;border-top:2px solid #166534;text-align:left;padding:4px 8px;font-weight:700}.project-row td+td{text-align:right;color:#586574;font-size:8px;font-weight:600}.project-row small{font-weight:400;color:#66717d}.activity-row td:first-child{text-align:left;padding:4px 8px 4px 18px;white-space:normal;line-height:1.15}.slot{width:${dayWidth}px;min-width:${dayWidth}px;padding:2px!important}.work{display:flex;width:100%;height:20px;align-items:center;justify-content:center;overflow:hidden;background:var(--work);color:var(--work-fg);font-size:7px;font-weight:700;border:1px solid #374151;background-image:repeating-linear-gradient(135deg,transparent,transparent 7px,rgba(255,255,255,.16) 7px,rgba(255,255,255,.16) 9px)}.people{display:flex;gap:8px 16px;flex-wrap:wrap;border-top:1px solid #ccd3db;margin-top:8px;padding-top:6px;font-size:8px}.people>strong{text-transform:uppercase;letter-spacing:.07em}.people span b{margin-right:3px;color:#166534}footer{margin-top:auto;padding-top:7px;border-top:1px solid #ccd3db;display:flex;justify-content:space-between;font-size:8px;color:#66717d}footer b{color:#27313b}@media print{html,body{background:#fff}.toolbar{display:none}.print-page{margin:0;padding:0;width:auto;min-height:260mm}}
+  </style></head><body><div class="toolbar"><button onclick="window.print()">Afdrukken / opslaan als PDF</button><span>A3 liggend · browser-schaal 100%</span></div>${pageHtml}</body></html>`;
 }
 
 export function exportGanttPDF(input: GanttExportInput): void {
-  const { titel, weken, projecten, activiteiten, monteurs, cellen, monteurWeergave, feestdagen, documentVariant, documentBranding } = input;
-  const feestdagenMap = feestdagen ?? new Map<string, string>();
-  const branding = resolveBranding(documentVariant, documentBranding);
-
-  if (weken.length === 0) {
-    throw new Error("Geen weken geselecteerd");
-  }
-
-  // Lookup maps
-  const monteurById = new Map(monteurs.map((m) => [m.id, m] as const));
-
-  // Group cellen by project + activiteit + week_nr + dag_index
-  type CellKey = string;
-  const cellMap = new Map<CellKey, GanttCel>();
-  cellen.forEach((c) => {
-    cellMap.set(`${c.activiteit_id}|${c.week_nr}|${c.dag_index}`, c);
-  });
-
-  // Welke projecten hebben überhaupt cellen in deze weken?
-  const weekNrSet = new Set(weken.map((w) => w.week_nr));
-  const projectIdsMetCellen = new Set<string>();
-  cellen.forEach((c) => {
-    if (weekNrSet.has(c.week_nr)) projectIdsMetCellen.add(c.project_id);
-  });
-
-  // Filter projecten en activiteiten
-  const zichtbareProjecten = projecten.filter((p) => projectIdsMetCellen.has(p.id));
-  // Activiteiten per project, gesorteerd op positie
-  const actsByProject = new Map<string, GanttActiviteit[]>();
-  activiteiten.forEach((a) => {
-    if (!projectIdsMetCellen.has(a.project_id)) return;
-    const arr = actsByProject.get(a.project_id) ?? [];
-    arr.push(a);
-    actsByProject.set(a.project_id, arr);
-  });
-  actsByProject.forEach((arr) =>
-    arr.sort((a, b) => (a.positie ?? 0) - (b.positie ?? 0)),
-  );
-
-  // Layout consts (px) — bij veel weken automatisch smaller maken zodat alles past
-  const totalDays = weken.length * 5;
-  // Schaal dagbreedte tussen 34 (weinig weken) en 14 (heel veel weken)
-  const DAG_W = weken.length <= 6 ? 34 : weken.length <= 10 ? 28 : weken.length <= 14 ? 22 : weken.length <= 20 ? 18 : 14;
-  // Eén gecombineerde "Project & Activity" kolom
-  const COL_LABEL_W = weken.length <= 14 ? 320 : 240;
-  const ROW_H = 30;
-
-  // Dynamische cel-binnenruimte: bij smalle dagen minder padding zodat block niet wordt
-  // weggedrukt en niet overlapt met de cel-rand.
-  const CELL_PAD = DAG_W >= 28 ? 3 : DAG_W >= 20 ? 2 : 1;
-  const BLOCK_PAD = DAG_W >= 28 ? 2 : DAG_W >= 20 ? 1 : 0;
-  // Block label-font schaalt mee zodat initialen altijd in de kleurblok passen
-  const BLOCK_FS = DAG_W >= 28 ? 9 : DAG_W >= 22 ? 8 : DAG_W >= 18 ? 7 : 6.5;
-  // Effectieve binnenbreedte voor de block (pixels): DAG_W − 2*CELL_PAD − 2px borders
-  const BLOCK_INNER_W = Math.max(6, DAG_W - 2 * CELL_PAD - 2);
-
-  const gridW = totalDays * DAG_W;
-  const sheetW = COL_LABEL_W + gridW;
-
-  // Kies papierformaat: A3 normaal, A2 bij heel brede planningen
-  const paperSize = weken.length <= 16 ? "A3" : "A2";
-  const pageWmm = paperSize === "A3" ? 396 : 570;
-  const pagePx = pageWmm * 3.7795;
-  const fitScale = sheetW > pagePx ? pagePx / sheetW : 1;
-
-  // Reporting period (eerste maandag t/m laatste vrijdag)
-  const firstWeek = weken[0];
-  const lastWeek = weken[weken.length - 1];
-  const periodStart = getMondayOfWeek(firstWeek.week_nr, firstWeek.jaar);
-  const periodEnd = new Date(getMondayOfWeek(lastWeek.week_nr, lastWeek.jaar));
-  periodEnd.setDate(periodEnd.getDate() + 4);
-  const fmtLong = (d: Date) =>
-    d.toLocaleDateString("nl-NL", { year: "numeric", month: "long", day: "numeric" });
-  const today = new Date();
-  const todayLabel = today.toLocaleDateString("nl-NL", { year: "numeric", month: "short", day: "numeric" });
-  const jaar = lastWeek.jaar;
-  const weekRangeLabel =
-    firstWeek.week_nr === lastWeek.week_nr
-      ? `Week ${firstWeek.week_nr}`
-      : `Week ${firstWeek.week_nr}-${lastWeek.week_nr}`;
-
-  // Build header rows — week label boven, dagen eronder
-  const weekHeader = weken
-    .map(
-      (w) => `<th colspan="5" class="wk">WEEK ${w.week_nr}</th>`,
-    )
-    .join("");
-
-  const dagHeader = weken
-    .map((w) =>
-      DAG_LABELS.map((d, i) => {
-        const monday = getMondayOfWeek(w.week_nr, w.jaar);
-        const dt = new Date(monday);
-        dt.setDate(monday.getDate() + i);
-        const isLastOfWeek = i === 4;
-        const isFirstOfWeek = i === 0;
-        const feestNaam = feestdagenMap.get(ymd(dt));
-        const cls = ["dag",
-          isFirstOfWeek ? "start-wk" : "",
-          isLastOfWeek ? "end-wk" : "",
-          feestNaam ? "feestdag-h" : "",
-        ].filter(Boolean).join(" ");
-        const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
-        return `<th class="${cls}"${tip}>${d}</th>`;
-      }).join(""),
-    )
-    .join("");
-
-  // Build body rows — corporate stijl: project header rij + activiteit rijen
-  let bodyRows = "";
-  if (zichtbareProjecten.length === 0) {
-    bodyRows = `<tr><td colspan="${1 + totalDays}" class="empty">Geen geplande activiteiten in de geselecteerde weken.</td></tr>`;
-  } else {
-    zichtbareProjecten.forEach((p) => {
-      const acts = actsByProject.get(p.id) ?? [];
-      if (acts.length === 0) return;
-      // Project group-header rij: label-kolom + grid-overspan apart, zodat de
-      // grid-uitlijning gegarandeerd hetzelfde is als bij activiteit-rijen.
-      bodyRows += `<tr class="proj-row">
-        <td class="proj-cell">${escHtml(projectLabel(p))}</td>
-        <td colspan="${totalDays}" class="proj-spacer"></td>
-      </tr>`;
-      acts.forEach((a) => {
-        const dayCells = weken
-          .map((w) =>
-            DAG_LABELS.map((_, di) => {
-              const cel = cellMap.get(`${a.id}|${w.week_nr}|${di}`);
-              const isLastOfWeek = di === 4;
-              const monday = getMondayOfWeek(w.week_nr, w.jaar);
-              const dt = new Date(monday);
-              dt.setDate(monday.getDate() + di);
-              const feestNaam = feestdagenMap.get(ymd(dt));
-              const endCls = isLastOfWeek ? " end-wk" : "";
-              const startCls = di === 0 ? " start-wk" : "";
-              const feestCls = feestNaam ? " feestdag" : "";
-              const tip = feestNaam ? ` title="Feestdag: ${escHtml(feestNaam)}"` : "";
-              if (!cel) return `<td class="cell empty-cell${startCls}${endCls}${feestCls}"${tip}></td>`;
-              const colorEntry = cel.kleur_code ? COLOR_MAP[cel.kleur_code] : null;
-              const bg = colorEntry?.hex ?? "#cbd5e1";
-              const fg = readableTextColor(bg);
-              let label = "";
-              let fullLabel = "";
-              if (monteurWeergave !== "geen" && cel.monteur_ids.length > 0) {
-                const namen = cel.monteur_ids
-                  .map((id) => monteurById.get(id)?.naam)
-                  .filter((n): n is string => !!n);
-                if (monteurWeergave === "initialen") {
-                  const inits = namen.map(initialen);
-                  fullLabel = inits.join(" ");
-                  // Bij smalle cellen: max 2 initialen tonen, rest in title-tooltip
-                  if (DAG_W < 22 && inits.length > 2) {
-                    label = inits.slice(0, 2).join(" ") + "+";
-                  } else {
-                    label = fullLabel;
-                  }
-                } else {
-                  fullLabel = namen.join(", ");
-                  // Volledige namen passen vrijwel nooit in een 14-30px cel:
-                  // toon initialen, met volledige namen in tooltip
-                  label = namen.map(initialen).join(" ");
-                  if (DAG_W < 22 && namen.length > 2) {
-                    label = namen.slice(0, 2).map(initialen).join(" ") + "+";
-                  }
-                }
-              }
-              const labelTip = fullLabel && fullLabel !== label
-                ? ` title="${escHtml(feestNaam ? `Feestdag: ${feestNaam} — ${fullLabel}` : fullLabel)}"`
-                : tip;
-              // Inner block geeft het corporate "blokje in cel" effect
-              return `<td class="cell${startCls}${endCls}${feestCls}"${labelTip}><span class="block" style="background:${bg};color:${fg};">${escHtml(label)}</span></td>`;
-            }).join(""),
-          )
-          .join("");
-        bodyRows += `<tr class="act-row">
-          <td class="act">${escHtml(a.naam)}</td>
-          ${dayCells}
-        </tr>`;
-      });
-    });
-  }
-
-  // Status legend — dynamisch op basis van kleurcodes die werkelijk in de export voorkomen.
-  // Volgorde = vaste volgorde van COLOR_MAP (c1..c12) zodat de legenda voorspelbaar leest
-  // en 1-op-1 correspondeert met de Nederlandse statuswaarden uit planning-types.ts.
-  const gebruikteCodes = new Set<string>();
-  const onbekendeCodes = new Set<string>();
-  cellen.forEach((c) => {
-    if (!c.kleur_code) return;
-    if (COLOR_MAP[c.kleur_code]) {
-      gebruikteCodes.add(c.kleur_code);
-    } else {
-      onbekendeCodes.add(c.kleur_code);
-    }
-  });
-
-  // Dev-time validatie: log eventuele ontbrekende mapping zodat de legenda altijd
-  // 1-op-1 blijft met de Nederlandse statuswaarden uit planning-types.ts (COLOR_MAP).
-  if (import.meta.env?.DEV) {
-    // 1) Cellen met een kleurcode die NIET in COLOR_MAP staat
-    if (onbekendeCodes.size > 0) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[gantt-export] Onbekende kleur_code(s) zonder mapping in COLOR_MAP:",
-        Array.from(onbekendeCodes),
-      );
-    }
-    // 2) Sanity-check: elke entry in COLOR_MAP heeft een niet-lege Nederlandse naam + geldige hex
-    const ongeldigeMap = Object.entries(COLOR_MAP).filter(
-      ([, v]) => !v?.naam?.trim() || !/^#[0-9a-fA-F]{6}$/.test(v?.hex ?? ""),
-    );
-    if (ongeldigeMap.length > 0) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[gantt-export] Ongeldige COLOR_MAP-entries (lege naam of ongeldige hex):",
-        ongeldigeMap.map(([k]) => k),
-      );
-    }
-    // 3) Legenda-namen die afwijken van COLOR_MAP (zou niet mogen, maar valideer expliciet)
-    const mismatch = COLOR_CODES.filter(
-      (code) => gebruikteCodes.has(code) && COLOR_MAP[code].naam !== COLOR_MAP[code].naam.trim(),
-    );
-    if (mismatch.length > 0) {
-      // eslint-disable-next-line no-console
-      console.warn("[gantt-export] Statusnamen met whitespace-afwijking:", mismatch);
-    }
-  }
-
-  const legendItems: Array<{ hex: string; naam: string; pattern?: boolean }> = COLOR_CODES
-    .filter((code) => gebruikteCodes.has(code))
-    .map((code) => ({ hex: COLOR_MAP[code].hex, naam: COLOR_MAP[code].naam }));
-  // Voeg feestdag-indicator toe als er feestdagen in de geselecteerde periode vallen
-  const heeftFeestdagInPeriode = weken.some((w) => {
-    const monday = getMondayOfWeek(w.week_nr, w.jaar);
-    for (let i = 0; i < 5; i++) {
-      const dt = new Date(monday);
-      dt.setDate(monday.getDate() + i);
-      if (feestdagenMap.has(ymd(dt))) return true;
-    }
-    return false;
-  });
-  if (heeftFeestdagInPeriode) {
-    legendItems.push({ hex: "#94a3b8", naam: "Feestdag / vrije dag", pattern: true });
-  }
-  const legend = legendItems.length === 0
-    ? `<span class="lg-empty">Geen statussen in deze periode</span>`
-    : legendItems
-        .map(
-          (c) =>
-            `<div class="lg-item"><span class="lg-dot${c.pattern ? " lg-dot-feest" : ""}" style="background:${c.hex}"></span><span class="lg-lbl">${escHtml(c.naam)}</span></div>`,
-        )
-        .join("");
-
-  const monteurWeergaveLabel =
-    monteurWeergave === "geen"
-      ? "geen monteurs"
-      : monteurWeergave === "initialen"
-        ? "monteurs als initialen"
-        : "monteurs met volledige naam";
-
-  // Render branding-strings (placeholders {bedrijf} en {jaar} invullen)
-  const fillTpl = (tpl: string) =>
-    tpl.replace(/\{bedrijf\}/g, branding.bedrijfsnaam).replace(/\{jaar\}/g, String(jaar));
-  const renderedTitle = fillTpl(branding.titelTemplate);
-  const renderedCopyright = fillTpl(branding.copyright);
-
-  const html = `<!doctype html>
-<html lang="nl">
-<head>
-<meta charset="utf-8" />
-<title>${escHtml(titel)}</title>
-<style>
-  /* Page margins: top = ruimte voor fixed header (32mm), bottom = ruimte voor fixed footer (18mm).
-     Marges zijn iets groter dan header/footer-hoogte zodat er nooit overlap met tabel is. */
-  /* Branding-kleur (variant-driven) — gebruikt door titel, header-line, project-row borders en toolbar */
-  :root { --accent: ${branding.accentKleur}; }
-  @page { size: ${paperSize} landscape; margin: 36mm 12mm 22mm 12mm; }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0;
-    background: #ffffff; color: #191b23;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    font-size: 11px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* ========== Fixed page header (herhaalt op elke pagina bij print) ==========
-     Hoogte 32mm < page-top-margin 36mm → 4mm safety gap, geen overlap mogelijk. */
-  .page-header {
-    position: fixed;
-    top: -34mm;
-    left: 0; right: 0;
-    height: 32mm;
-    padding: 0;
-    overflow: hidden;
-  }
-  /* Compacte fixed page footer: alleen confidential-line + paginanummer.
-     Hoogte 18mm < page-bottom-margin 22mm → 4mm safety gap. */
-  .page-footer {
-    position: fixed;
-    bottom: -20mm;
-    left: 0; right: 0;
-    height: 18mm;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  /* Op scherm: laat header/footer in normale flow staan zodat je een preview ziet */
-  @media screen {
-    .page-header, .page-footer {
-      position: static;
-      height: auto;
-    }
-    .wrap { padding: 14px 14px 24px 14px; }
-  }
-
-  .wrap { overflow: hidden; }
-  .gantt-scale {
-    width: ${sheetW}px;
-    transform-origin: top left;
-    margin: 0 auto;
-  }
-  body[data-scale="fit"] .gantt-scale,
-  body[data-scale="standard"] .gantt-scale {
-    transform: scale(${fitScale.toFixed(4)});
-    margin-bottom: ${Math.max(0, (1 - fitScale) * 100)}px;
-  }
-  body[data-scale="none"] .gantt-scale { transform: none; }
-  @media print {
-    body[data-scale="fit"] .gantt-scale,
-    body[data-scale="standard"] .gantt-scale {
-      transform: scale(${fitScale.toFixed(4)});
-    }
-    body[data-scale="none"] .gantt-scale { transform: none; }
-  }
-
-  /* ========== Document header ========== */
-  .doc-head {
-    width: 100%;
-    display: flex; justify-content: space-between; align-items: flex-end;
-    border-bottom: 2px solid var(--accent);
-    padding: 0 0 6px 0;
-    margin-bottom: 8px;
-  }
-  .doc-head .left .title {
-    color: var(--accent);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .doc-head .left .sub {
-    color: #434655;
-    font-size: 10px;
-    margin-top: 2px;
-  }
-  .doc-head .right {
-    text-align: right;
-    color: #434655;
-    font-size: 10px;
-    line-height: 1.5;
-  }
-  .doc-head .right b { color: #191b23; font-weight: 600; }
-
-  /* ========== Reporting period block ========== */
-  .meta-grid {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2px 24px;
-    margin-bottom: 8px;
-  }
-  .meta-grid .lbl {
-    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #737686;
-  }
-  .meta-grid .val {
-    font-size: 11px; color: #191b23; font-weight: 500;
-  }
-  .meta-grid .right { text-align: right; }
-
-  /* ========== Status legend ========== */
-  .legend-row {
-    width: 100%;
-    display: flex; align-items: center; flex-wrap: wrap;
-    gap: 6px 14px;
-    padding: 4px 0 0 0;
-    font-size: 10px;
-  }
-  .legend-row .lg-title {
-    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #737686;
-    margin-right: 4px;
-    flex-shrink: 0;
-  }
-  .lg-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-  .lg-dot {
-    width: 11px; height: 11px; border-radius: 2px;
-    border: 1px solid rgba(0,0,0,0.12);
-    display: inline-block;
-    flex-shrink: 0;
-  }
-  .lg-dot-feest {
-    background-image: repeating-linear-gradient(
-      45deg, #94a3b8, #94a3b8 2px, #e2e8f0 2px, #e2e8f0 4px
-    ) !important;
-  }
-  .lg-lbl { color: #191b23; font-size: 10px; }
-  .lg-empty { font-size: 10px; color: #737686; font-style: italic; }
-
-
-  /* ========== Gantt table ========== */
-  table.gantt {
-    border-collapse: collapse;
-    table-layout: fixed;
-    width: ${sheetW}px;
-    border: 1px solid #c3c6d7;
-  }
-  /* Belangrijk: thead herhaalt op iedere pagina bij print */
-  table.gantt thead { display: table-header-group; }
-  /* Activiteit-rijen mogen niet midden over een pagina-einde lopen */
-  table.gantt tbody tr { page-break-inside: avoid; break-inside: avoid; }
-  /* Een projectkop mag nooit als laatste rij op een pagina staan zonder activiteiten eronder */
-  table.gantt tr.proj-row { page-break-after: avoid; break-after: avoid; }
-  /* De eerste activiteit-rij van een project blijft bij de projectkop */
-  table.gantt tr.proj-row + tr.act-row { page-break-before: avoid; break-before: avoid; }
-  table.gantt th, table.gantt td {
-    border: 1px solid #c3c6d7;
-    padding: 0;
-    text-align: center;
-    vertical-align: middle;
-    font-size: 10px;
-    overflow: hidden;
-  }
-  /* Subtiele dag-gridlines: lichtere haarlijn binnen een week,
-     einde-week-streep (#737686) blijft sterker zodat week-grenzen leesbaar blijven */
-  table.gantt td.cell,
-  table.gantt thead th.dag {
-    border-right: 1px solid #ededf9;
-    border-left: 0;
-  }
-  /* Eerste dag van een week krijgt wel een normale linker-grid (week-scheiding) */
-  table.gantt td.cell.start-wk,
-  table.gantt thead th.dag.start-wk {
-    border-left: 1px solid #c3c6d7;
-  }
-  /* Horizontale rij-grid blijft licht zodat dagblokken visueel "los" staan */
-  table.gantt tbody td.cell {
-    border-top: 1px solid #f0f0fb;
-    border-bottom: 1px solid #f0f0fb;
-  }
-  thead th {
-    background: #ededf9;
-    color: #191b23;
-    font-weight: 700;
-  }
-  thead th.label-h {
-    width: ${COL_LABEL_W}px;
-    text-align: left;
-    padding: 8px 12px;
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #434655;
-    border-right: 1px solid #c3c6d7;
-  }
-  thead th.wk {
-    padding: 6px 2px;
-    font-size: 9.5px;
-    letter-spacing: 0.05em;
-    color: #434655;
-    border-bottom: 1px solid #c3c6d7;
-    border-right: 1px solid #c3c6d7;
-  }
-  thead th.dag {
-    width: ${DAG_W}px;
-    padding: 4px 0;
-    background: #f3f3fe;
-    font-size: 9px;
-    font-weight: 700;
-    color: #434655;
-    text-transform: uppercase;
-  }
-  thead th.dag.end-wk, td.cell.end-wk { border-right: 1.5px solid #737686; }
-  thead th.dag.feestdag-h {
-    background: repeating-linear-gradient(
-      45deg, #e1e2ed, #e1e2ed 3px, #f3f3fe 3px, #f3f3fe 6px
-    );
-  }
-  /* Activiteit-rij scheiding: zachte horizontale lijn zodat blokjes per rij duidelijk zijn */
-  tr.act-row + tr.act-row td { border-top: 1px solid #f0f0fb; }
-
-  /* Project group header — label-cel + lege grid-spacer met identiek raster
-     zodat activiteit-blokjes daaronder visueel met de week-kolommen uitlijnen */
-  tr.proj-row td.proj-cell {
-    text-align: left;
-    padding: 7px 12px;
-    background: #f0f0fb;
-    color: #191b23;
-    font-size: 11px;
-    font-weight: 600;
-    border-top: 1.5px solid var(--accent);
-    border-bottom: 1px solid #c3c6d7;
-    border-right: 1px solid #c3c6d7;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: ${COL_LABEL_W}px;
-    /* Voorkom dat lange projectnamen kolombreedte oprekken */
-    word-break: keep-all;
-  }
-  tr.proj-row td.proj-spacer {
-    background: #f0f0fb;
-    border-top: 1.5px solid var(--accent);
-    border-bottom: 1px solid #c3c6d7;
-    padding: 0;
-    height: ${Math.round(ROW_H * 0.85)}px;
-  }
-
-  /* Activity row */
-  tr.act-row td.act {
-    text-align: left;
-    padding: ${DAG_W >= 22 ? "6px 12px 6px 24px" : "5px 8px 5px 18px"};
-    background: #ffffff;
-    color: #191b23;
-    font-size: ${DAG_W >= 22 ? 10.5 : 10}px;
-    font-weight: 400;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: ${COL_LABEL_W}px;
-  }
-
-  td.cell {
-    height: ${ROW_H}px;
-    background: #ffffff;
-    padding: ${CELL_PAD}px;
-    /* Cel mag nooit breder worden dan zijn vaste week-kolombreedte */
-    max-width: ${DAG_W}px;
-    min-width: ${DAG_W}px;
-    width: ${DAG_W}px;
-  }
-  td.cell .block {
-    width: 100%;
-    height: 100%;
-    max-width: ${BLOCK_INNER_W}px;
-    border-radius: 2px;
-    font-size: ${BLOCK_FS}px;
-    font-weight: 700;
-    line-height: 1;
-    padding: ${BLOCK_PAD}px;
-    /* Geen wrapping in smalle blokken — overflow wordt afgekapt en zit in title-tooltip */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: clip;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-  }
-  td.cell.empty-cell .block { display: none; }
-  td.empty {
-    padding: 24px; text-align: center; color: #737686; font-style: italic;
-    background: #f3f3fe;
-  }
-
-  td.cell.feestdag {
-    background-image: repeating-linear-gradient(
-      45deg, rgba(115,118,134,0.14), rgba(115,118,134,0.14) 3px,
-      rgba(195,198,215,0.10) 3px, rgba(195,198,215,0.10) 6px
-    );
-  }
-
-  /* ========== End-block (alleen op laatste pagina, na de tabel) ==========
-     Wordt als één geheel bewaard zodat het nooit afgekapt over een page-break valt. */
-  .end-block {
-    margin-top: 14px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-  .signatures {
-    width: 100%;
-    margin: 10px 0 0 0;
-  }
-  .sig-block {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    border-top: 1px solid #434655;
-    padding-top: 4px;
-  }
-  .sig-block .lbl {
-    font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #737686;
-  }
-  .sig-block .name {
-    font-size: 10.5px; color: #191b23; font-weight: 600;
-  }
-
-  /* ========== Compacte fixed page footer (op elke pagina) ==========
-     Slechts 1 regel: confidential + ref + paginanummer. Past binnen 18mm hoogte. */
-  .doc-foot {
-    width: 100%;
-    height: 100%;
-    padding: 4px 14mm 0 14mm;
-    margin: 0;
-    border-top: 1px solid #c3c6d7;
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 8.5px;
-    color: #737686;
-    letter-spacing: 0.05em;
-  }
-  .doc-foot .conf {
-    color: #ba1a1a;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .doc-foot .ref { color: #434655; margin-left: 14px; }
-  .doc-foot .pageinfo { color: #434655; font-weight: 600; }
-  /* Paginanummer via CSS counter (alleen in print) */
-  @media print {
-    .doc-foot .pageinfo::after {
-      content: "Pagina " counter(page);
-    }
-  }
-  @media screen {
-    .doc-foot .pageinfo::after { content: "Pagina 1"; }
-  }
-
-  /* ========== Toolbar (alleen scherm) ========== */
-  .toolbar {
-    position: sticky; top: 0; z-index: 10;
-    background: #fff; border-bottom: 1px solid #e1e2ed;
-    padding: 8px 12px;
-    display: flex; gap: 8px; align-items: center;
-    font-size: 12px;
-  }
-  .toolbar button {
-    background: var(--accent); color: #fff; border: 0; padding: 6px 14px;
-    border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px;
-  }
-  .toolbar button:hover { filter: brightness(0.9); }
-  .toolbar label { color: #434655; font-weight: 600; }
-  .toolbar select {
-    border: 1px solid #c3c6d7; background: #fff; color: #191b23;
-    padding: 5px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;
-    cursor: pointer;
-  }
-  .toolbar .hint { color: #737686; }
-  @media print {
-    .toolbar { display: none; }
-    .wrap { padding-top: 0; }
-  }
-
-  /* Scherm-preview separator tussen header/body/footer */
-  @media screen {
-    .page-header { border-bottom: 1px dashed #c3c6d7; padding-bottom: 8px; margin-bottom: 12px; }
-    .page-footer { border-top: 1px dashed #c3c6d7; padding-top: 8px; margin-top: 12px; }
-  }
-</style>
-</head>
-<body data-scale="fit">
-  <div class="toolbar">
-    <button onclick="window.print()">Afdrukken / opslaan als PDF</button>
-    <label for="scaleSel">Schaal:</label>
-    <select id="scaleSel" onchange="document.body.setAttribute('data-scale', this.value)">
-      <option value="standard">Standaard</option>
-      <option value="fit" selected>Aanpassen aan pagina</option>
-      <option value="none">Geen schaling</option>
-    </select>
-    <span class="hint">Kies in de printdialoog "Opslaan als PDF" en ${paperSize} liggend. Zet de browser-schaling op 100%. Header, legend, annotaties en voettekst herhalen op elke pagina.</span>
-  </div>
-
-  <!-- FIXED PAGE HEADER — herhaalt op elke geprinte pagina -->
-  <div class="page-header">
-    <div class="doc-head">
-      <div class="left">
-        <div class="title">${escHtml(renderedTitle)}</div>
-        <div class="sub">${weken.length} ${weken.length === 1 ? "week" : "weken"} · ${zichtbareProjecten.length} ${zichtbareProjecten.length === 1 ? "project" : "projecten"} · ${monteurWeergaveLabel}</div>
-      </div>
-      <div class="right">
-        <div><b>Datum:</b> ${todayLabel}</div>
-      </div>
-    </div>
-    <div class="meta-grid">
-      <div>
-        <div class="lbl">Rapportageperiode</div>
-        <div class="val">${fmtLong(periodStart)} – ${fmtLong(periodEnd)} (${weekRangeLabel})</div>
-      </div>
-      <div class="right">
-        <div class="lbl">Document</div>
-        <div class="val">${escHtml(titel)}</div>
-      </div>
-    </div>
-    <div class="legend-row">
-      <span class="lg-title">Statuslegenda:</span>
-      ${legend}
-    </div>
-  </div>
-
-  <!-- FIXED PAGE FOOTER — compact, herhaalt op iedere geprinte pagina (1 regel) -->
-  <div class="page-footer">
-    <div class="doc-foot">
-      <div>${escHtml(renderedCopyright)}</div>
-      <div>
-        ${branding.toonConfidential ? `<span class="conf">Vertrouwelijk intern document</span>` : ""}
-        <span class="ref">Ref: ${escHtml(branding.refPrefix)}-${weekRangeLabel.replace(/\s+/g, "")}-${jaar}</span>
-        <span class="ref pageinfo"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN CONTENT — tabel; thead herhaalt automatisch op elke pagina -->
-  <div class="wrap">
-    <div class="gantt-scale">
-      <table class="gantt">
-        <thead>
-          <tr>
-            <th rowspan="2" class="label-h">Project &amp; activiteit</th>
-            ${weekHeader}
-          </tr>
-          <tr>${dagHeader}</tr>
-        </thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-
-      <!-- END-BLOCK — alleen op laatste pagina (na de tabel), bewaard als één geheel -->
-      <div class="end-block">
-        <div class="signatures">
-          <div class="sig-block">
-            <span class="lbl">OPGESTELD DOOR</span>
-            <span class="name">${escHtml(branding.preparedBy)}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
-
-  const w = window.open("", "_blank");
-  if (!w) {
-    throw new Error("Pop-up werd geblokkeerd. Sta pop-ups toe en probeer opnieuw.");
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  // Geen auto-print: gebruiker kiest eerst de schaal en klikt dan op "Afdrukken / opslaan als PDF"
-  w.focus();
+  const html = buildGanttHtml(input);
+  const popup = window.open("", "_blank");
+  if (!popup) throw new Error("Pop-up werd geblokkeerd. Sta pop-ups toe en probeer opnieuw.");
+  popup.document.open();
+  popup.document.write(html);
+  popup.document.close();
+  popup.focus();
 }
