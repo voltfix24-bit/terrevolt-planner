@@ -4068,7 +4068,7 @@ function GanttPrintMenu({
     target.setUTCDate(target.getUTCDate() - dayNr + 3);
     const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
     const diff = (target.getTime() - firstThursday.getTime()) / 86400000;
-    return 1 + Math.round((diff - ((firstThursday.getUTCDay() + 6) % 7) + 3) / 7);
+    return 1 + Math.round((diff - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
   }, []);
 
   // Range-selectors: van/tot week (default = volledige beschikbare reeks)
