@@ -20,7 +20,7 @@ export function MobileProjectDetail() {
     for (const b of blocks) groups.set(`${b.year}-${b.week}`, [...(groups.get(`${b.year}-${b.week}`) ?? []), b]);
     return [...groups].map(([key, items]) => ({ key, items }));
   }, [blocks]);
-  const defaultOpen = useMemo(() => { if (!days.length) return null; const t = targetWeekForDays(days, new Date()); return `${t.jaar}-${t.week_nr}`; }, [days]);
+  const defaultOpen = useMemo(() => { if (project?.status === "on_hold" || !days.length) return null; const t = targetWeekForDays(days, new Date()); return `${t.jaar}-${t.week_nr}`; }, [days, project?.status]);
   const [openWeeks, setOpenWeeks] = useState<Set<string> | null>(null);
   useEffect(() => { setOpenWeeks(null); }, [id]);
   const isOpen = (key: string) => openWeeks ? openWeeks.has(key) : key === defaultOpen;
@@ -31,13 +31,14 @@ export function MobileProjectDetail() {
   if (!project) return <p className="py-16 text-center text-sm text-muted-foreground">Case niet gevonden</p>;
   return <div className="space-y-5"><Button variant="ghost" className="h-11 -ml-3" onClick={() => navigate("/projecten")}><ArrowLeft className="mr-2 h-4 w-4" />Cases</Button>
     <section><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-xs text-muted-foreground">{project.case_nummer || "Geen casenummer"}</p><h1 className="font-display text-2xl font-bold">{project.station_naam || "Naamloos station"}</h1></div><StatusChip status={project.status} /></div><p className="mt-2 text-sm text-muted-foreground">{project.opdrachtgever_id ? data.opdrachtgeverNameById.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p>{address && <a className="mt-3 flex min-h-11 items-center gap-2 text-sm font-medium text-primary" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer"><MapPin className="h-4 w-4" />Navigeer naar {address}</a>}</section>
-    <section className="rounded-lg border border-border bg-card p-4"><div className="grid grid-cols-2 gap-3 text-sm">
+    {project.status === "on_hold" && <p role="status" className="border-l-2 border-warning pl-3 text-sm">On hold — niet opgenomen in actuele planning/capaciteit.</p>}
+    <section className="rounded-lg border border-border bg-card p-4">{project.status === "on_hold" && <p className="mb-3 text-xs font-medium text-muted-foreground">Niet actief — on hold · vastgelegde planning</p>}<div className="grid grid-cols-2 gap-3 text-sm">
       <div><span className="block text-[11px] text-muted-foreground">Eerste dag</span><strong>{fmtDate(summary.first)}</strong></div>
       <div><span className="block text-[11px] text-muted-foreground">Laatste dag</span><strong>{fmtDate(summary.last)}</strong></div>
       <div><span className="block text-[11px] text-muted-foreground">Werkdagen</span><strong>{summary.uniqueDays}</strong></div>
       <div><span className="block text-[11px] text-muted-foreground">Weken · monteurs</span><strong>{summary.weeks} · {crew.size}</strong></div>
     </div></section>
-    <section><h2 className="mb-2 font-display text-lg font-bold">Planning</h2>{weekGroups.length === 0 ? <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">Nog geen planning</p> : <div className="space-y-2">{weekGroups.map((group) => { const open = isOpen(group.key); const first = group.items[0]; return <article key={group.key} className="overflow-hidden rounded-lg border border-border bg-card">
+    <section><h2 className="mb-2 font-display text-lg font-bold">{project.status === "on_hold" ? "Vastgelegde planning · niet actief" : "Actuele planning"}</h2>{weekGroups.length === 0 ? <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">Nog geen planning</p> : <div className="space-y-2">{weekGroups.map((group) => { const open = isOpen(group.key); const first = group.items[0]; return <article key={group.key} className="overflow-hidden rounded-lg border border-border bg-card">
       <button className="flex min-h-12 w-full items-center justify-between px-4 text-left" onClick={() => toggle(group.key)} aria-expanded={open}><span><strong>Week {first.week} · {first.year}</strong><span className="ml-2 text-xs text-muted-foreground">{group.items.length} {group.items.length === 1 ? "dag" : "dagen"} · vanaf {formatShort(first.date)}</span></span><ChevronDown className={`h-5 w-5 transition-transform ${open ? "rotate-180" : ""}`} /></button>
       {open && <div className="divide-y divide-border border-t border-border">{group.items.map((block) => <div key={block.key} className="p-4"><strong className="text-sm capitalize">{block.date.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</strong><p className="mt-1 text-sm">{block.activities.join(" · ")}</p><p className="text-sm text-muted-foreground">{block.monteurIds.map((m) => data.monteurNameById.get(m)).filter(Boolean).join(", ") || "Nog geen monteurs"}</p></div>)}</div>}
     </article>; })}</div>}</section>

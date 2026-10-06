@@ -12,7 +12,7 @@ export function MobileToday() {
   const todayIndex = (now.getDay() + 6) % 7; const isWeekday = todayIndex <= 4;
   const initialDay = isWeekday ? todayIndex : 0;
   const [dayIndex, setDayIndex] = useState(initialDay);
-  const weekDays = data.daysByWeek.get(`${current.jaar}-${current.week_nr}`);
+  const weekDays = data.activeDaysByWeek.get(`${current.jaar}-${current.week_nr}`);
   const blocksByProject = useMemo(() => {
     const blocks = groupDayBlocks((weekDays ?? []).filter((d) => d.dayIndex === dayIndex));
     return blocks.filter((b) => data.projectById.has(b.projectId));
@@ -41,7 +41,7 @@ export function MobileToday() {
           </div>
           {dayCap.overplannedUnavailable > 0 && <p className="mt-2 text-xs text-destructive">{dayCap.overplannedUnavailable} ingepland terwijl niet beschikbaar</p>}
         </section>}
-        {data.loading ? <p className="py-10 text-center text-sm text-muted-foreground">Planning laden…</p> : blocksByProject.length === 0 ? <p className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">Geen projecten gepland op deze dag</p> : blocksByProject.map((block) => { const project = data.projectById.get(block.projectId)!; return <button key={block.key} onClick={() => navigate(`/projecten/${project.id}`)} className="w-full rounded-lg border border-border bg-card p-4 text-left">
+        {data.loading ? <p className="py-10 text-center text-sm text-muted-foreground">Planning laden…</p> : blocksByProject.length === 0 ? <p className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">Geen projecten gepland op deze dag</p> : blocksByProject.map((block) => { const project = data.projectById.get(block.projectId); if (!project) return null; return <button key={block.key} onClick={() => navigate(`/projecten/${project.id}`)} className="w-full rounded-lg border border-border bg-card p-4 text-left">
           <div className="flex items-start justify-between gap-2"><strong className="min-w-0">{project.case_nummer || "Geen casenummer"} · {project.station_naam || "Naamloos station"}</strong><StatusChip status={project.status} /></div>
           <p className="mt-1 text-xs text-muted-foreground">{project.opdrachtgever_id ? data.opdrachtgeverNameById.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p>
           <p className="mt-3 text-sm font-medium">{block.activities.join(" · ")}</p>
