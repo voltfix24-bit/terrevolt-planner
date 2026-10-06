@@ -69,3 +69,25 @@ export function DesktopOnly({ title }: { title: string }) {
     <p className="text-sm text-muted-foreground">Dit onderdeel bevat beheer- en bewerkfuncties en is alleen beschikbaar op desktop.</p>
   </div>;
 }
+
+/** Compacte actualiteit voor de sticky weekbalk: HH:MM + vernieuwen (44px). */
+export function FreshnessCompact({ data }: { data: Pick<MobilePlanningData, "lastUpdated" | "fetching" | "refresh" | "error"> }) {
+  const online = useOnline();
+  const time = data.lastUpdated ? data.lastUpdated.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }) : "…";
+  return <button type="button" onClick={data.refresh} disabled={data.fetching} aria-label={`Planning vernieuwen, bijgewerkt ${time}`} className={`flex h-11 shrink-0 items-center gap-1 rounded-md px-2 text-[11px] font-medium ${!online || data.error ? "text-destructive" : "text-muted-foreground"} disabled:opacity-60`}>
+    {!online ? <WifiOff className="h-3.5 w-3.5" /> : <RefreshCw className={`h-3.5 w-3.5 ${data.fetching ? "animate-spin" : ""}`} />}<span>{time}</span>
+  </button>;
+}
+
+/** Operationele toestanden van compacte dagcellen. */
+export const CELL_TONE = {
+  planned: "bg-primary/15 text-foreground",
+  free: "border border-dashed border-border bg-background text-muted-foreground",
+  unavailable: "bg-muted text-foreground/80 [background-image:repeating-linear-gradient(135deg,transparent_0_6px,hsl(var(--border))_6px_7px)]",
+  conflict: "bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive",
+} as const;
+
+export function CellLegend({ withUnavailable = true }: { withUnavailable?: boolean }) {
+  const items: [keyof typeof CELL_TONE, string][] = [["planned", "Gepland"], ["free", "Vrij"], ...(withUnavailable ? [["unavailable", "Niet beschikbaar"] as [keyof typeof CELL_TONE, string]] : []), ["conflict", "Conflict"]];
+  return <ul aria-label="Legenda" className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">{items.map(([k, l]) => <li key={k} className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${CELL_TONE[k]}`} aria-hidden="true" />{l}</li>)}</ul>;
+}
