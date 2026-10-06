@@ -41,7 +41,7 @@
 - [x] Sticky weekbalk met actualiteit; Komende weken -> weekkalender
 
 ## Mobiele betrouwbaarheid — fase 1
-- [ ] Gedeelde foutgate en actualiteit in mobiele topbar
-- [ ] Ondubbelzinnige beschikbaarheid en contrastrijke teksttokens
-- [ ] Synchrone mobiele detectie, titels/zoeken en Cases-secties
-- [ ] Licht manifest, architectuurregels, volledige tests en mobiele QA
+- [x] Gedeelde foutgate en actualiteit in mobiele topbar
+- [x] Ondubbelzinnige beschikbaarheid en contrastrijke teksttokens
+- [x] Synchrone mobiele detectie, titels/zoeken en Cases-secties
+- [x] Licht manifest, architectuurregels, volledige tests en mobiele QA

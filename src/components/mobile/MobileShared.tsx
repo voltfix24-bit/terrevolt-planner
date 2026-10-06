@@ -28,7 +28,7 @@ export function MobileDataGate({ data, children }: { data: Pick<MobilePlanningDa
   </section>;
   return <>{state === "stale" && <div role="status" className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-warning-text/40 bg-warning/10 px-3 py-2 text-warning-text">
     <div className="min-w-0 text-xs font-medium">{!online && <span className="mb-1 flex items-center gap-1"><WifiOff className="h-4 w-4" />Geen verbinding</span>}Niet vernieuwd — je ziet gegevens van {freshnessLabel(data.lastUpdated)}</div>
-    <Button variant="ghost" className="min-h-11 shrink-0 px-2 text-warning-text" onClick={data.refresh} disabled={data.fetching}>Opnieuw</Button>
+    <Button variant="ghost" className="min-h-11 shrink-0 px-2 text-warning-text hover:text-warning-text" onClick={data.refresh} disabled={data.fetching}>Opnieuw</Button>
   </div>}{children}</>;
 }
 
@@ -79,7 +79,7 @@ export function FreshnessCompact({ data }: { data: Pick<MobilePlanningData, "las
   const [, tick] = useState(0);
   useEffect(() => { const timer = window.setInterval(() => tick((n) => n + 1), 60_000); return () => window.clearInterval(timer); }, []);
   const time = freshnessLabel(data.lastUpdated);
-  return <Button variant="ghost" onClick={data.refresh} disabled={data.fetching} aria-label={`Planning vernieuwen, bijgewerkt ${time}${!online ? ", geen verbinding" : ""}`} className={`h-11 min-w-11 shrink-0 gap-1 px-1 text-[11px] font-medium ${!online ? "text-destructive-text" : data.error ? "text-warning-text" : "text-muted-foreground"} disabled:opacity-60`}>
+  return <Button variant="ghost" onClick={data.refresh} disabled={data.fetching} aria-label={`Planning vernieuwen, bijgewerkt ${time}${!online ? ", geen verbinding" : ""}`} className={`h-11 min-w-11 shrink-0 gap-1 px-1 text-[11px] font-medium ${!online ? "text-destructive-text hover:text-destructive-text" : data.error ? "text-warning-text hover:text-warning-text" : "text-muted-foreground hover:text-muted-foreground"} disabled:opacity-100`}>
     {!online ? <WifiOff className="h-3.5 w-3.5" /> : <RefreshCw className={`h-3.5 w-3.5 ${data.fetching ? "animate-spin" : ""}`} />}<span>{time}</span>
   </Button>;
 }
