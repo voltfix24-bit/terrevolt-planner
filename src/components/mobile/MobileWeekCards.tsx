@@ -32,7 +32,7 @@ function absenceLabel(reasons: string[]) {
   if (reason.includes("ziek")) return "Ziek";
   if (reason.includes("verlof") || reason.includes("vak")) return "Vak";
   if (reason.includes("opl")) return "Opl";
-  if (reason.includes("vrije dag")) return "Vrij";
+  if (reason.includes("vrije dag")) return "Vrije dag";
   return reasons.length ? "Feest/afw" : "Afw";
 }
 
