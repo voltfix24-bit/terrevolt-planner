@@ -1,25 +1,27 @@
 import { useMemo } from "react";
 import { Search, X } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { capacityForWeek, caseWeekMatrix, mobileProjectContext, type IsoWeek } from "@/lib/mobile-planning";
-import { caseTitle, matchesSearch, capacityLink, mobileBackTarget, planningEmptyState } from "@/lib/mobile-ux";
+import { caseTitle, matchesSearch, capacityLink, mobileBackTarget, planningEmptyState, weekExceptions } from "@/lib/mobile-ux";
 import { addIsoWeeks } from "@/lib/planning-types";
 import { CellLegend, MobileSearchEmpty, MobileDataGate, SwipeArea } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
 import { CaseWeekCard } from "./MobileWeekCards";
 import { MobileWeekNavigation } from "./MobileWeekNavigation";
+import { ActivityLegend, ExceptionsBar } from "./MobileSignals";
+import { useMobileSlide } from "./useMobileSlide";
 import { useMobileWeekView } from "./useMobileWeekView";
 
 
 
 export function MobileWeekPlanning() {
   const data = useMobilePlanningData(); const navigate = useNavigate();
-  const [params, setParams] = useSearchParams(); const projectId = params.get("project");
+  const state = useMobileWeekView(); const { params, setParams } = state; const projectId = params.get("project");
+  const { slide, transitionKey, transitionClass } = useMobileSlide();
   const contextProject = projectId ? data.projectById.get(projectId) : undefined;
   const contextState = mobileProjectContext(contextProject);
-  const state = useMobileWeekView();
   const { selected, query, open, update } = state;
   const setQuery = (query: string) => update({ query });
   const setOpen = (open: string | null) => update({ open });
@@ -34,9 +36,11 @@ export function MobileWeekPlanning() {
     return [{ ...row, project }];
   }).sort((a, b) => (a.project.case_nummer ?? "").localeCompare(b.project.case_nummer ?? "", "nl")), [weekDays, selected, projectId, term, data.projectById, data.opdrachtgeverNameById, data.monteurNameById]);
   const cap = useMemo(() => capacityForWeek(weekDays, selected.jaar, selected.week_nr, data.monteurs, data.absences, data.holidays), [weekDays, selected, data.monteurs, data.absences, data.holidays]);
+  const exceptions = useMemo(() => weekExceptions(weekDays, selected, data.monteurs, data.absences, data.holidays, data.onHoldProjectIds), [weekDays, selected, data.monteurs, data.absences, data.holidays, data.onHoldProjectIds]);
+  const caseBlocks = caseRows.flatMap((r) => r.blocks);
   const empty = planningEmptyState(projectId, projectId ? (data.activeDaysByProject.get(projectId)?.length ?? 0) > 0 : true);
-  const move = (delta: number) => { update({ week: addIsoWeeks(selected.jaar, selected.week_nr, delta), open: null }); };
-  const select = (week: IsoWeek) => { update({ week, open: null }); };
+  const move = (delta: number) => { slide(delta); update({ week: addIsoWeeks(selected.jaar, selected.week_nr, delta), open: null }); };
+  const select = (week: IsoWeek) => { slide(week.jaar * 100 + week.week_nr - selected.jaar * 100 - selected.week_nr); update({ week, open: null }); };
   const clearProject = () => { const next = new URLSearchParams(params); next.delete("project"); next.delete("open"); next.delete("q"); setParams(next, { replace: true });  };
   const contextTitle = contextProject ? caseTitle(contextProject) : null;
   const backToCase = () => { const target = mobileBackTarget(window.history.state?.idx, `/projecten/${projectId}`); if (target === -1) navigate(-1); else navigate(target); };
@@ -47,14 +51,16 @@ export function MobileWeekPlanning() {
   return <MobileDataGate data={data}><div className="space-y-3">
     <h1 className="break-words font-display text-xl font-bold">{contextTitle ? `Planning · ${contextTitle}` : "Planning"}</h1>
     {projectId && <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={backToCase} className="min-h-11">Terug naar case</Button><Button variant="outline" onClick={clearProject} className="min-h-11"><X className="mr-2 h-4 w-4" />Alle cases tonen</Button></div>}
-    <MobileWeekNavigation selected={selected} onMove={move} onSelect={select} />
+    <MobileWeekNavigation selected={selected} onMove={move} onSelect={select} dayHeader />
     {!projectId && <div className="relative"><Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" /><Input className="h-11 pl-9 pr-11" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Zoek case, station, opdrachtgever of monteur" aria-label="Planning zoeken" />{query && <Button variant="ghost" onClick={() => setQuery("")} aria-label="Zoekopdracht wissen" className="absolute right-0 top-0 h-11 w-11 p-0"><X className="h-4 w-4" /></Button>}</div>}
-    <p className="text-xs text-muted-foreground">Week: {cap.plannedUnique} mandagen ingepland · {cap.free} vrij · {cap.percentage}% bezet{cap.conflicts ? ` · ${cap.conflicts} conflicten` : ""}</p>
+    <p className="text-xs text-muted-foreground">{projectId ? `Deze case in week ${selected.week_nr}: ${caseBlocks.length} dagen · ${new Set(caseBlocks.flatMap((b) => b.monteurIds)).size} monteurs` : <>Week: {cap.plannedUnique} mandagen ingepland · {cap.free} vrij · {cap.percentage}% bezet{cap.conflicts ? ` · ${cap.conflicts} conflicten` : ""}</>}</p>
+    <ExceptionsBar items={exceptions} week={selected} data={data} />
+    <ActivityLegend codes={caseBlocks.flatMap((b) => b.colorCodes)} />
     <CellLegend withUnavailable={false} />
     <Button variant="link" className="h-auto min-h-11 max-w-full whitespace-normal px-0 text-left text-xs text-primary-text" onClick={() => navigate(capacityLink(selected))}>Monteurs per dag bekijken → Capaciteit</Button>
-    <SwipeArea onSwipe={move} label="Weekplanning"><div className="space-y-2">
+    <SwipeArea onSwipe={move} label="Weekplanning"><div key={transitionKey} className={`space-y-2 ${transitionClass}`}>
       {caseRows.length === 0 ? term ? <MobileSearchEmpty term={query} onClear={() => setQuery("")} /> : <p className="py-12 text-center text-sm text-muted-foreground">Geen actieve planning in week {selected.week_nr}</p>
-        : caseRows.map(({ project, blocks, cells }) => <CaseWeekCard key={project.id} project={project} blocks={blocks} cells={cells} data={data} open={open === project.id} onToggle={() => setOpen(open === project.id ? null : project.id)} />)}
+        : caseRows.map(({ project, blocks, cells }) => <CaseWeekCard key={project.id} project={project} blocks={blocks} cells={cells} exceptions={exceptions} data={data} open={open === project.id} onToggle={() => setOpen(open === project.id ? null : project.id)} />)}
     </div></SwipeArea>
   </div></MobileDataGate>;
 }
