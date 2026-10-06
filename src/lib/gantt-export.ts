@@ -167,6 +167,37 @@ export function paginateProjectRows(
   return pages;
 }
 
+export interface ExportPage { weeks: GanttWeek[]; rows: ProjectRowGroup[] }
+
+/**
+ * Per weekchunk: only projects/activities with cells inside that chunk are paginated.
+ * A chunk without any planning yields one empty page so it never silently disappears.
+ */
+export function buildExportPages(
+  orderedProjects: GanttProject[],
+  activities: GanttActiviteit[],
+  cells: GanttCel[],
+  weeks: GanttWeek[],
+  layout: GanttPrintLayout,
+  rowBudget = 24,
+): ExportPage[] {
+  const pages: ExportPage[] = [];
+  for (const chunk of chunkWeken(weeks, WEEKS_PER_LAYOUT[layout])) {
+    const weekSet = new Set(chunk.map((week) => week.week_nr));
+    const chunkCells = cells.filter((cell) => weekSet.has(cell.week_nr));
+    const projectIds = new Set(chunkCells.map((cell) => cell.project_id));
+    const activityIds = new Set(chunkCells.map((cell) => cell.activiteit_id));
+    const chunkProjects = orderedProjects.filter((project) => projectIds.has(project.id));
+    const chunkActivities = activities.filter(
+      (activity) => projectIds.has(activity.project_id) && activityIds.has(activity.id),
+    );
+    const rowPages = paginateProjectRows(chunkProjects, chunkActivities, rowBudget);
+    if (rowPages.length === 0) pages.push({ weeks: chunk, rows: [] });
+    else for (const rows of rowPages) pages.push({ weeks: chunk, rows });
+  }
+  return pages;
+}
+
 const esc = (value: string): string => value.replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 }[char] ?? char));
