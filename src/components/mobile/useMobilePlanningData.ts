@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  aggregateMobilePlanning, indexDaysByProject, indexDaysByWeek,
+  activeMobilePlanningDays, aggregateMobilePlanning, indexDaysByProject, indexDaysByWeek,
   type MobileActivity, type MobileCell, type MobileCellMonteur, type MobileWeek,
 } from "@/lib/mobile-planning";
 import type { AfwezigheidPeriode, FeestdagItem } from "@/lib/monteur-beschikbaarheid";
@@ -74,6 +74,9 @@ export function useMobilePlanningData() {
   const daysByProject = useMemo(() => indexDaysByProject(days), [days]);
   const daysByWeek = useMemo(() => indexDaysByWeek(days), [days]);
   const onHoldProjectIds = useMemo(() => new Set((raw?.projects ?? []).filter((p) => p.status === "on_hold").map((p) => p.id)), [raw]);
+  const activeDays = useMemo(() => activeMobilePlanningDays(days, onHoldProjectIds), [days, onHoldProjectIds]);
+  const activeDaysByWeek = useMemo(() => indexDaysByWeek(activeDays), [activeDays]);
+  const activeDaysByProject = useMemo(() => indexDaysByProject(activeDays), [activeDays]);
   const projectById = useMemo(() => new Map((raw?.projects ?? []).map((p) => [p.id, p])), [raw]);
   const monteurNameById = useMemo(() => new Map((raw?.monteurs ?? []).map((m) => [m.id, m.naam])), [raw]);
   const opdrachtgeverNameById = useMemo(() => new Map((raw?.opdrachtgevers ?? []).map((o) => [o.id, o.naam])), [raw]);
@@ -88,7 +91,7 @@ export function useMobilePlanningData() {
     opdrachtgevers: raw?.opdrachtgevers ?? [],
     absences: raw?.absences ?? [],
     holidays: raw?.holidays ?? [],
-    days, daysByProject, daysByWeek, onHoldProjectIds, projectById, monteurNameById, opdrachtgeverNameById,
+    days, daysByProject, daysByWeek, activeDays, activeDaysByWeek, activeDaysByProject, onHoldProjectIds, projectById, monteurNameById, opdrachtgeverNameById,
   };
 }
 

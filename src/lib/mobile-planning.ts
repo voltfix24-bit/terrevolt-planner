@@ -1,4 +1,4 @@
-import { addIsoWeeks, getMondayOfWeek, isoWeekPartsOf } from "./planning-types";
+import { addIsoWeeks, getMondayOfWeek, initialen, isoWeekPartsOf } from "./planning-types";
 import {
   checkBeschikbaarheid,
   shortReason,
@@ -33,6 +33,26 @@ export interface MobilePlanningDay {
 
 export const dayKeyOf = (year: number, week: number, dayIndex: number) => `${year}-${week}-${dayIndex}`;
 export const weekKeyOf = (year: number, week: number) => `${year}-${week}`;
+
+/** One exclusion rule for every active mobile view, including conflicts. */
+export function activeMobilePlanningDays(days: MobilePlanningDay[], onHoldProjectIds: ReadonlySet<string>): MobilePlanningDay[] {
+  return days.filter((day) => !onHoldProjectIds.has(day.projectId));
+}
+
+export function mobileProjectContext(project: { status: string | null } | undefined): "global" | "active" | "blocked" {
+  return !project ? "global" : project.status === "on_hold" ? "blocked" : "active";
+}
+
+export function compactMonteurLabels(ids: string[], names: ReadonlyMap<string, string>) {
+  const unique = [...new Set(ids)];
+  return { labels: unique.slice(0, 2).map((id) => initialen(names.get(id) ?? "?")), extra: Math.max(0, unique.length - 2) };
+}
+
+export function compactCaseLabels(entries: Pick<MonteurDayEntry, "projectId">[], projects: ReadonlyMap<string, { case_nummer: string | null; station_naam: string | null }>) {
+  const ids = [...new Set(entries.map((entry) => entry.projectId))];
+  const project = ids[0] ? projects.get(ids[0]) : undefined;
+  return { label: project?.case_nummer || project?.station_naam || "Case", extra: Math.max(0, ids.length - 1), conflict: ids.length > 1 };
+}
 
 export function aggregateMobilePlanning(
   weeks: MobileWeek[], activities: MobileActivity[], cells: MobileCell[], links: MobileCellMonteur[],
@@ -97,6 +117,17 @@ export function groupDayBlocks(days: MobilePlanningDay[]): MobileDayBlock[] {
     block.cellIds.push(day.cellId);
   }
   return [...blocks.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
+/** Five stable cells per actively planned case, no empty case rows. */
+export function caseWeekMatrix(days: MobilePlanningDay[], year: number, week: number, onHoldProjectIds: ReadonlySet<string> = new Set()) {
+  const rows = new Map<string, { projectId: string; blocks: MobileDayBlock[]; cells: (MobileDayBlock | null)[] }>();
+  const blocks = groupDayBlocks(activeMobilePlanningDays(days, onHoldProjectIds).filter((day) => day.year === year && day.week === week));
+  for (const block of blocks) {
+    const row = rows.get(block.projectId) ?? { projectId: block.projectId, blocks: [], cells: Array<MobileDayBlock | null>(5).fill(null) };
+    row.blocks.push(block); row.cells[block.dayIndex] = block; rows.set(block.projectId, row);
+  }
+  return [...rows.values()];
 }
 
 export interface ProjectPlanningSummary { first: Date | null; last: Date | null; uniqueDays: number; weeks: number }
@@ -211,7 +242,7 @@ export function capacityForWeek(
   onHoldProjectIds = new Set<string>(),
 ): MobileWeekCapacity {
   const projectsBySlot = new Map<string, Set<string>>();
-  for (const day of days) if (day.year === year && day.week === week && !onHoldProjectIds.has(day.projectId)) {
+  for (const day of activeMobilePlanningDays(days, onHoldProjectIds)) if (day.year === year && day.week === week) {
     for (const monteurId of day.monteurIds) {
       const key = `${monteurId}|${day.dayIndex}`;
       const set = projectsBySlot.get(key) ?? new Set<string>(); set.add(day.projectId); projectsBySlot.set(key, set);
@@ -258,7 +289,7 @@ export function capacityForWeek(
   };
 }
 
-export interface MonteurDayEntry { projectId: string; activities: string[]; onHold: boolean }
+export interface MonteurDayEntry { projectId: string; activities: string[]; colorCodes: string[]; onHold: boolean }
 export interface MonteurDayState {
   dayIndex: number;
   date: Date;
@@ -284,11 +315,12 @@ export function monteurWeekStates(
 ): Map<string, MonteurDayState[]> {
   const availability = availableMonteurSlotsForWeek(year, week, monteurs, absences, holidays);
   const entriesBySlot = new Map<string, Map<string, MonteurDayEntry>>();
-  for (const day of days) if (day.year === year && day.week === week) for (const monteurId of day.monteurIds) {
+  for (const day of activeMobilePlanningDays(days, onHoldProjectIds)) if (day.year === year && day.week === week) for (const monteurId of day.monteurIds) {
     const key = `${monteurId}|${day.dayIndex}`;
     const byProject = entriesBySlot.get(key) ?? new Map<string, MonteurDayEntry>();
-    const entry = byProject.get(day.projectId) ?? { projectId: day.projectId, activities: [], onHold: onHoldProjectIds.has(day.projectId) };
+    const entry = byProject.get(day.projectId) ?? { projectId: day.projectId, activities: [], colorCodes: [], onHold: false };
     if (!entry.activities.includes(day.activity)) entry.activities.push(day.activity);
+    if (day.colorCode && !entry.colorCodes.includes(day.colorCode)) entry.colorCodes.push(day.colorCode);
     byProject.set(day.projectId, entry); entriesBySlot.set(key, byProject);
   }
   const result = new Map<string, MonteurDayState[]>();
