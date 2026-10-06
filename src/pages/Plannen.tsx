@@ -98,6 +98,7 @@ import {
 import { findInitialPlanningFocus, computeWindowOffsetForWeek } from "@/lib/planning-focus";
 import { useIsManager } from "@/hooks/use-is-manager";
 import { PlanningSafetyBanner } from "@/components/PlanningSafetyBanner";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PlanningCleanupButton } from "@/components/PlanningCleanupButton";
 import {
   guardAddNextWeek,
@@ -281,6 +282,12 @@ const groupColor = (idx: number): string => GROUP_COLORS[idx % GROUP_COLORS.leng
 /* ----------------------------- Page ----------------------------- */
 
 const Plannen = () => {
+  const isMobile = useIsMobile();
+  const blockMobileMutation = useCallback(() => {
+    if (!isMobile) return false;
+    toast.error("Bewerken kan op desktop");
+    return true;
+  }, [isMobile]);
   const navigate = useNavigate();
   const confirmShift = useConfirm();
 
@@ -1323,6 +1330,7 @@ const Plannen = () => {
   // De hele inhoud (kleur + notitie + monteurs) verhuist mee, omdat planning_cellen.id behouden blijft.
   const moveCell = useCallback(
     async (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => {
+      if (blockMobileMutation()) return;
       let sourceCel: Cel | null = null;
       cellen.forEach((c) => {
         if (c.id === sourceCelId) sourceCel = c;
@@ -1405,7 +1413,7 @@ const Plannen = () => {
         overwritten,
       });
     },
-    [cellen, celMonteurs, loadAll, weken, confirmShift, confirmUrenboekImpact, pushHistory]
+    [blockMobileMutation, cellen, celMonteurs, loadAll, weken, confirmShift, confirmUrenboekImpact, pushHistory]
   );
 
   // Verplaats meerdere geselecteerde cellen tegelijk met een vaste delta in slots
@@ -1415,6 +1423,7 @@ const Plannen = () => {
   // Kern: verschuif een set cellen met een vaste delta in slots (1 dag = 1 slot, 1 week = 5 slots)
   const moveCellsByDelta = useCallback(
     async (sourceCelIds: string[], delta: number, historyLabel?: string) => {
+      if (blockMobileMutation()) return;
       if (delta === 0 || sourceCelIds.length === 0) return;
       const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
       const totalSlots = weken.length * 5;
@@ -1547,7 +1556,7 @@ const Plannen = () => {
         overwritten,
       });
     },
-    [cellen, celMonteurs, weken, loadAll, pushHistory, confirmShift, confirmUrenboekImpact]
+    [blockMobileMutation, cellen, celMonteurs, weken, loadAll, pushHistory, confirmShift, confirmUrenboekImpact]
   );
 
   // Wrapper voor drag-and-drop: bepaalt delta op basis van anchor + doel-(week,dag)
@@ -1558,6 +1567,7 @@ const Plannen = () => {
       targetWeekId: string,
       targetDagIndex: number
     ) => {
+      if (blockMobileMutation()) return;
       const weekIndexById = new Map(weken.map((w, i) => [w.id, i]));
       let anchor: Cel | null = null;
       cellen.forEach((c) => {
@@ -1576,7 +1586,7 @@ const Plannen = () => {
       await setAuditLabel(lbl);
       await moveCellsByDelta(sourceCelIds, delta, lbl);
     },
-    [cellen, weken, moveCellsByDelta, confirmShift]
+    [blockMobileMutation, cellen, weken, moveCellsByDelta, confirmShift]
   );
 
   // Excel-style fill handle: kopieer kleur + notitie + monteurs van bron-cel naar
@@ -1585,6 +1595,7 @@ const Plannen = () => {
   // Atomic via de RPC `fill_cell_range`: alles slaagt of niets wordt opgeslagen.
   const fillCellRange = useCallback(
     async (sourceCelId: string, targetWeekId: string, targetDagIndex: number) => {
+      if (blockMobileMutation()) return;
       let sourceCel: Cel | null = null;
       cellen.forEach((c) => {
         if (c.id === sourceCelId) sourceCel = c;
@@ -1924,6 +1935,7 @@ const Plannen = () => {
 
   /* ----------------------------- week mgmt ----------------------------- */
   const addWeek = useCallback(async () => {
+    if (blockMobileMutation()) return;
     if (!projectId) return;
     const fallbackJaar = project?.jaar ?? new Date().getFullYear();
     const guard = guardAddNextWeek(weken, fallbackJaar);
@@ -1956,9 +1968,10 @@ const Plannen = () => {
     // Garandeer dat positie chronologisch blijft 0..n-1, ook als de nieuwe
     // week (door addIsoWeeks rondom jaargrens) niet exact achteraan landt.
     await normalizeProjectWeeks(projectId);
-  }, [projectId, weken, project?.jaar]);
+  }, [blockMobileMutation, projectId, weken, project?.jaar]);
 
   const removeLastWeek = useCallback(async () => {
+    if (blockMobileMutation()) return;
     const orderedWeeks = [...weken].sort(compareWeeksChronological);
     const last = orderedWeeks[orderedWeeks.length - 1];
     if (!last) return;
@@ -1980,12 +1993,13 @@ const Plannen = () => {
     if (needsNorm && projectId) {
       await normalizeProjectWeeks(projectId);
     }
-  }, [weken, loadAll, projectId]);
+  }, [blockMobileMutation, weken, loadAll, projectId]);
 
   // Wijzig (jaar, week_nr) van één week en verschuif álle andere weken met dezelfde delta.
   // Volledig transactioneel via de RPC `shift_project_weken`: alles schuift, of niets schuift.
   const setWeekNr = useCallback(
     async (week_id: string, newJaar: number, newNr: number) => {
+      if (blockMobileMutation()) return;
       const target = weken.find((w) => w.id === week_id);
       if (!target) return;
       if (target.jaar === newJaar && target.week_nr === newNr) return;
