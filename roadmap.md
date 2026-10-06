@@ -30,3 +30,12 @@
 - [x] Capaciteit standaard weekkalender; komende weken behouden
 - [x] Vandaag en case-detail consequent on-hold behandelen
 - [x] Regressietests en mobiele/desktop browsercontrole
+
+## Mobiele UX-audit verbeterronde
+- [x] Vandaag: eerstvolgende actieve planning (?week=)
+- [x] Case-context zonder planning, on-hold detail opgeschoond
+- [x] Dagcellen: 11px, operationele kleuren + legenda
+- [x] Eenheden monteurs/mandagen, mobiele labels Vandaag/Cases/Planning/Capaciteit
+- [x] Mobiele Cases-lijst met zoeken en inklapbare filters
+- [x] Vrije monteurs gebundeld, secties in Capaciteit, monteurzoek
+- [x] Sticky weekbalk met actualiteit; Komende weken -> weekkalender
