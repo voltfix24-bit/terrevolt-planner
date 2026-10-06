@@ -173,7 +173,7 @@
   }
 }
 
-@layer components {
+/* These dynamic palette classes stay outside Tailwind's usage-pruned layers. */
   .activity-c1 { background-color: var(--activity-c1); }
   .activity-c2 { background-color: var(--activity-c2); }
   .activity-c3 { background-color: var(--activity-c3); }
@@ -186,6 +186,7 @@
   .activity-c10 { background-color: var(--activity-c10); }
   .activity-c11 { background-color: var(--activity-c11); }
   .activity-c12 { background-color: var(--activity-c12); }
+@layer components {
   .surface-card {
     background-color: rgb(var(--surface-rgb) / 0.7);
     border: 1px solid rgb(var(--fg-rgb) / 0.08);
