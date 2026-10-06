@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CalendarDays, ChevronDown, FileText, MapPin } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { groupDayBlocks, projectPlanningSummary, targetWeekForDays, uniqueMonteursForProject } from "@/lib/mobile-planning";
-import { capacityLink, caseTitle, formatWeekParam, mobileBackTarget, showPlanningStats, splitMobileWeeks } from "@/lib/mobile-ux";
+import { groupDayBlocks, projectPlanningSummary, uniqueMonteursForProject } from "@/lib/mobile-planning";
+import { capacityLink, caseTitle, formatWeekParam, mobileBackTarget, selectMobileWeek, showPlanningStats, splitMobileWeeks } from "@/lib/mobile-ux";
 import { MobileDataGate, formatShort, StatusChip } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
 
@@ -23,10 +23,10 @@ export function MobileProjectDetail() {
   }, [blocks]);
   const split = useMemo(() => splitMobileWeeks(weekGroups), [weekGroups]);
   const defaultOpen = split.upcoming[0]?.key ?? null;
-  const caseWeek = targetWeekForDays(data.activeDaysByProject.get(id ?? "") ?? [], new Date());
+  const caseWeek = project?.status !== "on_hold" && split.upcoming[0] ? { jaar: split.upcoming[0].year, week_nr: split.upcoming[0].week } : selectMobileWeek(null, null);
   const [earlierOpen, setEarlierOpen] = useState(false);
   const [openWeeks, setOpenWeeks] = useState<Set<string> | null>(null);
-  useEffect(() => { setOpenWeeks(null); }, [id]);
+  useEffect(() => { setOpenWeeks(null); setEarlierOpen(false); }, [id]);
   const isOpen = (key: string) => openWeeks ? openWeeks.has(key) : key === defaultOpen;
   const toggle = (key: string) => setOpenWeeks((prev) => { const next = new Set(prev ?? (defaultOpen ? [defaultOpen] : [])); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const address = project ? [project.straat, project.postcode, project.stad].filter(Boolean).join(", ") : "";

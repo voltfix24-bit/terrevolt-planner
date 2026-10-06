@@ -11,7 +11,7 @@ export function useMobileWeekView(preferredWeek?: IsoWeek, ready = true) {
   const [params, setParams] = useSearchParams();
   const stored = useWeekStore((s) => s.week); const setWeek = useWeekStore((s) => s.setWeek);
   const parsed = parseMobileView(params);
-  const selected = selectMobileWeek(params.get("week"), preferredWeek ?? stored);
+  const selected = selectMobileWeek(params.get("week"), stored ?? preferredWeek ?? null);
   const update = (patch: Partial<{ week: IsoWeek; query: string; open: string | null; mode: "week" | "overview" }>) => {
     const state = { week: selected, query: parsed.query, open: parsed.open, mode: parsed.mode, ...patch };
     setWeek(state.week);

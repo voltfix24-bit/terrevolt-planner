@@ -1,9 +1,55 @@
 import { describe, expect, it } from "vitest";
 import type { MobilePlanningDay, MonteurDayState } from "./mobile-planning";
 import { caseTitle, caseSection, matchesSearch, normalizeForSearch, freshnessLabel, mobileDataState, unavailableLabel, sortCaseWeekOptions, activeFilterCount, casePlanningLabel, classifyResourceWeek, compareCases, EMPTY_CASE_FILTERS, formatWeekParam, groupResourcesForWeek, nextActivePlanningAfter, parseWeekParam, planningEmptyState, showPlanningStats, unitLabel } from "./mobile-ux";
+import { capacityLink, formatMobileView, mobileBackTarget, mobileTodayContext, parseMobileView, selectMobileWeek, splitMobileWeeks } from "./mobile-ux";
 
 const day = (projectId: string, iso: string, week = 44, dayIndex = 0): MobilePlanningDay => ({ projectId, activityId: "a", activity: "X", cellId: projectId + iso, year: 2026, week, dayIndex, date: new Date(iso + "T00:00:00"), colorCode: "c1", monteurIds: [] });
 const st = (kind: MonteurDayState["kind"], conflict = false): Pick<MonteurDayState, "kind" | "conflict" | "plannedWhileUnavailable"> => ({ kind, conflict, plannedWhileUnavailable: false });
+
+describe("mobile structure and navigation", () => {
+  const now = new Date("2026-10-06T12:00:00");
+  it("selects URL > shared week > current week and ignores invalid URLs", () => {
+    const stored = { jaar: 2027, week_nr: 2 };
+    expect(selectMobileWeek("2026-44", stored, now)).toEqual({ jaar: 2026, week_nr: 44 });
+    expect(selectMobileWeek(null, stored, now)).toEqual(stored);
+    expect(selectMobileWeek("invalid", stored, now)).toEqual(stored);
+    expect(selectMobileWeek(null, null, now)).toEqual({ jaar: 2026, week_nr: 41 });
+  });
+  it("round-trips week/query/open/mode without changing context parameters or input", () => {
+    const source = new URLSearchParams("project=p&monteur=m&dag=2");
+    const state = { week: { jaar: 2026, week_nr: 44 }, query: "Ali & maat", open: "id/1", mode: "overview" as const };
+    const result = formatMobileView(source, state);
+    expect(parseMobileView(result)).toEqual(state);
+    expect(result.get("weergave")).toBe("komend");
+    expect(result.get("project")).toBe("p"); expect(result.get("dag")).toBe("2");
+    expect(source.has("week")).toBe(false);
+    const clean = formatMobileView(result, { ...state, query: "", open: null, mode: "week" });
+    expect(clean.has("q")).toBe(false); expect(clean.has("open")).toBe(false); expect(clean.has("weergave")).toBe(false);
+    expect(parseMobileView(new URLSearchParams("week=bad&weergave=bad"))).toEqual({ week: null, query: "", open: null, mode: "week" });
+  });
+  it.each(["2026-10-10", "2026-10-11"])("shows next Monday on weekend %s", (iso) => {
+    expect(mobileTodayContext(new Date(`${iso}T12:00:00`))).toEqual({ week: { jaar: 2026, week_nr: 42 }, dayIndex: 0, weekend: true });
+  });
+  it("keeps weekdays and rolls weekend ISO weeks across years", () => {
+    expect(mobileTodayContext(now)).toEqual({ week: { jaar: 2026, week_nr: 41 }, dayIndex: 1, weekend: false });
+    expect(mobileTodayContext(new Date("2027-01-03T12:00:00"))).toEqual({ week: { jaar: 2027, week_nr: 1 }, dayIndex: 0, weekend: true });
+  });
+  it("splits current/future ascending from earlier descending without mutating", () => {
+    const weeks = [{ year: 2027, week: 1 }, { year: 2026, week: 40 }, { year: 2026, week: 44 }, { year: 2025, week: 52 }, { year: 2026, week: 41 }];
+    const original = [...weeks]; const split = splitMobileWeeks(weeks, now);
+    expect(split.upcoming.map((w) => w.week)).toEqual([41, 44, 1]);
+    expect(split.earlier.map((w) => w.week)).toEqual([40, 52]);
+    expect(split.defaultOpen).toBe("2026-41"); expect(weeks).toEqual(original);
+    expect(splitMobileWeeks([{ year: 2026, week: 44 }], now).defaultOpen).toBe("2026-44");
+    expect(splitMobileWeeks([{ year: 2026, week: 40 }], now).defaultOpen).toBeNull();
+    expect(splitMobileWeeks([], now)).toEqual({ upcoming: [], earlier: [], defaultOpen: null });
+  });
+  it("uses history only when a previous app screen exists", () => {
+    expect(mobileBackTarget(1, "/projecten")).toBe(-1);
+    for (const idx of [0, undefined, null, -1, "1"]) expect(mobileBackTarget(idx, "/projecten")).toBe("/projecten");
+    expect(capacityLink({ jaar: 2026, week_nr: 4 }, "a/b")).toBe("/capaciteit?week=2026-04&monteur=a%2Fb");
+  });
+});
 
 describe("nextActivePlanningAfter", () => {
   const today = new Date("2026-10-06T12:00:00");
