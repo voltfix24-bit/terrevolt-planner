@@ -47,9 +47,9 @@
 - [x] Licht manifest, architectuurregels, volledige tests en mobiele QA
 
 ## Mobiele structuur en navigatie — fase 2
-- [ ] Signaaltokens met opacity-ondersteuning
-- [ ] Planning alleen per case, gedeelde week en URL-staat
-- [ ] Accountpaneel en contextbewuste terugnavigatie
-- [ ] Kruislinks, monteurfocus en geordend case-detail
-- [ ] Vandaag: komende week in weekend, cases eerst en vrije namen
-- [ ] Pure helpertests, volledige tests en mobiele/desktop QA
+- [x] Signaaltokens met opacity-ondersteuning
+- [x] Planning alleen per case, gedeelde week en URL-staat
+- [x] Accountpaneel en contextbewuste terugnavigatie
+- [x] Kruislinks, monteurfocus en geordend case-detail
+- [x] Vandaag: komende week in weekend, cases eerst en vrije namen
+- [x] Pure helpertests, volledige tests en mobiele/desktop QA (215 tests; automatische typecheck/build OK; 390×844 zonder overflow; amber rand en heen/terug-context gecontroleerd)
