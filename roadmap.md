@@ -1,5 +1,12 @@
 # Roadmap
 
+## Mobiele signalen en visuele inhoud — fase 3
+- [ ] Uitzonderingenbalk, eigen amber afwezigheidssignaal en activiteitcellen
+- [ ] Gedeelde dagkop, conceptbadge en conceptmandagen
+- [ ] Vrij-op-dagfilter, eerlijke capaciteit en vrije ruimte komende weken
+- [ ] Latente overlap on hold, case-context en week-/dagovergangen
+- [ ] Pure regressietests, volledige tests en QA op 360/390px en desktop
+
 - [x] Build client-safe external/internal Gantt export selection.
 - [x] Replace the compact print popover with a responsive export dialog.
 - [x] Add deterministic A3 week and row pagination with explicit page numbers.
