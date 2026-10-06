@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { capacityForWeek, groupDayBlocks, nextActivePlanningDay } from "@/lib/mobile-planning";
+import { capacityForWeek, groupDayBlocks } from "@/lib/mobile-planning";
+import { formatWeekParam, nextActivePlanningAfter, unitLabel } from "@/lib/mobile-ux";
 import { getMondayOfWeek, isoWeekPartsOf } from "@/lib/planning-types";
 import { DAY_LABELS, DAY_NAMES, FreshnessBar, StatusChip, SwipeArea } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
@@ -21,8 +22,10 @@ export function MobileToday() {
   const dayCap = cap.days[dayIndex];
   const date = new Date(monday); date.setDate(date.getDate() + dayIndex);
   const isToday = isWeekday && dayIndex === todayIndex;
-  const nextDay = useMemo(() => blocksByProject.length ? null : nextActivePlanningDay(data.activeDays.filter((d) => data.projectById.has(d.projectId)), new Date(date.getTime() + 86_400_000)), [blocksByProject.length, data.activeDays, data.projectById, date.getTime()]);
-  const nextProject = nextDay ? data.projectById.get(nextDay.projectId) : undefined;
+  const knownIds = useMemo(() => new Set(data.projectById.keys()), [data.projectById]);
+  const dateKey = date.toDateString();
+  const next = useMemo(() => blocksByProject.length || data.loading ? null : nextActivePlanningAfter(data.days, new Date(dateKey), data.onHoldProjectIds, knownIds), [blocksByProject.length, data.loading, data.days, data.onHoldProjectIds, knownIds, dateKey]);
+  const nextProject = next ? data.projectById.get(next.projectId) : undefined;
   const swipe = (dir: -1 | 1) => setDayIndex((i) => Math.min(4, Math.max(0, i + dir)));
 
   return <div className="space-y-4">
@@ -37,13 +40,13 @@ export function MobileToday() {
           <div className="flex items-center justify-between"><span className="text-sm font-medium">Capaciteit {isToday ? "vandaag" : DAY_NAMES[dayIndex].toLowerCase()}</span>{dayCap.conflicts.length > 0 && <span className="flex items-center gap-1 text-xs font-semibold text-destructive"><AlertTriangle className="h-3.5 w-3.5" />{dayCap.conflicts.length} {dayCap.conflicts.length === 1 ? "conflict" : "conflicten"}</span>}</div>
           {dayCap.holidayName && <p className="mt-1 text-xs font-medium text-primary">Feestdag: {dayCap.holidayName}</p>}
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div><strong className="block text-lg">{dayCap.available}</strong><span className="text-[11px] text-muted-foreground">monteurs beschikbaar</span></div>
-            <div><strong className="block text-lg">{dayCap.plannedUnique}</strong><span className="text-[11px] text-muted-foreground">ingepland</span></div>
-            <div><strong className="block text-lg">{dayCap.free}</strong><span className="text-[11px] text-muted-foreground">vrij</span></div>
+            <div><strong className="block text-lg">{dayCap.available}</strong><span className="text-[11px] text-muted-foreground">{unitLabel("day", "beschikbaar")}</span></div>
+            <div><strong className="block text-lg">{dayCap.plannedUnique}</strong><span className="text-[11px] text-muted-foreground">{unitLabel("day", "ingepland")}</span></div>
+            <div><strong className="block text-lg">{dayCap.free}</strong><span className="text-[11px] text-muted-foreground">{unitLabel("day", "vrij")}</span></div>
           </div>
           {dayCap.overplannedUnavailable > 0 && <p className="mt-2 text-xs text-destructive">{dayCap.overplannedUnavailable} ingepland terwijl niet beschikbaar</p>}
         </section>}
-        {data.loading ? <p className="py-10 text-center text-sm text-muted-foreground">Planning laden…</p> : blocksByProject.length === 0 ? <div className="rounded-lg border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground"><p>Geen projecten gepland op deze dag</p>{nextDay && nextProject && <button type="button" onClick={() => navigate(`/plannen?project=${nextProject.id}`)} className="mt-3 min-h-11 w-full rounded-md border border-border px-3 py-2 text-left text-foreground"><span className="block text-xs text-muted-foreground">Eerstvolgende actieve planning</span><strong className="block text-sm capitalize">{nextDay.date.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })} · {nextProject.case_nummer || "Case"} · {nextProject.station_naam || "Naamloos station"}</strong></button>}</div> : blocksByProject.map((block) => { const project = data.projectById.get(block.projectId); if (!project) return null; return <button key={block.key} onClick={() => navigate(`/projecten/${project.id}`)} className="w-full rounded-lg border border-border bg-card p-4 text-left">
+        {data.loading ? <p className="py-10 text-center text-sm text-muted-foreground">Planning laden…</p> : blocksByProject.length === 0 ? <div className="rounded-lg border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground"><p>Geen actieve projecten op deze dag</p>{next && nextProject ? <button type="button" onClick={() => navigate(`/plannen?week=${formatWeekParam({ jaar: next.year, week_nr: next.week })}`)} className="mt-3 min-h-11 w-full rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-left text-foreground"><span className="block text-xs text-muted-foreground">Eerstvolgende actieve planning</span><strong className="block text-sm"><span className="capitalize">{next.date.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })}</span> · {nextProject.case_nummer || "Case"} · {nextProject.station_naam || "Naamloos station"}{next.extraCases > 0 ? ` +${next.extraCases} cases` : ""}</strong><span className="block text-xs text-primary">Bekijk week {next.week}</span></button> : <p className="mt-2 text-xs">Geen toekomstige actieve planning gevonden</p>}</div> : blocksByProject.map((block) => { const project = data.projectById.get(block.projectId); if (!project) return null; return <button key={block.key} onClick={() => navigate(`/projecten/${project.id}`)} className="w-full rounded-lg border border-border bg-card p-4 text-left">
           <div className="flex items-start justify-between gap-2"><strong className="min-w-0">{project.case_nummer || "Geen casenummer"} · {project.station_naam || "Naamloos station"}</strong><StatusChip status={project.status} /></div>
           <p className="mt-1 text-xs text-muted-foreground">{project.opdrachtgever_id ? data.opdrachtgeverNameById.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p>
           <p className="mt-3 text-sm font-medium">{block.activities.join(" · ")}</p>
@@ -51,7 +54,7 @@ export function MobileToday() {
         </button>; })}
       </div>
     </SwipeArea>
-    <p className="text-center text-xs text-muted-foreground">Week {current.week_nr} · {cap.percentage}% bezet{cap.conflicts > 0 ? ` · ${cap.conflicts} conflicten` : ""}</p>
+    <p className="text-center text-xs text-muted-foreground">Week {current.week_nr} · {cap.percentage}% van mandagen bezet{cap.conflicts > 0 ? ` · ${cap.conflicts} conflicten` : ""}</p>
     <FreshnessBar data={data} />
   </div>;
 }

@@ -97,7 +97,7 @@ export function AppLayout() {
       )}
 
       <main
-        className="min-h-screen overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] pt-12 transition-[margin] duration-200 md:ml-[var(--nav-w)] md:pb-0 md:pt-0"
+        className="min-h-screen overflow-x-clip md:overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] pt-12 transition-[margin] duration-200 md:ml-[var(--nav-w)] md:pb-0 md:pt-0"
       >
         <div className="w-full px-3 py-3 md:px-6 md:py-6">
           <Outlet />

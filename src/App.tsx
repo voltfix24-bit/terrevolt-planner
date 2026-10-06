@@ -29,6 +29,7 @@ import { MobileToday } from "@/components/mobile/MobileToday";
 import { MobileWeekPlanning } from "@/components/mobile/MobileWeekPlanning";
 import { MobileCapacity } from "@/components/mobile/MobileCapacity";
 import { MobileProjectDetail } from "@/components/mobile/MobileProjectDetail";
+import { MobileCases } from "@/components/mobile/MobileCases";
 import { DesktopOnly } from "@/components/mobile/MobileShared";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } });
@@ -50,7 +51,7 @@ const App = () => (
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Navigate to="/overzicht" replace />} />
                   <Route path="/overzicht" element={<ResponsivePage desktop={<Overzicht />} mobile={<MobileToday />} />} />
-                  <Route path="/projecten" element={<Projecten />} />
+                  <Route path="/projecten" element={<ResponsivePage desktop={<Projecten />} mobile={<MobileCases />} />} />
                   <Route path="/projecten/:id" element={<ResponsivePage desktop={<ProjectDetail />} mobile={<MobileProjectDetail />} />} />
                   <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
                   <Route path="/plannen" element={<ResponsivePage desktop={<Plannen />} mobile={<MobileWeekPlanning />} />} />
