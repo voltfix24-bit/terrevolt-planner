@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MobilePlanningDay, MonteurDayState } from "./mobile-planning";
-import { activeFilterCount, casePlanningLabel, classifyResourceWeek, compareCases, EMPTY_CASE_FILTERS, formatWeekParam, groupResourcesForWeek, nextActivePlanningAfter, parseWeekParam, planningEmptyState, showPlanningStats, unitLabel } from "./mobile-ux";
+import { caseTitle, caseSection, matchesSearch, normalizeForSearch, freshnessLabel, mobileDataState, unavailableLabel, sortCaseWeekOptions, activeFilterCount, casePlanningLabel, classifyResourceWeek, compareCases, EMPTY_CASE_FILTERS, formatWeekParam, groupResourcesForWeek, nextActivePlanningAfter, parseWeekParam, planningEmptyState, showPlanningStats, unitLabel } from "./mobile-ux";
 
 const day = (projectId: string, iso: string, week = 44, dayIndex = 0): MobilePlanningDay => ({ projectId, activityId: "a", activity: "X", cellId: projectId + iso, year: 2026, week, dayIndex, date: new Date(iso + "T00:00:00"), colorCode: "c1", monteurIds: [] });
 const st = (kind: MonteurDayState["kind"], conflict = false): Pick<MonteurDayState, "kind" | "conflict" | "plannedWhileUnavailable"> => ({ kind, conflict, plannedWhileUnavailable: false });
@@ -82,5 +82,77 @@ describe("Cases-lijst", () => {
   it("actieve filtertelling", () => {
     expect(activeFilterCount(EMPTY_CASE_FILTERS)).toBe(0);
     expect(activeFilterCount({ status: "gepland", opdrachtgeverId: "", week: "2026-44" })).toBe(2);
+  });
+});
+
+
+describe("mobile reliability gate", () => {
+  it("never treats a first-load failure as empty planning", () => {
+    expect(mobileDataState(false, null, true)).toBe("loading");
+    expect(mobileDataState(false, "failed", true)).toBe("error");
+    expect(mobileDataState(false, null, false)).toBe("error");
+  });
+  it("retains successful empty or populated data on refetch failure/offline", () => {
+    expect(mobileDataState(true, "failed", true)).toBe("stale");
+    expect(mobileDataState(true, null, false)).toBe("stale");
+    expect(mobileDataState(true, null, true)).toBe("ready");
+  });
+});
+
+describe("mobile freshness", () => {
+  const now = new Date("2026-10-06T16:43:00");
+  it("shows today's time, yesterday, or a full short date", () => {
+    expect(freshnessLabel(new Date("2026-10-06T16:18:00"), now)).toBe("16:18");
+    expect(freshnessLabel(new Date("2026-10-05T17:05:00"), now)).toBe("gisteren 17:05");
+    expect(freshnessLabel(new Date("2026-10-04T17:05:00"), now)).toBe("zo 4 okt 17:05");
+    expect(freshnessLabel(null, now)).toBe("…");
+  });
+  it("handles yesterday across month/year boundaries", () => {
+    expect(freshnessLabel(new Date("2025-12-31T17:05:00"), new Date("2026-01-01T08:00:00"))).toBe("gisteren 17:05");
+  });
+});
+
+describe("availability labels", () => {
+  it("roster day off is not available Vrij", () => {
+    expect(unavailableLabel(["Vaste vrije dag (MA)"])).toBe("—");
+    expect(unavailableLabel(["Vaste vrije dag (MA)"], true)).toBe("geen werkdag (rooster)");
+  });
+  it.each([["vakantie", "Verlof"], ["verlof", "Verlof"], ["ziek", "Ziek"], ["opleiding", "Opleiding"], ["Feestdag: Kerstmis", "Feestdag"], ["overig", "Afwezig"]])("labels %s as %s", (reason, expected) => {
+    expect(unavailableLabel([reason])).toBe(expected);
+  });
+  it("does not hide overlapping absence behind roster dash", () => {
+    expect(unavailableLabel(["Vaste vrije dag (MA)", "ziek"])).toBe("Ziek");
+    expect(unavailableLabel(["Vaste vrije dag (MA)", "ziek"], true)).toBe("geen werkdag (rooster), Ziek");
+  });
+});
+
+describe("case display/search", () => {
+  it("trims and collapses spaces without mutating source", () => {
+    const project = { case_nummer: "0291829 ", station_naam: " SPEKHOEK   Terwolde " };
+    expect(caseTitle(project)).toBe("0291829 · SPEKHOEK Terwolde");
+    expect(project.station_naam).toBe(" SPEKHOEK   Terwolde ");
+    expect(caseTitle({ case_nummer: "  ", station_naam: null })).toBe("Geen casenummer · Naamloos station");
+  });
+  it.each([["0318773", "318773"], ["318773", "0318773"], ["HELLENB.STRAAT", "hellenb straat"], ["SPEKHOEK-Térwolde", "spekhoek terwolde"], ["Apeldoorn", "APELDOORN"]])("finds %s with %s", (text, term) => {
+    expect(matchesSearch(text, term)).toBe(true);
+  });
+  it("handles zero numeric runs and genuine no-results", () => {
+    expect(normalizeForSearch("000. 001-0308029")).toBe("10308029");
+    expect(matchesSearch("Smart Infra", "zzzz")).toBe(false);
+    expect(matchesSearch("Smart Infra", "")).toBe(true);
+  });
+});
+
+describe("Cases sections and week options", () => {
+  it("maps the existing sort rank, with status taking priority over next planning", () => {
+    const next = { kind: "next", date: new Date(), week: 41 } as const;
+    expect(caseSection({ status: "gepland", label: next })).toBe("Komende planning");
+    expect(caseSection({ status: "gepland", label: { kind: "past", date: new Date() } })).toBe("Afgelopen planning");
+    expect(caseSection({ status: "concept", label: { kind: "none" } })).toBe("Zonder planning");
+    expect(caseSection({ status: "on_hold", label: next })).toBe("On hold");
+    expect(caseSection({ status: "afgerond", label: next })).toBe("Afgerond");
+  });
+  it("sorts current/future weeks first then descending past across years", () => {
+    expect(sortCaseWeekOptions(["2026-40", "2027-01", "2026-44", "2025-52", "2026-41"], { jaar: 2026, week_nr: 41 })).toEqual(["2026-41", "2026-44", "2027-01", "2026-40", "2025-52"]);
   });
 });
