@@ -15,4 +15,4 @@
 - Keep weekend selection, URL state, history fallback and current/earlier week splitting pure in mobile-ux.ts with regression coverage, so mobile navigation has one tested interpretation.
 - Keep mobile exceptions, activity labels, day sorting, concept resource-day subtotals and latent on-hold overlap pure in mobile-ux.ts with regression tests, so informational inactive records cannot leak into active counts.
 - Use MobileSignals for shared exception targets and activity legends, and one MobileWeekNavigation day grid aligned with calendar cell insets, so mobile views have consistent signals without changing desktop.
-- Keep mobile activity strip tokens synchronized with COLOR_MAP and use useMobileSlide for directional reduced-motion-safe transitions, so palette meaning and navigation motion remain consistent.
+- Keep mobile activity strip tokens synchronized with COLOR_MAP and their dynamic classes safelisted; use useMobileSlide for directional reduced-motion-safe transitions, so palette meaning survives production pruning and navigation motion remains consistent.

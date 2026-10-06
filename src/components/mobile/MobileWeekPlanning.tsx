@@ -56,7 +56,7 @@ export function MobileWeekPlanning() {
     <p className="text-xs text-muted-foreground">{projectId ? `Deze case in week ${selected.week_nr}: ${caseBlocks.length} dagen · ${new Set(caseBlocks.flatMap((b) => b.monteurIds)).size} monteurs` : <>Week: {cap.plannedUnique} mandagen ingepland · {cap.free} vrij · {cap.percentage}% bezet{cap.conflicts ? ` · ${cap.conflicts} conflicten` : ""}</>}</p>
     <ExceptionsBar items={exceptions} week={selected} data={data} />
     <ActivityLegend codes={caseBlocks.flatMap((b) => b.colorCodes)} />
-    <CellLegend withUnavailable={false} />
+    <CellLegend />
     <Button variant="link" className="h-auto min-h-11 max-w-full whitespace-normal px-0 text-left text-xs text-primary-text" onClick={() => navigate(capacityLink(selected))}>Monteurs per dag bekijken → Capaciteit</Button>
     <SwipeArea onSwipe={move} label="Weekplanning"><div key={transitionKey} className={`space-y-2 ${transitionClass}`}>
       {caseRows.length === 0 ? term ? <MobileSearchEmpty term={query} onClear={() => setQuery("")} /> : <p className="py-12 text-center text-sm text-muted-foreground">Geen actieve planning in week {selected.week_nr}</p>
