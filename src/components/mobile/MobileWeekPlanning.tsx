@@ -3,11 +3,11 @@ import { Search, X } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { capacityForWeek, caseWeekMatrix, mobileProjectContext, monteurWeekStates, targetWeekForDays, type IsoWeek, type MonteurDayState } from "@/lib/mobile-planning";
+import { capacityForWeek, caseWeekMatrix, splitMonteursByWeekActivity, mobileProjectContext, monteurWeekStates, targetWeekForDays, type IsoWeek, type MonteurDayState } from "@/lib/mobile-planning";
 import { addIsoWeeks, isoWeekPartsOf } from "@/lib/planning-types";
 import { FreshnessBar, SwipeArea } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
-import { CaseWeekCard, MonteurWeekCard } from "./MobileWeekCards";
+import { CaseWeekCard, FreeMonteursRow, MonteurWeekCard } from "./MobileWeekCards";
 import { MobileWeekNavigation } from "./MobileWeekNavigation";
 
 type Mode = "case" | "monteur";
@@ -42,6 +42,8 @@ export function MobileWeekPlanning() {
       const project = data.projectById.get(entry.projectId); return `${project?.case_nummer ?? ""} ${project?.station_naam ?? ""}`.toLowerCase().includes(term);
     }));
   }), [data.monteurs, data.projectById, monteurStates, term]);
+  const monteurSplit = useMemo(() => splitMonteursByWeekActivity(monteurRows, monteurStates), [monteurRows, monteurStates]);
+  const contextHasPlanning = projectId ? (data.activeDaysByProject.get(projectId)?.length ?? 0) > 0 : true;
   const cap = useMemo(() => capacityForWeek(weekDays, selected.jaar, selected.week_nr, data.monteurs, data.absences, data.holidays), [weekDays, selected, data.monteurs, data.absences, data.holidays]);
   const move = (delta: number) => { setSelected((week) => addIsoWeeks(week.jaar, week.week_nr, delta)); setOpen(null); };
   const select = (week: IsoWeek) => { setSelected(week); setOpen(null); };
@@ -60,10 +62,10 @@ export function MobileWeekPlanning() {
     <p className="text-xs text-muted-foreground">{cap.plannedUnique} ingepland · {cap.free} vrij · {cap.percentage}% bezet{cap.conflicts ? ` · ${cap.conflicts} conflicten` : ""}</p>
     <SwipeArea onSwipe={move} label="Weekplanning"><div className="space-y-2">
       {data.loading ? <p className="py-12 text-center text-sm text-muted-foreground">Planning laden…</p>
-        : mode === "case" || projectId ? caseRows.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">Geen actieve planning in deze week</p>
+        : mode === "case" || projectId ? caseRows.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">{contextHasPlanning ? "Geen actieve planning in deze week" : "Deze case heeft nog geen planning"}</p>
           : caseRows.map(({ project, blocks, cells }) => <CaseWeekCard key={project.id} project={project} blocks={blocks} cells={cells} data={data} open={open === project.id} onToggle={() => setOpen(open === project.id ? null : project.id)} />)
         : monteurRows.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">Geen monteurs gevonden</p>
-          : monteurRows.map((monteur) => <MonteurWeekCard key={monteur.id} name={monteur.naam} states={monteurStates.get(monteur.id) ?? []} data={data} open={open === monteur.id} onToggle={() => setOpen(open === monteur.id ? null : monteur.id)} />)}
+          : <>{monteurSplit.busy.map((monteur) => <MonteurWeekCard key={monteur.id} name={monteur.naam} states={monteurStates.get(monteur.id) ?? []} data={data} open={open === monteur.id} onToggle={() => setOpen(open === monteur.id ? null : monteur.id)} />)}<FreeMonteursRow names={monteurSplit.free.map((m) => m.naam)} open={open === "__free"} onToggle={() => setOpen(open === "__free" ? null : "__free")} /></>}
     </div></SwipeArea>
     <FreshnessBar data={data} />
   </div>;
