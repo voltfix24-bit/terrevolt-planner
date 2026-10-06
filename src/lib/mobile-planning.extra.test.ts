@@ -64,7 +64,7 @@ describe("capacity correctness", () => {
 });
 
 describe("per-monteur daily state", () => {
-  it("marks planned, free, fixed day off, holiday, absence, on-hold and conflict", () => {
+  it("marks planned, free, fixed day off, holiday, absence, on-hold exclusion and conflict", () => {
     const states = monteurWeekStates(
       [mk("p1", 0, ["a"]), mk("p2", 0, ["a"]), mk("hold", 1, ["a"])],
       2026, 41, [m("a", [1, 2, 3, 4]), m("b")],
@@ -72,10 +72,9 @@ describe("per-monteur daily state", () => {
       [{ datum: "2026-10-08", naam: "Testdag" }],
       new Set(["hold"]),
     );
-    const a = states.get("a")!; const b = states.get("b")!;
+    const a = states.get("a") ?? []; const b = states.get("b") ?? [];
     expect(a[0]).toMatchObject({ kind: "planned", conflict: true });
-    expect(a[1]).toMatchObject({ kind: "planned", conflict: false });
-    expect(a[1].entries[0].onHold).toBe(true);
+    expect(a[1]).toMatchObject({ kind: "free", conflict: false, entries: [] });
     expect(a[3]).toMatchObject({ kind: "unavailable", reasons: ["Testdag"] });
     expect(a[4]).toMatchObject({ kind: "unavailable", reasons: ["Vrije dag"] });
     expect(b[0].kind).toBe("free");
