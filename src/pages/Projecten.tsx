@@ -120,6 +120,8 @@ const Projecten = () => {
   const [cellDates, setCellDates] = useState<Map<string, number[]>>(new Map());
 
   const [statusFilter, setStatusFilter] = useState<"alle" | Status>("alle");
+  const [opdrachtgeverFilter, setOpdrachtgeverFilter] = useState("alle");
+  const [weekFilter, setWeekFilter] = useState("alle");
   const [zoek, setZoek] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
@@ -174,6 +176,17 @@ const Projecten = () => {
     const term = zoek.trim().toLowerCase();
     return projects.filter((p) => {
       if (statusFilter !== "alle" && p.status !== statusFilter) return false;
+      if (opdrachtgeverFilter !== "alle" && p.opdrachtgever_id !== opdrachtgeverFilter) return false;
+      if (weekFilter !== "alle") {
+        const [year, week] = weekFilter.split("-").map(Number);
+        const matches = (cellDates.get(p.id) ?? []).some((ms) => {
+          const date = new Date(ms); const first = new Date(date.getFullYear(), 0, 4);
+          const day = (date.getDay() + 6) % 7; const thursday = new Date(date); thursday.setDate(date.getDate() - day + 3);
+          const firstDay = (first.getDay() + 6) % 7; first.setDate(first.getDate() - firstDay + 3);
+          return thursday.getFullYear() === year && 1 + Math.round((thursday.getTime() - first.getTime()) / (7 * DAY_MS)) === week;
+        });
+        if (!matches) return false;
+      }
       if (term) {
         const fields = [p.case_nummer, p.station_naam, p.straat, p.postcode, p.stad, p.gemeente];
         const hit = fields.some((f) => (f ?? "").toLowerCase().includes(term));
@@ -181,7 +194,19 @@ const Projecten = () => {
       }
       return true;
     });
-  }, [projects, statusFilter, zoek]);
+  }, [projects, statusFilter, opdrachtgeverFilter, weekFilter, zoek, cellDates]);
+
+  const mobileWeeks = useMemo(() => {
+    const values = new Map<string, string>();
+    for (const dates of cellDates.values()) for (const ms of dates) {
+      const date = new Date(ms); const first = new Date(date.getFullYear(), 0, 4);
+      const day = (date.getDay() + 6) % 7; const thursday = new Date(date); thursday.setDate(date.getDate() - day + 3);
+      const firstDay = (first.getDay() + 6) % 7; first.setDate(first.getDate() - firstDay + 3);
+      const week = 1 + Math.round((thursday.getTime() - first.getTime()) / (7 * DAY_MS));
+      values.set(`${thursday.getFullYear()}-${week}`, `Week ${week} · ${thursday.getFullYear()}`);
+    }
+    return [...values].sort(([a], [b]) => a.localeCompare(b));
+  }, [cellDates]);
 
   const grouped = useMemo(() => {
     const today = new Date();
@@ -294,6 +319,14 @@ const Projecten = () => {
               {f.label}
             </button>
           ))}
+        </div>
+        <div className="grid w-full grid-cols-2 gap-2 md:hidden">
+          <select aria-label="Filter opdrachtgever" value={opdrachtgeverFilter} onChange={(e) => setOpdrachtgeverFilter(e.target.value)} className="h-11 rounded-md border border-input bg-background px-3 text-sm">
+            <option value="alle">Alle opdrachtgevers</option>{opdrachtgevers.map((o) => <option key={o.id} value={o.id}>{o.naam}</option>)}
+          </select>
+          <select aria-label="Filter week" value={weekFilter} onChange={(e) => setWeekFilter(e.target.value)} className="h-11 rounded-md border border-input bg-background px-3 text-sm">
+            <option value="alle">Alle weken</option>{mobileWeeks.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
         </div>
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
