@@ -30,7 +30,13 @@ export function useMobilePlanningData() {
     if (!active) return;
     setProjects((p.data ?? []) as MobileProject[]); setMonteurs((m.data ?? []) as MobileMonteur[]);
     setOpdrachtgevers((o.data ?? []) as { id: string; naam: string }[]);
-    setAbsences((absent.data ?? []).filter((item): item is AfwezigheidPeriode => Boolean(item.monteur_id)));
+    setAbsences((absent.data ?? []).flatMap((item) => item.monteur_id ? [{
+      monteur_id: item.monteur_id,
+      datum_van: item.datum_van,
+      datum_tot: item.datum_tot,
+      type: item.type,
+      omschrijving: item.omschrijving,
+    }] : []));
     setHolidays((holiday.data ?? []) as FeestdagItem[]);
     setRaw({ weeks: w.data ?? [], activities: a.data ?? [], cells: c.data ?? [], links: l.data ?? [] }); setLoading(false);
   })(); return () => { active = false; }; }, []);

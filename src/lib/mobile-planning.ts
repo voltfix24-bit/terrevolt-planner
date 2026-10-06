@@ -71,7 +71,7 @@ export function availableMonteurSlotsForWeek(
         werkdagen: monteur.werkdagen,
         weekNr: week,
         jaar: year,
-        dagIndex,
+        dagIndex: dayIndex,
         afwezigheid: absences,
         feestdagenMap: holidayMap,
       });
