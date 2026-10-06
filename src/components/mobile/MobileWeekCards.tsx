@@ -2,7 +2,7 @@ import { AlertTriangle, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { compactCaseLabels, compactMonteurLabels, type MobileDayBlock, type MonteurDayState } from "@/lib/mobile-planning";
-import { caseTitle, unavailableLabel } from "@/lib/mobile-ux";
+import { capacityLink, caseTitle, unavailableLabel } from "@/lib/mobile-ux";
 import { COLOR_MAP } from "@/lib/planning-types";
 import { CELL_TONE, DAY_LABELS, formatShort } from "./MobileShared";
 import type { MobilePlanningData, MobileProject } from "./useMobilePlanningData";
@@ -22,15 +22,16 @@ export function CaseWeekCard({ project, blocks, cells, data, open, onToggle }: {
     {open && <div className="divide-y divide-border border-t border-border">{blocks.map((block) => <div key={block.key} className="px-3 py-3">
       <strong className="text-sm capitalize">{block.date.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}</strong>
       <p className="mt-1 text-sm">{block.activities.join(" · ")}</p>
-      <p className="text-sm text-muted-foreground">{block.monteurIds.map((id) => data.monteurNameById.get(id)).filter(Boolean).join(", ") || "Nog geen monteurs"}</p>
+      <div className="flex flex-wrap gap-1">{block.monteurIds.length ? block.monteurIds.map((id) => <Button key={id} variant="outline" className="min-h-11 max-w-full whitespace-normal text-xs text-primary-text" onClick={() => navigate(capacityLink({ jaar: block.year, week_nr: block.week }, id))}>{data.monteurNameById.get(id) ?? "Monteur"}</Button>) : <p className="text-sm text-muted-foreground">Nog geen monteurs</p>}</div>
       <p className="mt-1 text-[11px] text-muted-foreground">{block.colorCodes.map((code) => COLOR_MAP[code]?.naam).filter(Boolean).join(" · ")}</p>
     </div>)}<Button variant="ghost" className="h-11 w-full justify-start rounded-none px-3 text-primary-text" onClick={() => navigate(`/projecten/${project.id}`)}>Case bekijken</Button></div>}
   </article>;
 }
 
-export function MonteurWeekCard({ name, states, data, open, onToggle }: { name: string; states: MonteurDayState[]; data: MobilePlanningData; open: boolean; onToggle: () => void }) {
+export function MonteurWeekCard({ id, highlight = false, name, states, data, open, onToggle }: { id: string; highlight?: boolean; name: string; states: MonteurDayState[]; data: MobilePlanningData; open: boolean; onToggle: () => void }) {
+  const navigate = useNavigate();
   const conflicts = states.filter((state) => state.conflict).length;
-  return <article className="overflow-hidden rounded-lg border border-border bg-card">
+  return <article id={`mobile-monteur-${id}`} className={`scroll-mt-52 overflow-hidden rounded-lg border border-border bg-card ${highlight ? "ring-2 ring-primary-text" : ""}`}>
     <Button variant="ghost" className="block h-auto w-full rounded-none p-0 text-left font-normal hover:bg-transparent" onClick={onToggle} aria-expanded={open} aria-label={name}>
       <span className="flex h-11 items-center gap-2 px-2.5"><strong className="min-w-0 flex-1 truncate text-sm">{name}</strong>{conflicts > 0 && <span className="flex items-center gap-1 text-xs font-semibold text-destructive-text"><AlertTriangle className="h-3.5 w-3.5" />{conflicts}</span>}<ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} /></span>
       <span className="grid grid-cols-5 gap-1 px-1 pb-1">{DAY_LABELS.map((label, index) => {
@@ -42,7 +43,7 @@ export function MonteurWeekCard({ name, states, data, open, onToggle }: { name: 
     {open && <div className="divide-y divide-border border-t border-border">{states.map((state) => <div key={state.dayIndex} className="px-3 py-3">
       <div className="flex items-center justify-between gap-2"><strong className="text-sm">{DAY_LABELS[state.dayIndex]} {formatShort(state.date)}</strong>{state.conflict && <span className="text-xs font-semibold text-destructive-text">Conflict · {state.entries.length} cases</span>}{state.kind === "free" && <span className="text-xs text-muted-foreground">Vrij / beschikbaar</span>}</div>
       {state.reasons.length > 0 && <p className={`mt-1 text-xs ${state.plannedWhileUnavailable ? "text-destructive-text" : "text-muted-foreground"}`}>Niet beschikbaar: {unavailableLabel(state.reasons, true)}{state.plannedWhileUnavailable ? " — toch ingepland" : ""}</p>}
-      {state.entries.map((entry) => { const project = data.projectById.get(entry.projectId); return <p key={entry.projectId} className="mt-2 text-sm"><span className="font-medium">{caseTitle(project)}</span><span className="block text-muted-foreground">{entry.activities.join(" · ")}</span></p>; })}
+      {state.entries.map((entry) => { const project = data.projectById.get(entry.projectId); return <Button variant="ghost" key={entry.projectId} onClick={() => navigate(`/projecten/${entry.projectId}`)} className="mt-2 block h-auto min-h-11 w-full whitespace-normal px-0 text-left text-sm"><span className="block font-medium text-primary-text">{caseTitle(project)}</span><span className="block font-normal text-muted-foreground">{entry.activities.join(" · ")}</span></Button>; })}
     </div>)}</div>}
   </article>;
 }
