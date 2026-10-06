@@ -167,6 +167,37 @@ export function paginateProjectRows(
   return pages;
 }
 
+export interface ExportPage { weeks: GanttWeek[]; rows: ProjectRowGroup[] }
+
+/**
+ * Per weekchunk: only projects/activities with cells inside that chunk are paginated.
+ * A chunk without any planning yields one empty page so it never silently disappears.
+ */
+export function buildExportPages(
+  orderedProjects: GanttProject[],
+  activities: GanttActiviteit[],
+  cells: GanttCel[],
+  weeks: GanttWeek[],
+  layout: GanttPrintLayout,
+  rowBudget = 24,
+): ExportPage[] {
+  const pages: ExportPage[] = [];
+  for (const chunk of chunkWeken(weeks, WEEKS_PER_LAYOUT[layout])) {
+    const weekSet = new Set(chunk.map((week) => week.week_nr));
+    const chunkCells = cells.filter((cell) => weekSet.has(cell.week_nr));
+    const projectIds = new Set(chunkCells.map((cell) => cell.project_id));
+    const activityIds = new Set(chunkCells.map((cell) => cell.activiteit_id));
+    const chunkProjects = orderedProjects.filter((project) => projectIds.has(project.id));
+    const chunkActivities = activities.filter(
+      (activity) => projectIds.has(activity.project_id) && activityIds.has(activity.id),
+    );
+    const rowPages = paginateProjectRows(chunkProjects, chunkActivities, rowBudget);
+    if (rowPages.length === 0) pages.push({ weeks: chunk, rows: [] });
+    else for (const rows of rowPages) pages.push({ weeks: chunk, rows });
+  }
+  return pages;
+}
+
 const esc = (value: string): string => value.replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 }[char] ?? char));
@@ -287,32 +318,27 @@ export function buildGanttHtml(input: GanttExportInput): string {
   const orderedProjects = input.exportMode === "intern"
     ? groupProjectsByOpdrachtgever(input.projecten).flatMap((group) => group.projects)
     : input.projecten;
-  const visibleProjectIds = new Set(input.cellen.map((cell) => cell.project_id));
-  const printableProjects = orderedProjects.filter((project) => visibleProjectIds.has(project.id));
-  if (printableProjects.length === 0) throw new Error("Geen geplande activiteiten in deze selectie");
-  const printableIds = new Set(printableProjects.map((project) => project.id));
-  const plannedActivityIds = new Set(input.cellen.map((cell) => cell.activiteit_id));
-  const printableActivities = input.activiteiten.filter(
-    (activity) => printableIds.has(activity.project_id) && plannedActivityIds.has(activity.id),
-  );
-  const rowPages = paginateProjectRows(printableProjects, printableActivities, 24);
-  const weekPages = chunkWeken(input.weken, WEEKS_PER_LAYOUT[layout]);
+  const pages = buildExportPages(orderedProjects, input.activiteiten, input.cellen, input.weken, layout);
+  if (pages.every((page) => page.rows.length === 0)) throw new Error("Geen geplande activiteiten in deze selectie");
+  const printableProjectCount = new Set(pages.flatMap((page) => page.rows.map((row) => row.project.id))).size;
   const cellMap = new Map(input.cellen.map((cell) => [`${cell.activiteit_id}|${cell.week_nr}|${cell.dag_index}`, cell]));
   const monteurById = new Map(input.monteurs.map((monteur) => [monteur.id, monteur]));
   const holidays = input.feestdagen ?? new Map<string, string>();
-  const pages: Array<{ weeks: GanttWeek[]; rows: ProjectRowGroup[] }> = [];
-  for (const weeks of weekPages) for (const rows of rowPages) pages.push({ weeks, rows });
   const ref = `${input.exportMode === "intern" ? "INT" : "KLANT"}-${input.weken[0].jaar}-W${input.weken[0].week_nr}-W${input.weken[input.weken.length - 1].week_nr}`;
 
   const pageHtml = pages.map((page, index) => {
-    const { table, monteurs: pageMonteurs } = renderTable(input, page.weeks, page.rows, cellMap, monteurById);
-    const names = input.monteurWeergave === "namen"
-      ? [...pageMonteurs].sort((a, b) => a.localeCompare(b, "nl")).map((name) => `<span><b>${esc(initialen(name))}</b> ${esc(name)}</span>`).join("")
-      : "";
+    const content = page.rows.length === 0
+      ? `<div class="empty-chunk"><strong>Geen planning in week ${page.weeks[0].week_nr}–${page.weeks[page.weeks.length - 1].week_nr}</strong><span>Voor de geselecteerde projecten staan in dit weekblok geen activiteiten gepland.</span></div>`
+      : (() => {
+        const { table, monteurs: pageMonteurs } = renderTable(input, page.weeks, page.rows, cellMap, monteurById);
+        const names = input.monteurWeergave === "namen"
+          ? [...pageMonteurs].sort((a, b) => a.localeCompare(b, "nl")).map((name) => `<span><b>${esc(initialen(name))}</b> ${esc(name)}</span>`).join("")
+          : "";
+        return `${table}${names ? `<aside class="people"><strong>Monteurs</strong>${names}</aside>` : ""}`;
+      })();
     return `<section class="print-page">
-      ${renderPageHeader(input, page.weeks, printableProjects.length, usedLegend(input.cellen, page.weeks, holidays))}
-      ${table}
-      ${names ? `<aside class="people"><strong>Monteurs</strong>${names}</aside>` : ""}
+      ${renderPageHeader(input, page.weeks, printableProjectCount, usedLegend(input.cellen, page.weeks, holidays))}
+      ${content}
       <footer><span>${input.exportMode === "intern" ? "Intern gebruik" : `Voor ${esc(input.opdrachtgeverNaam ?? "opdrachtgever")}`}</span><span>Ref ${esc(ref)}</span><b>Pagina ${index + 1} / ${pages.length}</b></footer>
     </section>`;
   }).join("");

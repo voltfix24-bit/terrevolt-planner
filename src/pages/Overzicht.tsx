@@ -4029,6 +4029,7 @@ function GanttPrintMenu({
     [gekozenProjecten],
   );
 
+  const periodeGeinitialiseerd = useRef(false);
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) return;
@@ -4036,6 +4037,10 @@ function GanttPrintMenu({
     setExportMode("opdrachtgever");
     setOpdrachtgeverId(nextClientId);
     setUitgeslotenProjecten(new Set());
+    if (!periodeGeinitialiseerd.current && beschikbareWeken.length > 0) {
+      periodeGeinitialiseerd.current = true;
+      presetVolgende(8);
+    }
   };
 
   const handleModeChange = (mode: GanttExportMode) => {
@@ -4063,7 +4068,7 @@ function GanttPrintMenu({
     target.setUTCDate(target.getUTCDate() - dayNr + 3);
     const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
     const diff = (target.getTime() - firstThursday.getTime()) / 86400000;
-    return 1 + Math.round((diff - ((firstThursday.getUTCDay() + 6) % 7) + 3) / 7);
+    return 1 + Math.round((diff - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
   }, []);
 
   // Range-selectors: van/tot week (default = volledige beschikbare reeks)
@@ -4239,12 +4244,11 @@ function GanttPrintMenu({
     }
   };
 
-  const selectieLabel =
-    selWeeks.size === 0
-      ? `alle weken (${beschikbareWeken.length})`
-      : `${selWeeks.size} ${selWeeks.size === 1 ? "week" : "weken"}`;
-
-  const gekozenWeekCount = selWeeks.size === 0 ? beschikbareWeken.length : Array.from(selWeeks).filter((week) => beschikbareWeken.includes(week)).length;
+  const gekozenWekenLijst = selWeeks.size === 0 ? beschikbareWeken : beschikbareWeken.filter((week) => selWeeks.has(week));
+  const gekozenWeekCount = gekozenWekenLijst.length;
+  const selectieLabel = gekozenWeekCount === 0
+    ? "geen weken"
+    : `${selWeeks.size === 0 ? "alle weken · " : ""}${gekozenWeekCount === 1 ? `week ${gekozenWekenLijst[0]}` : `week ${gekozenWekenLijst[0]}–${gekozenWekenLijst[gekozenWeekCount - 1]}`}${gekozenWeekCount > 1 && gekozenWekenLijst[gekozenWeekCount - 1] - gekozenWekenLijst[0] + 1 !== gekozenWeekCount ? ` (${gekozenWeekCount} wk)` : ""}`;
   const pageBlocks = Math.max(1, Math.ceil(gekozenWeekCount / ({ detail: 4, standaard: 6, compact: 8 }[printLayout])));
   const opdrachtgeverNaam = opdrachtgeverNaamById.get(opdrachtgeverId);
   const canExport = !busy && gekozenProjecten.length > 0 && gekozenWeekCount > 0 && (exportMode === "intern" || Boolean(opdrachtgeverId));

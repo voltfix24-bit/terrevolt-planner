@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertClientSafeExport,
+  buildExportPages,
   buildGanttHtml,
   chunkWeken,
   filterProjectsForExport,
@@ -58,5 +59,48 @@ describe("Gantt pagination", () => {
     expect(pages).toHaveLength(3);
     expect(pages.every((page) => page[0].activiteiten.length > 0)).toBe(true);
     expect(pages.map((page) => page[0].continued)).toEqual([false, true, true]);
+  });
+});
+describe("Gantt per-weekchunk pagination", () => {
+  const act = (id: string, projectId: string): GanttActiviteit => ({ id, project_id: projectId, naam: id, positie: 0 });
+  const cel = (projectId: string, activiteitId: string, week: number) => ({
+    project_id: projectId, activiteit_id: activiteitId, week_nr: week, dag_index: 0, kleur_code: null, monteur_ids: [],
+  });
+  const weeks = Array.from({ length: 12 }, (_, i) => ({ week_nr: 40 + i, jaar: 2026 }));
+
+  it("only shows projects in chunks where they have cells", () => {
+    const pages = buildExportPages(
+      [project("A", "c", "C"), project("B", "c", "C")],
+      [act("a1", "A"), act("b1", "B")],
+      [cel("A", "a1", 40), cel("B", "b1", 47)],
+      weeks, "standaard",
+    );
+    expect(pages).toHaveLength(2);
+    expect(pages[0].rows.map((r) => r.project.id)).toEqual(["A"]);
+    expect(pages[1].rows.map((r) => r.project.id)).toEqual(["B"]);
+  });
+
+  it("renders a fully empty chunk as an empty page", () => {
+    const pages = buildExportPages([project("A", "c", "C")], [act("a1", "A")], [cel("A", "a1", 40)], weeks, "standaard");
+    expect(pages[1].rows).toEqual([]);
+    const html = buildGanttHtml({
+      titel: "T", weken: weeks, projecten: [project("A", "c", "C")], activiteiten: [act("a1", "A")],
+      monteurs: [], cellen: [cel("A", "a1", 40)], monteurWeergave: "geen", exportMode: "intern",
+    });
+    expect(html).toContain("Geen planning in week 46–51");
+    expect(html).toContain("Pagina 2 / 2");
+  });
+
+  it("keeps internal grouping after chunk filtering", () => {
+    const ordered = groupProjectsByOpdrachtgever([
+      project("x", null, null), project("b", "cb", "Beta"), project("a", "ca", "Alfa"), project("a2", "ca", "Alfa"),
+    ]).flatMap((g) => g.projects);
+    const pages = buildExportPages(
+      ordered, [act("x1", "x"), act("b1", "b"), act("a1", "a"), act("a21", "a2")],
+      [cel("x", "x1", 41), cel("b", "b1", 41), cel("a2", "a21", 41), cel("a", "a1", 48)],
+      weeks, "standaard",
+    );
+    expect(pages[0].rows.map((r) => r.project.opdrachtgever_naam)).toEqual(["Alfa", "Beta", null]);
+    expect(pages[1].rows.map((r) => r.project.id)).toEqual(["a"]);
   });
 });
