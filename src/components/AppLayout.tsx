@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { UndoButton } from "./UndoButton";
+import { MobileBottomNav } from "./mobile/MobileBottomNav";
 
 const STORAGE_KEY = "terrevolt-nav-collapsed";
 
@@ -40,7 +41,7 @@ export function AppLayout() {
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-fg/[0.06]"
+          className="flex h-11 w-11 items-center justify-center rounded-md text-foreground hover:bg-fg/[0.06]"
           aria-label={mobileOpen ? "Menu sluiten" : "Menu openen"}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -91,12 +92,13 @@ export function AppLayout() {
       )}
 
       <main
-        className="min-h-screen pt-12 md:pt-0 overflow-x-hidden transition-[margin] duration-200 md:ml-[var(--nav-w)]"
+        className="min-h-screen overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] pt-12 transition-[margin] duration-200 md:ml-[var(--nav-w)] md:pb-0 md:pt-0"
       >
         <div className="w-full px-3 py-3 md:px-6 md:py-6">
           <Outlet />
         </div>
       </main>
+      <MobileBottomNav />
     </div>
   );
 }

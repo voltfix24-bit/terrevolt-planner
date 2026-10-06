@@ -24,8 +24,16 @@ import Instellingen from "./pages/Instellingen";
 import Overzicht from "./pages/Overzicht";
 import Mandagenregister from "./pages/Mandagenregister";
 import NotFound from "./pages/NotFound.tsx";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileToday } from "@/components/mobile/MobileToday";
+import { MobileWeekPlanning } from "@/components/mobile/MobileWeekPlanning";
+import { MobileCapacity } from "@/components/mobile/MobileCapacity";
+import { MobileProjectDetail } from "@/components/mobile/MobileProjectDetail";
 
 const queryClient = new QueryClient();
+
+const ResponsivePage = ({ desktop, mobile }: { desktop: React.ReactNode; mobile: React.ReactNode }) =>
+  useIsMobile() ? mobile : desktop;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -40,14 +48,14 @@ const App = () => (
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Navigate to="/overzicht" replace />} />
-                  <Route path="/overzicht" element={<Overzicht />} />
+                  <Route path="/overzicht" element={<ResponsivePage desktop={<Overzicht />} mobile={<MobileToday />} />} />
                   <Route path="/projecten" element={<Projecten />} />
-                  <Route path="/projecten/:id" element={<ProjectDetail />} />
+                  <Route path="/projecten/:id" element={<ResponsivePage desktop={<ProjectDetail />} mobile={<MobileProjectDetail />} />} />
                   <Route path="/projecten/:id/dossier" element={<ProjectDossier />} />
-                  <Route path="/plannen" element={<Plannen />} />
+                  <Route path="/plannen" element={<ResponsivePage desktop={<Plannen />} mobile={<MobileWeekPlanning />} />} />
                   <Route path="/mandagenregister" element={<Mandagenregister />} />
                   <Route path="/activiteiten" element={<Activiteiten />} />
-                  <Route path="/capaciteit" element={<Capaciteit />} />
+                  <Route path="/capaciteit" element={<ResponsivePage desktop={<Capaciteit />} mobile={<MobileCapacity />} />} />
                   <Route path="/instellingen" element={<Instellingen />} />
                 </Route>
               </Route>

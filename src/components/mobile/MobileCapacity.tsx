@@ -1,0 +1,18 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { capacityForWeek, mobileWeekSequence } from "@/lib/mobile-planning";
+import { getMondayOfWeek } from "@/lib/planning-types";
+import { useMobilePlanningData } from "./useMobilePlanningData";
+
+export function MobileCapacity() {
+  const data = useMobilePlanningData(); const [count, setCount] = useState(8); const [open, setOpen] = useState<string | null>(null);
+  const weeks = mobileWeekSequence(new Date(), count); const onHold = new Set(data.projects.filter((p) => p.status === "on_hold").map((p) => p.id));
+  const monteurById = new Map(data.monteurs.map((m) => [m.id, m.naam])); const projectById = new Map(data.projects.map((p) => [p.id, p]));
+  return <div className="space-y-4"><div><h1 className="font-display text-2xl font-bold">Capaciteit</h1><p className="text-sm text-muted-foreground">Bezetting en vrije ruimte per week</p></div>
+    <div className="grid grid-cols-3 rounded-lg bg-muted p-1">{[6, 8, 12].map((n) => <button key={n} className={`min-h-11 rounded-md text-sm font-medium ${count === n ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => setCount(n)}>{n} weken</button>)}</div>
+    {data.loading ? <p className="py-12 text-center text-sm text-muted-foreground">Capaciteit laden…</p> : weeks.map(({ jaar, week_nr }) => { const key = `${jaar}-${week_nr}`; const cap = capacityForWeek(data.days, jaar, week_nr, data.monteurs.map((m) => m.id), onHold); const monday = getMondayOfWeek(week_nr, jaar); const weekDays = data.days.filter((d) => d.year === jaar && d.week === week_nr && !onHold.has(d.projectId)); return <article key={key} className="overflow-hidden rounded-lg border border-border bg-card"><button className="w-full p-4 text-left" onClick={() => setOpen(open === key ? null : key)}><div className="flex items-center justify-between"><div><strong>Week {week_nr}</strong><p className="text-xs text-muted-foreground">vanaf {monday.toLocaleDateString("nl-NL", { day: "numeric", month: "long" })}</p></div><div className="flex items-center gap-2"><strong>{cap.percentage}%</strong><ChevronDown className={`h-5 w-5 transition-transform ${open === key ? "rotate-180" : ""}`}/></div></div><div className="mt-3 h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.min(100, cap.percentage)}%` }}/></div><p className="mt-2 text-xs text-muted-foreground">{cap.planned} bezet · {cap.free} vrij · {cap.available} beschikbaar</p></button>
+      {open === key && <div className="divide-y divide-border border-t border-border">{[0,1,2,3,4].map((dayIndex) => { const date = new Date(monday); date.setDate(date.getDate() + dayIndex); const day = weekDays.filter((d) => d.dayIndex === dayIndex); const assigned = new Set(day.flatMap((d) => d.monteurIds)); const free = data.monteurs.filter((m) => !assigned.has(m.id)); return <div key={dayIndex} className="p-4"><strong className="text-sm capitalize">{date.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "short" })}</strong>{day.length ? day.map((d) => <p key={d.cellId} className="mt-2 text-xs"><span className="font-medium">{d.monteurIds.map((id) => monteurById.get(id)).filter(Boolean).join(", ") || "Geen ploeg"}</span><span className="text-muted-foreground"> · {projectById.get(d.projectId)?.case_nummer || "Case"} · {d.activity}</span></p>) : <p className="mt-2 text-xs text-muted-foreground">Niets ingepland</p>}<p className="mt-2 text-xs text-muted-foreground">Vrij: {free.map((m) => m.naam).join(", ") || "niemand"}</p></div>; })}</div>}
+    </article>; })}
+    <p className="pb-2 text-center text-xs text-muted-foreground">Beheer van monteurs, ploegen en vrije dagen is beschikbaar op desktop.</p>
+  </div>;
+}
