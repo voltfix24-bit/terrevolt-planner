@@ -39,3 +39,9 @@
 - [x] Mobiele Cases-lijst met zoeken en inklapbare filters
 - [x] Vrije monteurs gebundeld, secties in Capaciteit, monteurzoek
 - [x] Sticky weekbalk met actualiteit; Komende weken -> weekkalender
+
+## Mobiele betrouwbaarheid — fase 1
+- [x] Gedeelde foutgate en actualiteit in mobiele topbar
+- [x] Ondubbelzinnige beschikbaarheid en contrastrijke teksttokens
+- [x] Synchrone mobiele detectie, titels/zoeken en Cases-secties
+- [x] Licht manifest, architectuurregels, volledige tests en mobiele QA

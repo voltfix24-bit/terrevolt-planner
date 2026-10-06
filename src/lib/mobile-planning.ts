@@ -51,7 +51,7 @@ export function compactMonteurLabels(ids: string[], names: ReadonlyMap<string, s
 export function compactCaseLabels(entries: Pick<MonteurDayEntry, "projectId">[], projects: ReadonlyMap<string, { case_nummer: string | null; station_naam: string | null }>) {
   const ids = [...new Set(entries.map((entry) => entry.projectId))];
   const project = ids[0] ? projects.get(ids[0]) : undefined;
-  return { label: project?.case_nummer || project?.station_naam || "Case", extra: Math.max(0, ids.length - 1), conflict: ids.length > 1 };
+  return { label: project?.case_nummer?.trim().replace(/\s+/g, " ") || project?.station_naam?.trim().replace(/\s+/g, " ") || "Case", extra: Math.max(0, ids.length - 1), conflict: ids.length > 1 };
 }
 
 export function aggregateMobilePlanning(
@@ -327,7 +327,7 @@ export function monteurWeekStates(
   for (const monteur of monteurs) {
     result.set(monteur.id, availability.map((day) => {
       const entries = [...(entriesBySlot.get(`${monteur.id}|${day.dayIndex}`)?.values() ?? [])];
-      const reasons = day.reasonsByMonteur.get(monteur.id) ?? [];
+      const reasons = (day.reasonsByMonteur.get(monteur.id) ?? []).map((reason) => reason === day.holidayName ? `Feestdag: ${reason}` : reason);
       const unavailable = reasons.length > 0;
       const activeEntries = entries.filter((e) => !e.onHold);
       return {

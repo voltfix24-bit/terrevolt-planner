@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { UndoButton } from "./UndoButton";
+import { MobileTopbarFreshness } from "./mobile/MobileShared";
 import { MobileBottomNav } from "./mobile/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -48,9 +49,9 @@ export function AppLayout() {
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
-        <div className="font-display text-sm font-bold tracking-tight">TerreVolt Planner</div>
+        <div className="min-w-0 truncate px-1 font-display text-sm font-bold">TerreVolt Planner</div>
         {/* Undo is muterend: niet tonen in de read-only mobiele modus. */}
-        <div className="h-11 w-11" aria-hidden="true" />
+        {isMobile && <MobileTopbarFreshness />}
       </div>
 
       {/* Sidebar wrapper: slide on mobile, static on desktop. */}

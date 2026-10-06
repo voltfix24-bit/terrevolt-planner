@@ -77,3 +77,61 @@ export function compareCases(a: { status: string | null; label: CasePlanningLabe
 export interface CaseFilters { status: string; opdrachtgeverId: string; week: string }
 export const EMPTY_CASE_FILTERS: CaseFilters = { status: "", opdrachtgeverId: "", week: "" };
 export const activeFilterCount = (f: CaseFilters) => [f.status, f.opdrachtgeverId, f.week].filter(Boolean).length;
+
+
+/** Uniforme mobiele titel, zonder opslag of brondata te wijzigen. */
+export function caseTitle(project?: { case_nummer?: string | null; station_naam?: string | null }) {
+  const clean = (value: string | null | undefined, fallback: string) => value?.trim().replace(/\s+/g, " ") || fallback;
+  return `${clean(project?.case_nummer, "Geen casenummer")} · ${clean(project?.station_naam, "Naamloos station")}`;
+}
+
+/** Zoeken is accent-, scheidingsteken- en voorloopnul-onafhankelijk. */
+export function normalizeForSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[\s.\-]+/g, "").replace(/\d+/g, (digits) => digits.replace(/^0+(?=\d)/, ""));
+}
+export const matchesSearch = (value: string, term: string) => normalizeForSearch(value).includes(normalizeForSearch(term));
+
+export function mobileDataState(hasData: boolean, error: string | null, online: boolean): "loading" | "error" | "stale" | "ready" {
+  if (!hasData) return error || !online ? "error" : "loading";
+  return error || !online ? "stale" : "ready";
+}
+
+/** Lokale kalenderdag, ook correct over middernacht en zomer-/wintertijd. */
+export function freshnessLabel(updated: Date | null, now: Date = new Date()) {
+  if (!updated) return "…";
+  const time = updated.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  if (startOfDay(updated) === startOfDay(now)) return time;
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+  if (startOfDay(updated) === startOfDay(yesterday)) return `gisteren ${time}`;
+  return `${updated.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "")} ${time}`;
+}
+
+/** Labels interpreteren alleen bestaande beschikbaarheidsredenen, nooit resourcenamen. */
+export function unavailableLabel(reasons: string[], detail = false) {
+  const label = (reason: string) => {
+    const text = reason.toLowerCase();
+    if (text.includes("vrije dag")) return detail ? "geen werkdag (rooster)" : "—";
+    if (text.includes("feestdag")) return "Feestdag";
+    if (text.includes("ziek")) return "Ziek";
+    if (text.includes("verlof") || text.includes("vakantie")) return "Verlof";
+    if (text.includes("opleiding")) return "Opleiding";
+    return "Afwezig";
+  };
+  const labels = [...new Set(reasons.map(label))];
+  // Een werkelijke afwezigheid/feestdag blijft zichtbaar wanneer ook het rooster vrij is.
+  return detail ? labels.join(", ") || "Afwezig" : labels.find((value) => value !== "—") ?? "—";
+}
+
+export function caseSection(c: { status: string | null; label: CasePlanningLabel }) {
+  return c.status === "afgerond" ? "Afgerond" : c.status === "on_hold" ? "On hold" : c.label.kind === "next" ? "Komende planning" : c.label.kind === "past" ? "Afgelopen planning" : "Zonder planning";
+}
+
+/** Huidige/toekomstige ISO-weken oplopend, daarna verleden aflopend. */
+export function sortCaseWeekOptions(weeks: string[], current: IsoWeek) {
+  const pivot = formatWeekParam(current);
+  return [...weeks].sort((a, b) => {
+    const aFuture = a >= pivot, bFuture = b >= pivot;
+    return aFuture !== bFuture ? (aFuture ? -1 : 1) : aFuture ? a.localeCompare(b) : b.localeCompare(a);
+  });
+}

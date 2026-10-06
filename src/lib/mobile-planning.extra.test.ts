@@ -75,7 +75,7 @@ describe("per-monteur daily state", () => {
     const a = states.get("a") ?? []; const b = states.get("b") ?? [];
     expect(a[0]).toMatchObject({ kind: "planned", conflict: true });
     expect(a[1]).toMatchObject({ kind: "free", conflict: false, entries: [] });
-    expect(a[3]).toMatchObject({ kind: "unavailable", reasons: ["Testdag"] });
+    expect(a[3]).toMatchObject({ kind: "unavailable", reasons: ["Feestdag: Testdag"] });
     expect(a[4]).toMatchObject({ kind: "unavailable", reasons: ["Vrije dag"] });
     expect(b[0].kind).toBe("free");
     expect(b[2]).toMatchObject({ kind: "unavailable", reasons: ["Verlof"] });

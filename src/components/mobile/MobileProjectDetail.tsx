@@ -3,8 +3,8 @@ import { ArrowLeft, CalendarDays, ChevronDown, FileText, MapPin } from "lucide-r
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { groupDayBlocks, projectPlanningSummary, targetWeekForDays, uniqueMonteursForProject } from "@/lib/mobile-planning";
-import { showPlanningStats } from "@/lib/mobile-ux";
-import { FreshnessBar, formatShort, StatusChip } from "./MobileShared";
+import { caseTitle, showPlanningStats } from "@/lib/mobile-ux";
+import { MobileDataGate, formatShort, StatusChip } from "./MobileShared";
 import { useMobilePlanningData } from "./useMobilePlanningData";
 
 const fmtDate = (d: Date | null) => d ? d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -28,11 +28,11 @@ export function MobileProjectDetail() {
   const toggle = (key: string) => setOpenWeeks((prev) => { const next = new Set(prev ?? (defaultOpen ? [defaultOpen] : [])); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const address = project ? [project.straat, project.postcode, project.stad].filter(Boolean).join(", ") : "";
 
-  if (data.loading) return <p className="py-16 text-center text-sm text-muted-foreground">Case laden…</p>;
-  if (!project) return <p className="py-16 text-center text-sm text-muted-foreground">Case niet gevonden</p>;
-  return <div className="space-y-5"><Button variant="ghost" className="h-11 -ml-3" onClick={() => navigate("/projecten")}><ArrowLeft className="mr-2 h-4 w-4" />Cases</Button>
-    <section><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-xs text-muted-foreground">{project.case_nummer || "Geen casenummer"}</p><h1 className="font-display text-2xl font-bold">{project.station_naam || "Naamloos station"}</h1></div><StatusChip status={project.status} /></div><p className="mt-2 text-sm text-muted-foreground">{project.opdrachtgever_id ? data.opdrachtgeverNameById.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p>{address && <a className="mt-3 flex min-h-11 items-center gap-2 text-sm font-medium text-primary" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer"><MapPin className="h-4 w-4" />Navigeer naar {address}</a>}</section>
-    {project.status === "on_hold" && <p role="status" className="border-l-2 border-warning pl-3 text-sm">Niet opgenomen in actuele planning/capaciteit.</p>}
+  if (!data.hasData) return <MobileDataGate data={data} />;
+  if (!project) return <MobileDataGate data={data}><p className="py-16 text-center text-sm text-muted-foreground">Case niet gevonden</p></MobileDataGate>;
+  return <MobileDataGate data={data}><div className="space-y-5"><Button variant="ghost" className="h-11 -ml-3" onClick={() => navigate("/projecten")}><ArrowLeft className="mr-2 h-4 w-4" />Cases</Button>
+    <section><div className="flex items-start justify-between gap-3"><div><h1 className="break-words font-display text-xl font-bold">{caseTitle(project)}</h1></div><StatusChip status={project.status} /></div><p className="mt-2 text-sm text-muted-foreground">{project.opdrachtgever_id ? data.opdrachtgeverNameById.get(project.opdrachtgever_id) : "Geen opdrachtgever"}</p>{address && <a className="mt-3 flex min-h-11 items-center gap-2 text-sm font-medium text-primary-text" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer"><MapPin className="h-4 w-4" />Navigeer naar {address}</a>}</section>
+    {project.status === "on_hold" && <p role="status" className="border-l-2 border-warning-text pl-3 text-sm">Niet opgenomen in actuele planning/capaciteit.</p>}
     {showPlanningStats(summary) && <section className="rounded-lg border border-border bg-card p-4"><div className="grid grid-cols-2 gap-3 text-sm">
       <div><span className="block text-[11px] text-muted-foreground">Eerste dag</span><strong>{fmtDate(summary.first)}</strong></div>
       <div><span className="block text-[11px] text-muted-foreground">Laatste dag</span><strong>{fmtDate(summary.last)}</strong></div>
@@ -45,7 +45,6 @@ export function MobileProjectDetail() {
     </article>; })}</div>}</section>
     <section><h2 className="mb-2 font-display text-lg font-bold">Ploeg / monteurs</h2><div className="divide-y divide-border rounded-lg border border-border bg-card">{crew.size ? [...crew].sort((a, b) => b[1] - a[1]).map(([monteurId, count]) => <div key={monteurId} className="flex min-h-12 items-center justify-between px-4 text-sm"><span>{data.monteurNameById.get(monteurId) || "Onbekende monteur"}</span><span className="text-muted-foreground">{count} {count === 1 ? "dag" : "dagen"}</span></div>) : <p className="p-4 text-sm text-muted-foreground">Nog geen monteurs gekoppeld</p>}</div></section>
     <div className="grid grid-cols-2 gap-2"><Button variant="outline" className="h-11" onClick={() => navigate(`/projecten/${project.id}/dossier`)}><FileText className="mr-2 h-4 w-4" />Dossier</Button><Button className="h-11" onClick={() => navigate(`/plannen?project=${project.id}`)}><CalendarDays className="mr-2 h-4 w-4" />Planning bekijken</Button></div>
-    <FreshnessBar data={data} />
     <p className="text-center text-xs text-muted-foreground">Projectgegevens bewerken kan op desktop.</p>
-  </div>;
+  </div></MobileDataGate>;
 }
