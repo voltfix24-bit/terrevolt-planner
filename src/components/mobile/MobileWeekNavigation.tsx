@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { getMondayOfWeek, isoWeekPartsOf } from "@/lib/planning-types";
 import type { IsoWeek } from "@/lib/mobile-planning";
 import { formatShort } from "./MobileShared";
-import type { MobilePlanningData } from "./useMobilePlanningData";
 
-/** Compacte sticky weekbalk onder de vaste topbalk (h-12): week, pijlen, actualiteit en optionele toggle. */
-export function MobileWeekNavigation({ selected, onMove, onSelect, data, children }: { selected: IsoWeek; onMove: (delta: number) => void; onSelect: (week: IsoWeek) => void; data?: Pick<MobilePlanningData, "lastUpdated" | "fetching" | "refresh" | "error">; children?: ReactNode }) {
+/** Compacte sticky weekbalk onder de vaste topbalk (h-12): week, pijlen en optionele toggle. */
+export function MobileWeekNavigation({ selected, onMove, onSelect, children }: { selected: IsoWeek; onMove: (delta: number) => void; onSelect: (week: IsoWeek) => void; children?: ReactNode }) {
   const monday = getMondayOfWeek(selected.week_nr, selected.jaar);
   const friday = new Date(monday); friday.setDate(friday.getDate() + 4);
   return <div data-testid="mobile-week-toolbar" className="sticky top-12 z-20 -mx-3 space-y-1 border-b border-border bg-background/95 px-3 py-1 backdrop-blur">

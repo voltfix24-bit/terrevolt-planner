@@ -5,7 +5,7 @@ import { isServiceWorkerAllowed } from "./pwa-register";
 describe("PWA manifest", () => {
   const manifest = JSON.parse(readFileSync("public/manifest.webmanifest", "utf8"));
   it("is installable as standalone TerreVolt app starting at /overzicht", () => {
-    expect(manifest).toMatchObject({ name: "TerreVolt Planner", short_name: "TerreVolt", display: "standalone", start_url: "/overzicht" });
+    expect(manifest).toMatchObject({ name: "TerreVolt Planner", short_name: "TV Planner", display: "standalone", start_url: "/overzicht", theme_color: "#eef2f7", background_color: "#eef2f7" });
     expect(manifest.icons.map((i: { sizes: string }) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
   });
 });

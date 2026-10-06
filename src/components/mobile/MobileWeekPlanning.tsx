@@ -59,7 +59,7 @@ export function MobileWeekPlanning() {
   return <MobileDataGate data={data}><div className="space-y-3">
     <h1 className="break-words font-display text-xl font-bold">{contextTitle ? `Planning · ${contextTitle}` : "Planning"}</h1>
     {projectId && <Button variant="outline" onClick={clearProject} className="h-11 w-full"><X className="mr-2 h-4 w-4" />Alle cases tonen</Button>}
-    <MobileWeekNavigation selected={selected} onMove={move} onSelect={select} data={data}>
+    <MobileWeekNavigation selected={selected} onMove={move} onSelect={select}>
       {!projectId && <div className="grid grid-cols-2 rounded-lg bg-muted p-1" role="tablist" aria-label="Weergave">{(["case", "monteur"] as const).map((value) => <Button variant="ghost" key={value} role="tab" aria-selected={mode === value} onClick={() => { setMode(value); setOpen(null); }} className={`h-11 rounded-md text-sm ${mode === value ? "bg-card text-primary-text shadow-sm" : "text-muted-foreground"}`}>{value === "case" ? "Per case" : "Per monteur"}</Button>)}</div>}
     </MobileWeekNavigation>
     {!projectId && <div className="relative"><Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" /><Input className="h-11 pl-9 pr-11" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={mode === "case" ? "Zoek case, station of opdrachtgever" : "Zoek monteur of case"} aria-label="Planning zoeken" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Zoekopdracht wissen" className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-muted-foreground"><X className="h-4 w-4" /></button>}</div>}

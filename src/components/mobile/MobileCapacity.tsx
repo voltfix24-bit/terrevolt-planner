@@ -31,7 +31,7 @@ export function MobileCapacity() {
   if (!data.hasData) return <MobileDataGate data={data} />;
   return <MobileDataGate data={data}><div className="space-y-4">
     <h1 className="font-display text-xl font-bold">Capaciteit</h1>
-    <MobileWeekNavigation selected={selected} onMove={move} onSelect={(week) => { setSelected(week); setOpenMonteur(null); setOpen(null); }} data={data}>
+    <MobileWeekNavigation selected={selected} onMove={move} onSelect={(week) => { setSelected(week); setOpenMonteur(null); setOpen(null); }}>
     <div className="grid grid-cols-2 rounded-lg bg-muted p-1" role="tablist" aria-label="Capaciteitsweergave">{(["week", "overview"] as const).map((value) => <Button variant="ghost" key={value} role="tab" aria-selected={mode === value} onClick={() => { setMode(value); setOpenMonteur(null); }} className={`h-11 ${mode === value ? "bg-card text-primary-text shadow-sm" : "text-muted-foreground"}`}>{value === "week" ? "Weekkalender" : "Komende weken"}</Button>)}</div>
     </MobileWeekNavigation>
     {mode === "week" ? <>
