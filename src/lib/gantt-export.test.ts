@@ -53,7 +53,7 @@ describe("Gantt chronological order and brand", () => {
   });
 
   it("retains customer groups while ordering projects inside each group", () => {
-    const grouped = [projects[0], { ...projects[2], opdrachtgever_id: "other", opdrachtgever_naam: "Beta" }, projects[1]];
+    const grouped = [{ ...projects[0], opdrachtgever_naam: "Alfa" }, { ...projects[2], opdrachtgever_id: "other", opdrachtgever_naam: "Beta" }, { ...projects[1], opdrachtgever_naam: "Alfa" }];
     const html = htmlFor(grouped, [cell("C", 43), cell("A", 44), cell("B", 43, 2)], "intern");
     expect(html.indexOf("B — B")).toBeLessThan(html.indexOf("A — A"));
     expect(html.indexOf("A — A")).toBeLessThan(html.indexOf("C — C"));
