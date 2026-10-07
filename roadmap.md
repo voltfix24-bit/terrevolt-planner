@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Desktop Gantt — chronologische volgorde en logo
-- [ ] Pure exportsortering binnen bestaande opdrachtgevergroepen
-- [ ] Bestaand TerreVolt-beeldmerk in iedere printheader
-- [ ] Regressietests, volledige tests en echte desktop-printpreview QA
+- [x] Pure exportsortering binnen bestaande opdrachtgevergroepen
+- [x] Bestaand TerreVolt-beeldmerk in iedere printheader
+- [x] Regressietests, volledige tests en echte desktop-printpreview QA (242 tests; automatische typecheck/build OK; van Gelder week 40–49 in Chromium light/dark en WebKit: chronologisch, 4 A3-pagina's, logo op iedere pagina, header 68px ongewijzigd, uitsluitend van Gelder)
 
 ## Mobiele signalen en visuele inhoud — fase 3
 - [x] Uitzonderingenbalk, eigen amber afwezigheidssignaal en activiteitcellen
