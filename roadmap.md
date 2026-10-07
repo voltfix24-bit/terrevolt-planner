@@ -1,5 +1,10 @@
 # Roadmap
 
+## Desktop Gantt — chronologische volgorde en logo
+- [ ] Pure exportsortering binnen bestaande opdrachtgevergroepen
+- [ ] Bestaand TerreVolt-beeldmerk in iedere printheader
+- [ ] Regressietests, volledige tests en echte desktop-printpreview QA
+
 ## Mobiele signalen en visuele inhoud — fase 3
 - [x] Uitzonderingenbalk, eigen amber afwezigheidssignaal en activiteitcellen
 - [x] Gedeelde dagkop, conceptbadge en conceptmandagen
