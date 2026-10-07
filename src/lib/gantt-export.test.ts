@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TERREVOLT_ICON_DATA_URI } from "./brand-assets";
 import {
   assertClientSafeExport,
   buildExportPages,
@@ -7,6 +8,8 @@ import {
   filterProjectsForExport,
   groupProjectsByOpdrachtgever,
   paginateProjectRows,
+  sortProjectsByFirstPlannedDate,
+  type GanttCel,
   type GanttActiviteit,
   type GanttProject,
 } from "./gantt-export";
@@ -14,6 +17,72 @@ import {
 const project = (id: string, opdrachtgeverId: string | null, naam: string | null): GanttProject => ({
   id, case_nummer: id, station_naam: id, wv_naam: null,
   opdrachtgever_id: opdrachtgeverId, opdrachtgever_naam: naam,
+});
+
+describe("Gantt chronological order and brand", () => {
+  const weeks = [{ week_nr: 43, jaar: 2026 }, { week_nr: 44, jaar: 2026 }];
+  const activities = ["A", "B", "C"].map((id) => ({ id: `act-${id}`, project_id: id, naam: id, positie: 0 }));
+  const cell = (id: string, week: number, day = 0): GanttCel => ({
+    project_id: id, activiteit_id: `act-${id}`, week_nr: week, dag_index: day, kleur_code: "c5", monteur_ids: [],
+  });
+  const projects = [project("A", "c", "Client"), project("B", "c", "Client"), project("C", "c", "Client")];
+  const htmlFor = (items: GanttProject[], cells: GanttCel[], mode: "intern" | "opdrachtgever" = "opdrachtgever") => buildGanttHtml({
+    titel: "Planning", weken: weeks, projecten: items, activiteiten: activities, cellen: cells,
+    monteurs: [], monteurWeergave: "geen", exportMode: mode, opdrachtgeverId: "c", opdrachtgeverNaam: "Client",
+  });
+
+  it("sorts by the first selected planned weekday without mutating inputs", () => {
+    const cells = [cell("A", 44), cell("B", 43, 2)];
+    const snapshot = JSON.stringify({ projects, activities, cells, weeks });
+    expect(sortProjectsByFirstPlannedDate(projects, activities, cells, weeks).map((p) => p.id)).toEqual(["B", "A", "C"]);
+    expect(sortProjectsByFirstPlannedDate([...projects].reverse(), activities, cells, weeks).map((p) => p.id)).toEqual(["B", "A", "C"]);
+    expect(JSON.stringify({ projects, activities, cells, weeks })).toBe(snapshot);
+    const html = htmlFor(projects, cells);
+    expect(html.indexOf("B — B")).toBeLessThan(html.indexOf("A — A"));
+  });
+
+  it("ignores outside-period cells and non-workday indexes", () => {
+    expect(sortProjectsByFirstPlannedDate(projects, activities, [cell("A", 42), cell("A", 43, 5), cell("B", 44)], weeks).map((p) => p.id)).toEqual(["B", "A", "C"]);
+  });
+
+  it("breaks equal dates by case number, then station, retaining exact ties", () => {
+    const sameCase = projects.map((p) => ({ ...p, case_nummer: "001", station_naam: p.id === "A" ? "Zulu" : "Alpha" }));
+    const cells = projects.map((p) => cell(p.id, 43));
+    expect(sortProjectsByFirstPlannedDate([...projects].reverse(), activities, cells, weeks).map((p) => p.id)).toEqual(["A", "B", "C"]);
+    expect(sortProjectsByFirstPlannedDate(sameCase, activities, cells, weeks).map((p) => p.id)).toEqual(["B", "C", "A"]);
+  });
+
+  it("retains customer groups while ordering projects inside each group", () => {
+    const grouped = [{ ...projects[0], opdrachtgever_naam: "Alfa" }, { ...projects[2], opdrachtgever_id: "other", opdrachtgever_naam: "Beta" }, { ...projects[1], opdrachtgever_naam: "Alfa" }];
+    const html = htmlFor(grouped, [cell("C", 43), cell("A", 44), cell("B", 43, 2)], "intern");
+    expect(html.indexOf("B — B")).toBeLessThan(html.indexOf("A — A"));
+    expect(html.indexOf("A — A")).toBeLessThan(html.indexOf("C — C"));
+    expect(html).toContain("Opdrachtgever · Beta");
+  });
+
+  it("keeps global order across horizontal chunks instead of re-sorting each chunk", () => {
+    const allWeeks = Array.from({ length: 8 }, (_, i) => ({ week_nr: 43 + i, jaar: 2026 }));
+    const cells = [cell("A", 43), cell("B", 44), cell("C", 49), cell("A", 50), cell("B", 49, 2)];
+    const ordered = sortProjectsByFirstPlannedDate([...projects].reverse(), activities, cells, allWeeks);
+    const pages = buildExportPages(ordered, activities, cells, allWeeks, "standaard");
+    expect(pages[0].rows.map((r) => r.project.id)).toEqual(["A", "B"]);
+    expect(pages[1].rows.map((r) => r.project.id)).toEqual(["A", "B", "C"]);
+  });
+
+  it("uses real calendar dates across an ISO-year boundary", () => {
+    expect(sortProjectsByFirstPlannedDate(projects, activities, [cell("A", 1), cell("B", 53, 4)], [{ week_nr: 53, jaar: 2026 }, { week_nr: 1, jaar: 2027 }]).map((p) => p.id)).toEqual(["B", "A", "C"]);
+  });
+
+  it("renders the existing proportional icon on every page without the old mark", () => {
+    const html = htmlFor(projects, [cell("A", 43)]);
+    expect(html).toContain(`<img class="brand-logo" src="${TERREVOLT_ICON_DATA_URI}"`);
+    expect(html).not.toContain("brand-mark");
+    expect(html).toContain("object-fit:contain");
+    expect(html).toContain("<strong>TERREVOLT</strong><small>Projectplanning</small>");
+    expect(html).toContain("@page{size:A3 landscape;margin:9mm}");
+    const multipage = buildGanttHtml({ titel: "T", weken: Array.from({ length: 8 }, (_, i) => ({ week_nr: 43 + i, jaar: 2026 })), projecten: projects, activiteiten: activities, cellen: [cell("A", 43), cell("B", 50)], monteurs: [], monteurWeergave: "geen", exportMode: "intern" });
+    expect(multipage.match(/<img class="brand-logo"/g)).toHaveLength(2);
+  });
 });
 
 describe("Gantt export safety", () => {

@@ -1,4 +1,5 @@
 /** Client-safe, explicitly paginated Gantt print export. */
+import { TERREVOLT_ICON_DATA_URI } from "./brand-assets";
 import { COLOR_CODES, COLOR_MAP, DAG_LABELS, getMondayOfWeek, initialen } from "./planning-types";
 
 export type GanttMonteurWeergave = "geen" | "initialen" | "namen";
@@ -105,6 +106,37 @@ export function groupProjectsByOpdrachtgever(projects: GanttProject[]): Array<{
       return a.localeCompare(b, "nl");
     })
     .map(([opdrachtgever, groupedProjects]) => ({ opdrachtgever, projects: groupedProjects }));
+}
+
+/** Sort once across the selected period; chunk filtering preserves this global order.
+ * Cells arrive normalized from activity/project and week_id/week in the export caller.
+ */
+export function sortProjectsByFirstPlannedDate(
+  projects: readonly GanttProject[],
+  activities: readonly GanttActiviteit[],
+  cells: readonly GanttCel[],
+  weeks: readonly GanttWeek[],
+): GanttProject[] {
+  const projectByActivity = new Map(activities.map((activity) => [activity.id, activity.project_id]));
+  const mondayByWeek = new Map(weeks.map((week) => [week.week_nr, getMondayOfWeek(week.week_nr, week.jaar)]));
+  const firstDateByProject = new Map<string, number>();
+  for (const cell of cells) {
+    if (!Number.isInteger(cell.dag_index) || cell.dag_index < 0 || cell.dag_index > 4) continue;
+    const projectId = projectByActivity.get(cell.activiteit_id);
+    const monday = mondayByWeek.get(cell.week_nr);
+    if (!projectId || !monday) continue;
+    const date = new Date(monday);
+    date.setDate(date.getDate() + cell.dag_index);
+    const timestamp = date.getTime();
+    firstDateByProject.set(projectId, Math.min(firstDateByProject.get(projectId) ?? Infinity, timestamp));
+  }
+  return [...projects].sort((a, b) => {
+    const firstA = firstDateByProject.get(a.id) ?? Infinity;
+    const firstB = firstDateByProject.get(b.id) ?? Infinity;
+    if (firstA !== firstB) return firstA < firstB ? -1 : 1;
+    return (a.case_nummer ?? "").localeCompare(b.case_nummer ?? "", "nl")
+      || (a.station_naam ?? "").localeCompare(b.station_naam ?? "", "nl");
+  });
 }
 
 /** Project header costs one row; a project header always stays with its first activity. */
@@ -236,7 +268,7 @@ function renderPageHeader(
     ? esc(input.opdrachtgeverNaam ?? "Opdrachtgever")
     : "Intern planningsoverzicht";
   return `<header class="doc-head">
-    <div class="brand"><span class="brand-mark"></span><div><strong>TERREVOLT</strong><small>Projectplanning</small></div></div>
+    <div class="brand"><img class="brand-logo" src="${TERREVOLT_ICON_DATA_URI}" alt="TerreVolt beeldmerk"><div><strong>TERREVOLT</strong><small>Projectplanning</small></div></div>
     <div class="doc-title"><h1>${esc(input.titel)}</h1><strong>${audience}</strong></div>
     <div class="doc-meta"><b>${shortDate(start)}–${shortDate(end)}</b><span>Week ${first.week_nr}–${last.week_nr}</span><span>Gegenereerd ${new Date().toLocaleDateString("nl-NL")}</span></div>
     <div class="summary">${projectCount} ${projectCount === 1 ? "project" : "projecten"} · A3 liggend</div>
@@ -315,9 +347,10 @@ export function buildGanttHtml(input: GanttExportInput): string {
   if (input.exportMode === "opdrachtgever") assertClientSafeExport(input.projecten, input.opdrachtgeverId);
 
   const layout = input.printLayout ?? "standaard";
+  const chronologicalProjects = sortProjectsByFirstPlannedDate(input.projecten, input.activiteiten, input.cellen, input.weken);
   const orderedProjects = input.exportMode === "intern"
-    ? groupProjectsByOpdrachtgever(input.projecten).flatMap((group) => group.projects)
-    : input.projecten;
+    ? groupProjectsByOpdrachtgever(chronologicalProjects).flatMap((group) => group.projects)
+    : chronologicalProjects;
   const pages = buildExportPages(orderedProjects, input.activiteiten, input.cellen, input.weken, layout);
   if (pages.every((page) => page.rows.length === 0)) throw new Error("Geen geplande activiteiten in deze selectie");
   const printableProjectCount = new Set(pages.flatMap((page) => page.rows.map((row) => row.project.id))).size;
@@ -345,7 +378,7 @@ export function buildGanttHtml(input: GanttExportInput): string {
 
   const dayWidth = layout === "detail" ? 42 : layout === "standaard" ? 31 : 24;
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>${esc(input.titel)}</title><style>
-    @page{size:A3 landscape;margin:9mm}*{box-sizing:border-box}html,body{margin:0;background:#e8ebef;color:#18202a;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.toolbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid #ccd3db}.toolbar button{border:0;border-radius:4px;padding:8px 14px;background:#166534;color:#fff;font-weight:700;cursor:pointer}.toolbar span{color:#586574}.print-page{width:396mm;min-height:279mm;margin:16px auto;padding:9mm;background:#fff;display:flex;flex-direction:column;page-break-after:always;break-after:page}.print-page:last-child{page-break-after:auto}.doc-head{display:grid;grid-template-columns:180px 1fr 220px;gap:8px 18px;align-items:end;border-bottom:2px solid #166534;padding-bottom:8px;margin-bottom:8px}.brand{display:flex;gap:9px;align-items:center}.brand-mark{width:24px;height:24px;border-radius:3px;background:#166534;border:4px solid #d9eadf}.brand strong{display:block;letter-spacing:.08em}.brand small{display:block;color:#66717d}.doc-title{text-align:center}.doc-title h1{font-size:17px;margin:0 0 2px}.doc-title strong{font-size:11px;color:#166534}.doc-meta{text-align:right;display:flex;flex-direction:column;font-size:10px}.summary{font-size:9px;color:#66717d}.legend{grid-column:2/4;display:flex;align-items:center;justify-content:flex-end;gap:9px;font-size:8px;flex-wrap:wrap}.legend span{display:inline-flex;align-items:center;gap:3px}.legend i{width:9px;height:9px;border:1px solid #374151;background:var(--swatch);display:inline-block}.holiday-swatch{background:repeating-linear-gradient(45deg,#a3aab4,#a3aab4 2px,#fff 2px,#fff 4px)!important}.gantt{width:auto;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}.gantt th,.gantt td{border:1px solid #c9d0d8;text-align:center;padding:0;height:25px}.gantt .label{width:285px;min-width:285px;text-align:left;padding:7px 10px;text-transform:uppercase;letter-spacing:.06em}.week{height:23px;background:#dce8df;color:#123b21;letter-spacing:.08em}.day{width:${dayWidth}px;min-width:${dayWidth}px;background:#f0f3f5;font-size:8px}.day small{display:block;font-size:7px;font-weight:400;color:#596572;margin-top:2px}.week-start{border-left:2px solid #66717d!important}.week-end{border-right:2px solid #66717d!important}.holiday{background:repeating-linear-gradient(45deg,#edf0f2,#edf0f2 3px,#fff 3px,#fff 6px)}.customer-row td{text-align:left;height:20px;padding:3px 8px;background:#27313b;color:#fff;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.project-row td{height:23px;background:#e9eef1;border-top:2px solid #166534;text-align:left;padding:4px 8px;font-weight:700}.project-row td+td{text-align:right;color:#586574;font-size:8px;font-weight:600}.project-row small{font-weight:400;color:#66717d}.activity-row td:first-child{text-align:left;padding:4px 8px 4px 18px;white-space:normal;line-height:1.15}.slot{width:${dayWidth}px;min-width:${dayWidth}px;padding:2px!important}.work{display:flex;width:100%;height:20px;align-items:center;justify-content:center;overflow:hidden;background:var(--work);color:var(--work-fg);font-size:7px;font-weight:700;border:1px solid #374151;background-image:repeating-linear-gradient(135deg,transparent,transparent 7px,rgba(255,255,255,.16) 7px,rgba(255,255,255,.16) 9px)}.people{display:flex;gap:8px 16px;flex-wrap:wrap;border-top:1px solid #ccd3db;margin-top:8px;padding-top:6px;font-size:8px}.people>strong{text-transform:uppercase;letter-spacing:.07em}.people span b{margin-right:3px;color:#166534}footer{margin-top:auto;padding-top:7px;border-top:1px solid #ccd3db;display:flex;justify-content:space-between;font-size:8px;color:#66717d}footer b{color:#27313b}@media print{html,body{background:#fff}.toolbar{display:none}.print-page{margin:0;padding:0;width:auto;min-height:260mm}}
+    @page{size:A3 landscape;margin:9mm}*{box-sizing:border-box}html,body{margin:0;background:#e8ebef;color:#18202a;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.toolbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid #ccd3db}.toolbar button{border:0;border-radius:4px;padding:8px 14px;background:#166534;color:#fff;font-weight:700;cursor:pointer}.toolbar span{color:#586574}.print-page{width:396mm;min-height:279mm;margin:16px auto;padding:9mm;background:#fff;display:flex;flex-direction:column;page-break-after:always;break-after:page}.print-page:last-child{page-break-after:auto}.doc-head{display:grid;grid-template-columns:180px 1fr 220px;gap:8px 18px;align-items:end;border-bottom:2px solid #166534;padding-bottom:8px;margin-bottom:8px}.brand{display:flex;gap:9px;align-items:center}.brand-logo{height:24px;width:auto;max-width:30px;object-fit:contain;flex-shrink:0}.brand strong{display:block;letter-spacing:.08em}.brand small{display:block;color:#66717d}.doc-title{text-align:center}.doc-title h1{font-size:17px;margin:0 0 2px}.doc-title strong{font-size:11px;color:#166534}.doc-meta{text-align:right;display:flex;flex-direction:column;font-size:10px}.summary{font-size:9px;color:#66717d}.legend{grid-column:2/4;display:flex;align-items:center;justify-content:flex-end;gap:9px;font-size:8px;flex-wrap:wrap}.legend span{display:inline-flex;align-items:center;gap:3px}.legend i{width:9px;height:9px;border:1px solid #374151;background:var(--swatch);display:inline-block}.holiday-swatch{background:repeating-linear-gradient(45deg,#a3aab4,#a3aab4 2px,#fff 2px,#fff 4px)!important}.gantt{width:auto;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}.gantt th,.gantt td{border:1px solid #c9d0d8;text-align:center;padding:0;height:25px}.gantt .label{width:285px;min-width:285px;text-align:left;padding:7px 10px;text-transform:uppercase;letter-spacing:.06em}.week{height:23px;background:#dce8df;color:#123b21;letter-spacing:.08em}.day{width:${dayWidth}px;min-width:${dayWidth}px;background:#f0f3f5;font-size:8px}.day small{display:block;font-size:7px;font-weight:400;color:#596572;margin-top:2px}.week-start{border-left:2px solid #66717d!important}.week-end{border-right:2px solid #66717d!important}.holiday{background:repeating-linear-gradient(45deg,#edf0f2,#edf0f2 3px,#fff 3px,#fff 6px)}.customer-row td{text-align:left;height:20px;padding:3px 8px;background:#27313b;color:#fff;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.project-row td{height:23px;background:#e9eef1;border-top:2px solid #166534;text-align:left;padding:4px 8px;font-weight:700}.project-row td+td{text-align:right;color:#586574;font-size:8px;font-weight:600}.project-row small{font-weight:400;color:#66717d}.activity-row td:first-child{text-align:left;padding:4px 8px 4px 18px;white-space:normal;line-height:1.15}.slot{width:${dayWidth}px;min-width:${dayWidth}px;padding:2px!important}.work{display:flex;width:100%;height:20px;align-items:center;justify-content:center;overflow:hidden;background:var(--work);color:var(--work-fg);font-size:7px;font-weight:700;border:1px solid #374151;background-image:repeating-linear-gradient(135deg,transparent,transparent 7px,rgba(255,255,255,.16) 7px,rgba(255,255,255,.16) 9px)}.people{display:flex;gap:8px 16px;flex-wrap:wrap;border-top:1px solid #ccd3db;margin-top:8px;padding-top:6px;font-size:8px}.people>strong{text-transform:uppercase;letter-spacing:.07em}.people span b{margin-right:3px;color:#166534}footer{margin-top:auto;padding-top:7px;border-top:1px solid #ccd3db;display:flex;justify-content:space-between;font-size:8px;color:#66717d}footer b{color:#27313b}@media print{html,body{background:#fff}.toolbar{display:none}.print-page{margin:0;padding:0;width:auto;min-height:260mm}}
   </style></head><body><div class="toolbar"><button onclick="window.print()">Afdrukken / opslaan als PDF</button><span>A3 liggend · browser-schaal 100%</span></div>${pageHtml}</body></html>`;
 }
 

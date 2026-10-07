@@ -1,6 +1,6 @@
 # Architecture rules
 
-- Keep Gantt export safety, grouping, and pagination as pure functions in `src/lib/gantt-export.ts` so customer isolation and page composition remain unit-testable.
+- Keep Gantt export safety, selected-period chronological project sorting, grouping, and pagination as pure functions in `src/lib/gantt-export.ts`; sort globally before chunking and within customer groups for internal exports so isolation and consistent page composition remain unit-testable.
 - Keep mobile planning aggregation and capacity calculations pure in `src/lib/mobile-planning.ts` so read-only views share tested business interpretation without changing desktop editors.
 - Derive active mobile day indexes once in the shared hook with `activeMobilePlanningDays`; calendar and capacity helpers use that same pure filter defensively, while raw indexes remain available only for explicitly inactive case records.
 - Mobile planning screens share one React Query cache via `useMobilePlanningData` (no per-screen refetch, no N+1) and stay read-only; desktop-only admin routes render `DesktopOnly` on mobile.
