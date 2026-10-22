@@ -1,5 +1,9 @@
 # Roadmap
 
+## Jaarwisseling planningoverzicht
+- [ ] Doorlopende ISO-weken met het juiste jaar voor datums, planning en capaciteit
+- [ ] Regressietests en browsercontrole van week 53 naar week 1
+
 ## Desktop Gantt — chronologische volgorde en logo
 - [x] Pure exportsortering binnen bestaande opdrachtgevergroepen
 - [x] Bestaand TerreVolt-beeldmerk in iedere printheader
