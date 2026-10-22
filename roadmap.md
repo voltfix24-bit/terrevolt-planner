@@ -1,5 +1,9 @@
 # Roadmap
 
+## Jaarwisseling planningoverzicht
+- [x] Doorlopende ISO-weken met het juiste jaar voor datums, planning en capaciteit
+- [x] Regressietests en browsercontrole van week 53 naar week 1 (245 tests geslaagd; automatische build OK; echte desktopweergave: 1 januari alleen in week 53, week 1 begint 4 januari 2027; geen paginafouten)
+
 ## Desktop Gantt — chronologische volgorde en logo
 - [x] Pure exportsortering binnen bestaande opdrachtgevergroepen
 - [x] Bestaand TerreVolt-beeldmerk in iedere printheader

@@ -22,11 +22,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   DAG_LABELS,
   addIsoWeeks,
+  consecutiveIsoWeeks,
   formatDate,
   getMondayOfWeek,
   initialen,
   weekDeltaIso,
-  wrapWeek,
 } from "@/lib/planning-types";
 import {
   HoverCard,
@@ -199,7 +199,7 @@ interface CelMonteur {
 interface Slot {
   index: number;
   // (week_nr, dag_index) pairs covered by this slot
-  pairs: Array<{ wnr: number; dag: number }>;
+  pairs: Array<{ jaar: number; wnr: number; dag: number }>;
   // header info
   primaryLabel: string;       // e.g. "MA" / "Wk 18" / "Mei"
   secondaryLabel?: string;    // e.g. "27/4" / "" / ""
@@ -218,8 +218,8 @@ interface Slot {
 }
 
 // ============== Helpers ==============
-function dayKey(week_nr: number, dag_index: number): string {
-  return `${week_nr}-${dag_index}`;
+function dayKey(jaar: number, week_nr: number, dag_index: number): string {
+  return `${jaar}-${week_nr}-${dag_index}`;
 }
 
 function dateKey(d: Date): string {
@@ -507,12 +507,11 @@ export default function Overzicht() {
 
     if (scale === "maand") {
       // weeksToShow weeks × 5 days (auto-fit to viewport)
-      const wkCount = weeksInYear(jaar);
-      for (let wi = 0; wi < weeksToShow; wi++) {
-        const wnr = wrapWeek(((startWeek - 1 + wi) % wkCount) + 1);
-        const monday = getMondayOfWeek(wnr, jaar);
-        const isCurrentWeek = wnr === todayWeek && jaar === todayYear;
-        const groupKey = `wk-${wnr}`;
+      for (const week of consecutiveIsoWeeks(jaar, startWeek, weeksToShow)) {
+        const wnr = week.week_nr;
+        const monday = getMondayOfWeek(wnr, week.jaar);
+        const isCurrentWeek = wnr === todayWeek && week.jaar === todayYear;
+        const groupKey = `wk-${week.jaar}-${wnr}`;
         const groupLabel = `Wk ${wnr}`;
         for (let d = 0; d < DAYS_PER_WEEK; d++) {
           const date = new Date(monday);
@@ -522,7 +521,7 @@ export default function Overzicht() {
           const fNaam = feestdagMap.get(dStr);
           out.push({
             index: out.length,
-            pairs: [{ wnr, dag: d }],
+            pairs: [{ jaar: week.jaar, wnr, dag: d }],
             primaryLabel: DAG_LABELS[d],
             secondaryLabel: formatDate(date),
             groupLabel,
@@ -537,18 +536,17 @@ export default function Overzicht() {
       }
     } else if (scale === "kwartaal") {
       // Auto-fit weeks; group by month of the week's Monday
-      const wkCount = weeksInYear(jaar);
-      for (let i = 0; i < kwartaalWeeks; i++) {
-        const wnr = wrapWeek(((startWeek - 1 + i) % wkCount) + 1);
-        const monday = getMondayOfWeek(wnr, jaar);
+      for (const week of consecutiveIsoWeeks(jaar, startWeek, kwartaalWeeks)) {
+        const wnr = week.week_nr;
+        const monday = getMondayOfWeek(wnr, week.jaar);
         const monthIdx = monday.getMonth();
         const groupKey = `mo-${monday.getFullYear()}-${monthIdx}`;
         const groupLabel = `${NL_MONTHS_LONG[monthIdx]} ${monday.getFullYear()}`;
-        const pairs: Array<{ wnr: number; dag: number }> = [];
-        for (let d = 0; d < DAYS_PER_WEEK; d++) pairs.push({ wnr, dag: d });
+        const pairs: Array<{ jaar: number; wnr: number; dag: number }> = [];
+        for (let d = 0; d < DAYS_PER_WEEK; d++) pairs.push({ jaar: week.jaar, wnr, dag: d });
         // Last in group = next slot has different month
         // We'll patch isLastInGroup after the loop.
-        const isCurrentWeek = wnr === todayWeek && jaar === todayYear;
+        const isCurrentWeek = wnr === todayWeek && week.jaar === todayYear;
         out.push({
           index: out.length,
           pairs,
@@ -565,12 +563,12 @@ export default function Overzicht() {
       // jaar: 12 months
       for (let m = 0; m < 12; m++) {
         // Collect all (wnr, d) pairs whose Monday is in this month
-        const pairs: Array<{ wnr: number; dag: number }> = [];
+        const pairs: Array<{ jaar: number; wnr: number; dag: number }> = [];
         const wkCount = weeksInYear(jaar);
         for (let w = 1; w <= wkCount; w++) {
           const monday = getMondayOfWeek(w, jaar);
           if (monday.getMonth() === m && monday.getFullYear() === jaar) {
-            for (let d = 0; d < DAYS_PER_WEEK; d++) pairs.push({ wnr: w, dag: d });
+            for (let d = 0; d < DAYS_PER_WEEK; d++) pairs.push({ jaar, wnr: w, dag: d });
           }
         }
         const isCurrentMonth = jaar === todayYear && new Date().getMonth() === m;
@@ -609,17 +607,19 @@ export default function Overzicht() {
   }, [scale, viewportW]);
   const totalGridWidth = slots.length * cellW;
 
-  const visibleWeekNrSet = useMemo(() => {
-    const s = new Set<number>();
-    for (const sl of slots) for (const p of sl.pairs) s.add(p.wnr);
-    return s;
+  const visibleWeeks = useMemo(() => {
+    const weeks = new Map<string, { jaar: number; week_nr: number }>();
+    for (const sl of slots) for (const p of sl.pairs) {
+      weeks.set(`${p.jaar}-${p.wnr}`, { jaar: p.jaar, week_nr: p.wnr });
+    }
+    return weeks;
   }, [slots]);
 
   // dayKey -> slotIndex (for fast lookup of which column a (wnr,dag) belongs to)
   const dayKeyToSlot = useMemo(() => {
     const m = new Map<string, number>();
     for (const sl of slots) {
-      for (const p of sl.pairs) m.set(dayKey(p.wnr, p.dag), sl.index);
+      for (const p of sl.pairs) m.set(dayKey(p.jaar, p.wnr, p.dag), sl.index);
     }
     return m;
   }, [slots]);
@@ -757,12 +757,12 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
+      if (!visibleWeeks.has(`${w.jaar}-${w.week_nr}`)) continue;
       const act = activiteitById.get(c.activiteit_id);
       if (!act?.project_id) continue;
       const monteurIds = monteurIdsByCel.get(c.id) ?? [];
       if (!monteurIds.length) continue;
-      const k = dayKey(w.week_nr, c.dag_index);
+      const k = dayKey(w.jaar, w.week_nr, c.dag_index);
       for (const mid of monteurIds) {
         let byDay = m.get(mid);
         if (!byDay) { byDay = new Map(); m.set(mid, byDay); }
@@ -772,7 +772,7 @@ export default function Overzicht() {
       }
     }
     return m;
-  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeekNrSet, relevantCelIds, onHoldCelIds, jaar]);
+  }, [cellen, weekById, activiteitById, monteurIdsByCel, visibleWeeks, relevantCelIds, onHoldCelIds, jaar]);
 
   // dayKey → Set<monteurId> double-booked on that day
   // dayKey → monteurId → reden ("dubbel" | "verlof" | "vrije_dag")
@@ -797,10 +797,10 @@ export default function Overzicht() {
       const wd = mont?.werkdagen && mont.werkdagen.length ? mont.werkdagen : [1, 2, 3, 4, 5];
       for (const k of byDay.keys()) {
         // k = "weekNr-dagIndex"
-        const [wnrStr, dagStr] = k.split("-");
+        const [yearStr, wnrStr, dagStr] = k.split("-");
         const wnr = Number(wnrStr);
         const dag = Number(dagStr);
-        const monday = getMondayOfWeek(wnr, jaar);
+        const monday = getMondayOfWeek(wnr, Number(yearStr));
         const d = new Date(monday);
         d.setDate(monday.getDate() + dag);
         const y = d.getFullYear();
@@ -839,10 +839,10 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
+      if (!visibleWeeks.has(`${w.jaar}-${w.week_nr}`)) continue;
       const act = activiteitById.get(c.activiteit_id);
       if (!act?.project_id) continue;
-      const k = dayKey(w.week_nr, c.dag_index);
+      const k = dayKey(w.jaar, w.week_nr, c.dag_index);
       let byDay = m.get(act.project_id);
       if (!byDay) { byDay = new Map(); m.set(act.project_id, byDay); }
       let byAct = byDay.get(k);
@@ -850,7 +850,7 @@ export default function Overzicht() {
       byAct.set(c.activiteit_id, c);
     }
     return m;
-  }, [cellen, weekById, activiteitById, visibleWeekNrSet, jaar]);
+  }, [cellen, weekById, activiteitById, visibleWeeks, jaar]);
 
   // activiteit_id → dayKey → cel
   const activiteitDayCel = useMemo(() => {
@@ -859,14 +859,14 @@ export default function Overzicht() {
       if (!c.activiteit_id || !c.week_id || !c.kleur_code) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
-      const k = dayKey(w.week_nr, c.dag_index);
+      if (!visibleWeeks.has(`${w.jaar}-${w.week_nr}`)) continue;
+      const k = dayKey(w.jaar, w.week_nr, c.dag_index);
       let byDay = m.get(c.activiteit_id);
       if (!byDay) { byDay = new Map(); m.set(c.activiteit_id, byDay); }
       byDay.set(k, c);
     }
     return m;
-  }, [cellen, weekById, visibleWeekNrSet, jaar]);
+  }, [cellen, weekById, visibleWeeks, jaar]);
 
   const activiteitenByProject = useMemo(() => {
     const m = new Map<string, Activiteit[]>();
@@ -886,7 +886,7 @@ export default function Overzicht() {
     let max: Date | null = null;
     for (const s of slots) {
       for (const p of s.pairs) {
-        const monday = getMondayOfWeek(p.wnr, jaar);
+        const monday = getMondayOfWeek(p.wnr, p.jaar);
         const d = new Date(monday);
         d.setDate(monday.getDate() + p.dag);
         if (!min || d < min) min = d;
@@ -1074,8 +1074,8 @@ export default function Overzicht() {
       if (onHoldCelIds.has(c.id)) continue;
       const w = weekById.get(c.week_id);
       if (!w) continue;
-      if (w.jaar !== jaar || !visibleWeekNrSet.has(w.week_nr)) continue;
-      const k = dayKey(w.week_nr, c.dag_index);
+      if (!visibleWeeks.has(`${w.jaar}-${w.week_nr}`)) continue;
+      const k = dayKey(w.jaar, w.week_nr, c.dag_index);
       const si = dayKeyToSlot.get(k);
       if (si === undefined) continue;
       const act = activiteitById.get(c.activiteit_id);
@@ -1090,7 +1090,7 @@ export default function Overzicht() {
       s.add(si);
     }
     return m;
-  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot, visibleWeekNrSet, onHoldCelIds, jaar]);
+  }, [cellen, weekById, activiteitById, dayConflictMonteurs, monteurIdsByCel, dayKeyToSlot, visibleWeeks, onHoldCelIds, jaar]);
 
   // Team capaciteit % (planned monteur-days vs total possible monteur-days in visible range)
   // Excludes feestdagen consistently (both in possible and planned).
@@ -1100,8 +1100,8 @@ export default function Overzicht() {
     // Build the list of working days (MA-VR, excl. feestdagen) in the visible period
     const dates: string[] = [];
     if (scale === "maand" || scale === "kwartaal") {
-      for (const wnr of visibleWeekNrSet) {
-        const monday = getMondayOfWeek(wnr, jaar);
+      for (const week of visibleWeeks.values()) {
+        const monday = getMondayOfWeek(week.week_nr, week.jaar);
         for (let d = 0; d < 5; d++) {
           const date = new Date(monday);
           date.setDate(monday.getDate() + d);
@@ -1134,8 +1134,8 @@ export default function Overzicht() {
       if (onHoldCelIds.has(cel.id)) continue;
       const week = weekById.get(cel.week_id);
       if (!week) continue;
-      if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
-      const monday = getMondayOfWeek(week.week_nr, jaar);
+      if (!visibleWeeks.has(`${week.jaar}-${week.week_nr}`)) continue;
+      const monday = getMondayOfWeek(week.week_nr, week.jaar);
       const date = new Date(monday);
       date.setDate(monday.getDate() + cel.dag_index);
       const dk = dateKey(date);
@@ -1145,7 +1145,7 @@ export default function Overzicht() {
     }
 
     return Math.round((planned.size / totalPossible) * 100);
-  }, [monteurs, visibleWeekNrSet, scale, jaar, cellen, monteurIdsByCel, weekById, feestdagMap, onHoldCelIds]);
+  }, [monteurs, visibleWeeks, scale, jaar, cellen, monteurIdsByCel, weekById, feestdagMap, onHoldCelIds]);
 
   // Vrije dagen per monteur in zichtbare periode
   // (werkdagen exclusief feestdagen − dagen met inplanning op niet-feestdagen)
@@ -1153,13 +1153,13 @@ export default function Overzicht() {
     const map = new Map<string, number>();
     // Tel alle werkdagen (MA-VR) in zichtbare weken die geen feestdag zijn
     const workingDateKeys = new Set<string>();
-    for (const wnr of visibleWeekNrSet) {
-      const monday = getMondayOfWeek(wnr, jaar);
+    for (const week of visibleWeeks.values()) {
+      const monday = getMondayOfWeek(week.week_nr, week.jaar);
       for (let d = 0; d < 5; d++) {
         const date = new Date(monday);
         date.setDate(monday.getDate() + d);
         const dStr = dateKey(date);
-        if (!feestdagMap.has(dStr)) workingDateKeys.add(`${wnr}-${d}`);
+        if (!feestdagMap.has(dStr)) workingDateKeys.add(dayKey(week.jaar, week.week_nr, d));
       }
     }
     const totalDays = workingDateKeys.size;
@@ -1170,8 +1170,8 @@ export default function Overzicht() {
         if (onHoldCelIds.has(cel.id)) continue;
         const week = weekById.get(cel.week_id);
         if (!week) continue;
-        if (week.jaar !== jaar || !visibleWeekNrSet.has(week.week_nr)) continue;
-        const key = `${week.week_nr}-${cel.dag_index}`;
+        if (!visibleWeeks.has(`${week.jaar}-${week.week_nr}`)) continue;
+        const key = dayKey(week.jaar, week.week_nr, cel.dag_index);
         if (!workingDateKeys.has(key)) continue;
         const mids = monteurIdsByCel.get(cel.id) ?? [];
         if (mids.includes(m.id)) planned.add(key);
@@ -1179,7 +1179,7 @@ export default function Overzicht() {
       map.set(m.id, totalDays - planned.size);
     }
     return map;
-  }, [monteurs, visibleWeekNrSet, cellen, weekById, monteurIdsByCel, jaar, feestdagMap, onHoldCelIds]);
+  }, [monteurs, visibleWeeks, cellen, weekById, monteurIdsByCel, jaar, feestdagMap, onHoldCelIds]);
 
   const toggleExpand = (id: string) => {
     setExpandedProjects((prev) => {
@@ -1516,12 +1516,12 @@ export default function Overzicht() {
     for (const c of cellen) {
       const w = c.week_id ? weekById.get(c.week_id) : undefined;
       if (!w) continue;
-      if (w.jaar !== jaar || (visibleWeekNrSet.size && !visibleWeekNrSet.has(w.week_nr))) continue;
+      if (!visibleWeeks.has(`${w.jaar}-${w.week_nr}`)) continue;
       const act = c.activiteit_id ? activiteitById.get(c.activiteit_id) : undefined;
       if (!act || !act.project_id) continue;
       const mids = monteurIdsByCel.get(c.id) ?? [];
       if (!mids.length) continue;
-      const monday = getMondayOfWeek(w.week_nr, jaar);
+      const monday = getMondayOfWeek(w.week_nr, w.jaar);
       const d = new Date(monday);
       d.setDate(monday.getDate() + c.dag_index);
       const y = d.getFullYear();
@@ -1580,7 +1580,7 @@ export default function Overzicht() {
     activiteitById,
     projectById,
     monteurs,
-    visibleWeekNrSet,
+    visibleWeeks,
     jaar,
   ]);
 
@@ -1659,14 +1659,11 @@ export default function Overzicht() {
   // ====== Navigator label & shift ======
   const navigatorLabel = useMemo(() => {
     if (scale === "maand") {
-      const wkCount = weeksInYear(jaar);
       const firstWnr = startWeek;
-      const lastWnr = wrapWeek(((startWeek - 1 + (weeksToShow - 1)) % wkCount) + 1);
+      const lastWeek = addIsoWeeks(jaar, startWeek, weeksToShow - 1);
+      const lastWnr = lastWeek.week_nr;
       const firstMonday = getMondayOfWeek(firstWnr, jaar);
-      // For the last week we may have wrapped into next year
-      const lastWeekWrapped = startWeek + weeksToShow - 1 > wkCount;
-      const lastYear = lastWeekWrapped ? jaar + 1 : jaar;
-      const lastMonday = getMondayOfWeek(lastWnr, lastYear);
+      const lastMonday = getMondayOfWeek(lastWnr, lastWeek.jaar);
 
       const fM = firstMonday.getMonth();
       const fY = firstMonday.getFullYear();
@@ -2543,7 +2540,7 @@ export default function Overzicht() {
                     key={m.id}
                     monteur={m}
                     collapsed={sidebarCollapsed}
-                    vrijeDagen={monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5}
+                    vrijeDagen={monteurVrijeDagen.get(m.id) ?? visibleWeeks.size * 5}
                   />
                 ))}
               </div>
@@ -2590,7 +2587,7 @@ export default function Overzicht() {
                     key={m.id}
                     monteur={m}
                     collapsed={sidebarCollapsed}
-                    vrijeDagen={monteurVrijeDagen.get(m.id) ?? visibleWeekNrSet.size * 5}
+                    vrijeDagen={monteurVrijeDagen.get(m.id) ?? visibleWeeks.size * 5}
                   />
                 ))}
               </div>
@@ -3359,7 +3356,7 @@ export default function Overzicht() {
                         const dayMap = activiteitDayCel.get(a.id);
                         const hasData = !!dayMap && slots.some((sl) => {
                           for (const p2 of sl.pairs) {
-                            if (dayMap.has(dayKey(p2.wnr, p2.dag))) return true;
+                            if (dayMap.has(dayKey(p2.jaar, p2.wnr, p2.dag))) return true;
                           }
                           return false;
                         });
@@ -3838,12 +3835,12 @@ function ActiviteitCellsRow({
         const conflictReasonsByMid = new Map<string, "dubbel" | "verlof" | "vrije_dag">();
 
         for (const p of s.pairs) {
-          const cel = dayCelMap?.get(dayKey(p.wnr, p.dag));
+          const cel = dayCelMap?.get(dayKey(p.jaar, p.wnr, p.dag));
           if (!cel) continue;
           if (cel.kleur_code && !firstColorHex) firstColorHex = colorHexFor(cel.kleur_code);
           const mids = monteurIdsByCel.get(cel.id) ?? [];
           for (const mid of mids) aggMonteurIds.add(mid);
-          const reasons = dayConflictReasons.get(dayKey(p.wnr, p.dag));
+          const reasons = dayConflictReasons.get(dayKey(p.jaar, p.wnr, p.dag));
           if (reasons) {
             for (const mid of mids) {
               const r = reasons.get(mid);

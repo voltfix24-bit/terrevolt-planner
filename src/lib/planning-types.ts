@@ -59,6 +59,11 @@ export function addIsoWeeks(
   return isoWeekPartsOf(m);
 }
 
+/** Consecutive ISO weeks retain their own year across 52/53 → 1. */
+export function consecutiveIsoWeeks(jaar: number, weekNr: number, count: number): { jaar: number; week_nr: number }[] {
+  return Array.from({ length: count }, (_, offset) => addIsoWeeks(jaar, weekNr, offset));
+}
+
 /** Verschil in ISO-weken tussen twee (jaar, week_nr) tupels. */
 export function weekDeltaIso(
   fromJaar: number,
