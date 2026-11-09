@@ -56,8 +56,11 @@ const fmtDate = (iso: string | null | undefined): string => {
   return d.toLocaleDateString("nl-NL", { year: "numeric", month: "short", day: "numeric" });
 };
 
-const fmtShortDate = (d: Date): string =>
-  d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+const fmtShortDateIso = (iso: string | null | undefined): string => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}-${m}-${y}` : iso;
+};
 
 const fmtDay = (d: Date): string => String(d.getUTCDate()).padStart(2, "0");
 
@@ -84,26 +87,7 @@ function isoWeekDates(weekKey: string): Date[] | null {
   });
 }
 
-function isoWeekLabel(weekKey: string): { badge: string; range: string; dayHeaders: string[] } {
-  const dates = isoWeekDates(weekKey);
-  if (!dates) {
-    return {
-      badge: weekKey,
-      range: weekKey,
-      dayHeaders: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
-    };
-  }
-  const shortWeek = weekKey.replace(/^\d{4}-W/, "Week ");
-  return {
-    badge: shortWeek,
-    range: `${fmtShortDate(dates[0])} t/m ${fmtShortDate(dates[6])}`,
-    dayHeaders: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"].map(
-      (label, index) => `${label} (${fmtDay(dates[index])})`,
-    ),
-  };
-}
-
-export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void {
+export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): string {
   const { dienstverband, project, periodeVan, periodeTot, rows } = input;
   const preparedBy = input.preparedBy ?? "TerreVolt Planner";
   const titel = "Mandagenregister";
@@ -122,7 +106,6 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
     ? ["Naam zelfstandige", "Status", "KvK-nummer"]
     : ["Naam", "BSN", "Geboortedatum", "ID-type", "ID-nummer", "ID geldig tot"];
   const trailingHeader = ["Totaal", "Opmerking"];
-  const columnCount = baseHeader.length + 7 + trailingHeader.length;
 
   const renderRow = (r: WeekRow): string => {
     if (dienstverband === "zzp") {
@@ -148,28 +131,39 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
     </tr>`;
   };
 
+  const dayNames = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+  const headers = [...baseHeader, ...dayNames, ...trailingHeader];
+  const headRow = `<tr>${headers.map((h, i) => {
+    const isDay = i >= baseHeader.length && i < baseHeader.length + 7;
+    const cls = isDay ? "c" : i === baseHeader.length + 7 ? "r" : "";
+    return `<th class="${cls}">${escHtml(h)}</th>`;
+  }).join("")}</tr>`;
+
   const weekSections = sortedRows.length === 0
-    ? `<section class="week-section"><table><tbody><tr><td colspan="${columnCount}" class="empty">Geen geplande monteurs in deze periode.</td></tr></tbody></table></section>`
+    ? `<p class="empty">Geen geplande monteurs in deze periode.</p>`
     : Object.entries(rowsByWeek).map(([week, weekRows]) => {
-        const labels = isoWeekLabel(week);
+        const dates = isoWeekDates(week);
+        const m = week.match(/^(\d{4})-W(\d{2})$/);
+        const weekTitle = m ? `Week ${Number(m[2])}, ${m[1]}` : week;
         const dayTotals = Array.from({ length: 7 }, (_, index) =>
           weekRows.reduce((sum, row) => sum + (Number(row.days[index]) || 0), 0),
         );
         const weekTotal = weekRows.reduce((sum, r) => sum + (r.total || 0), 0);
-        const headers = [...baseHeader, ...labels.dayHeaders, ...trailingHeader];
+        const dateCells = Array.from({ length: 7 }, (_, i) =>
+          `<td class="c">${dates ? `${fmtDay(dates[i])}-${String(dates[i].getUTCMonth() + 1).padStart(2, "0")}` : ""}</td>`,
+        ).join("");
         return `<section class="week-section">
-          <div class="week-heading">
-            <span class="week-badge">${escHtml(labels.badge)}</span>
-            <span class="week-range">Weekoverzicht: ${escHtml(labels.range)}</span>
-          </div>
           <table aria-label="${escHtml(titel)} ${escHtml(week)}">
-            <thead><tr>${headers.map((h, index) => `<th class="${index === headers.length - 2 ? "total-head" : ""}">${escHtml(h)}</th>`).join("")}</tr></thead>
-            <tbody>${weekRows.map(renderRow).join("")}</tbody>
+            <thead>${headRow}</thead>
+            <tbody>
+              <tr class="week-row"><td colspan="${baseHeader.length}">${escHtml(weekTitle)}</td>${dateCells}<td></td><td></td></tr>
+              ${weekRows.map(renderRow).join("")}
+            </tbody>
             <tfoot>
               <tr>
-                <td colspan="${baseHeader.length}" class="daily-label">Dagtotaal</td>
-                ${dayTotals.map((u) => `<td class="daily-total">${escHtml(fmtTotalUren(u))}</td>`).join("")}
-                <td class="grand-total">${escHtml(fmtTotalUren(weekTotal))}</td>
+                <td colspan="${baseHeader.length}">Totaal</td>
+                ${dayTotals.map((u) => `<td class="c">${escHtml(fmtTotalUren(u))}</td>`).join("")}
+                <td class="r">${escHtml(fmtTotalUren(weekTotal))}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -180,302 +174,76 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   const totalAll = sortedRows.reduce((sum, r) => sum + (r.total || 0), 0);
   const monteurCount = new Set(sortedRows.map((r) => r.monteur_id)).size;
   const weekKeys = Object.keys(rowsByWeek);
+  const dvLabel = dienstverband === "zzp" ? "ZZP (zelfstandigen)" : "Loondienst";
 
-  const html = `<!doctype html>
+  return `<!doctype html>
 <html lang="nl">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escHtml(titel)} - ${escHtml(projectLabel || "Project")}</title>
 <style>
-  :root {
-    --accent: #10b981;
-    --accent-dark: #064e3b;
-    --accent-soft: #d1fae5;
-    --ink: #111827;
-    --muted: #64748b;
-    --line: #d9e2e8;
-    --soft: #f3f6f7;
-    --summary: #111827;
-  }
-
-  @page { size: A4 landscape; margin: 12mm; }
-
+  @page { size: A4 landscape; margin: 14mm 16mm; }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0;
-    padding: 0;
-    min-height: 100%;
-    background: #ffffff !important;
-    color: var(--ink) !important;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 10.5px;
-    line-height: 1.35;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    margin: 0; padding: 0; background: #ffffff !important; color: #111111 !important;
+    font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+    font-size: 10px; line-height: 1.4;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
+  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-bottom: 1px solid #e5e5e5; background: #ffffff; }
+  .toolbar button { border: 0; border-radius: 4px; background: #111111; color: #ffffff;
+    padding: 7px 14px; font-weight: 700; cursor: pointer; }
+  .toolbar span { color: #666666; font-size: 12px; }
+  .print-root { padding: 24px 28px; max-width: 1200px; margin: 0 auto; }
 
-  .toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-bottom: 1px solid #e2e8f0;
-    background: #ffffff;
-  }
-  .toolbar button {
-    border: 0;
-    border-radius: 5px;
-    background: var(--accent);
-    color: #ffffff;
-    padding: 7px 14px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .toolbar span { color: var(--muted); font-size: 12px; }
+  .doc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .doc-top h1 { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.01em; }
+  .doc-top .logo { display: flex; align-items: center; gap: 10px; }
+  .doc-top .logo img { height: 46px; width: auto; object-fit: contain; display: block; }
+  .doc-top .logo strong { font-size: 16px; letter-spacing: 0.04em; display: block; }
+  .doc-top .logo small { color: #666666; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; }
 
-  .print-root {
-    display: block;
-    width: 100%;
-    padding: 0;
-    background: #ffffff;
-    color: var(--ink);
-  }
+  .parties { display: grid; grid-template-columns: 1fr auto 1fr; gap: 40px; margin-bottom: 24px; }
+  .parties .right { text-align: right; }
+  .parties b { display: block; font-weight: 700; }
+  .parties .muted { color: #555555; }
 
-  .doc-header {
-    display: grid;
-    grid-template-columns: 260px 1fr 230px;
-    gap: 18px;
-    align-items: start;
-    padding-bottom: 16px;
-    margin-bottom: 24px;
-    border-bottom: 2px solid var(--accent);
-  }
-  .brand { display: flex; gap: 10px; align-items: center; }
-  .logo {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--accent-soft) !important;
-  }
-  .logo img {
-    width: 29px;
-    height: 29px;
-    object-fit: contain;
-    display: block;
-  }
-  .brand-name {
-    font-size: 14px;
-    font-weight: 800;
-    color: var(--accent-dark);
-  }
-  .brand-sub {
-    margin-top: 2px;
-    color: var(--muted);
-    font-size: 10.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-  .doc-title { text-align: center; }
-  .doc-title h1 {
-    margin: 0;
-    font-size: 20px;
-    line-height: 1.1;
-    color: var(--ink);
-  }
-  .doc-title div { margin-top: 4px; color: var(--muted); }
-  .doc-meta { text-align: right; color: var(--muted); font-size: 10px; }
-  .doc-meta b { color: var(--ink); }
+  .meta { display: grid; grid-template-columns: 110px 150px; gap: 2px 0; align-content: start; }
+  .meta span:nth-child(odd) { color: #333333; }
 
-  .project-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 7px 20px;
-    margin-bottom: 24px;
-    padding: 14px 16px;
-    border-radius: 7px;
-    background: var(--soft) !important;
-  }
-  .label {
-    color: #4b5563;
-    font-size: 8.5px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .value { margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--ink); }
-
-  .week-section {
-    margin-top: 22px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  .week-heading {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-bottom: 8px;
-  }
-  .week-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: 22px;
-    border-radius: 4px;
-    background: var(--accent) !important;
-    color: #ffffff;
-    padding: 4px 10px;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-  .week-range {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: auto;
-  }
+  h2 { font-size: 13px; font-weight: 700; margin: 0 0 8px; }
+  .week-section { margin-bottom: 20px; break-inside: avoid; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; }
   thead { display: table-header-group; }
   tr { break-inside: avoid; page-break-inside: avoid; }
-  th, td {
-    border: 0.5px solid var(--line);
-    padding: 6px 7px;
-    vertical-align: middle;
-  }
-  th {
-    background: #f3f6f7 !important;
-    color: var(--ink);
-    font-size: 9px;
-    font-weight: 800;
-    text-align: left;
-  }
-  th:not(:first-child), td.uren, td.daily-total { text-align: center; }
-  th.total-head {
-    background: #e8f8f0 !important;
-    color: var(--accent-dark);
-  }
-  td.naam { font-weight: 800; min-width: 135px; }
-  td.status { text-align: center; color: var(--accent-dark); font-weight: 900; }
-  td.mono { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  td.uren { min-width: 27px; font-variant-numeric: tabular-nums; }
-  td.totaal { text-align: right; font-weight: 900; background: #fafafa !important; }
-  td.opmerking { color: #475569; font-size: 9px; }
-  td.empty { padding: 22px; text-align: center; color: var(--muted); font-style: italic; }
-  tfoot td {
-    background: #eef2f3 !important;
-    font-weight: 900;
-  }
-  .daily-label { color: var(--ink); }
-  .grand-total {
-    background: var(--accent) !important;
-    color: #ffffff;
-    text-align: right;
-  }
+  th, td { padding: 4px 6px; text-align: left; vertical-align: top; border: 0; }
+  th { font-weight: 600; border-top: 1px solid #111111; border-bottom: 1px solid #111111; }
+  .c { text-align: center; }
+  .r { text-align: right; }
+  .week-row td { font-weight: 700; border-bottom: 1px solid #cccccc; }
+  tbody tr:not(.week-row) td { border-bottom: 1px solid #eeeeee; }
+  td.uren { text-align: center; font-variant-numeric: tabular-nums; }
+  td.totaal { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  td.status { text-align: center; }
+  td.mono { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.opmerking { color: #555555; font-size: 9px; }
+  tfoot td { font-weight: 700; border-top: 1px solid #111111; border-bottom: 1px solid #111111; font-variant-numeric: tabular-nums; }
+  .empty { color: #666666; font-style: italic; }
 
-  .bottom-row {
-    display: grid;
-    grid-template-columns: 1fr 330px;
-    gap: 24px;
-    align-items: end;
-    margin-top: 26px;
-  }
-  .prepared {
-    padding-top: 8px;
-    border-top: 1px solid #cbd5e1;
-    color: var(--muted);
-    font-size: 9.5px;
-  }
-  .prepared b { color: var(--ink); }
-  .summary-card {
-    border-radius: 8px;
-    background: var(--summary) !important;
-    color: #ffffff;
-    padding: 16px 18px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  .summary-title {
-    padding-bottom: 7px;
-    border-bottom: 1px solid rgb(255 255 255 / 0.18);
-    color: #e5e7eb;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-  .summary-grid {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px 12px;
-    margin-top: 12px;
-  }
-  .summary-grid span:nth-child(odd) { color: #cbd5e1; }
-  .summary-grid span:nth-child(even) { font-weight: 900; text-align: right; }
-  .summary-total {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 1px solid rgb(255 255 255 / 0.18);
-  }
-  .summary-total b:first-child {
-    color: var(--accent);
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .summary-total b:last-child { font-size: 20px; }
+  .grand { display: flex; justify-content: flex-end; gap: 28px; border-top: 1px solid #111111;
+    padding-top: 10px; margin-top: 8px; font-size: 13px; }
+  .grand span { color: #444444; font-size: 10px; align-self: center; }
+  .grand b { font-weight: 700; }
 
-  .footer {
-    margin-top: 14px;
-    padding-top: 7px;
-    border-top: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    color: var(--muted);
-    font-size: 8.8px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
+  .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 34px; break-inside: avoid; }
+  .sign div { border-top: 1px solid #111111; padding-top: 6px; color: #444444; }
+  .sign b { color: #111111; }
 
   @media print {
-    html, body {
-      width: auto !important;
-      min-height: auto !important;
-      overflow: visible !important;
-      background: #ffffff !important;
-      color: var(--ink) !important;
-    }
     .toolbar { display: none !important; }
-    .print-root {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    .doc-header,
-    .project-grid,
-    .week-section,
-    table,
-    .bottom-row,
-    .prepared,
-    .summary-card,
-    .footer {
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
+    .print-root { padding: 0; max-width: none; }
   }
 </style>
 </head>
@@ -486,55 +254,50 @@ export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void
   </div>
 
   <main class="print-root">
-    <header class="doc-header">
-      <div class="brand">
-        <div class="logo"><img src="${TERREVOLT_ICON_DATA_URI}" alt="TerreVolt" /></div>
-        <div>
-          <div class="brand-name">TerreVolt</div>
-          <div class="brand-sub">Mandagenregister</div>
-        </div>
-      </div>
-      <div class="doc-title">
-        <h1>${escHtml(titel)}</h1>
-        <div>${escHtml(projectLabel || "Project")}</div>
-      </div>
-      <div class="doc-meta">
-        <div><b>Periode:</b> ${escHtml(fmtDate(periodeVan))} - ${escHtml(fmtDate(periodeTot))}</div>
+    <header class="doc-top">
+      <h1>${escHtml(titel)}</h1>
+      <div class="logo">
+        <img class="brand-logo" src="${TERREVOLT_ICON_DATA_URI}" alt="TerreVolt" />
+        <div><strong>TERREVOLT</strong><small>Projectplanning</small></div>
       </div>
     </header>
 
-    <section class="project-grid">
-      <div><div class="label">Projectnummer</div><div class="value">${escHtml(project.case_nummer ?? "-")}</div></div>
-      <div><div class="label">Projectnaam</div><div class="value">${escHtml(project.station_naam ?? "-")}</div></div>
-      <div><div class="label">Locatie</div><div class="value">${escHtml(project.locatie ?? "-")}</div></div>
-      <div><div class="label">Hoofdaannemer / opdrachtgever</div><div class="value">${escHtml(project.opdrachtgever ?? "-")}</div></div>
+    <section class="parties">
+      <div>
+        <b>${escHtml(project.opdrachtgever ?? "-")}</b>
+        <span class="muted">Hoofdaannemer / opdrachtgever</span>
+        <b style="margin-top:12px">${escHtml(projectLabel || "Project")}</b>
+        <span class="muted">${escHtml(project.locatie ?? "")}</span>
+      </div>
+      <div class="meta">
+        <span>Projectnummer</span><span>${escHtml(project.case_nummer ?? "-")}</span>
+        <span>Begindatum</span><span>${escHtml(fmtShortDateIso(periodeVan))}</span>
+        <span>Einddatum</span><span>${escHtml(fmtShortDateIso(periodeTot))}</span>
+        <span>Dienstverband</span><span>${escHtml(dvLabel)}</span>
+        <span>Monteurs · weken</span><span>${monteurCount} · ${weekKeys.length}</span>
+      </div>
+      <div class="right">
+        <b>TerreVolt</b>
+        <span class="muted">Opgesteld door ${escHtml(preparedBy)}</span>
+      </div>
     </section>
 
+    <h2>Uren</h2>
     ${weekSections}
 
-    <div class="bottom-row">
-      <div class="prepared">
-        Opgesteld door <b>${escHtml(preparedBy)}</b>.
-      </div>
-      <aside class="summary-card">
-        <div class="summary-title">Registersamenvatting</div>
-        <div class="summary-grid">
-          <span>Monteurs</span><span>${monteurCount}</span>
-          <span>Weken</span><span>${weekKeys.length}</span>
-          <span>Weekregels</span><span>${sortedRows.length}</span>
-          <div class="summary-total"><b>Totaal uren</b><b>${escHtml(fmtTotalUren(totalAll))}</b></div>
-        </div>
-      </aside>
-    </div>
+    <div class="grand"><span>Totaal uren</span><b>${escHtml(fmtTotalUren(totalAll))}</b></div>
 
-    <footer class="footer">
-      <div>TerreVolt Planner · ${escHtml(titel)}</div>
-      <div>${escHtml(projectLabel || "Project")}</div>
-    </footer>
+    <section class="sign">
+      <div>Voor akkoord TerreVolt<br /><b>&nbsp;</b></div>
+      <div>Voor akkoord opdrachtgever<br /><b>&nbsp;</b></div>
+    </section>
   </main>
 </body>
 </html>`;
+}
 
+export function exportMandagenregisterPDF(input: MandagenregisterPdfInput): void {
+  const html = buildMandagenregisterHtml(input);
   const w = window.open("", "_blank");
   if (!w) {
     throw new Error("Pop-up werd geblokkeerd. Sta pop-ups toe en probeer opnieuw.");
