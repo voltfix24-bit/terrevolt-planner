@@ -238,9 +238,6 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
   .grand span { color: #444444; font-size: 10px; align-self: center; }
   .grand b { font-weight: 700; }
 
-  .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 34px; break-inside: avoid; }
-  .sign div { border-top: 1px solid #111111; padding-top: 6px; color: #444444; }
-  .sign b { color: #111111; }
 
   @media print {
     .toolbar { display: none !important; }
@@ -293,10 +290,6 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
 
     <div class="grand"><span>Totaal uren</span><b>${escHtml(fmtTotalUren(totalAll))}</b></div>
 
-    <section class="sign">
-      <div>Voor akkoord TerreVolt B.V.<br /><b>&nbsp;</b></div>
-      <div>Voor akkoord opdrachtgever<br /><b>&nbsp;</b></div>
-    </section>
   </main>
 </body>
 </html>`;
