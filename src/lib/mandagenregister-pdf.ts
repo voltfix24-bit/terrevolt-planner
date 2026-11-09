@@ -38,6 +38,7 @@ export interface MandagenregisterPdfInput {
   periodeTot: string;
   rows: WeekRow[];
   preparedBy?: string;
+  titel?: string;
 }
 
 const escHtml = (s: string | null | undefined): string =>
@@ -90,7 +91,7 @@ function isoWeekDates(weekKey: string): Date[] | null {
 export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): string {
   const { dienstverband, project, periodeVan, periodeTot, rows } = input;
   const preparedBy = input.preparedBy ?? "TerreVolt Planner";
-  const titel = "Mandagenregister";
+  const titel = input.titel ?? "Mandagenregister";
   const projectLabel = [project.case_nummer, project.station_naam].filter(Boolean).join(" - ");
 
   const sortedRows = [...rows].sort(

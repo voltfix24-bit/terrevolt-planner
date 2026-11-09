@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { exportMandagenregisterPDF } from "@/lib/mandagenregister-pdf";
+import { filterRegisterRows, type RegisterSoort } from "@/lib/mandagen-register-soort";
 import { logTechnicalError, toUserFacingError } from "@/lib/user-facing-error";
 
 type Dienstverband = "loondienst" | "zzp";
@@ -122,7 +123,9 @@ export function MandagenregisterPanel({
   const [tot, setTot] = useState<string>(() => defaultTot || fmt(isoSundayOfWeek(today)));
   const [userTouchedRange, setUserTouchedRange] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [allRows, setRows] = useState<Row[]>([]);
+  const [soort, setSoort] = useState<RegisterSoort>("project");
+  const rows = useMemo(() => filterRegisterRows(allRows, soort), [allRows, soort]);
   const [allowIncomplete, setAllowIncomplete] = useState(false);
   const [logs, setLogs] = useState<ExportLog[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -240,7 +243,7 @@ export function MandagenregisterPanel({
       toast.error(toUserFacingError(error, "Kon uren niet opslaan"));
       return;
     }
-    setRows((rs) =>
+    setRows((rs: Row[]) =>
       rs.map((r) =>
         r.monteur_id === row.monteur_id && r.datum === row.datum
           ? { ...r, uren, status: "gecontroleerd" }
@@ -377,7 +380,7 @@ export function MandagenregisterPanel({
       toast.error("Er ontbreken nog gegevens — corrigeer of vink override aan");
       return null;
     }
-    const baseSlug = (projectLabel || projectId).replace(/[^\w-]+/g, "_").slice(0, 40);
+    const baseSlug = (projectLabel || projectId).replace(/[^\w-]+/g, "_").slice(0, 40) + (soort === "aarding" ? "_aarding" : "");
     return { ok: true, filtered, baseSlug };
   }
 
@@ -465,6 +468,7 @@ export function MandagenregisterPanel({
     try {
       exportMandagenregisterPDF({
         dienstverband: d,
+        titel: soort === "aarding" ? "Mandagenregister aarding" : undefined,
         project: projectMeta,
         periodeVan: van,
         periodeTot: tot,
@@ -524,9 +528,22 @@ export function MandagenregisterPanel({
             Volledige planning
           </Button>
         )}
+        <div className="flex h-9 overflow-hidden rounded-md border border-fg/15" role="group" aria-label="Soort register">
+          {(["project", "aarding"] as RegisterSoort[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={soort === k}
+              onClick={() => setSoort(k)}
+              className={`px-3 text-xs font-semibold ${soort === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-fg/[0.04]"}`}
+            >
+              {k === "project" ? "Project" : "Aarding"}
+            </button>
+          ))}
+        </div>
         <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <CalendarDays className="h-3.5 w-3.5" />
-          {hasRows ? `${rows.length} regels` : "Geen data geladen"}
+          {hasRows ? `${rows.length} regels` : allRows.length > 0 ? (soort === "aarding" ? "Geen aardingsdagen in deze periode" : "Alleen aardingsdagen in deze periode") : "Geen data geladen"}
         </div>
       </div>
 
