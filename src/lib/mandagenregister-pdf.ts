@@ -34,6 +34,13 @@ export function opdrachtgeverBlockLines(naam: string | null, g?: OpdrachtgeverGe
   return { titel, regels };
 }
 
+/** "2026-W44","2026-W45" → "Week 44, 45" */
+export function weekNumbersLabel(keys: string[]): string {
+  const nrs = [...new Set(keys)].sort().map((k) => String(Number(k.split("-W")[1] ?? k)));
+  if (nrs.length === 0) return "-";
+  return `${nrs.length === 1 ? "Week" : "Weken"} ${nrs.join(", ")}`;
+}
+
 export interface WeekRow {
   monteur_id: string;
   naam: string;
@@ -225,6 +232,7 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
   .doc-top .logo small { color: #666666; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; }
 
   .parties { display: grid; grid-template-columns: 1fr auto 1fr; gap: 40px; margin-bottom: 24px; }
+  .project-line { font-size: 15px; font-weight: 700; margin-top: 4px; }
   .parties .right { text-align: right; }
   .parties b { display: block; font-weight: 700; }
   .parties .muted { color: #555555; }
@@ -271,7 +279,10 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
 
   <main class="print-root">
     <header class="doc-top">
-      <h1>${escHtml(titel)}</h1>
+      <div>
+        <h1>${escHtml(titel)}</h1>
+        <div class="project-line">Project ${escHtml(projectLabel || "-")}</div>
+      </div>
       <div class="logo">
         <img class="brand-logo" src="${TERREVOLT_ICON_DATA_URI}" alt="TerreVolt" />
         <div><strong>TERREVOLT</strong><small>Projectplanning</small></div>
@@ -282,7 +293,8 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
       <div>
         ${(() => { const og = opdrachtgeverBlockLines(project.opdrachtgever, project.opdrachtgeverGegevens); return `<b>${escHtml(og.titel)}</b>${og.regels.map((r) => `<span>${escHtml(r)}</span>`).join("")}`; })()}
         <span class="muted">Hoofdaannemer / opdrachtgever</span>
-        <b style="margin-top:12px">${escHtml(projectLabel || "Project")}</b>
+        <span class="muted" style="margin-top:12px;display:block">Project</span>
+        <b>${escHtml(projectLabel || "-")}</b>
         <span class="muted">${escHtml(project.locatie ?? "")}</span>
       </div>
       <div class="meta">
@@ -290,7 +302,8 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
         <span>Begindatum</span><span>${escHtml(fmtShortDateIso(periodeVan))}</span>
         <span>Einddatum</span><span>${escHtml(fmtShortDateIso(periodeTot))}</span>
         <span>Dienstverband</span><span>${escHtml(dvLabel)}</span>
-        <span>Monteurs · weken</span><span>${monteurCount} · ${weekKeys.length}</span>
+        <span>Monteurs</span><span>${monteurCount}</span>
+        <span>Weken</span><span>${escHtml(weekNumbersLabel(weekKeys))}</span>
       </div>
       <div class="right">
         <b>TerreVolt B.V.</b>

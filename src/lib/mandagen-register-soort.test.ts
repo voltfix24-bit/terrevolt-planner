@@ -25,3 +25,11 @@ describe("opdrachtgeverBlockLines", () => {
     expect(opdrachtgeverBlockLines("Enexis", null)).toEqual({ titel: "Enexis", regels: [] });
   });
 });
+
+import { weekNumbersLabel } from "./mandagenregister-pdf";
+describe("weekNumbersLabel", () => {
+  it("toont weeknummers gesorteerd", () => {
+    expect(weekNumbersLabel(["2026-W45", "2026-W44"])).toBe("Weken 44, 45");
+    expect(weekNumbersLabel(["2026-W07"])).toBe("Week 7");
+  });
+});
