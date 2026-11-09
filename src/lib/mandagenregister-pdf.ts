@@ -277,8 +277,13 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
         <span>Monteurs · weken</span><span>${monteurCount} · ${weekKeys.length}</span>
       </div>
       <div class="right">
-        <b>TerreVolt</b>
-        <span class="muted">Opgesteld door ${escHtml(preparedBy)}</span>
+        <b>TerreVolt B.V.</b>
+        <span>Overvliet 97</span><br />
+        <span>3545 NH Utrecht</span><br />
+        <span>info@terrevolt.nl</span><br />
+        <span>KvK: 98495976</span><br />
+        <span>BTW: NL868519522B01</span><br />
+        <span class="muted" style="display:inline-block;margin-top:6px">Opgesteld door ${escHtml(preparedBy)}</span>
       </div>
     </section>
 
@@ -288,7 +293,7 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
     <div class="grand"><span>Totaal uren</span><b>${escHtml(fmtTotalUren(totalAll))}</b></div>
 
     <section class="sign">
-      <div>Voor akkoord TerreVolt<br /><b>&nbsp;</b></div>
+      <div>Voor akkoord TerreVolt B.V.<br /><b>&nbsp;</b></div>
       <div>Voor akkoord opdrachtgever<br /><b>&nbsp;</b></div>
     </section>
   </main>
