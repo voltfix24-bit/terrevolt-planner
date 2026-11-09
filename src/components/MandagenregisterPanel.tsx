@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { exportMandagenregisterPDF } from "@/lib/mandagenregister-pdf";
+import { exportMandagenregisterPDF, type OpdrachtgeverGegevens } from "@/lib/mandagenregister-pdf";
 import { filterRegisterRows, type RegisterSoort } from "@/lib/mandagen-register-soort";
 import { logTechnicalError, toUserFacingError } from "@/lib/user-facing-error";
 
@@ -134,7 +134,23 @@ export function MandagenregisterPanel({
     station_naam: string | null;
     locatie: string | null;
     opdrachtgever: string | null;
+    opdrachtgeverGegevens?: OpdrachtgeverGegevens | null;
   }>({ case_nummer: null, station_naam: null, locatie: null, opdrachtgever: null });
+  const [ogId, setOgId] = useState<string | null>(null);
+  const [ogForm, setOgForm] = useState<OpdrachtgeverGegevens>({ bedrijfsnaam: "", adres: "", postcode_plaats: "", telefoon: "", email: "", website: "" });
+  const [ogOpen, setOgOpen] = useState(false);
+  const [ogSaving, setOgSaving] = useState(false);
+  const saveOg = async () => {
+    if (!ogId) return;
+    setOgSaving(true);
+    const clean = Object.fromEntries(Object.entries(ogForm).map(([k, v]) => [k, (v ?? "").trim() || null])) as unknown as OpdrachtgeverGegevens;
+    const { error } = await supabase.from("opdrachtgevers").update(clean).eq("id", ogId);
+    setOgSaving(false);
+    if (error) { toast.error("Gegevens opdrachtgever niet opgeslagen"); return; }
+    setProjectMeta((m) => ({ ...m, opdrachtgeverGegevens: clean }));
+    toast.success("Gegevens opdrachtgever opgeslagen");
+    setOgOpen(false);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -147,13 +163,21 @@ export function MandagenregisterPanel({
         .maybeSingle();
       if (cancelled || !data) return;
       let opdrachtgeverNaam: string | null = null;
+      let gegevens: OpdrachtgeverGegevens | null = null;
       if (data.opdrachtgever_id) {
         const { data: og } = await supabase
           .from("opdrachtgevers")
-          .select("naam")
+          .select("naam, bedrijfsnaam, adres, postcode_plaats, telefoon, email, website")
           .eq("id", data.opdrachtgever_id)
           .maybeSingle();
         opdrachtgeverNaam = og?.naam ?? null;
+        if (og) {
+          gegevens = { bedrijfsnaam: og.bedrijfsnaam, adres: og.adres, postcode_plaats: og.postcode_plaats, telefoon: og.telefoon, email: og.email, website: og.website };
+          if (!cancelled) {
+            setOgId(data.opdrachtgever_id);
+            setOgForm({ bedrijfsnaam: og.bedrijfsnaam ?? "", adres: og.adres ?? "", postcode_plaats: og.postcode_plaats ?? "", telefoon: og.telefoon ?? "", email: og.email ?? "", website: og.website ?? "" });
+          }
+        }
       }
       if (cancelled) return;
       setProjectMeta({
@@ -161,6 +185,7 @@ export function MandagenregisterPanel({
         station_naam: data.station_naam ?? null,
         locatie: data.locatie ?? null,
         opdrachtgever: opdrachtgeverNaam,
+        opdrachtgeverGegevens: gegevens,
       });
     })();
     return () => {
@@ -501,6 +526,33 @@ export function MandagenregisterPanel({
 
   return (
     <div className="space-y-4">
+      {ogId && (
+        <div className="rounded-md border border-fg/10 bg-fg/[0.02] px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Opdrachtgever op register: </span>
+              <strong>{ogForm.bedrijfsnaam || projectMeta.opdrachtgever || "-"}</strong>
+              {!ogForm.adres && !ogForm.telefoon && !ogForm.email && <span className="ml-2 text-muted-foreground">(nog geen adresgegevens)</span>}
+            </div>
+            <Button variant="outline" className="h-8" onClick={() => setOgOpen((o) => !o)}>
+              {ogOpen ? "Sluiten" : "Gegevens opdrachtgever"}
+            </Button>
+          </div>
+          {ogOpen && (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {([["bedrijfsnaam","Volledige bedrijfsnaam"],["adres","Adres"],["postcode_plaats","Postcode en plaats"],["telefoon","Telefoon"],["email","E-mail"],["website","Website"]] as const).map(([k, label]) => (
+                <div key={k} className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</Label>
+                  <Input className="h-9" value={ogForm[k] ?? ""} onChange={(e) => setOgForm((f) => ({ ...f, [k]: e.target.value }))} />
+                </div>
+              ))}
+              <div className="flex items-end">
+                <Button className="h-9" onClick={saveOg} disabled={ogSaving}>Opslaan</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {/* Periode + actie */}
       <div className="flex flex-wrap items-end gap-3 rounded-md border border-fg/10 bg-fg/[0.02] px-3 py-2.5">
         <div className="space-y-1">

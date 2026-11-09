@@ -14,3 +14,14 @@ describe("aarding apart register", () => {
     expect(registerSoortVoorDag("Aarding slaan, Demontage")).toBe("project");
   });
 });
+
+import { opdrachtgeverBlockLines } from "./mandagenregister-pdf";
+describe("opdrachtgeverBlockLines", () => {
+  it("toont volledige naam en alleen ingevulde regels", () => {
+    const r = opdrachtgeverBlockLines("van Gelder", { bedrijfsnaam: "Van Gelder B.V.", adres: "Sluiswachter 18", postcode_plaats: "3861 SN NIJKERK GLD", telefoon: null, email: " ", website: "www.vangelder.com" });
+    expect(r).toEqual({ titel: "Van Gelder B.V.", regels: ["Sluiswachter 18", "3861 SN NIJKERK GLD", "www.vangelder.com"] });
+  });
+  it("valt terug op korte naam zonder gegevens", () => {
+    expect(opdrachtgeverBlockLines("Enexis", null)).toEqual({ titel: "Enexis", regels: [] });
+  });
+});

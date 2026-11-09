@@ -385,22 +385,40 @@ export type Database = {
       }
       opdrachtgevers: {
         Row: {
+          adres: string | null
+          bedrijfsnaam: string | null
           created_at: string | null
+          email: string | null
           id: string
           naam: string
           positie: number | null
+          postcode_plaats: string | null
+          telefoon: string | null
+          website: string | null
         }
         Insert: {
+          adres?: string | null
+          bedrijfsnaam?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           naam: string
           positie?: number | null
+          postcode_plaats?: string | null
+          telefoon?: string | null
+          website?: string | null
         }
         Update: {
+          adres?: string | null
+          bedrijfsnaam?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           naam?: string
           positie?: number | null
+          postcode_plaats?: string | null
+          telefoon?: string | null
+          website?: string | null
         }
         Relationships: []
       }

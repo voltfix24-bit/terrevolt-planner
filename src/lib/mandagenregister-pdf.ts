@@ -14,6 +14,24 @@ export interface ProjectMeta {
   station_naam: string | null;
   locatie: string | null;
   opdrachtgever: string | null;
+  opdrachtgeverGegevens?: OpdrachtgeverGegevens | null;
+}
+
+export interface OpdrachtgeverGegevens {
+  bedrijfsnaam: string | null;
+  adres: string | null;
+  postcode_plaats: string | null;
+  telefoon: string | null;
+  email: string | null;
+  website: string | null;
+}
+
+export function opdrachtgeverBlockLines(naam: string | null, g?: OpdrachtgeverGegevens | null): { titel: string; regels: string[] } {
+  const titel = (g?.bedrijfsnaam?.trim() || naam?.trim() || "-");
+  const regels = [g?.adres, g?.postcode_plaats, g?.telefoon, g?.email, g?.website]
+    .map((v) => v?.trim() ?? "")
+    .filter(Boolean);
+  return { titel, regels };
 }
 
 export interface WeekRow {
@@ -262,7 +280,7 @@ export function buildMandagenregisterHtml(input: MandagenregisterPdfInput): stri
 
     <section class="parties">
       <div>
-        <b>${escHtml(project.opdrachtgever ?? "-")}</b>
+        ${(() => { const og = opdrachtgeverBlockLines(project.opdrachtgever, project.opdrachtgeverGegevens); return `<b>${escHtml(og.titel)}</b>${og.regels.map((r) => `<span>${escHtml(r)}</span>`).join("")}`; })()}
         <span class="muted">Hoofdaannemer / opdrachtgever</span>
         <b style="margin-top:12px">${escHtml(projectLabel || "Project")}</b>
         <span class="muted">${escHtml(project.locatie ?? "")}</span>
