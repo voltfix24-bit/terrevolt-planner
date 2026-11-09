@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { exportMandagenregisterPDF, type OpdrachtgeverGegevens } from "@/lib/mandagenregister-pdf";
-import { exportPvStaat } from "@/lib/pv-staat";
+import { buildPvBron, exportPvStaat, type PvDagRegel } from "@/lib/pv-staat";
+import { PvKlussenEditor } from "@/components/PvKlussenEditor";
 import { filterRegisterRows, type RegisterSoort } from "@/lib/mandagen-register-soort";
 import { logTechnicalError, toUserFacingError } from "@/lib/user-facing-error";
 
@@ -143,6 +144,8 @@ export function MandagenregisterPanel({
   const [pvStaat, setPvStaat] = useState(false);
   const [pvWbs, setPvWbs] = useState("");
   const [pvTarief, setPvTarief] = useState("90");
+  const [pvKlussen, setPvKlussen] = useState<PvDagRegel[]>([]);
+  const [pvKlussenOpen, setPvKlussenOpen] = useState(false);
   const [ogSaving, setOgSaving] = useState(false);
   const saveOg = async () => {
     if (!ogId) return;
@@ -628,7 +631,7 @@ export function MandagenregisterPanel({
               const tarieven: Record<string, number | null> = {};
               for (const r of regs ?? []) tarieven[r.monteur_id] = r.uurtarief != null ? Number(r.uurtarief) : null;
               try {
-                exportPvStaat({ project: projectMeta, wbs: pvWbs, tarief, tarieven, bron: rows.map((r) => ({ monteur_id: r.monteur_id, naam: r.naam, datum: r.datum, uren: Number(r.uren) || 0 })) });
+                exportPvStaat({ project: projectMeta, wbs: pvWbs, tarief, tarieven, bron: buildPvBron(rows.map((r) => ({ monteur_id: r.monteur_id, naam: r.naam, datum: r.datum, uren: Number(r.uren) || 0 })), pvKlussen) });
               } catch (e) {
                 toast.error(toUserFacingError(e, "PV-staat kon niet worden geopend"));
               }
@@ -637,6 +640,10 @@ export function MandagenregisterPanel({
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Download PV-staat
           </Button>
+          <Button size="sm" variant="ghost" className="h-9" onClick={() => setPvKlussenOpen((o) => !o)}>
+            {pvKlussenOpen ? "Klussen per dag verbergen" : "Klussen per dag verdelen"}
+          </Button>
+          <div className={pvKlussenOpen ? "w-full" : "hidden"}><PvKlussenEditor projectId={projectId} van={van} tot={tot} gepland={rows} onChange={setPvKlussen} /></div>
         </div>
       )}
 

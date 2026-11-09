@@ -10,6 +10,49 @@ export interface PvBronRegel {
   naam: string;
   datum: string; // YYYY-MM-DD
   uren: number;
+  locatie?: string | null;
+  opmerking?: string | null;
+}
+
+export interface PvDagRegel {
+  monteur_id: string;
+  datum: string;
+  omschrijving: string | null;
+  case_nummer: string | null;
+  uitvoerder: string | null;
+  uren: number;
+  overuren: number;
+  niet_doorgegaan: boolean;
+  positie: number;
+}
+
+/** Omschrijving van een klus op de PV-staat: "Locatie - Case 0337541 - uitvoerder Anatole". */
+export function pvKlusLabel(r: Pick<PvDagRegel, "omschrijving" | "case_nummer" | "uitvoerder">): string {
+  return [r.omschrijving?.trim(), r.case_nummer?.trim() ? `Case ${r.case_nummer.trim()}` : null, r.uitvoerder?.trim() ? `uitvoerder ${r.uitvoerder.trim()}` : null]
+    .filter(Boolean).join(" - ");
+}
+
+/** Geplande monteurdagen; heeft een monteurdag eigen klussen, dan vervangen die de geplande dag (uren + overuren per klus). */
+export function buildPvBron(gepland: PvBronRegel[], klussen: PvDagRegel[]): PvBronRegel[] {
+  const perDag = new Map<string, PvDagRegel[]>();
+  for (const k of klussen) {
+    const key = `${k.monteur_id}|${k.datum}`;
+    perDag.set(key, [...(perDag.get(key) ?? []), k]);
+  }
+  const out: PvBronRegel[] = [];
+  for (const g of gepland) {
+    const ks = perDag.get(`${g.monteur_id}|${g.datum}`);
+    if (!ks?.length) { out.push(g); continue; }
+    for (const k of [...ks].sort((a, b) => a.positie - b.positie)) {
+      out.push({
+        monteur_id: g.monteur_id, naam: g.naam, datum: g.datum,
+        uren: (Number(k.uren) || 0) + (Number(k.overuren) || 0),
+        locatie: pvKlusLabel(k) || null,
+        opmerking: [Number(k.overuren) > 0 ? `incl. ${Number(k.overuren)} uur overwerk` : null, k.niet_doorgegaan ? "niet doorgegaan" : null].filter(Boolean).join(", ") || null,
+      });
+    }
+  }
+  return out;
 }
 
 export interface PvRegel extends PvBronRegel {
@@ -109,7 +152,7 @@ export function buildPvStaatHtml(input: PvStaatInput): string {
     </section>
     <table>
       <thead><tr><th>Medewerker</th><th>Datum</th><th>Locatie</th><th class="r">Uren</th><th class="r">Tarief p/u</th><th class="r">Totaal</th></tr></thead>
-      <tbody>${w.regels.map((r) => `<tr><td>${esc(r.naam)}</td><td>${esc(fmtLangeDatum(r.datum))}</td><td>${esc(project.locatie ?? "-")}</td><td class="r">${r.uren} uur</td><td class="r">${fmtEuro(r.tarief)}</td><td class="r">${fmtEuro(r.totaal)}</td></tr>`).join("")}</tbody>
+      <tbody>${w.regels.map((r) => `<tr><td>${esc(r.naam)}</td><td>${esc(fmtLangeDatum(r.datum))}</td><td>${esc(r.locatie || project.locatie || "-")}${r.opmerking ? ` <span class="opm">(${esc(r.opmerking)})</span>` : ""}</td><td class="r">${r.uren} uur</td><td class="r">${fmtEuro(r.tarief)}</td><td class="r">${fmtEuro(r.totaal)}</td></tr>`).join("")}</tbody>
       <tfoot><tr><td colspan="3">Totaal excl. btw</td><td class="r">${w.uren} uur</td><td></td><td class="r">${fmtEuro(w.totaal)}</td></tr></tfoot>
     </table>
   </section>`).join("");
@@ -138,6 +181,7 @@ export function buildPvStaatHtml(input: PvStaatInput): string {
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 5px 6px; text-align: left; vertical-align: top; }
   th { font-weight: 600; border-top: 1px solid #111; border-bottom: 1px solid #111; }
+  .opm { color: #666; font-style: italic; }
   tbody td { border-bottom: 1px solid #eee; }
   tr { break-inside: avoid; }
   .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

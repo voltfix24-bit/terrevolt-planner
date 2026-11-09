@@ -15,6 +15,13 @@
       "when": 1794229793156,
       "tag": "0001_opdrachtgever_pv_staat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794231522597,
+      "tag": "0002_create_pv_regels",
+      "breakpoints": true
     }
   ]
 }

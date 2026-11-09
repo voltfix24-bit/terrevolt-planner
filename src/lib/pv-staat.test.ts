@@ -35,3 +35,18 @@ describe("tarief per monteur", () => {
     expect(w[0].regels.map((r) => r.totaal)).toEqual([600, 720]);
   });
 });
+
+import { buildPvBron } from "./pv-staat";
+describe("klussen per dag", () => {
+  const g = [{ monteur_id: "h", naam: "Hassan", datum: "2026-11-03", uren: 8 }, { monteur_id: "h", naam: "Hassan", datum: "2026-11-04", uren: 8 }];
+  it("vervangt een dag door zijn klussen en telt overwerk mee", () => {
+    const b = buildPvBron(g, [{ monteur_id: "h", datum: "2026-11-03", omschrijving: "Gj Scheurleerweg Amsterdam", case_nummer: "0337541", uitvoerder: "Anatole", uren: 8, overuren: 2, niet_doorgegaan: false, positie: 0 }]);
+    expect(b).toHaveLength(2);
+    expect(b[0]).toMatchObject({ uren: 10, locatie: "Gj Scheurleerweg Amsterdam - Case 0337541 - uitvoerder Anatole", opmerking: "incl. 2 uur overwerk" });
+    expect(b[1].locatie).toBeUndefined();
+  });
+  it("markeert niet doorgegaan", () => {
+    const b = buildPvBron(g.slice(0, 1), [{ monteur_id: "h", datum: "2026-11-03", omschrijving: "Zuidplein", case_nummer: null, uitvoerder: null, uren: 8, overuren: 0, niet_doorgegaan: true, positie: 0 }]);
+    expect(b[0].opmerking).toBe("niet doorgegaan");
+  });
+});

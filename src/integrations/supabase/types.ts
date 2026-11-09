@@ -1142,6 +1142,69 @@ export type Database = {
           },
         ]
       }
+      pv_regels: {
+        Row: {
+          case_nummer: string | null
+          created_at: string
+          datum: string
+          id: string
+          monteur_id: string
+          niet_doorgegaan: boolean
+          omschrijving: string | null
+          overuren: number
+          positie: number
+          project_id: string
+          uitvoerder: string | null
+          updated_at: string
+          uren: number
+        }
+        Insert: {
+          case_nummer?: string | null
+          created_at?: string
+          datum: string
+          id?: string
+          monteur_id: string
+          niet_doorgegaan?: boolean
+          omschrijving?: string | null
+          overuren?: number
+          positie?: number
+          project_id: string
+          uitvoerder?: string | null
+          updated_at?: string
+          uren?: number
+        }
+        Update: {
+          case_nummer?: string | null
+          created_at?: string
+          datum?: string
+          id?: string
+          monteur_id?: string
+          niet_doorgegaan?: boolean
+          omschrijving?: string | null
+          overuren?: number
+          positie?: number
+          project_id?: string
+          uitvoerder?: string | null
+          updated_at?: string
+          uren?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pv_regels_monteur_id_fkey"
+            columns: ["monteur_id"]
+            isOneToOne: false
+            referencedRelation: "monteurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pv_regels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
