@@ -145,11 +145,19 @@ export function MandagenregisterPanel({
   const [pvWbs, setPvWbs] = useState("");
   const [pvTarief, setPvTarief] = useState("90");
   const [pvKlussen, setPvKlussen] = useState<PvDagRegel[]>([]);
-  const [pvKlussenOpen, setPvKlussenOpen] = useState(false);
-  const [pvWeek, setPvWeek] = useState<string>("alle");
+  const [pvKlussenOpen, setPvKlussenOpen] = useState(true);
+  const [pvWeek, setPvWeek] = useState<string>("");
   const pvWeekOpties = useMemo(() => [...new Set(rows.filter((r) => Number(r.uren) > 0).map((r) => weekKey(r.datum)))].sort(), [rows]);
-  const pvWeekEff = pvWeekOpties.includes(pvWeek) ? pvWeek : "alle";
+  const pvWeekEff = useMemo(() => {
+    if (pvWeek === "alle" || pvWeekOpties.includes(pvWeek)) return pvWeek;
+    const vorige = new Date(); vorige.setDate(vorige.getDate() - 7);
+    const vk = weekKey(fmt(vorige));
+    if (pvWeekOpties.includes(vk)) return vk;
+    const verleden = pvWeekOpties.filter((w) => w <= vk);
+    return verleden[verleden.length - 1] ?? pvWeekOpties[0] ?? "alle";
+  }, [pvWeek, pvWeekOpties]);
   const pvRows = useMemo(() => (pvWeekEff === "alle" ? rows : rows.filter((r) => weekKey(r.datum) === pvWeekEff)), [rows, pvWeekEff]);
+  const pvMonteurs = useMemo(() => [...new Map(pvRows.map((r) => [r.monteur_id, r.naam])).values()].sort((a, b) => a.localeCompare(b, "nl")), [pvRows]);
   const [ogSaving, setOgSaving] = useState(false);
   const saveOg = async () => {
     if (!ogId) return;
@@ -613,7 +621,10 @@ export function MandagenregisterPanel({
 
       {hasRows && pvStaat && (
         <div className="flex flex-wrap items-end gap-3 rounded-md border border-fg/10 p-3">
-          <h3 className="w-full font-display text-sm font-bold">PV-staat <span className="ml-1 text-xs font-normal text-muted-foreground">(alle monteurs, één pagina per week)</span></h3>
+          <h3 className="w-full font-display text-sm font-bold">PV-staat <span className="ml-1 text-xs font-normal text-muted-foreground">(één pagina per week)</span></h3>
+          <p className="w-full text-xs text-muted-foreground">
+            {pvWeekEff === "alle" ? "Alle weken" : `Week ${Number(pvWeekEff.split("-W")[1])}`} · {pvMonteurs.length} {pvMonteurs.length === 1 ? "monteur" : "monteurs"} ingepland: {pvMonteurs.join(", ") || "geen"}
+          </p>
           <div className="space-y-1">
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">WBS-nummer</Label>
             <Input className="h-9 w-[180px]" value={pvWbs} onChange={(e) => setPvWbs(e.target.value)} />
@@ -625,8 +636,8 @@ export function MandagenregisterPanel({
           <div className="space-y-1">
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Week</Label>
             <select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={pvWeekEff} onChange={(e) => setPvWeek(e.target.value)}>
+                            {pvWeekOpties.map((w) => <option key={w} value={w}>Week {Number(w.split("-W")[1])}, {w.split("-W")[0]}</option>)}
               <option value="alle">Alle weken</option>
-              {pvWeekOpties.map((w) => <option key={w} value={w}>Week {Number(w.split("-W")[1])}, {w.split("-W")[0]}</option>)}
             </select>
           </div>
           <Button
@@ -654,7 +665,7 @@ export function MandagenregisterPanel({
           <Button size="sm" variant="ghost" className="h-9" onClick={() => setPvKlussenOpen((o) => !o)}>
             {pvKlussenOpen ? "Klussen per dag verbergen" : "Klussen per dag verdelen"}
           </Button>
-          <div className={pvKlussenOpen ? "w-full" : "hidden"}><PvKlussenEditor projectId={projectId} van={van} tot={tot} gepland={rows} onChange={setPvKlussen} /></div>
+          <div className={pvKlussenOpen ? "w-full" : "hidden"}><PvKlussenEditor projectId={projectId} van={van} tot={tot} gepland={pvRows} onChange={setPvKlussen} /></div>
         </div>
       )}
 
