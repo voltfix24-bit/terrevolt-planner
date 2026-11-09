@@ -146,6 +146,10 @@ export function MandagenregisterPanel({
   const [pvTarief, setPvTarief] = useState("90");
   const [pvKlussen, setPvKlussen] = useState<PvDagRegel[]>([]);
   const [pvKlussenOpen, setPvKlussenOpen] = useState(false);
+  const [pvWeek, setPvWeek] = useState<string>("alle");
+  const pvWeekOpties = useMemo(() => [...new Set(rows.filter((r) => Number(r.uren) > 0).map((r) => weekKey(r.datum)))].sort(), [rows]);
+  const pvWeekEff = pvWeekOpties.includes(pvWeek) ? pvWeek : "alle";
+  const pvRows = useMemo(() => (pvWeekEff === "alle" ? rows : rows.filter((r) => weekKey(r.datum) === pvWeekEff)), [rows, pvWeekEff]);
   const [ogSaving, setOgSaving] = useState(false);
   const saveOg = async () => {
     if (!ogId) return;
@@ -618,6 +622,13 @@ export function MandagenregisterPanel({
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Standaardtarief (€)</Label>
             <Input className="h-9 w-[120px]" inputMode="decimal" value={pvTarief} onChange={(e) => setPvTarief(e.target.value)} />
           </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Week</Label>
+            <select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={pvWeekEff} onChange={(e) => setPvWeek(e.target.value)}>
+              <option value="alle">Alle weken</option>
+              {pvWeekOpties.map((w) => <option key={w} value={w}>Week {Number(w.split("-W")[1])}, {w.split("-W")[0]}</option>)}
+            </select>
+          </div>
           <Button
             size="sm"
             variant="outline"
@@ -625,13 +636,13 @@ export function MandagenregisterPanel({
             onClick={async () => {
               const tarief = Number(pvTarief.replace(",", "."));
               if (!Number.isFinite(tarief) || tarief <= 0) { toast.error("Vul een geldig tarief in"); return; }
-              const ids = [...new Set(rows.map((r) => r.monteur_id))];
+              const ids = [...new Set(pvRows.map((r) => r.monteur_id))];
               const { data: regs, error: tErr } = await supabase.from("monteur_register").select("monteur_id, uurtarief").in("monteur_id", ids);
               if (tErr) { toast.error("Tarieven per monteur konden niet worden geladen"); return; }
               const tarieven: Record<string, number | null> = {};
               for (const r of regs ?? []) tarieven[r.monteur_id] = r.uurtarief != null ? Number(r.uurtarief) : null;
               try {
-                exportPvStaat({ project: projectMeta, wbs: pvWbs, tarief, tarieven, bron: buildPvBron(rows.map((r) => ({ monteur_id: r.monteur_id, naam: r.naam, datum: r.datum, uren: Number(r.uren) || 0 })), pvKlussen) });
+                exportPvStaat({ project: projectMeta, wbs: pvWbs, tarief, tarieven, bron: buildPvBron(pvRows.map((r) => ({ monteur_id: r.monteur_id, naam: r.naam, datum: r.datum, uren: Number(r.uren) || 0 })), pvKlussen) });
               } catch (e) {
                 toast.error(toUserFacingError(e, "PV-staat kon niet worden geopend"));
               }
