@@ -393,6 +393,7 @@ export type Database = {
           naam: string
           positie: number | null
           postcode_plaats: string | null
+          pv_staat: boolean
           telefoon: string | null
           website: string | null
         }
@@ -405,6 +406,7 @@ export type Database = {
           naam: string
           positie?: number | null
           postcode_plaats?: string | null
+          pv_staat?: boolean
           telefoon?: string | null
           website?: string | null
         }
@@ -417,6 +419,7 @@ export type Database = {
           naam?: string
           positie?: number | null
           postcode_plaats?: string | null
+          pv_staat?: boolean
           telefoon?: string | null
           website?: string | null
         }

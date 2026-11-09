@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { exportMandagenregisterPDF, type OpdrachtgeverGegevens } from "@/lib/mandagenregister-pdf";
+import { exportPvStaat } from "@/lib/pv-staat";
 import { filterRegisterRows, type RegisterSoort } from "@/lib/mandagen-register-soort";
 import { logTechnicalError, toUserFacingError } from "@/lib/user-facing-error";
 
@@ -139,6 +140,9 @@ export function MandagenregisterPanel({
   const [ogId, setOgId] = useState<string | null>(null);
   const [ogForm, setOgForm] = useState<OpdrachtgeverGegevens>({ bedrijfsnaam: "", adres: "", postcode_plaats: "", telefoon: "", email: "", website: "" });
   const [ogOpen, setOgOpen] = useState(false);
+  const [pvStaat, setPvStaat] = useState(false);
+  const [pvWbs, setPvWbs] = useState("");
+  const [pvTarief, setPvTarief] = useState("90");
   const [ogSaving, setOgSaving] = useState(false);
   const saveOg = async () => {
     if (!ogId) return;
@@ -167,7 +171,7 @@ export function MandagenregisterPanel({
       if (data.opdrachtgever_id) {
         const { data: og } = await supabase
           .from("opdrachtgevers")
-          .select("naam, bedrijfsnaam, adres, postcode_plaats, telefoon, email, website")
+          .select("naam, bedrijfsnaam, adres, postcode_plaats, telefoon, email, website, pv_staat")
           .eq("id", data.opdrachtgever_id)
           .maybeSingle();
         opdrachtgeverNaam = og?.naam ?? null;
@@ -175,6 +179,7 @@ export function MandagenregisterPanel({
           gegevens = { bedrijfsnaam: og.bedrijfsnaam, adres: og.adres, postcode_plaats: og.postcode_plaats, telefoon: og.telefoon, email: og.email, website: og.website };
           if (!cancelled) {
             setOgId(data.opdrachtgever_id);
+            setPvStaat(!!og.pv_staat);
             setOgForm({ bedrijfsnaam: og.bedrijfsnaam ?? "", adres: og.adres ?? "", postcode_plaats: og.postcode_plaats ?? "", telefoon: og.telefoon ?? "", email: og.email ?? "", website: og.website ?? "" });
           }
         }
@@ -598,6 +603,37 @@ export function MandagenregisterPanel({
           {hasRows ? `${rows.length} regels` : allRows.length > 0 ? (soort === "aarding" ? "Geen aardingsdagen in deze periode" : "Alleen aardingsdagen in deze periode") : "Geen data geladen"}
         </div>
       </div>
+
+      {hasRows && pvStaat && (
+        <div className="flex flex-wrap items-end gap-3 rounded-md border border-fg/10 p-3">
+          <h3 className="w-full font-display text-sm font-bold">PV-staat <span className="ml-1 text-xs font-normal text-muted-foreground">(alle monteurs, één pagina per week)</span></h3>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">WBS-nummer</Label>
+            <Input className="h-9 w-[180px]" value={pvWbs} onChange={(e) => setPvWbs(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tarief per uur (€)</Label>
+            <Input className="h-9 w-[120px]" inputMode="decimal" value={pvTarief} onChange={(e) => setPvTarief(e.target.value)} />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9"
+            onClick={() => {
+              const tarief = Number(pvTarief.replace(",", "."));
+              if (!Number.isFinite(tarief) || tarief <= 0) { toast.error("Vul een geldig tarief in"); return; }
+              try {
+                exportPvStaat({ project: projectMeta, wbs: pvWbs, tarief, bron: rows.map((r) => ({ monteur_id: r.monteur_id, naam: r.naam, datum: r.datum, uren: Number(r.uren) || 0 })) });
+              } catch (e) {
+                toast.error(toUserFacingError(e, "PV-staat kon niet worden geopend"));
+              }
+            }}
+          >
+            <FileText className="mr-1.5 h-3.5 w-3.5" />
+            Download PV-staat
+          </Button>
+        </div>
+      )}
 
       {hasRows && (
         <>
