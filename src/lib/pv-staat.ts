@@ -36,7 +36,7 @@ export function isoWeekKey(datum: string): { key: string; weekNr: number } {
 }
 
 /** Groepeert dagregels per ISO-week, sorteert op datum dan naam, en rekent uren × tarief. Dagen zonder uren vallen weg. */
-export function buildPvWeken(bron: PvBronRegel[], tarief: number): PvWeek[] {
+export function buildPvWeken(bron: PvBronRegel[], standaardTarief: number, tarieven?: Record<string, number | null | undefined>): PvWeek[] {
   const map = new Map<string, PvWeek>();
   const sorted = [...bron]
     .filter((r) => r.uren > 0)
@@ -44,6 +44,8 @@ export function buildPvWeken(bron: PvBronRegel[], tarief: number): PvWeek[] {
   for (const r of sorted) {
     const { key, weekNr } = isoWeekKey(r.datum);
     const w = map.get(key) ?? { key, weekNr, regels: [], uren: 0, totaal: 0 };
+    const eigen = tarieven?.[r.monteur_id];
+    const tarief = eigen != null && eigen > 0 ? eigen : standaardTarief;
     const totaal = Math.round(r.uren * tarief * 100) / 100;
     w.regels.push({ ...r, tarief, totaal });
     w.uren += r.uren;
@@ -69,13 +71,14 @@ export interface PvStaatInput {
   project: { case_nummer: string | null; station_naam: string | null; locatie: string | null; opdrachtgever: string | null; opdrachtgeverGegevens?: OpdrachtgeverGegevens | null };
   wbs: string;
   tarief: number;
+  tarieven?: Record<string, number | null | undefined>;
   bron: PvBronRegel[];
   datum?: Date;
 }
 
 export function buildPvStaatHtml(input: PvStaatInput): string {
-  const { project, wbs, tarief, bron } = input;
-  const weken = buildPvWeken(bron, tarief);
+  const { project, wbs, tarief, tarieven, bron } = input;
+  const weken = buildPvWeken(bron, tarief, tarieven);
   const og = opdrachtgeverBlockLines(project.opdrachtgever, project.opdrachtgeverGegevens);
   const projectLabel = [project.case_nummer, project.station_naam].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" - ");
   const vandaag = (input.datum ?? new Date()).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });

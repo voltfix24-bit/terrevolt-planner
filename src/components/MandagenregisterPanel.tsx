@@ -612,18 +612,23 @@ export function MandagenregisterPanel({
             <Input className="h-9 w-[180px]" value={pvWbs} onChange={(e) => setPvWbs(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tarief per uur (€)</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Standaardtarief (€)</Label>
             <Input className="h-9 w-[120px]" inputMode="decimal" value={pvTarief} onChange={(e) => setPvTarief(e.target.value)} />
           </div>
           <Button
             size="sm"
             variant="outline"
             className="h-9"
-            onClick={() => {
+            onClick={async () => {
               const tarief = Number(pvTarief.replace(",", "."));
               if (!Number.isFinite(tarief) || tarief <= 0) { toast.error("Vul een geldig tarief in"); return; }
+              const ids = [...new Set(rows.map((r) => r.monteur_id))];
+              const { data: regs, error: tErr } = await supabase.from("monteur_register").select("monteur_id, uurtarief").in("monteur_id", ids);
+              if (tErr) { toast.error("Tarieven per monteur konden niet worden geladen"); return; }
+              const tarieven: Record<string, number | null> = {};
+              for (const r of regs ?? []) tarieven[r.monteur_id] = r.uurtarief != null ? Number(r.uurtarief) : null;
               try {
-                exportPvStaat({ project: projectMeta, wbs: pvWbs, tarief, bron: rows.map((r) => ({ monteur_id: r.monteur_id, naam: r.naam, datum: r.datum, uren: Number(r.uren) || 0 })) });
+                exportPvStaat({ project: projectMeta, wbs: pvWbs, tarief, tarieven, bron: rows.map((r) => ({ monteur_id: r.monteur_id, naam: r.naam, datum: r.datum, uren: Number(r.uren) || 0 })) });
               } catch (e) {
                 toast.error(toUserFacingError(e, "PV-staat kon niet worden geopend"));
               }

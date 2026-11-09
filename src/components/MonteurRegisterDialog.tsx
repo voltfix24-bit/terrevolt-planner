@@ -154,7 +154,7 @@ export function MonteurRegisterDialog({
       bedrijfsnaam: dienstverband === "zzp" ? (reg.bedrijfsnaam?.trim() || null) : null,
       kvk_nummer: dienstverband === "zzp" ? (reg.kvk_nummer?.trim() || null) : null,
       btw_nummer: dienstverband === "zzp" ? (reg.btw_nummer?.trim() || null) : null,
-      uurtarief: dienstverband === "zzp" && reg.uurtarief ? Number(reg.uurtarief) : null,
+      uurtarief: reg.uurtarief ? Number(reg.uurtarief) : null,
     };
     const { error: rErr } = await supabase
       .from("monteur_register")
@@ -216,6 +216,21 @@ export function MonteurRegisterDialog({
                 </div>
               </div>
 
+              {/* Tarief dat de opdrachtgever betaalt; gebruikt op de PV-staat. */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tarief opdrachtgever per uur € (PV-staat)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  className="w-[160px]"
+                  value={reg.uurtarief ?? ""}
+                  onChange={(e) => set("uurtarief", e.target.value || null)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Wat de opdrachtgever per uur voor deze monteur betaalt. Leeg = het standaardtarief op de PV-staat.
+                </p>
+              </div>
+
               {/* ZZP: alleen KvK is verplicht voor de standaard mandagenregister-export. */}
               {dienstverband === "zzp" && (
                 <div className="space-y-3">
@@ -251,15 +266,6 @@ export function MonteurRegisterDialog({
                         value={reg.btw_nummer ?? ""}
                         onChange={(e) => set("btw_nummer", e.target.value || null)}
                         placeholder="NL123456789B01"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Uurtarief € (optioneel)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={reg.uurtarief ?? ""}
-                        onChange={(e) => set("uurtarief", e.target.value || null)}
                       />
                     </div>
                   </div>

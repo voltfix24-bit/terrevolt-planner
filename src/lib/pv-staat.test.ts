@@ -24,3 +24,14 @@ describe("PV-staat", () => {
     expect(html).toContain("€ 1.440,00");
   });
 });
+
+import { buildPvWeken as bpw } from "./pv-staat";
+describe("tarief per monteur", () => {
+  it("gebruikt eigen tarief en valt terug op standaard", () => {
+    const w = bpw([
+      { monteur_id: "a", naam: "A", datum: "2026-11-02", uren: 8 },
+      { monteur_id: "b", naam: "B", datum: "2026-11-02", uren: 8 },
+    ], 90, { a: 75 });
+    expect(w[0].regels.map((r) => r.totaal)).toEqual([600, 720]);
+  });
+});
