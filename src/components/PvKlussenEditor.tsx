@@ -19,6 +19,8 @@ export function PvKlussenEditor({ projectId, gepland, van, tot, onChange }: {
   projectId: string; gepland: Gepland[]; van: string; tot: string; onChange: (k: PvDagRegel[]) => void;
 }) {
   const [klussen, setKlussen] = useState<Klus[]>([]);
+  // Rauwe tekst van uur-velden tijdens het typen, zodat "1," niet meteen naar 1 wordt afgerond.
+  const [uurDraft, setUurDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancel = false;
@@ -50,6 +52,20 @@ export function PvKlussenEditor({ projectId, gepland, van, tot, onChange }: {
     setKlussen((ks) => [...ks, { ...data, uren: Number(data.uren), overuren: Number(data.overuren) } as Klus]);
   };
   const patch = (id: string, p: Partial<Klus>) => setKlussen((ks) => ks.map((k) => (k.id === id ? { ...k, ...p } : k)));
+  const uurKey = (id: string, veld: "uren" | "overuren") => `${id}:${veld}`;
+  const uurChange = (id: string, veld: "uren" | "overuren", raw: string) =>
+    setUurDraft((d) => ({ ...d, [uurKey(id, veld)]: raw }));
+  const uurBlur = (k: Klus, veld: "uren" | "overuren") => {
+    const key = uurKey(k.id, veld);
+    const raw = uurDraft[key];
+    if (raw === undefined) { save(k); return; }
+    const parsed = Number(raw.replace(",", "."));
+    const waarde = Number.isFinite(parsed) && raw.trim() !== "" ? parsed : 0;
+    setUurDraft((d) => { const n = { ...d }; delete n[key]; return n; });
+    const n = { ...k, [veld]: waarde };
+    patch(k.id, { [veld]: waarde });
+    save(n);
+  };
   const save = async (k: Klus) => {
     const { error } = await supabase.from("pv_regels").update({
       omschrijving: k.omschrijving?.trim() || null, case_nummer: k.case_nummer?.trim() || null, uitvoerder: k.uitvoerder?.trim() || null,
@@ -88,10 +104,10 @@ export function PvKlussenEditor({ projectId, gepland, van, tot, onChange }: {
                     <Input className="h-8 w-[110px] text-xs" placeholder="Case" value={k.case_nummer ?? ""} onChange={(e) => patch(k.id, { case_nummer: e.target.value })} onBlur={() => save(k)} />
                     <Input className="h-8 w-[150px] text-xs" placeholder="Uitvoerder" value={k.uitvoerder ?? ""} onChange={(e) => patch(k.id, { uitvoerder: e.target.value })} onBlur={() => save(k)} />
                     <label className="flex items-center gap-1 text-xs">Uren
-                      <Input className="h-8 w-[64px] text-xs" inputMode="decimal" value={String(k.uren)} onChange={(e) => patch(k.id, { uren: Number(e.target.value.replace(",", ".")) || 0 })} onBlur={() => save(k)} />
+                      <Input className="h-8 w-[64px] text-xs" inputMode="decimal" value={uurDraft[uurKey(k.id, "uren")] ?? String(k.uren)} onChange={(e) => uurChange(k.id, "uren", e.target.value)} onBlur={() => uurBlur(k, "uren")} />
                     </label>
                     <label className="flex items-center gap-1 text-xs">Overwerk
-                      <Input className="h-8 w-[64px] text-xs" inputMode="decimal" value={String(k.overuren)} onChange={(e) => patch(k.id, { overuren: Number(e.target.value.replace(",", ".")) || 0 })} onBlur={() => save(k)} />
+                      <Input className="h-8 w-[64px] text-xs" inputMode="decimal" value={uurDraft[uurKey(k.id, "overuren")] ?? String(k.overuren)} onChange={(e) => uurChange(k.id, "overuren", e.target.value)} onBlur={() => uurBlur(k, "overuren")} />
                     </label>
                     <label className="flex items-center gap-1 text-xs">
                       <input type="checkbox" checked={k.niet_doorgegaan} onChange={(e) => { const n = { ...k, niet_doorgegaan: e.target.checked }; patch(k.id, n); save(n); }} />
