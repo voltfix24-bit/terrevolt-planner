@@ -9,7 +9,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("MobileDataGate", () => {
   it("hides empty states and KPIs before the first success", () => {
     render(<MobileDataGate data={data()}><p>0 mandagen · Geen cases gevonden</p></MobileDataGate>);
-    expect(screen.getByText("Planning laden…")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Laden…" })).toBeInTheDocument();
     expect(screen.queryByText(/0 mandagen/)).not.toBeInTheDocument();
   });
   it("shows a retryable server failure instead of false emptiness", () => {
