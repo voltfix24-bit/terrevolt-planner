@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, memo, MouseEvent as ReactMouseEvent } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -2381,9 +2382,7 @@ const Plannen = () => {
 
   if (loading || !project) {
     return (
-      <div className="surface-card px-6 py-16 text-center text-sm text-muted-foreground">
-        Planning laden…
-      </div>
+      <PageLoader />
     );
   }
 

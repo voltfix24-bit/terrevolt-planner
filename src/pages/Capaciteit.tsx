@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { BadgeCheck, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit2, Plus, Power, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -409,9 +410,7 @@ const Capaciteit = () => {
           </div>
 
           {loading ? (
-            <div className="px-6 py-16 text-center text-sm text-muted-foreground">
-              Laden…
-            </div>
+            <BlockLoader />
           ) : zichtbaar.length === 0 ? (
             <EmptyState onAdd={openNew} totalCount={monteurs.length} />
           ) : (
@@ -696,7 +695,7 @@ const Capaciteit = () => {
               disabled={saving}
               className="w-full font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
             >
-              {saving ? "Bezig met opslaan…" : "Opslaan"}
+              {saving ? <ButtonLoader /> : "Opslaan"}
             </Button>
           </div>
         </DialogContent>
@@ -1165,7 +1164,7 @@ const TijdlijnView = ({ monteurs }: { monteurs: Monteur[] }) => {
           <div ref={bodyRef} className="overflow-x-auto tijdlijn-scroll" style={{ scrollbarWidth: "thin" }}>
             <div style={{ minWidth: SIDEBAR_W + totalGridWidth }}>
               {loadingPlan && (
-                <div className="px-4 py-2 text-xs text-muted-foreground">Laden…</div>
+                <BlockLoader className="py-4" />
               )}
 
               {/* Schakelmonteurs */}
@@ -1625,7 +1624,7 @@ const FeestdagenSection = () => {
       </div>
 
       {loading ? (
-        <div className="px-6 py-12 text-center text-sm text-muted-foreground">Laden…</div>
+        <BlockLoader />
       ) : items.length === 0 ? (
         <div className="px-6 py-12 text-center text-sm text-muted-foreground">
           Geen feestdagen voor {jaar}
@@ -1711,7 +1710,7 @@ const FeestdagenSection = () => {
               disabled={saving}
               className="w-full font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
             >
-              {saving ? "Bezig met opslaan…" : "Opslaan"}
+              {saving ? <ButtonLoader /> : "Opslaan"}
             </Button>
           </div>
         </DialogContent>
@@ -1807,7 +1806,7 @@ const MonteurBeschikbaarheidSection = ({
         </h3>
       </div>
       {loading ? (
-        <div className="px-6 py-12 text-center text-sm text-muted-foreground">Laden…</div>
+        <BlockLoader />
       ) : actieve.length === 0 ? (
         <div className="px-6 py-12 text-center text-sm text-muted-foreground">
           Geen actieve monteurs
@@ -2276,7 +2275,7 @@ const AfwezigheidModal = ({
             disabled={saving}
             className="w-full font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
           >
-            {saving ? "Bezig met opslaan…" : "Opslaan"}
+            {saving ? <ButtonLoader /> : "Opslaan"}
           </Button>
         </div>
       </DialogContent>
@@ -2466,7 +2465,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
       </div>
 
       {loading ? (
-        <div className="px-6 py-16 text-center text-sm text-muted-foreground">Laden…</div>
+        <BlockLoader />
       ) : ploegen.length === 0 ? (
         <div className="px-6 py-16 text-center text-sm text-muted-foreground">
           Nog geen ploegen. Een ploeg is een vaste groep monteurs die je in één klik
@@ -2671,7 +2670,7 @@ const PloegenView = ({ monteurs }: { monteurs: Monteur[] }) => {
               disabled={saving}
               className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {saving ? "Bezig met opslaan…" : "Opslaan"}
+              {saving ? <ButtonLoader /> : "Opslaan"}
             </Button>
           </div>
         </DialogContent>

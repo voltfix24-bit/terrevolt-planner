@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -444,7 +445,7 @@ const TemplatePicker: React.FC<{
           }}
           className="rounded-md border border-fg/10 bg-fg/[0.03] px-2.5 py-1.5 text-[10.5px] font-display font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-fg/[0.07] hover:text-foreground"
         >
-          {loading ? "Laden…" : showAll ? "Filter op situatie" : "Toon alle"}
+          {loading ? <ButtonLoader /> : showAll ? "Filter op situatie" : "Toon alle"}
         </button>
       </div>
       <p className="text-[10.5px] text-muted-foreground">
@@ -911,9 +912,7 @@ const ProjectDetail = () => {
   // =====================================================
   if (loading || !project) {
     return (
-      <div className="surface-card px-6 py-16 text-center text-sm text-muted-foreground">
-        Laden…
-      </div>
+      <PageLoader />
     );
   }
 

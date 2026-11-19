@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { toast } from "sonner";
-import { Copy, Download, FileText, Loader2 } from "lucide-react";
+import { Copy, Download, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -418,15 +419,15 @@ export const VrijeDagenExport = ({ monteurs }: { monteurs: Monteur[] }) => {
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
         <Button onClick={onPdf} disabled={busy} className="bg-primary text-primary-foreground hover:bg-primary/90 font-display font-semibold">
-          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+          {busy ? <span className="mr-2 inline-flex"><ButtonLoader /></span> : <FileText className="mr-2 h-4 w-4" />}
           PDF / Afdrukken
         </Button>
         <Button onClick={onCsv} disabled={busy} variant="outline" className="font-display font-semibold">
-          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+          {busy ? <span className="mr-2 inline-flex"><ButtonLoader /></span> : <Download className="mr-2 h-4 w-4" />}
           Excel / CSV
         </Button>
         <Button onClick={onCopy} disabled={busy} variant="outline" className="font-display font-semibold">
-          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+          {busy ? <span className="mr-2 inline-flex"><ButtonLoader /></span> : <Copy className="mr-2 h-4 w-4" />}
           Kopieer als tekst
         </Button>
       </div>

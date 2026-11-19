@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { CalendarDays, ChevronDown, FileText, Search, SlidersHorizontal, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ export function MobileCases() {
       <label className="text-xs text-muted-foreground">Week<select className={selectCls} value={filters.week} onChange={(e) => setFilters((f) => ({ ...f, week: e.target.value }))}><option value="">Alle weken</option>{weekOptions.map((w) => <option key={w} value={w}>Week {Number(w.split("-")[1])} · {w.split("-")[0]}</option>)}</select></label>
     </div>}
     <p className="text-xs text-muted-foreground" aria-live="polite">{visible.length} {visible.length === 1 ? "case" : "cases"}</p>
-    {data.loading ? <p className="py-12 text-center text-sm text-muted-foreground">Cases laden…</p> : visible.length === 0 ? term ? <MobileSearchEmpty term={query} onClear={() => setQuery("")} /> : <p className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">Geen cases gevonden</p> :
+    {data.loading ? <BlockLoader /> : visible.length === 0 ? term ? <MobileSearchEmpty term={query} onClear={() => setQuery("")} /> : <p className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">Geen cases gevonden</p> :
       <div className="space-y-4">{sections.map(([title, items]) => <section key={title} aria-label={title}><h2 className="mb-2 text-sm font-semibold">{title} · {items.length}</h2><ul className="space-y-2">{items.map(({ project, opdrachtgever, label }) => <li key={project.id} className="overflow-hidden rounded-lg border border-border bg-card">
         <button type="button" onClick={() => navigate(`/projecten/${project.id}`)} className="block min-h-11 w-full px-3 pb-1 pt-2.5 text-left">
           <span className="flex items-start justify-between gap-2"><strong className="min-w-0 text-sm">{caseTitle(project)}</strong><StatusChip status={project.status} /></span>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -584,7 +585,7 @@ export function MandagenregisterPanel({
           <Input type="date" value={tot} onChange={(e) => { setUserTouchedRange(true); setTot(e.target.value); }} className="h-9 w-[160px]" />
         </div>
         <Button onClick={fetchRows} disabled={loading} className="h-9">
-          <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          {loading ? <span className="mr-1.5 inline-flex"><ButtonLoader /></span> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
           Register ophalen
         </Button>
         {defaultVan && defaultTot && (defaultVan !== van || defaultTot !== tot) && (

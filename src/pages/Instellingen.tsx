@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import {
   CalendarDays,
   Check,
@@ -425,7 +426,7 @@ const Instellingen = () => {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Laden…</p>
+          <BlockLoader />
         ) : templates.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nog geen templates.</p>
         ) : (
@@ -549,7 +550,7 @@ const Instellingen = () => {
                   className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
                 >
                   <Link2 className="h-4 w-4 mr-1.5" />
-                  {koppelRunning ? "Bezig…" : "Templates koppelen"}
+                  {koppelRunning ? <ButtonLoader /> : "Templates koppelen"}
                 </Button>
               </div>
             </div>
@@ -570,7 +571,7 @@ const Instellingen = () => {
                   className="font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shrink-0"
                 >
                   <CalendarDays className="h-4 w-4 mr-1.5" />
-                  {feestdagenRunning ? "Bezig…" : "Feestdagen seeden"}
+                  {feestdagenRunning ? <ButtonLoader /> : "Feestdagen seeden"}
                 </Button>
               </div>
             </div>
@@ -759,7 +760,7 @@ const Instellingen = () => {
               className="w-full font-display font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
             >
               {saving ? (
-                "Bezig met opslaan…"
+                <ButtonLoader />
               ) : (
                 <>
                   <Check className="h-4 w-4 mr-1.5" strokeWidth={3} />

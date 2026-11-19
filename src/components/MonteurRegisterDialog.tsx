@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { toast } from "sonner";
 import { BadgeCheck, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -190,7 +191,7 @@ export function MonteurRegisterDialog({
           </div>
 
           {loading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">Laden…</div>
+            <BlockLoader />
           ) : (
             <>
               {/* Dienstverband */}
@@ -422,7 +423,7 @@ export function MonteurRegisterDialog({
                   Annuleren
                 </Button>
                 <Button onClick={handleSave} disabled={saving || bsnInvalid || kvkInvalid}>
-                  {saving ? "Bezig…" : "Opslaan"}
+                  {saving ? <ButtonLoader /> : "Opslaan"}
                 </Button>
               </div>
             </>

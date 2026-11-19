@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -353,7 +354,7 @@ const Projecten = () => {
       </div>
 
       {loading ? (
-        <div className="surface-card px-6 py-16 text-center text-sm text-muted-foreground">Laden…</div>
+        <BlockLoader />
       ) : filtered.length === 0 ? (
         <div className="surface-card flex flex-col items-center justify-center px-6 py-20 text-center">
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">

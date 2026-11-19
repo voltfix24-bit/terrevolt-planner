@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
+import TerreVoltLoader from "@/components/TerreVoltLoader";
 import { RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { freshnessLabel, mobileDataState } from "@/lib/mobile-ux";
@@ -20,11 +22,11 @@ export function useOnline() {
 export function MobileDataGate({ data, children }: { data: Pick<MobilePlanningData, "hasData" | "error" | "lastUpdated" | "fetching" | "refresh">; children?: ReactNode }) {
   const online = useOnline();
   const state = mobileDataState(data.hasData, data.error, online);
-  if (state === "loading") return <p role="status" className="py-12 text-center text-sm text-muted-foreground">Planning laden…</p>;
+  if (state === "loading") return <PageLoader />;
   if (state === "error") return <section role="alert" className="space-y-3 rounded-lg border border-border bg-card p-4">
     <h1 className="font-display text-lg font-bold">Planning niet geladen</h1>
     <p className="text-sm text-muted-foreground">{online ? "Server niet bereikbaar" : "Geen verbinding"}</p>
-    <Button variant="outline" className="min-h-11" onClick={data.refresh} disabled={data.fetching}><RefreshCw className={`mr-2 h-4 w-4 ${data.fetching ? "animate-spin" : ""}`} />Opnieuw proberen</Button>
+    <Button variant="outline" className="min-h-11" onClick={data.refresh} disabled={data.fetching}>{data.fetching ? <span className="mr-2 inline-flex"><ButtonLoader /></span> : <RefreshCw className="mr-2 h-4 w-4" />}Opnieuw proberen</Button>
   </section>;
   return <>{state === "stale" && <div role="status" className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-warning-text/40 bg-warning/10 px-3 py-2 text-warning-text">
     <div className="min-w-0 text-xs font-medium">{!online && <span className="mb-1 flex items-center gap-1"><WifiOff className="h-4 w-4" />Geen verbinding</span>}Niet vernieuwd — je ziet gegevens van {freshnessLabel(data.lastUpdated)}</div>
@@ -80,7 +82,7 @@ export function FreshnessCompact({ data }: { data: Pick<MobilePlanningData, "las
   useEffect(() => { const timer = window.setInterval(() => tick((n) => n + 1), 60_000); return () => window.clearInterval(timer); }, []);
   const time = freshnessLabel(data.lastUpdated);
   return <Button variant="ghost" onClick={data.refresh} disabled={data.fetching} aria-label={`Planning vernieuwen, bijgewerkt ${time}${!online ? ", geen verbinding" : ""}`} className={`h-11 min-w-11 shrink-0 gap-1 px-1 text-[11px] font-medium ${!online ? "text-destructive-text hover:text-destructive-text" : data.error ? "text-warning-text hover:text-warning-text" : "text-muted-foreground hover:text-muted-foreground"} disabled:opacity-100`}>
-    {!online ? <WifiOff className="h-3.5 w-3.5" /> : <RefreshCw className={`h-3.5 w-3.5 ${data.fetching ? "animate-spin" : ""}`} />}<span>{time}</span>
+    {!online ? <WifiOff className="h-3.5 w-3.5" /> : data.fetching ? <TerreVoltLoader size={14} /> : <RefreshCw className="h-3.5 w-3.5" />}<span>{time}</span>
   </Button>;
 }
 

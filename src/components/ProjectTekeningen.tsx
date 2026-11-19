@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, FileText, Download, Eye, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
+import { Upload, FileText, Download, Eye, Trash2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -223,7 +224,7 @@ export function ProjectTekeningen({ projectId, soort, emptyHint }: Props) {
           }}
         />
         {uploading ? (
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <ButtonLoader />
         ) : (
           <Upload className="h-5 w-5 text-muted-foreground" />
         )}
@@ -235,7 +236,7 @@ export function ProjectTekeningen({ projectId, soort, emptyHint }: Props) {
 
       {/* List */}
       {loading ? (
-        <div className="text-xs text-muted-foreground">Laden…</div>
+        <BlockLoader />
       ) : items.length === 0 ? (
         <div className="text-xs text-muted-foreground">Nog geen tekeningen toegevoegd.</div>
       ) : (

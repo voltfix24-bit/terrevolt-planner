@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
+import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -133,7 +134,7 @@ export function PlanningCleanupButton({
         title="Lege project_weken buiten de echte planning verwijderen"
       >
         {loading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <ButtonLoader />
         ) : (
           <Sparkles className="h-3.5 w-3.5" />
         )}
@@ -220,10 +221,7 @@ export function PlanningCleanupButton({
               disabled={applying || (dryRun?.delete_weeks ?? 0) === 0}
             >
               {applying ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Bezig…
-                </span>
+                <ButtonLoader />
               ) : (dryRun?.delete_weeks ?? 0) === 0 ? (
                 "Niets te verwijderen"
               ) : (

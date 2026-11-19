@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import TerreVoltLoader from "@/components/TerreVoltLoader";
 import { useAuth } from "@/hooks/use-auth";
 
 export function ProtectedRoute() {
@@ -7,9 +8,7 @@ export function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted-foreground text-sm">
-        Laden...
-      </div>
+      <div className="flex min-h-screen items-center justify-center"><TerreVoltLoader size={80} /></div>
     );
   }
   if (!session) {

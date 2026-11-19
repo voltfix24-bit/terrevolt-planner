@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import {
   DndContext,
   closestCenter,
@@ -424,17 +425,7 @@ const Activiteiten = () => {
       </div>
 
       {loading ? (
-        <div
-          className="px-6 py-16 text-center text-sm"
-          style={{
-            background: "rgb(var(--surface-rgb) / 0.6)",
-            border: "1px solid rgb(var(--fg-rgb) / 0.08)",
-            borderRadius: 12,
-            color: "rgb(var(--fg-rgb) / 0.5)",
-          }}
-        >
-          Laden…
-        </div>
+        <BlockLoader />
       ) : items.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center px-6 py-20 text-center"
@@ -781,7 +772,7 @@ const Activiteiten = () => {
                   fontSize: 14,
                 }}
               >
-                {saving ? "Bezig met opslaan…" : "Opslaan"}
+                {saving ? <ButtonLoader /> : "Opslaan"}
               </button>
             </div>
           </div>

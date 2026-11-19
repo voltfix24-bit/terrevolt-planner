@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -478,9 +479,7 @@ const ProjectDossier = () => {
 
   if (loading || !project) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
-        Dossier laden…
-      </div>
+      <PageLoader />
     );
   }
 

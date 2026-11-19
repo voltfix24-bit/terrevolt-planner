@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,7 +87,7 @@ export const LookupBeheer: React.FC<Props> = ({ table, title, description, place
       </div>
 
       {loading ? (
-        <div className="text-xs text-muted-foreground py-2">Laden…</div>
+        <BlockLoader className="py-4" />
       ) : items.length === 0 ? (
         <div className="text-xs text-muted-foreground py-2">Nog niets toegevoegd.</div>
       ) : (

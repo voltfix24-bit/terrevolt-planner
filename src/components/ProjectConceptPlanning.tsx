@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -394,7 +395,7 @@ export const ProjectConceptPlanning: React.FC<{ projectId: string }> = ({
   };
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Laden…</div>;
+    return <BlockLoader />;
   }
 
   const hasSelection = selected.size > 0;

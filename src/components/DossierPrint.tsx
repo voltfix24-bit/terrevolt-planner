@@ -1,4 +1,5 @@
 import { format, parseISO, isValid } from "date-fns";
+import { LoadingImage } from "@/components/Loaders";
 import { nl } from "date-fns/locale";
 import {
   yesNoLabel,
@@ -715,7 +716,7 @@ const DocTable: React.FC<{ items: TekeningRow[] }> = ({ items }) => {
                   breakInside: "avoid",
                 }}
               >
-                <img
+                <LoadingImage
                   src={t.previewUrl as string}
                   alt={t.titel || t.bestandsnaam}
                   style={{

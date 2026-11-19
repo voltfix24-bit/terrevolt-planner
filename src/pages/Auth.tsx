@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { PageLoader, BlockLoader, ButtonLoader } from "@/components/Loaders";
+import TerreVoltLoader from "@/components/TerreVoltLoader";
 import { Navigate } from "react-router-dom";
 import { Zap } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,7 +15,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (loading) return null;
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><TerreVoltLoader size={80} /></div>;
   if (session) return <Navigate to="/overzicht" replace />;
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -73,7 +75,7 @@ export default function Auth() {
             />
           </div>
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Bezig..." : "Inloggen"}
+            {busy ? <ButtonLoader /> : "Inloggen"}
           </Button>
         </form>
 
